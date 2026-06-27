@@ -1,0 +1,2 @@
+-- Deprecated: username auth no longer uses Supabase email auth.
+-- See 202606270005_app_username_auth_no_email.sql.

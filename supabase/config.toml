@@ -1,0 +1,4 @@
+project_id = "project-v2"
+
+[functions.search-hospitals]
+verify_jwt = true

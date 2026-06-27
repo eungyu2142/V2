@@ -1,0 +1,15 @@
+{
+  "source": "Naver Local Search API",
+  "endpoint": "https://openapi.naver.com/v1/search/local.json",
+  "notice": "네이버 검색 결과는 실제 진료 가능 여부의 공식 보증이 아니라 검색 키워드 기반 추정입니다.",
+  "startedAt": "2026-06-27T03:44:55.499Z",
+  "finishedAt": "2026-06-27T03:53:22.711Z",
+  "lastCollectedAt": "2026-06-27T03:53:22.711Z",
+  "requestCount": 705,
+  "requestedMaxHospitals": 100,
+  "collectedCount": 102,
+  "rateLimited": false,
+  "lastQuery": "경기 수원시 특수동물병원",
+  "regionCount": 229,
+  "keywordCount": 8
+}
