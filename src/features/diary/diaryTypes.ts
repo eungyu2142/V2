@@ -14,7 +14,6 @@ export type Pet = {
   species: string
   gender?: 'male' | 'female' | 'unknown'
   photoUrl?: string
-  emoji?: string
   weight?: number
   birthDate?: string
   adoptionDate?: string

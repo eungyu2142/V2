@@ -16,14 +16,16 @@ type RecordDraft = {
   reviewId: string
 }
 
-const recordMeta: Record<PetRecordType, { label: string; icon: string; summary: string }> = {
-  food: { label: '먹이', icon: '🍽️', summary: '귀뚜라미 3마리' },
-  weight: { label: '무게', icon: '⚖️', summary: '42.1g' },
-  shed: { label: '탈피', icon: '🦎', summary: '탈피 확인' },
-  poop: { label: '배변', icon: '💩', summary: '정상' },
-  cleaning: { label: '청소', icon: '🧽', summary: '사육장 청소' },
-  hospital: { label: '병원', icon: '🏥', summary: '병원 방문 기록' },
-  other: { label: '기타', icon: '✨', summary: '메모' },
+type RecordCreateStep = 'detail' | 'memo' | 'photo'
+
+const recordMeta: Record<PetRecordType, { label: string; summary: string }> = {
+  food: { label: '먹이', summary: '귀뚜라미 3마리' },
+  weight: { label: '무게', summary: '42.1g' },
+  shed: { label: '탈피', summary: '탈피 확인' },
+  poop: { label: '배변', summary: '정상' },
+  cleaning: { label: '청소', summary: '사육장 청소' },
+  hospital: { label: '병원', summary: '병원 방문 기록' },
+  other: { label: '기타', summary: '메모' },
 }
 
 const categoryLabels: Record<AnimalCategory, string> = {
@@ -57,13 +59,14 @@ export default function DiaryPage() {
   const [typeSheetOpen, setTypeSheetOpen] = useState(false)
   const [formType, setFormType] = useState<PetRecordType | null>(null)
 
-  const selectedPet = mockPets.find((pet) => pet.id === selectedPetId) ?? mockPets[0]
+  const selectedPet = mockPets.find((pet) => pet.id === selectedPetId)
   const selectedRecords = useMemo(
     () => records.filter((record) => record.petId === selectedPetId && record.date === selectedDate),
     [records, selectedDate, selectedPetId],
   )
   const selectedPetRecords = useMemo(() => records.filter((record) => record.petId === selectedPetId), [records, selectedPetId])
   const isFutureDate = selectedDate > todayKey
+  const hasPet = Boolean(selectedPet)
 
   const selectPet = (petId: string) => {
     setSelectedPetId(petId)
@@ -71,7 +74,7 @@ export default function DiaryPage() {
   }
 
   const openAddFlow = () => {
-    if (!isFutureDate) setTypeSheetOpen(true)
+    if (hasPet && !isFutureDate) setTypeSheetOpen(true)
   }
 
   const selectRecordType = (type: PetRecordType) => {
@@ -80,6 +83,7 @@ export default function DiaryPage() {
   }
 
   const saveRecord = (draft: RecordDraft) => {
+    if (!selectedPet) return
     const record: PetRecord = {
       id: crypto.randomUUID(),
       userId: selectedPet.userId,
@@ -97,6 +101,26 @@ export default function DiaryPage() {
     setRecords((items) => [record, ...items])
     setFormType(null)
   }
+  const editRecord = (record: PetRecord) => {
+    setSelectedDate(record.date)
+    setFormType(record.type)
+  }
+  const deleteRecord = (recordId: string) => {
+    setRecords((items) => items.filter((record) => record.id !== recordId))
+  }
+
+  if (formType && selectedPet) {
+    return (
+      <RecordCreateScreen
+        key={`${formType}-${selectedPet.id}-${selectedDate}-${selectedPet.weight ?? 0}`}
+        type={formType}
+        date={selectedDate}
+        selectedPet={selectedPet}
+        onClose={() => setFormType(null)}
+        onSave={saveRecord}
+      />
+    )
+  }
 
   return (
     <section className="diary-page">
@@ -111,6 +135,8 @@ export default function DiaryPage() {
         onMoveMonth={(amount) => setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() + amount, 1))}
         onSelectDate={setSelectedDate}
         onAdd={openAddFlow}
+        onEditRecord={editRecord}
+        onDeleteRecord={deleteRecord}
       />
       <DesktopDiaryLayout
         pets={mockPets}
@@ -125,20 +151,14 @@ export default function DiaryPage() {
         onMoveMonth={(amount) => setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() + amount, 1))}
         onSelectDate={setSelectedDate}
         onAdd={openAddFlow}
+        onEditRecord={editRecord}
+        onDeleteRecord={deleteRecord}
       />
 
       <SidePanel open={petPanelOpen} onClose={() => setPetPanelOpen(false)}>
         <PetSelectorPanel pets={mockPets} selectedPetId={selectedPetId} onSelectPet={selectPet} />
       </SidePanel>
       <RecordTypeBottomSheet open={typeSheetOpen} onClose={() => setTypeSheetOpen(false)} onSelect={selectRecordType} />
-      <RecordFormSheet
-        key={`${formType ?? 'none'}-${selectedPet.id}-${selectedPet.weight ?? 0}`}
-        type={formType}
-        date={selectedDate}
-        selectedPet={selectedPet}
-        onClose={() => setFormType(null)}
-        onSave={saveRecord}
-      />
     </section>
   )
 }
@@ -154,8 +174,10 @@ function MobileDiaryLayout({
   onMoveMonth,
   onSelectDate,
   onAdd,
+  onEditRecord,
+  onDeleteRecord,
 }: {
-  selectedPet: Pet
+  selectedPet?: Pet
   selectedDate: string
   visibleMonth: Date
   records: PetRecord[]
@@ -165,6 +187,8 @@ function MobileDiaryLayout({
   onMoveMonth: (amount: number) => void
   onSelectDate: (date: string) => void
   onAdd: () => void
+  onEditRecord: (record: PetRecord) => void
+  onDeleteRecord: (recordId: string) => void
 }) {
   return (
     <div className="diary-mobile">
@@ -177,9 +201,9 @@ function MobileDiaryLayout({
           onMoveMonth={onMoveMonth}
           onSelectDate={onSelectDate}
         />
-        <RecordList date={selectedDate} records={records} isFutureDate={isFutureDate} />
+        <RecordList date={selectedDate} records={records} isFutureDate={isFutureDate} hasPet={Boolean(selectedPet)} onEditRecord={onEditRecord} onDeleteRecord={onDeleteRecord} />
       </main>
-      {!isFutureDate && <FloatingAddButton onClick={onAdd} />}
+      {selectedPet && !isFutureDate && <FloatingAddButton onClick={onAdd} />}
     </div>
   )
 }
@@ -197,9 +221,11 @@ function DesktopDiaryLayout({
   onMoveMonth,
   onSelectDate,
   onAdd,
+  onEditRecord,
+  onDeleteRecord,
 }: {
   pets: Pet[]
-  selectedPet: Pet
+  selectedPet?: Pet
   selectedPetId: string
   selectedDate: string
   visibleMonth: Date
@@ -210,6 +236,8 @@ function DesktopDiaryLayout({
   onMoveMonth: (amount: number) => void
   onSelectDate: (date: string) => void
   onAdd: () => void
+  onEditRecord: (record: PetRecord) => void
+  onDeleteRecord: (recordId: string) => void
 }) {
   return (
     <div className="diary-desktop">
@@ -227,47 +255,47 @@ function DesktopDiaryLayout({
         />
       </main>
       <aside className="diary-desktop-records">
-        <RecordList date={selectedDate} records={records} isFutureDate={isFutureDate} />
-        {!isFutureDate && <FloatingAddButton inline onClick={onAdd} />}
+        <RecordList date={selectedDate} records={records} isFutureDate={isFutureDate} hasPet={Boolean(selectedPet)} onEditRecord={onEditRecord} onDeleteRecord={onDeleteRecord} />
+        {selectedPet && !isFutureDate && <FloatingAddButton inline onClick={onAdd} />}
       </aside>
     </div>
   )
 }
 
-function DiaryHeader({ selectedPet, onOpenPetPanel }: { selectedPet: Pet; onOpenPetPanel?: () => void }) {
+function DiaryHeader({ selectedPet, onOpenPetPanel }: { selectedPet?: Pet; onOpenPetPanel?: () => void }) {
   return (
     <header className="diary-header">
-      <button className="diary-pet-trigger" type="button" onClick={onOpenPetPanel ?? undefined}>
-        <span className="diary-pet-avatar">{selectedPet.emoji ?? '🐾'}</span>
+      <button className="diary-pet-trigger" type="button" onClick={onOpenPetPanel}>
+        <span className="diary-pet-avatar">{selectedPet ? <DiaryAnimalIcon category={selectedPet.category} /> : <span aria-hidden="true">+</span>}</span>
         <span>
-          <strong>{selectedPet.name}</strong>
-          <small>{selectedPet.species}</small>
+          <strong>{selectedPet?.name ?? '반려동물 없음'}</strong>
+          <small>{selectedPet?.species ?? '먼저 반려동물을 등록해주세요'}</small>
         </span>
         {onOpenPetPanel && <span aria-hidden="true">⌄</span>}
       </button>
-      <button className="diary-profile" type="button" aria-label="프로필">ME</button>
     </header>
   )
 }
 
 function PetSelectorPanel({ pets, selectedPetId, onSelectPet }: { pets: Pet[]; selectedPetId: string; onSelectPet: (petId: string) => void }) {
-  const selectedPet = pets.find((pet) => pet.id === selectedPetId) ?? pets[0]
+  const selectedPet = pets.find((pet) => pet.id === selectedPetId)
   const groupedPets = useMemo(() => groupPetsByCategory(pets), [pets])
   const useGroups = pets.length >= 6
 
   return (
     <section className="pet-panel">
       <div className="pet-panel-current">
-        <span>{selectedPet.emoji ?? '🐾'}</span>
+        <span className="pet-panel-icon">{selectedPet ? <DiaryAnimalIcon category={selectedPet.category} /> : <span aria-hidden="true">+</span>}</span>
         <div>
-          <strong>{selectedPet.name}</strong>
-          <small>{selectedPet.species}</small>
+          <strong>{selectedPet?.name ?? '반려동물 없음'}</strong>
+          <small>{selectedPet?.species ?? '등록 후 기록을 남길 수 있어요'}</small>
         </div>
-        <button type="button" aria-label="편집" onClick={() => history.pushState(null, '', `/pets/${selectedPet.id}/edit`)}>✎</button>
       </div>
 
       <div className="pet-panel-list">
-        {useGroups ? (
+        {pets.length === 0 ? (
+          <EmptyState title="등록된 반려동물이 없어요" body="내 펫 화면에서 반려동물을 먼저 등록해주세요." />
+        ) : useGroups ? (
           Object.entries(groupedPets).map(([category, groupPets]) => (
             <details key={category} open={groupPets.some((pet) => pet.id === selectedPetId)}>
               <summary>{categoryLabels[category as AnimalCategory]}</summary>
@@ -278,11 +306,6 @@ function PetSelectorPanel({ pets, selectedPetId, onSelectPet }: { pets: Pet[]; s
           pets.map((pet) => <PetListRow key={pet.id} pet={pet} selected={pet.id === selectedPetId} onClick={() => onSelectPet(pet.id)} />)
         )}
       </div>
-
-      <div className="pet-panel-actions">
-        <button type="button" onClick={() => history.pushState(null, '', '/pets')}>반려동물 관리하기</button>
-        <button type="button" aria-label="펫 추가" onClick={() => history.pushState(null, '', '/pets/new')}>+</button>
-      </div>
     </section>
   )
 }
@@ -290,7 +313,7 @@ function PetSelectorPanel({ pets, selectedPetId, onSelectPet }: { pets: Pet[]; s
 function PetListRow({ pet, selected, onClick }: { pet: Pet; selected: boolean; onClick: () => void }) {
   return (
     <button className={`pet-list-row ${selected ? 'selected' : ''}`} type="button" onClick={onClick}>
-      <span className="pet-list-photo">{pet.emoji ?? '🐾'}</span>
+      <span className="pet-list-photo"><DiaryAnimalIcon category={pet.category} /></span>
       <span>
         <strong>{pet.name} <em>{genderIcons[pet.gender ?? 'unknown']}</em></strong>
         <small>{pet.species}</small>
@@ -355,38 +378,67 @@ function CalendarDayCell({ day, selected, today, muted, hasRecord, onClick }: { 
   )
 }
 
-function RecordList({ date, records, isFutureDate }: { date: string; records: PetRecord[]; isFutureDate: boolean }) {
+function RecordList({
+  date,
+  records,
+  isFutureDate,
+  hasPet = true,
+  onEditRecord,
+  onDeleteRecord,
+}: {
+  date: string
+  records: PetRecord[]
+  isFutureDate: boolean
+  hasPet?: boolean
+  onEditRecord: (record: PetRecord) => void
+  onDeleteRecord: (recordId: string) => void
+}) {
   return (
     <section className="record-list-panel">
       <div className="record-list-title">
         <span>{formatDateLabel(date)}</span>
         <strong>기록 {records.length}</strong>
       </div>
-      {isFutureDate ? (
+      {!hasPet ? (
+        <EmptyRecordState title="등록된 반려동물이 없어요" body="내 펫 화면에서 반려동물을 먼저 등록해주세요." />
+      ) : isFutureDate ? (
         <EmptyRecordState title="미래 날짜에는 기록을 추가할 수 없어요" body="날짜 확인은 가능하지만 기록 작성은 오늘부터 과거까지만 가능해요." />
       ) : records.length === 0 ? (
         <EmptyRecordState title="아직 기록이 없어요" body="+ 버튼으로 기록을 남겨보세요" />
       ) : (
         <div className="record-list-rows">
-          {records.map((record) => <RecordListItem key={record.id} record={record} />)}
+          {records.map((record) => <RecordListItem key={record.id} record={record} onEdit={() => onEditRecord(record)} onDelete={() => onDeleteRecord(record.id)} />)}
         </div>
       )}
     </section>
   )
 }
 
-function RecordListItem({ record }: { record: PetRecord }) {
+function RecordListItem({ record, onEdit, onDelete }: { record: PetRecord; onEdit: () => void; onDelete: () => void }) {
   const meta = recordMeta[record.type]
   return (
-    <button className="record-list-item" type="button">
-      <span>{meta.icon}</span>
+    <div className="record-list-item">
+      <RecordTypeIcon type={record.type} />
       <span>
         <strong>{meta.label}</strong>
         <small>{record.memo || meta.summary}</small>
       </span>
       <time>{formatTime(record.createdAt)}</time>
-      <b aria-hidden="true">›</b>
-    </button>
+      <RecordItemActions onEdit={onEdit} onDelete={onDelete} />
+    </div>
+  )
+}
+
+function RecordItemActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+  return (
+    <div className="record-item-actions">
+      <button className="record-item-action" type="button" aria-label="수정" onClick={onEdit}>
+        <span className="record-action-icon edit" aria-hidden="true" />
+      </button>
+      <button className="record-item-action danger" type="button" aria-label="삭제" onClick={onDelete}>
+        <span className="record-action-icon delete" aria-hidden="true" />
+      </button>
+    </div>
   )
 }
 
@@ -400,7 +452,7 @@ function RecordTypeBottomSheet({ open, onClose, onSelect }: { open: boolean; onC
         <div className="record-type-grid">
           {recordTypes.map((type) => (
             <button key={type} type="button" onClick={() => onSelect(type)}>
-              <span>{recordMeta[type].icon}</span>
+              <RecordTypeIcon type={type} />
               <strong>{recordMeta[type].label}</strong>
             </button>
           ))}
@@ -410,28 +462,51 @@ function RecordTypeBottomSheet({ open, onClose, onSelect }: { open: boolean; onC
   )
 }
 
-function RecordFormSheet({ type, date, selectedPet, onClose, onSave }: { type: PetRecordType | null; date: string; selectedPet: Pet; onClose: () => void; onSave: (draft: RecordDraft) => void }) {
-  const [draft, setDraft] = useState<RecordDraft>(() => createDraft(type ?? 'food', selectedPet.weight ?? 0))
-  const meta = type ? recordMeta[type] : null
-
-  if (!type || !meta) return null
+function RecordCreateScreen({ type, date, selectedPet, onClose, onSave }: { type: PetRecordType; date: string; selectedPet: Pet; onClose: () => void; onSave: (draft: RecordDraft) => void }) {
+  const [draft, setDraft] = useState<RecordDraft>(() => createDraft(type, selectedPet.weight ?? 0))
+  const [stepIndex, setStepIndex] = useState(0)
+  const meta = recordMeta[type]
+  const steps = getRecordCreateSteps(type)
+  const currentStep = steps[stepIndex]
+  const isLastStep = stepIndex === steps.length - 1
+  const canGoNext = currentStep !== 'detail' || canSaveDetailStep(draft)
 
   const update = (patch: Partial<RecordDraft>) => setDraft((value) => ({ ...value, ...patch }))
 
+  const goBack = () => {
+    if (stepIndex === 0) {
+      onClose()
+      return
+    }
+    setStepIndex((value) => value - 1)
+  }
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!isLastStep) {
+      setStepIndex((value) => value + 1)
+      return
+    }
     onSave(draft)
   }
 
   return (
-    <BottomSheet open onClose={onClose}>
+    <main className="record-create-screen">
+      <header className="record-create-header">
+        <button type="button" aria-label="뒤로가기" onClick={goBack}>←</button>
+        <strong>기록 작성</strong>
+      </header>
       <form className="record-form-sheet" onSubmit={submit}>
-        <span className="sheet-handle" />
-        <h2>{meta.icon} {meta.label}</h2>
-        <p>{date}</p>
-        {type === 'food' && (
+        <div className="record-step-progress" aria-label={`${stepIndex + 1}/${steps.length}`}>
+          <span style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
+        </div>
+        <div className="record-form-title">
+          <h1><RecordTypeIcon type={type} /> {meta.label}</h1>
+          <p>{selectedPet.name} · {date} · {stepIndex + 1}/{steps.length}</p>
+        </div>
+        {currentStep === 'detail' && type === 'food' && (
           <div className="form-section">
-            <label>먹이 종류</label>
+            <label>먹이 종류를 선택하세요</label>
             <div className="chip-grid">
               {foodOptions.map((food) => (
                 <Chip key={food} selected={draft.foods.includes(food)} onClick={() => toggleFood(draft, food, update)}>{food}</Chip>
@@ -440,9 +515,9 @@ function RecordFormSheet({ type, date, selectedPet, onClose, onSave }: { type: P
             <input value={draft.customFood} onChange={(event) => update({ customFood: event.target.value })} placeholder="직접 입력" />
           </div>
         )}
-        {type === 'weight' && (
+        {currentStep === 'detail' && type === 'weight' && (
           <div className="form-section">
-            <label>현재 무게</label>
+            <label>현재 무게를 입력하세요</label>
             <output className="weight-output">{draft.weight.toFixed(1)}g</output>
             <div className="weight-controls">
               {[0.1, 1, 5, -0.1, -1, -5].map((amount) => (
@@ -453,28 +528,29 @@ function RecordFormSheet({ type, date, selectedPet, onClose, onSave }: { type: P
             </div>
           </div>
         )}
-        {type === 'shed' && <SegmentedField label="상태" options={shedStatuses} value={draft.status} onChange={(status) => update({ status })} />}
-        {type === 'poop' && <SegmentedField label="상태" options={poopStatuses} value={draft.status} onChange={(status) => update({ status })} />}
-        {type === 'cleaning' && <SegmentedField label="청소 범위" options={cleaningScopes} value={draft.cleaningScope} onChange={(cleaningScope) => update({ cleaningScope })} />}
-        {type === 'hospital' && (
+        {currentStep === 'detail' && type === 'shed' && <SegmentedField label="탈피 상태를 선택하세요" options={shedStatuses} value={draft.status} onChange={(status) => update({ status })} />}
+        {currentStep === 'detail' && type === 'poop' && <SegmentedField label="배변 상태를 선택하세요" options={poopStatuses} value={draft.status} onChange={(status) => update({ status })} />}
+        {currentStep === 'detail' && type === 'cleaning' && <SegmentedField label="청소 범위를 선택하세요" options={cleaningScopes} value={draft.cleaningScope} onChange={(cleaningScope) => update({ cleaningScope })} />}
+        {currentStep === 'detail' && type === 'hospital' && (
           <div className="form-section">
-            <label>병원</label>
+            <label>병원을 연결하세요</label>
             <input value={draft.hospitalId} onChange={(event) => update({ hospitalId: event.target.value })} placeholder="hospitalId 준비" />
             <input value={draft.reviewId} onChange={(event) => update({ reviewId: event.target.value })} placeholder="reviewId 준비" />
           </div>
         )}
-        <label className="form-section">메모<textarea value={draft.memo} onChange={(event) => update({ memo: event.target.value })} placeholder="짧게 남기기" /></label>
-        <label className="form-section">사진 1장<input type="file" accept="image/*" onChange={(event) => update({ photoUrl: getPhotoName(event) })} /></label>
-        <details className="extra-fields">
-          <summary>추가 입력</summary>
-          <p>사진은 현재 파일명만 mock으로 저장됩니다.</p>
-        </details>
+        {currentStep === 'memo' && <label className="form-section">메모를 입력하세요<textarea autoFocus value={draft.memo} onChange={(event) => update({ memo: event.target.value })} placeholder="짧게 남기기" /></label>}
+        {currentStep === 'photo' && (
+          <label className="form-section">
+            사진 1장을 추가하세요
+            <input type="file" accept="image/*" onChange={(event) => update({ photoUrl: getPhotoName(event) })} />
+            <small>{draft.photoUrl ? draft.photoUrl : '사진은 선택하지 않아도 저장할 수 있어요.'}</small>
+          </label>
+        )}
         <div className="form-actions">
-          <Button variant="ghost" type="button" onClick={onClose}>취소</Button>
-          <Button type="submit">저장</Button>
+          <Button type="submit" disabled={!canGoNext}>{isLastStep ? '저장' : '다음'}</Button>
         </div>
       </form>
-    </BottomSheet>
+    </main>
   )
 }
 
@@ -536,6 +612,15 @@ function EmptyState({ title, body }: { title: string; body: string }) {
   )
 }
 
+function DiaryAnimalIcon({ category }: { category: AnimalCategory }) {
+  const iconCategory = category === 'reptile' || category === 'amphibian' || category === 'rodent' || category === 'bird' ? category : 'all'
+  return <span className={`animal-icon animal-icon-${iconCategory}`} aria-hidden="true"><span /></span>
+}
+
+function RecordTypeIcon({ type }: { type: PetRecordType }) {
+  return <span className={`record-line-icon record-line-icon-${type}`} aria-hidden="true"><span /></span>
+}
+
 function SegmentedField({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (value: string) => void }) {
   return (
     <div className="form-section">
@@ -559,6 +644,15 @@ function createDraft(type: PetRecordType, weight: number): RecordDraft {
     hospitalId: '',
     reviewId: '',
   }
+}
+
+function getRecordCreateSteps(type: PetRecordType): RecordCreateStep[] {
+  return type === 'other' ? ['memo', 'photo'] : ['detail', 'memo', 'photo']
+}
+
+function canSaveDetailStep(draft: RecordDraft) {
+  if (draft.type === 'food') return draft.foods.length > 0 || draft.customFood.trim().length > 0
+  return true
 }
 
 function buildRecordMemo(draft: RecordDraft) {
