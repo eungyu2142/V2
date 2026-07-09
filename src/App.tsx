@@ -1,10 +1,16 @@
-import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import './App.css'
+import AuthScreen from './components/AuthScreen'
 import DiaryPage from './features/diary/DiaryPage'
+import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
+import { supabase } from './lib/supabase'
 
-type Tab = 'pets' | 'diary' | 'map' | 'community' | 'share'
+type Tab = 'pets' | 'diary' | 'map' | 'qna' | 'share'
 type CreateMode = 'pet' | 'post' | 'share' | null
-type AnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian'
+type AnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
+type ShareCategory = 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other' | 'food' | 'supplies'
+type ShareSort = 'latest' | 'popular'
 
 type Pet = {
   id: string
@@ -12,13 +18,38 @@ type Pet = {
   group: AnimalCategory
   species: string
   gender: 'male' | 'female' | 'unknown'
+  photo?: string
+  weight?: string
+  weightUnit?: 'g' | 'kg'
+  birthday?: string
+  adoptionDate?: string
 }
 
-type CommunityPost = {
+type QnaCategory = '정보' | '동물 병원' | '건강/증상' | '기타'
+
+type QnaComment = {
   id: string
-  category: string
+  author: string
+  body: string
+  createdAt: string
+  mine: boolean
+}
+
+type QnaPost = {
+  id: string
+  category: QnaCategory
   title: string
   body: string
+  author: string
+  animal: string
+  petId: string
+  animalGroup?: string
+  animalSpecies?: string
+  image?: string
+  createdAt: string
+  liked: boolean
+  likes: number
+  comments: QnaComment[]
 }
 
 type ShareItem = {
@@ -26,6 +57,25 @@ type ShareItem = {
   title: string
   area: string
   memo: string
+  category?: ShareCategory
+  subcategory?: string
+  species?: string
+  gender?: Pet['gender']
+  imageUrl?: string
+  createdAt?: string
+  likes?: number
+  liked?: boolean
+}
+
+type DraftKind = 'question' | 'share_item'
+
+type DraftItem = {
+  id: string
+  draftType: DraftKind
+  title: string
+  body: string
+  updatedAt: string
+  payload: QnaPost | ShareItem
 }
 
 type Coordinates = {
@@ -86,17 +136,18 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: 'pets', label: '마이 펫' },
   { id: 'diary', label: '기록' },
   { id: 'map', label: '지도' },
-  { id: 'community', label: '커뮤니티' },
+  { id: 'qna', label: 'QNA' },
   { id: 'share', label: '나눔' },
 ]
 
-const animalCategoryOptions: AnimalCategory[] = ['reptile', 'bird', 'rodent', 'amphibian', 'all']
+const animalCategoryOptions: AnimalCategory[] = ['all', 'reptile', 'rodent', 'amphibian', 'bird', 'other']
 const animalCategoryLabels: Record<AnimalCategory, string> = {
   all: '전체',
   reptile: '파충류',
   bird: '조류',
   rodent: '설치류',
   amphibian: '양서류',
+  other: '기타',
 }
 
 const animalCategorySearchTerms: Record<AnimalCategory, string> = {
@@ -105,6 +156,7 @@ const animalCategorySearchTerms: Record<AnimalCategory, string> = {
   bird: '조류 동물병원',
   rodent: '설치류 동물병원',
   amphibian: '양서류 동물병원',
+  other: '특수동물병원',
 }
 
 const animalCategoryKeywords: Record<Exclude<AnimalCategory, 'all'>, string[]> = {
@@ -112,88 +164,228 @@ const animalCategoryKeywords: Record<Exclude<AnimalCategory, 'all'>, string[]> =
   bird: ['조류', '앵무새', '새', '카나리아', '문조', '잉꼬', '코뉴어'],
   rodent: ['설치류', '햄스터', '기니피그', '친칠라', '고슴도치', '토끼', '페럿', '데구', '저빌'],
   amphibian: ['양서류', '개구리', '팩맨', '도롱뇽', '뉴트', '살라만더', '아홀로틀'],
+  other: ['특수동물', '기타'],
+}
+
+const petSpeciesOptions: Record<Exclude<AnimalCategory, 'all'>, string[]> = {
+  reptile: ['개코', '비어디드래곤', '이구아나', '카멜레온', '왕도마뱀', '스킨크', '육지 거북', '수생 습지 거북', '콘스네이크', '킹스네이크', '볼파이톤', '보아-파이톤', '호그노즈', '기타 도마뱀', '기타 뱀', '기타'],
+  bird: ['앵무새', '닭', '기타 조류', '기타'],
+  rodent: ['슈가글라이더', '고슴도치', '햄스터', '기타 설치류', '기타'],
+  amphibian: ['팩맨', '트리프록', '두꺼비(토드)', '뉴트', '살라만다', '아홀로틀', '기타 양서류', '기타'],
+  other: ['기타'],
 }
 
 const reviewStorageKey = 'exocare-hospital-reviews'
-const petsStorageKey = 'exocare-pets'
-const postsStorageKey = 'exocare-community-posts'
-const shareStorageKey = 'exocare-share-items'
+const shareCategoryLabels: Record<ShareCategory, string> = {
+  reptile: '파충류', bird: '조류', rodent: '설치류', amphibian: '양서류',
+  other: '기타', food: '먹이', supplies: '용품',
+}
+const shareSubcategories: Record<ShareCategory, string[]> = {
+  reptile: ['개코', '비어디드래곤', '이구아나', '카멜레온', '왕도마뱀', '스킨크', '육지 거북', '수생 습지 거북', '콘스네이크', '킹스네이크', '볼파이톤', '보아-파이톤', '호그노즈', '기타 도마뱀', '기타 뱀'],
+  bird: ['앵무새', '닭', '기타'],
+  rodent: ['슈가글라이더', '고슴도치', '햄스터', '기타'],
+  amphibian: ['팩맨', '트리프록', '두꺼비(토드)', '뉴트', '살라만다', '아홀로틀', '기타'],
+  other: ['기타 동물'],
+  food: ['영양제', '귀뚜라미', '밀웜', '누에', '마우스', '사료', '기타'],
+  supplies: ['사육장', '식급수기', '은신처', '바닥재', '온습도계', '난방용품', '기타'],
+}
+void shareSubcategories
 let naverMapsLoader: Promise<NaverMapApi> | null = null
+const qnaTable = ['comm', 'unity_posts'].join('')
+const qnaDatabaseCategory = ['Q', '&A'].join('')
 
 function App() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setAuthReady(true)
+    })
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+      setAuthReady(true)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [])
+
+  if (!authReady) return <main className="auth-screen"><p className="auth-loading">로그인 상태를 확인하고 있습니다.</p></main>
+  if (!session) return <AuthScreen />
+  return <AuthenticatedApp session={session} />
+}
+
+function AuthenticatedApp({ session }: { session: Session }) {
   const [activeTab, setActiveTab] = useState<Tab>('map')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [sideNavOpen, setSideNavOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateMode>(null)
-  const [pets, setPets] = useState<Pet[]>(() => readStoredList<Pet>(petsStorageKey))
-  const [posts, setPosts] = useState<CommunityPost[]>(() => readStoredList<CommunityPost>(postsStorageKey))
-  const [shareItems, setShareItems] = useState<ShareItem[]>(() => readStoredList<ShareItem>(shareStorageKey))
+  const [editingPet, setEditingPet] = useState<Pet | null>(null)
+  const [pets, setPets] = useState<Pet[]>([])
+  const [qnaPosts, setQnaPosts] = useState<QnaPost[]>([])
+  const [shareItems, setShareItems] = useState<ShareItem[]>([])
+  const [drafts, setDrafts] = useState<DraftItem[]>([])
+  const [dataError, setDataError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      loadAppData<Pet>('pets'),
+      loadAppData<QnaPost>(qnaTable),
+      loadAppData<ShareItem>('share_items'),
+      loadAppData<DraftItem>('drafts'),
+    ]).then(([nextPets, nextPosts, nextItems, nextDrafts]) => {
+      if (!active) return
+      setPets(nextPets.map(normalizePet))
+      setQnaPosts(nextPosts)
+      setShareItems(nextItems)
+      setDrafts(nextDrafts)
+    }).catch(() => active && setDataError('데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'))
+    return () => { active = false }
+  }, [session.user.id])
 
   const moveTab = (tab: Tab) => {
     setActiveTab(tab)
     setCreateMode(null)
+    setEditingPet(null)
   }
 
-  const savePet = (pet: Pet) => {
-    setPets((items) => {
-      const next = [pet, ...items.filter((item) => item.id !== pet.id)]
-      localStorage.setItem(petsStorageKey, JSON.stringify(next))
-      return next
+  const savePet = async (pet: Pet) => {
+    try {
+      await saveAppData('pets', session.user.id, pet, {
+        name: pet.name, species: pet.species, category: pet.group,
+        gender: pet.gender, photo_url: pet.photo ?? null,
+      })
+      setPets((items) => [pet, ...items.filter((item) => item.id !== pet.id)])
+      setCreateMode(null)
+    } catch {
+      setDataError('펫 정보를 저장하지 못했습니다.')
+    }
+  }
+
+  const deletePet = async (petId: string) => {
+    try {
+      await deleteAppData('pets', petId)
+      setPets((items) => items.filter((item) => item.id !== petId))
+    } catch {
+      setDataError('펫 정보를 삭제하지 못했습니다.')
+    }
+  }
+
+  const saveQnaPost = async (post: QnaPost) => {
+    try {
+      await saveAppData(qnaTable, session.user.id, post, {
+        category: qnaDatabaseCategory, title: post.title, body: post.body,
+      })
+      setQnaPosts((items) => [post, ...items.filter((item) => item.id !== post.id)])
+      setCreateMode(null)
+    } catch {
+      setDataError('질문을 저장하지 못했습니다.')
+    }
+  }
+
+  const updateQnaPosts = (next: QnaPost[]) => {
+    setQnaPosts(next)
+    const changed = next.find((post) => {
+      const previous = qnaPosts.find((item) => item.id === post.id)
+      return previous && JSON.stringify(previous) !== JSON.stringify(post)
     })
-    setCreateMode(null)
+    if (changed) {
+      void saveAppData(qnaTable, session.user.id, changed, {
+        category: qnaDatabaseCategory, title: changed.title, body: changed.body,
+      }).catch(() => setDataError('질문 변경 내용을 저장하지 못했습니다.'))
+    }
   }
 
-  const deletePet = (petId: string) => {
-    setPets((items) => {
-      const next = items.filter((item) => item.id !== petId)
-      localStorage.setItem(petsStorageKey, JSON.stringify(next))
-      return next
-    })
+  const deleteQnaPost = async (postId: string) => {
+    try {
+      await deleteAppData(qnaTable, postId)
+      setQnaPosts((items) => items.filter((item) => item.id !== postId))
+    } catch {
+      setDataError('질문을 삭제하지 못했습니다.')
+    }
   }
 
-  const savePost = (post: CommunityPost) => {
-    setPosts((items) => {
-      const next = [post, ...items.filter((item) => item.id !== post.id)]
-      localStorage.setItem(postsStorageKey, JSON.stringify(next))
-      return next
-    })
-    setCreateMode(null)
+  const saveShareItem = async (item: ShareItem) => {
+    try {
+      await saveAppData('share_items', session.user.id, item, {
+        title: item.title, area: item.area, memo: item.memo,
+      })
+      setShareItems((items) => [item, ...items.filter((shareItem) => shareItem.id !== item.id)])
+      setCreateMode(null)
+    } catch {
+      setDataError('나눔 글을 저장하지 못했습니다.')
+    }
   }
 
-  const deletePost = (postId: string) => {
-    setPosts((items) => {
-      const next = items.filter((item) => item.id !== postId)
-      localStorage.setItem(postsStorageKey, JSON.stringify(next))
-      return next
-    })
+  const deleteShareItem = async (itemId: string) => {
+    try {
+      await deleteAppData('share_items', itemId)
+      setShareItems((items) => items.filter((item) => item.id !== itemId))
+    } catch {
+      setDataError('나눔 글을 삭제하지 못했습니다.')
+    }
   }
 
-  const saveShareItem = (item: ShareItem) => {
-    setShareItems((items) => {
-      const next = [item, ...items.filter((shareItem) => shareItem.id !== item.id)]
-      localStorage.setItem(shareStorageKey, JSON.stringify(next))
-      return next
-    })
-    setCreateMode(null)
+  const saveDraft = async (draft: DraftItem) => {
+    try {
+      await saveAppData('drafts', session.user.id, draft, { draft_type: draft.draftType })
+      setDrafts((items) => [draft, ...items.filter((item) => item.id !== draft.id)])
+      setCreateMode(null)
+    } catch {
+      setDataError('임시저장을 저장하지 못했습니다.')
+    }
   }
 
-  const deleteShareItem = (itemId: string) => {
-    setShareItems((items) => {
-      const next = items.filter((item) => item.id !== itemId)
-      localStorage.setItem(shareStorageKey, JSON.stringify(next))
-      return next
-    })
+  const deleteDraft = async (draftId: string) => {
+    try {
+      await deleteAppData('drafts', draftId)
+      setDrafts((items) => items.filter((item) => item.id !== draftId))
+    } catch {
+      setDataError('임시저장을 삭제하지 못했습니다.')
+    }
   }
 
-  if (createMode === 'pet') return <PetCreateFlow onClose={() => setCreateMode(null)} onSave={savePet} />
-  if (createMode === 'post') return <PostCreateFlow onClose={() => setCreateMode(null)} onSave={savePost} />
-  if (createMode === 'share') return <ShareCreateFlow onClose={() => setCreateMode(null)} onSave={saveShareItem} />
+  const publishDraft = async (draft: DraftItem) => {
+    try {
+      if (draft.draftType === 'question') {
+        await saveQnaPost(draft.payload as QnaPost)
+      } else {
+        await saveShareItem(draft.payload as ShareItem)
+      }
+      await deleteDraft(draft.id)
+    } catch {
+      setDataError('임시저장을 등록하지 못했습니다.')
+    }
+  }
+
+  if (createMode === 'pet') return <PetCreateFlow initialPet={editingPet} onClose={() => { setCreateMode(null); setEditingPet(null) }} onSave={savePet} />
+  if (createMode === 'post') return <QnaCreateFlow pets={pets} onClose={() => setCreateMode(null)} onSave={saveQnaPost} onSaveDraft={saveDraft} />
+  if (createMode === 'share') return <ShareCreateFlow pets={pets} onClose={() => setCreateMode(null)} onSave={saveShareItem} onSaveDraft={saveDraft} />
 
   return (
     <div className={`app-shell ${activeTab === 'map' ? 'map-shell' : ''}`}>
-      <aside className="side-nav">
+      <button
+        className="menu-trigger"
+        type="button"
+        aria-label="메뉴 열기"
+        aria-expanded={sideNavOpen}
+        onClick={() => setSideNavOpen(true)}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <button
+        className={`side-nav-dim ${sideNavOpen ? 'open' : ''}`}
+        type="button"
+        aria-label="메뉴 닫기"
+        onClick={() => setSideNavOpen(false)}
+      />
+      <aside className={`side-nav ${sideNavOpen ? 'open' : ''}`}>
         <nav>
           {tabs.map((tab) => (
-            <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={() => moveTab(tab.id)}>
+            <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={() => { moveTab(tab.id); setSideNavOpen(false) }}>
               <span className={`side-nav-icon ${tab.id}`} aria-hidden="true" />
               {tab.label}
             </button>
@@ -207,30 +399,23 @@ function App() {
 
       <header className="top-bar">
         <div>
-          <span>SPECIAL ANIMAL CARE PWA</span>
           <h1>{tabs.find((tab) => tab.id === activeTab)?.label}</h1>
         </div>
       </header>
 
-      <main className="app-main">
-        {activeTab === 'map' && <MapScreen />}
-        {activeTab === 'pets' && <Placeholder title="마이 펫" body="펫 등록 플로우를 이 화면에 이어서 붙이면 됩니다." />}
-        {activeTab === 'diary' && <Placeholder title="기록" body="캘린더와 동물 기록을 이 화면에 이어서 붙이면 됩니다." />}
-        {activeTab === 'community' && <Placeholder title="커뮤니티" body="QNA와 댓글 기능을 이 화면에 이어서 붙이면 됩니다." />}
-        {activeTab === 'share' && <Placeholder title="나눔" body="나눔 글 목록과 작성 기능을 이 화면에 이어서 붙이면 됩니다." />}
-      </main>
+      {activeTab === 'map' && <main className="app-main"><MapScreen /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">
-          {activeTab === 'pets' && <PetsScreen pets={pets} onDeletePet={deletePet} />}
-          {activeTab === 'diary' && <DiaryPage />}
-          {activeTab === 'community' && <CommunityScreen posts={posts} onDeletePost={deletePost} />}
-          {activeTab === 'share' && <ShareScreen items={shareItems} onDeleteItem={deleteShareItem} />}
+          {activeTab === 'pets' && <PetsScreen pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={() => moveTab('diary')} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} onAddPet={() => { setEditingPet(null); setCreateMode('pet') }} />}
+          {activeTab === 'qna' && <QnaScreen posts={qnaPosts} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} />}
+          {activeTab === 'share' && <ShareScreen items={shareItems} onItemsChange={setShareItems} onSaveItem={saveShareItem} onDeleteItem={deleteShareItem} />}
         </main>
       )}
 
       {activeTab !== 'map' && activeTab !== 'diary' && (
-        <button className="app-fab" type="button" aria-label="작성" onClick={() => setCreateMode(activeTab === 'pets' ? 'pet' : activeTab === 'community' ? 'post' : 'share')}>
+        <button className="app-fab" type="button" aria-label="작성" onClick={() => { setEditingPet(null); setCreateMode(activeTab === 'pets' ? 'pet' : activeTab === 'qna' ? 'post' : 'share') }}>
           +
         </button>
       )}
@@ -243,21 +428,102 @@ function App() {
         ))}
       </nav>
 
-      {profileOpen && <ProfilePanel onClose={() => setProfileOpen(false)} />}
+      {dataError && <button className="data-error" type="button" onClick={() => setDataError('')}>{dataError}</button>}
+      {profileOpen && <ProfilePanel qnaPosts={qnaPosts} shareItems={shareItems} drafts={drafts} onClose={() => setProfileOpen(false)} onSignOut={() => supabase.auth.signOut()} onDeleteDraft={deleteDraft} onPublishDraft={publishDraft} />}
     </div>
   )
 }
 
-function ProfilePanel({ onClose }: { onClose: () => void }) {
+function ProfilePanel({
+  qnaPosts,
+  shareItems,
+  drafts,
+  onClose,
+  onSignOut,
+  onDeleteDraft,
+  onPublishDraft,
+}: {
+  qnaPosts: QnaPost[]
+  shareItems: ShareItem[]
+  drafts: DraftItem[]
+  onClose: () => void
+  onSignOut: () => void
+  onDeleteDraft: (draftId: string) => void
+  onPublishDraft: (draft: DraftItem) => void
+}) {
+  const [view, setView] = useState<'menu' | 'profile' | 'posts' | 'drafts' | 'saved' | 'logout'>('menu')
+  const posts = [
+    ...qnaPosts.map((post) => ({ id: post.id, type: 'QNA', title: post.title, body: post.body })),
+    ...shareItems.map((item) => ({ id: item.id, type: shareCategoryLabels[item.category ?? 'other'], title: item.title, body: item.memo })),
+  ]
+
   return (
     <div className="overlay">
       <button className="overlay-dim" type="button" onClick={onClose} aria-label="close" />
       <section className="profile-panel">
-        <h2>&#54532;&#47196;&#54596;</h2>
-        <button type="button">&#45236; &#51221;&#48372; &#49688;&#51221;</button>
-        <button type="button">&#45236;&#44032; &#50420; &#44544;</button>
-        <button type="button">&#51200;&#51109;&#54620; &#48337;&#50896;</button>
-        <button type="button">&#47196;&#44536;&#50500;&#50883;</button>
+        <div className="profile-panel-header">
+          {view !== 'menu' && <button className="profile-back" type="button" onClick={() => setView('menu')}>뒤로</button>}
+          <h2>&#54532;&#47196;&#54596;</h2>
+        </div>
+        {view === 'menu' && (
+          <>
+            <button type="button" onClick={() => setView('profile')}>&#45236; &#51221;&#48372; &#49688;&#51221;</button>
+            <button type="button" onClick={() => setView('posts')}>&#45236;&#44032; &#50420; &#44544;</button>
+            <button type="button" onClick={() => setView('drafts')}>임시저장 <span>{drafts.length}</span></button>
+            <button type="button" onClick={() => setView('saved')}>&#51200;&#51109;&#54620; &#48337;&#50896;</button>
+            <button type="button" onClick={() => setView('logout')}>&#47196;&#44536;&#50500;&#50883;</button>
+          </>
+        )}
+        {view === 'profile' && (
+          <div className="profile-panel-content">
+            <p>프로필 사진, 닉네임, 계정 관리는 DB 프로필 테이블과 연결할 예정입니다.</p>
+          </div>
+        )}
+        {view === 'posts' && (
+          <div className="profile-panel-content">
+            {posts.length === 0 ? <p>아직 작성한 글이 없습니다.</p> : (
+              <div className="profile-list">
+                {posts.map((post) => (
+                  <article key={`${post.type}-${post.id}`}>
+                    <span>{post.type}</span>
+                    <strong>{post.title}</strong>
+                    <p>{post.body}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {view === 'drafts' && (
+          <div className="profile-panel-content">
+            {drafts.length === 0 ? <p>임시저장한 글이 없습니다.</p> : (
+              <div className="profile-list">
+                {drafts.map((draft) => (
+                  <article key={draft.id}>
+                    <span>{draft.draftType === 'question' ? 'QNA' : '나눔'} · {formatReviewDate(draft.updatedAt)}</span>
+                    <strong>{draft.title || '제목 없음'}</strong>
+                    <p>{draft.body || '내용 없음'}</p>
+                    <div className="profile-row-actions">
+                      <button type="button" onClick={() => onPublishDraft(draft)}>등록</button>
+                      <button type="button" onClick={() => onDeleteDraft(draft.id)}>삭제</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {view === 'saved' && (
+          <div className="profile-panel-content">
+            <p>저장한 병원 목록은 좋아요/저장 DB 연결 후 이곳에 표시됩니다.</p>
+          </div>
+        )}
+        {view === 'logout' && (
+          <div className="profile-panel-content">
+            <p>현재 계정에서 로그아웃합니다.</p>
+            <button type="button" onClick={onSignOut}>&#47196;&#44536;&#50500;&#50883;</button>
+          </div>
+        )}
       </section>
     </div>
   )
@@ -271,7 +537,7 @@ function MapScreen() {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
   const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null)
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'error')
-  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'idle')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState(naverMapClientId ? '' : '.env.local의 VITE_NAVER_MAP_CLIENT_ID를 확인해주세요.')
   const [reviewPanelHospitalId, setReviewPanelHospitalId] = useState<string | null>(null)
@@ -297,12 +563,31 @@ function MapScreen() {
     if (!naverMapClientId) return
 
     let mounted = true
-    loadNaverMaps(naverMapClientId)
-      .then((naver) => {
+
+    Promise.allSettled([loadNaverMaps(naverMapClientId), readBrowserLocation()])
+      .then(([naverResult, locationResult]) => {
         if (!mounted || !mapElementRef.current) return
-        const center = new naver.maps.LatLng(37.5665, 126.978)
+
+        if (naverResult.status === 'rejected') {
+          throw naverResult.reason
+        }
+
+        const naver = naverResult.value
+        const firstLocation = locationResult.status === 'fulfilled' ? locationResult.value : null
+        const centerLocation = firstLocation ?? { lat: 37.5665, lng: 126.978 }
+        const center = new naver.maps.LatLng(centerLocation.lat, centerLocation.lng)
         mapInstanceRef.current = new naver.maps.Map(mapElementRef.current, { center, zoom: 12 })
         setMapStatus('ready')
+
+        if (firstLocation) {
+          setCurrentLocation(firstLocation)
+          setLocationStatus('ready')
+          setMessage('내 위치 기준으로 지도를 열었어요.')
+        } else {
+          console.error('Initial geolocation error:', locationResult.status === 'rejected' ? locationResult.reason : null)
+          setLocationStatus('error')
+          setMessage('현재 위치를 가져올 수 없어서 기본 위치로 지도를 열었어요. 위치 권한을 확인해 주세요.')
+        }
       })
       .catch((error) => {
         console.error('Naver map load error:', error)
@@ -361,33 +646,23 @@ function MapScreen() {
     })
   }, [filteredHospitals, selectedHospitalId, selectedHospitalReviews.length])
 
-  const getCurrentLocation = (moveMap = true) => new Promise<Coordinates>((resolve, reject) => {
-    if (!navigator.geolocation) {
-      setLocationStatus('error')
-      reject(new Error('Geolocation is unavailable.'))
-      return
-    }
-
+  const getCurrentLocation = () => {
     setLocationStatus('loading')
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = { lat: position.coords.latitude, lng: position.coords.longitude }
+    return readBrowserLocation()
+      .then((location) => {
         setCurrentLocation(location)
         setLocationStatus('ready')
-        if (!moveMap) resolve(location)
-        else resolve(location)
-      },
-      (error) => {
+        return location
+      })
+      .catch((error) => {
         console.error('Geolocation error:', error)
         setLocationStatus('error')
-        reject(error)
-      },
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 300_000 },
-    )
-  })
+        throw error
+      })
+  }
 
   const requestCurrentLocation = async () => {
-    await getCurrentLocation(true).catch(() => {
+    await getCurrentLocation().catch(() => {
       setMessage('현재 위치를 가져올 수 없어요. 브라우저 위치 권한을 확인해주세요.')
     })
   }
@@ -401,7 +676,7 @@ function MapScreen() {
     setReviewPanelHospitalId(null)
     setMessage('병원을 검색하는 중이에요.')
 
-    const location = currentLocation ?? await getCurrentLocation(false).catch(() => null)
+    const location = currentLocation ?? await getCurrentLocation().catch(() => null)
 
     try {
       const results = await searchHospitals(buildHospitalSearchQuery(query, selectedCategory), selectedCategory, location)
@@ -503,6 +778,7 @@ function MapScreen() {
                 </div>
                 {isReviewFormOpen && (
                   <form className="review-form" onSubmit={submitReview}>
+                    <div className="step-progress review-progress" aria-hidden="true"><span style={{ width: '100%' }} /></div>
                     <div className="review-form-row">
                       <input value={reviewAuthor} onChange={(event) => setReviewAuthor(event.target.value)} placeholder="닉네임" />
                       <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))}>
@@ -535,27 +811,43 @@ function MapScreen() {
   )
 }
 
-function Placeholder({ title, body }: { title: string; body: string }) {
-  void title
-  void body
-  return null
-}
+function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary }: { pets: Pet[]; onDeletePet: (petId: string) => void; onEditPet: (pet: Pet) => void; onOpenDiary: () => void }) {
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<AnimalCategory>('all')
+  const filteredPets = pets.filter((pet) => {
+    const text = `${pet.name} ${pet.species} ${animalCategoryLabels[pet.group]}`.toLowerCase()
+    return (category === 'all' || pet.group === category) && text.includes(query.trim().toLowerCase())
+  })
 
-function PetsScreen({ pets, onDeletePet }: { pets: Pet[]; onDeletePet: (petId: string) => void }) {
   return (
     <section className="page-stack">
+      <section className="section-block my-pet-tools">
+        <label className="my-pet-search"><span>동물 검색</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름, 종, 분류 검색" /></label>
+        <div className="filter-tags" aria-label="동물 분류 필터">
+          {animalCategoryOptions.map((item) => (
+            <button className={category === item ? 'active' : ''} type="button" key={item} onClick={() => setCategory(item)}>
+              <CategoryTagIcon category={item} /><span>{animalCategoryLabels[item]}</span>
+            </button>
+          ))}
+        </div>
+      </section>
       <section className="section-block my-pet-section">
-        <div className="section-title"><h2>마이 펫</h2><span>{pets.length}마리</span></div>
-        {pets.length === 0 ? null : (
+        <div className="section-title"><h2>등록된 펫</h2><span>{filteredPets.length}마리</span></div>
+        {filteredPets.length === 0 ? <p className="empty-state">{pets.length === 0 ? '등록된 펫이 없습니다.' : '검색 조건에 맞는 펫이 없습니다.'}</p> : (
           <div className="pet-list">
-            {pets.map((pet) => (
+            {filteredPets.map((pet) => (
               <article className="pet-card" key={pet.id}>
-                <div className="pet-card-icon"><CategoryTagIcon category={pet.group} /></div>
+                <div className="pet-card-icon">{pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} /> : <CategoryTagIcon category={pet.group} />}</div>
                 <div className="pet-card-main">
                   <strong>{pet.name}</strong>
                   <small>{animalCategoryLabels[pet.group]} · {pet.species} · {genderLabel(pet.gender)}</small>
+                  <small>{formatPetDetails(pet)}</small>
                 </div>
-                <ItemActions onDelete={() => onDeletePet(pet.id)} />
+                <div className="item-actions">
+                  <button className="item-action-button" type="button" aria-label="수정" onClick={() => onEditPet(pet)}>✎</button>
+                  <ItemActions onDelete={() => onDeletePet(pet.id)} />
+                </div>
+                <button className="pet-record-link" type="button" onClick={onOpenDiary}>기록으로 이동</button>
               </article>
             ))}
           </div>
@@ -565,45 +857,181 @@ function PetsScreen({ pets, onDeletePet }: { pets: Pet[]; onDeletePet: (petId: s
   )
 }
 
-function CommunityScreen({ posts, onDeletePost }: { posts: CommunityPost[]; onDeletePost: (postId: string) => void }) {
+function QnaScreen({ posts, onChange, onDeletePost }: { posts: QnaPost[]; onChange: (posts: QnaPost[]) => void; onDeletePost: (postId: string) => void }) {
+  const [category, setCategory] = useState<'전체' | QnaCategory>('전체')
+  const [query, setQuery] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [comment, setComment] = useState('')
+  const selected = posts.find((post) => post.id === selectedId)
+  const filtered = posts.filter((post) => {
+    const matchesCategory = category === '전체' || post.category === category
+    const text = `${post.title} ${post.body} ${post.author} ${post.animalGroup ?? ''} ${post.animalSpecies ?? post.animal}`.toLowerCase()
+    return matchesCategory && text.includes(query.trim().toLowerCase())
+  })
+
+  const updatePost = (post: QnaPost) => onChange(posts.map((item) => item.id === post.id ? post : item))
+  const toggleLike = (post: QnaPost) => updatePost({ ...post, liked: !post.liked, likes: Math.max(0, post.likes + (post.liked ? -1 : 1)) })
+  const addComment = (event: FormEvent) => {
+    event.preventDefault()
+    if (!selected || !comment.trim()) return
+    updatePost({ ...selected, comments: [...selected.comments, { id: crypto.randomUUID(), author: '나', body: comment.trim(), createdAt: new Date().toISOString(), mine: true }] })
+    setComment('')
+  }
+
+  if (selected) {
+    return (
+      <section className="qna-detail">
+        <header className="qna-detail-header">
+          <button className="qna-back" type="button" aria-label="뒤로가기" onClick={() => setSelectedId(null)}>←</button>
+          <strong>QNA</strong>
+          <ItemActions onDelete={() => { onDeletePost(selected.id); setSelectedId(null) }} />
+        </header>
+        <article className="qna-detail-post">
+          <span className="qna-category">{selected.category}</span>
+          <h2>{selected.title}</h2>
+          <div className="qna-author"><strong>{selected.author}</strong><span>{formatQnaAnimal(selected)} · {formatQnaDate(selected.createdAt)}</span></div>
+          {selected.image && <img src={selected.image} alt="" />}
+          <p>{selected.body}</p>
+          <button className={`qna-like ${selected.liked ? 'active' : ''}`} type="button" onClick={() => toggleLike(selected)}>♡ {selected.likes}</button>
+        </article>
+        <section className="qna-comments">
+          <h3>댓글 {selected.comments.length}</h3>
+          {selected.comments.map((item) => (
+            <article key={item.id}>
+              <div><strong>{item.author}</strong><time>{formatQnaDate(item.createdAt)}</time></div>
+              <p>{item.body}</p>
+              {item.mine && <button type="button" onClick={() => updatePost({ ...selected, comments: selected.comments.filter((commentItem) => commentItem.id !== item.id) })}>삭제</button>}
+            </article>
+          ))}
+          <form onSubmit={addComment}><input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요" aria-label="댓글" /><button type="submit">등록</button></form>
+        </section>
+      </section>
+    )
+  }
+
   return (
-    <section className="page-stack">
-      <section className="section-block">
-        <div className="section-title"><h2>커뮤니티</h2><span>{posts.length}개</span></div>
-        {posts.length === 0 ? null : (
-          <div className="result-list">
-            {posts.map((post) => (
-              <article className="post-card" key={post.id}>
-                <div className="post-card-head"><span>{post.category}</span><ItemActions onDelete={() => onDeletePost(post.id)} /></div>
-                <strong>{post.title}</strong>
-                <p>{post.body}</p>
-              </article>
-            ))}
-          </div>
-        )}
+    <BoardSurface
+      className="qna-main-page"
+      title="QNA"
+      count={filtered.length}
+      query={query}
+      onQueryChange={setQuery}
+      placeholder="제목, 내용, 작성자, 동물 종"
+      controlsOrder="filters-first"
+      filters={(['전체', '정보', '동물 병원', '건강/증상', '기타'] as const).map((item) => ({
+        id: item,
+        label: item,
+        active: category === item,
+        onClick: () => setCategory(item),
+      }))}
+    >
+      {filtered.length === 0 ? <div className="share-empty qna-empty-state"><strong>표시할 QNA 글이 없습니다</strong><p>조건을 바꾸거나 첫 QNA 글을 작성해 보세요.</p></div> : <div className="qna-list">
+        {filtered.map((post) => (
+          <article className="qna-row" key={post.id} onClick={() => setSelectedId(post.id)}>
+            <div className="qna-row-main">
+              <span className="qna-category">{post.category}</span>
+              <h3>{post.title}</h3>
+              <p>{post.body}</p>
+              <div className="qna-meta"><span>{post.author} · {formatQnaAnimal(post)}</span><span>♡ {post.likes} · 댓글 {post.comments.length} · {formatQnaDate(post.createdAt)}</span></div>
+            </div>
+            {post.image && <img src={post.image} alt="" />}
+          </article>
+        ))}
+      </div>}
+    </BoardSurface>
+  )
+}
+
+type BoardFilter = {
+  id: string
+  label: ReactNode
+  active?: boolean
+  ariaLabel?: string
+  iconOnly?: boolean
+  onClick: () => void
+}
+
+function BoardSurface({ className = '', title, count, query, onQueryChange, placeholder, filters, controlsOrder = 'search-first', children }: { className?: string; title: string; count: number; query: string; onQueryChange: (value: string) => void; placeholder: string; filters: BoardFilter[]; controlsOrder?: 'search-first' | 'filters-first'; children: ReactNode }) {
+  const searchControl = <label className="board-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={placeholder} /></label>
+  const filterControl = (
+    <div className="share-filter-row">
+      {filters.map((filter) => (
+        <button className={`${filter.active ? 'active' : ''}${filter.iconOnly ? ' filter-all-button' : ''}`.trim()} type="button" key={filter.id} aria-label={filter.ariaLabel} onClick={filter.onClick}>
+          {filter.iconOnly ? <><span /><span /><span /></> : filter.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  return (
+    <section className={`page-stack board-page ${className}`.trim()}>
+      <section className="share-board">
+        <div className="section-title"><h2>{title}</h2><span>{count}</span></div>
+        {controlsOrder === 'filters-first' ? <>{filterControl}{searchControl}</> : <>{searchControl}{filterControl}</>}
+        {children}
       </section>
     </section>
   )
 }
 
-function ShareScreen({ items, onDeleteItem }: { items: ShareItem[]; onDeleteItem: (itemId: string) => void }) {
+function ShareScreen({ items, onItemsChange, onSaveItem, onDeleteItem }: { items: ShareItem[]; onItemsChange: (items: ShareItem[]) => void; onSaveItem: (item: ShareItem) => void; onDeleteItem: (itemId: string) => void }) {
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<'all' | ShareCategory>('all')
+  const [gender, setGender] = useState<'all' | Pet['gender']>('all')
+  const [sort, setSort] = useState<ShareSort>('latest')
+  const [openFilter, setOpenFilter] = useState<'category' | 'sort' | 'gender' | 'all' | null>(null)
+  const normalized = items.map((item) => ({ ...item, category: item.category ?? 'supplies' as ShareCategory, subcategory: item.subcategory ?? '', species: item.species ?? '', gender: item.gender ?? 'unknown' as const, imageUrl: item.imageUrl ?? '', createdAt: item.createdAt ?? new Date(0).toISOString(), likes: item.likes ?? 0, liked: item.liked ?? false }))
+  const filtered = normalized.filter((item) => category === 'all' || item.category === category).filter((item) => gender === 'all' || item.gender === gender).filter((item) => `${item.title} ${item.subcategory} ${item.species} ${item.memo}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === 'popular' ? b.likes - a.likes : b.createdAt.localeCompare(a.createdAt))
+  const categoryLabels = { all: '전체', ...shareCategoryLabels }
+  const sortLabels = { latest: '최신순', popular: '인기순' }
+  const genderLabels = { all: '전체', male: '수컷', female: '암컷', unknown: '미구분' }
+  const setCategoryFilter = (value: string) => {
+    setCategory(value as 'all' | ShareCategory)
+    setOpenFilter(null)
+  }
+  const setSortFilter = (value: string) => {
+    setSort(value as ShareSort)
+    setOpenFilter(null)
+  }
+  const setGenderFilter = (value: string) => {
+    setGender(value as 'all' | Pet['gender'])
+    setOpenFilter(null)
+  }
+  const toggleLike = (id: string) => {
+    const next = normalized.map((item) => item.id === id ? { ...item, liked: !item.liked, likes: Math.max(0, item.likes + (item.liked ? -1 : 1)) } : item)
+    onItemsChange(next)
+    const changed = next.find((item) => item.id === id)
+    if (changed) onSaveItem(changed)
+  }
   return (
-    <section className="page-stack">
-      <section className="section-block">
-        <div className="section-title"><h2>나눔</h2><span>{items.length}개</span></div>
-        {items.length === 0 ? null : (
-          <div className="result-list">
-            {items.map((item) => (
-              <article className="post-card" key={item.id}>
-                <div className="post-card-head"><span>{item.area}</span><ItemActions onDelete={() => onDeleteItem(item.id)} /></div>
-                <strong>{item.title}</strong>
-                <p>{item.memo}</p>
+    <BoardSurface
+      className="share-page"
+      title="무료분양/나눔"
+      count={filtered.length}
+      query={query}
+      onQueryChange={setQuery}
+      placeholder="머리글, 물품 이름, 동물 종, 내용 검색"
+      filters={[
+        { id: 'category', label: category === 'all' ? '종류' : shareCategoryLabels[category], active: openFilter === 'category' || category !== 'all', onClick: () => setOpenFilter(openFilter === 'category' ? null : 'category') },
+        { id: 'sort', label: sortLabels[sort], active: openFilter === 'sort' || sort !== 'latest', onClick: () => setOpenFilter(openFilter === 'sort' ? null : 'sort') },
+        { id: 'gender', label: gender === 'all' ? '성별' : genderLabel(gender), active: openFilter === 'gender' || gender !== 'all', onClick: () => setOpenFilter(openFilter === 'gender' ? null : 'gender') },
+        { id: 'all', label: '전체 필터', active: openFilter === 'all', iconOnly: true, ariaLabel: '전체 필터', onClick: () => setOpenFilter(openFilter === 'all' ? null : 'all') },
+      ]}
+    >
+        {openFilter && <div className="share-filter-panel">
+          {(openFilter === 'category' || openFilter === 'all') && <FilterGroup title="종류" options={['all', ...Object.keys(shareCategoryLabels)]} value={category} labels={categoryLabels} onChange={setCategoryFilter} />}
+          {(openFilter === 'sort' || openFilter === 'all') && <FilterGroup title="정렬" options={['latest', 'popular']} value={sort} labels={sortLabels} onChange={setSortFilter} />}
+          {(openFilter === 'gender' || openFilter === 'all') && <FilterGroup title="성별" options={['all', 'male', 'female', 'unknown']} value={gender} labels={genderLabels} onChange={setGenderFilter} />}
+        </div>}
+          {filtered.length === 0 ? <div className="share-empty"><strong>게시글이 없습니다</strong><p>조건을 바꾸거나 첫 무료분양/나눔 글을 작성해 보세요.</p></div> : <div className="share-card-grid">
+            {filtered.map((item) => (
+              <article className="share-card" key={item.id}>
+                <div className="share-card-media">{item.imageUrl ? <img src={item.imageUrl} alt="" /> : <span>사진 없음</span>}<button className={item.liked ? 'liked' : ''} type="button" aria-label="좋아요" onClick={() => toggleLike(item.id)}>♥</button></div>
+                <div className="share-card-body"><strong>{item.title}</strong><p>{item.species || item.subcategory}</p><div className="share-card-tags"><span>{shareCategoryLabels[item.category]}</span>{!['food', 'supplies'].includes(item.category) && <span>{genderLabel(item.gender)}</span>}</div><div className="share-card-meta"><span>{item.area || '지역 미입력'} · ♥ {item.likes}</span><ItemActions onDelete={() => onDeleteItem(item.id)} /></div></div>
               </article>
             ))}
-          </div>
-        )}
-      </section>
-    </section>
+          </div>}
+    </BoardSurface>
   )
 }
 
@@ -617,72 +1045,222 @@ function ItemActions({ onDelete }: { onDelete: () => void }) {
   )
 }
 
-function PetCreateFlow({ onClose, onSave }: { onClose: () => void; onSave: (pet: Pet) => void }) {
+function PetCreateFlow({ initialPet, onClose, onSave }: { initialPet: Pet | null; onClose: () => void; onSave: (pet: Pet) => void }) {
   const [step, setStep] = useState(0)
-  const [name, setName] = useState('')
-  const [group, setGroup] = useState<AnimalCategory>('reptile')
-  const [species, setSpecies] = useState('')
-  const [gender, setGender] = useState<Pet['gender']>('unknown')
-  const canNext = step === 0 ? name.trim().length > 0 : step === 2 ? species.trim().length > 0 : true
-  const finish = () => onSave({ id: crypto.randomUUID(), name: name.trim(), group, species: species.trim(), gender })
+  const [name, setName] = useState(initialPet?.name ?? '')
+  const [group, setGroup] = useState<Exclude<AnimalCategory, 'all'>>(initialPet?.group === 'all' || !initialPet?.group ? 'reptile' : initialPet.group)
+  const [species, setSpecies] = useState(initialPet?.species ?? '')
+  const [gender, setGender] = useState<Pet['gender']>(initialPet?.gender ?? 'unknown')
+  const [photo, setPhoto] = useState<string | undefined>(initialPet?.photo)
+  const [weight, setWeight] = useState(initialPet?.weight ?? '')
+  const [weightUnit, setWeightUnit] = useState<'g' | 'kg'>(initialPet?.weightUnit ?? 'g')
+  const [birthday, setBirthday] = useState(initialPet?.birthday ?? '')
+  const [adoptionDate, setAdoptionDate] = useState(initialPet?.adoptionDate ?? '')
+  const canNext = step === 1 ? Boolean(species) : step === 3 ? name.trim().length > 0 : true
+  const finish = () => onSave({ id: initialPet?.id ?? crypto.randomUUID(), name: name.trim(), group, species, gender, photo, weight: weight.trim() || undefined, weightUnit, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined })
+  const attachPhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setPhoto(typeof reader.result === 'string' ? reader.result : undefined)
+    reader.readAsDataURL(file)
+  }
 
   return (
-    <StepShell title="펫 등록" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)}>
-      {step === 0 && <StepText label="이름" value={name} onChange={setName} placeholder="예: 레오" />}
-      {step === 1 && <StepSelect label="분류" value={group} options={animalCategoryOptions.filter((category) => category !== 'all')} labels={animalCategoryLabels} onChange={(value) => setGroup(value as AnimalCategory)} />}
-      {step === 2 && <StepText label="종" value={species} onChange={setSpecies} placeholder="예: 레오파드게코" />}
-      {step === 3 && <StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} />}
-      <button className="step-primary" type="button" disabled={!canNext} onClick={step === 3 ? finish : () => setStep((value) => value + 1)}>{step === 3 ? '저장' : '다음'}</button>
+    <StepShell title={initialPet ? '펫 수정' : '펫 등록'} onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} progress={(step + 1) / 8}>
+      {step === 0 && <StepSelect label="종류" value={group} options={animalCategoryOptions.filter((item) => item !== 'all')} labels={animalCategoryLabels} onChange={(value) => { setGroup(value as Exclude<AnimalCategory, 'all'>); setSpecies('') }} />}
+      {step === 1 && <StepSelect label="종" value={species} options={petSpeciesOptions[group]} onChange={setSpecies} />}
+      {step === 2 && <StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} />}
+      {step === 3 && <><StepText label="이름(닉네임)" value={name} onChange={setName} placeholder="예: 레오" /><label className="step-field photo-field"><span>사진 (선택)</span><input type="file" accept="image/*" onChange={attachPhoto} />{photo && <img src={photo} alt="선택한 펫 미리보기" />}</label></>}
+      {step === 4 && <div className="step-field"><span>체중 (선택)</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="체중 입력" /><div className="weight-unit">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></div>}
+      {step === 5 && <StepDate label="생일 (선택)" value={birthday} onChange={setBirthday} />}
+      {step === 6 && <StepDate label="입양일 (선택)" value={adoptionDate} onChange={setAdoptionDate} />}
+      {step === 7 && <PetSummary pet={{ id: initialPet?.id ?? '', name, group, species, gender, photo, weight, weightUnit, birthday, adoptionDate }} />}
+      <button className="step-primary" type="button" disabled={!canNext} onClick={step === 7 ? finish : () => setStep((value) => value + 1)}>{step === 7 ? '등록 완료' : '다음'}</button>
     </StepShell>
   )
 }
 
-function PostCreateFlow({ onClose, onSave }: { onClose: () => void; onSave: (post: CommunityPost) => void }) {
+function QnaCreateFlow({ pets, onClose, onSave, onSaveDraft }: { pets: Pet[]; onClose: () => void; onSave: (post: QnaPost) => void; onSaveDraft: (draft: DraftItem) => void }) {
   const [step, setStep] = useState(0)
-  const [category, setCategory] = useState('Q&A')
+  const [petId, setPetId] = useState('')
+  const [category, setCategory] = useState<QnaCategory>('정보')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const canNext = step === 1 ? title.trim().length > 0 : step === 2 ? body.trim().length > 0 : true
-  const finish = () => onSave({ id: crypto.randomUUID(), category, title: title.trim(), body: body.trim() })
+  const [image, setImage] = useState<string>()
+  const pet = pets.find((item) => item.id === petId)
+  const hasNoAnimal = petId === 'none'
+  const canNext = step === 1 ? Boolean(petId) : step < 2 || (title.trim().length > 0 && body.trim().length > 0)
+  const selectedGroup = hasNoAnimal ? '동물 없음' : pet ? animalCategoryLabels[pet.group] : ''
+  const selectedSpecies = hasNoAnimal ? '' : pet?.species || ''
+  const buildPost = (): QnaPost => ({
+    id: crypto.randomUUID(),
+    category,
+    title: title.trim(),
+    body: body.trim(),
+    author: '작성자',
+    animal: hasNoAnimal ? '동물 없음' : selectedSpecies.trim(),
+    animalGroup: selectedGroup.trim(),
+    animalSpecies: selectedSpecies.trim(),
+    petId: hasNoAnimal ? '' : petId,
+    image,
+    createdAt: new Date().toISOString(),
+    liked: false,
+    likes: 0,
+    comments: [],
+  })
+  const finish = () => onSave(buildPost())
+  const saveDraft = () => {
+    const post = buildPost()
+    onSaveDraft({
+      id: crypto.randomUUID(),
+      draftType: 'question',
+      title: post.title || '제목 없음',
+      body: post.body,
+      updatedAt: new Date().toISOString(),
+      payload: post,
+    })
+  }
+  const attachImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setImage(typeof reader.result === 'string' ? reader.result : undefined)
+    reader.readAsDataURL(file)
+  }
 
   return (
-    <StepShell title="글 작성" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)}>
-      {step === 0 && <StepSelect label="카테고리" value={category} options={['Q&A', '일상', '정보']} onChange={setCategory} />}
-      {step === 1 && <StepText label="제목" value={title} onChange={setTitle} placeholder="제목 입력" />}
-      {step === 2 && <StepTextarea label="내용" value={body} onChange={setBody} placeholder="내용 입력" />}
+    <StepShell title="QNA 작성" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} progress={(step + 1) / 3}>
+      {step === 0 && <StepSelect label="어떤 것에 관한 내용인가요?" value={category} options={['정보', '동물 병원', '건강/증상', '기타']} onChange={(value) => setCategory(value as QnaCategory)} />}
+      {step === 1 && <>
+        <StepSelect
+          label="질문과 관련된 동물을 선택하세요"
+          value={petId}
+          options={[...pets.map((item) => item.id), 'none']}
+          labels={{ ...Object.fromEntries(pets.map((item) => [item.id, `${item.name} · ${animalCategoryLabels[item.group]} · ${item.species}`])), none: '동물 없음' }}
+          onChange={setPetId}
+        />
+      </>}
+      {step === 2 && <div className="qna-compose-fields">
+        <StepText label="제목" value={title} onChange={setTitle} placeholder="질문 제목을 입력하세요" />
+        <StepTextarea label="내용" value={body} onChange={setBody} placeholder="궁금한 내용을 자세히 적어 주세요" />
+        <label className="step-field"><span>사진 첨부 (선택)</span><input type="file" accept="image/*" onChange={attachImage} /></label>
+        {image && <img className="qna-compose-preview" src={image} alt="첨부 사진 미리보기" />}
+      </div>}
+      {step === 2 && <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>}
       <button className="step-primary" type="button" disabled={!canNext} onClick={step === 2 ? finish : () => setStep((value) => value + 1)}>{step === 2 ? '등록' : '다음'}</button>
     </StepShell>
   )
 }
 
-function ShareCreateFlow({ onClose, onSave }: { onClose: () => void; onSave: (item: ShareItem) => void }) {
+function FilterGroup({ title, options, value, labels, onChange }: { title: string; options: string[]; value: string; labels: Record<string, string>; onChange: (value: string) => void }) {
+  return <section><strong>{title}</strong><div>{options.map((option) => <button className={value === option ? 'active' : ''} key={option} type="button" onClick={() => onChange(option)}>{labels[option]}</button>)}</div></section>
+}
+
+function formatQnaDate(value: string) {
+  const elapsed = Date.now() - new Date(value).getTime()
+  const minutes = Math.max(0, Math.floor(elapsed / 60000))
+  if (minutes < 1) return '방금 전'
+  if (minutes < 60) return `${minutes}분 전`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}시간 전`
+  return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value))
+}
+
+function formatQnaAnimal(post: QnaPost) {
+  if (post.animal === '동물 없음' || post.animalGroup === '동물 없음') return '동물 없음'
+  const group = post.animalGroup || '분류 미지정'
+  const species = post.animalSpecies || post.animal || '종 미지정'
+  return `${group} · ${species}`
+}
+
+function ShareCreateFlow({ pets, onClose, onSave, onSaveDraft }: { pets: Pet[]; onClose: () => void; onSave: (item: ShareItem) => void; onSaveDraft: (draft: DraftItem) => void }) {
   const [step, setStep] = useState(0)
+  const [shareType, setShareType] = useState<'animal' | 'item'>('animal')
+  const [category, setCategory] = useState<ShareCategory>('reptile')
+  const [subcategory, setSubcategory] = useState('개코')
+  const [source, setSource] = useState<'pet' | 'custom'>('pet')
+  const [petId, setPetId] = useState('')
+  const [species, setSpecies] = useState('')
+  const [gender, setGender] = useState<Pet['gender']>('unknown')
   const [title, setTitle] = useState('')
   const [area, setArea] = useState('')
   const [memo, setMemo] = useState('')
-  const canNext = step === 0 ? title.trim().length > 0 : step === 1 ? area.trim().length > 0 : memo.trim().length > 0
-  const finish = () => onSave({ id: crypto.randomUUID(), title: title.trim(), area: area.trim(), memo: memo.trim() })
+  const [imageUrl, setImageUrl] = useState('')
+  const selectedPet = pets.find((pet) => pet.id === petId)
+  const resolvedSpecies = source === 'pet' && selectedPet ? selectedPet.species : species
+  const resolvedGender = source === 'pet' && selectedPet ? selectedPet.gender : gender
+  const resolvedCategory = shareType === 'animal' && selectedPet && selectedPet.group !== 'all' ? selectedPet.group : category
+  const canNext = step === 1 ? (shareType === 'animal' ? Boolean(resolvedSpecies.trim()) : Boolean(subcategory)) : step === 2 ? title.trim().length > 0 : step === 3 ? Boolean(imageUrl) : step === 4 ? memo.trim().length > 0 : true
+  const buildItem = (): ShareItem => ({ id: crypto.randomUUID(), title: title.trim(), area: area.trim(), memo: memo.trim(), category: resolvedCategory, subcategory: shareType === 'animal' ? resolvedSpecies.trim() : subcategory, species: shareType === 'animal' ? resolvedSpecies.trim() : '', gender: shareType === 'animal' ? resolvedGender : 'unknown', imageUrl, createdAt: new Date().toISOString(), likes: 0, liked: false })
+  const finish = () => onSave(buildItem())
+  const saveDraft = () => {
+    const item = buildItem()
+    onSaveDraft({
+      id: crypto.randomUUID(),
+      draftType: 'share_item',
+      title: item.title || '제목 없음',
+      body: item.memo,
+      updatedAt: new Date().toISOString(),
+      payload: item,
+    })
+  }
 
   return (
-    <StepShell title="나눔 등록" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)}>
-      {step === 0 && <StepText label="머리글" value={title} onChange={setTitle} placeholder="나눔할 물품" />}
-      {step === 1 && <StepText label="지역" value={area} onChange={setArea} placeholder="예: 서울 강남" />}
-      {step === 2 && <StepTextarea label="메모" value={memo} onChange={setMemo} placeholder="상태, 나눔 방식" />}
-      <button className="step-primary" type="button" disabled={!canNext} onClick={step === 2 ? finish : () => setStep((value) => value + 1)}>{step === 2 ? '등록' : '다음'}</button>
+    <StepShell title="무료분양/나눔 작성" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} progress={(step + 1) / 5}>
+      {step === 0 && <div className="share-type-picker"><span className="step-heading">무엇을 나눔하나요?</span><div><button className={shareType === 'animal' ? 'active' : ''} type="button" onClick={() => { setShareType('animal'); setCategory('reptile'); setSubcategory('개코') }}><strong>동물</strong><span>무료분양할 동물을 선택합니다</span></button><button className={shareType === 'item' ? 'active' : ''} type="button" onClick={() => { setShareType('item'); setCategory('food'); setSubcategory(shareSubcategories.food[0]) }}><strong>물품</strong><span>먹이 또는 용품을 나눔합니다</span></button></div></div>}
+      {step === 1 && shareType === 'animal' && <div className="share-animal-picker"><span className="step-heading">동물 선택</span><div className="share-source-tabs"><button className={source === 'pet' ? 'active' : ''} type="button" onClick={() => setSource('pet')}>마이 펫</button><button className={source === 'custom' ? 'active' : ''} type="button" onClick={() => setSource('custom')}>다른 종 직접 입력</button></div>{source === 'pet' ? <div className="share-pet-grid">{pets.length ? pets.map((pet) => <button className={petId === pet.id ? 'active' : ''} type="button" key={pet.id} onClick={() => setPetId(pet.id)}><strong>{pet.name}</strong><span>{pet.species}</span></button>) : <div className="share-animal-empty"><strong>등록된 마이 펫이 없습니다</strong><p>다른 종 직접 입력을 선택해 주세요.</p></div>}</div> : <><StepSelect label="동물 분류" value={category} options={['reptile', 'amphibian', 'rodent', 'bird', 'other']} labels={shareCategoryLabels} onChange={(value) => setCategory(value as ShareCategory)} /><StepText label="종" value={species} onChange={setSpecies} placeholder="예: 크레스티드 게코" /><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} /></>}</div>}
+      {step === 1 && shareType === 'item' && <div className="share-category-picker"><span className="step-heading">물품 카테고리</span><div className="share-category-section">{(['food', 'supplies'] as const).map((value) => <button className={category === value ? 'active' : ''} type="button" key={value} onClick={() => { setCategory(value); setSubcategory(shareSubcategories[value][0]) }}>{shareCategoryLabels[value]}</button>)}</div><div className="share-subcategory-section">{shareSubcategories[category === 'supplies' ? 'supplies' : 'food'].map((value) => <button className={subcategory === value ? 'active' : ''} type="button" key={value} onClick={() => setSubcategory(value)}>{value}</button>)}</div></div>}
+      {step === 2 && <div className="share-create-fields"><StepText label="머리글" value={title} onChange={setTitle} placeholder="나눔 내용을 한눈에 알 수 있게 입력" /><StepText label="지역 (선택)" value={area} onChange={setArea} placeholder="예: 서울 강남" /></div>}
+      {step === 3 && <label className="share-photo-input"><span className="step-heading">사진</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setImageUrl(String(reader.result)); reader.readAsDataURL(file) }} />{imageUrl && <img src={imageUrl} alt="첨부 미리보기" />}</label>}
+      {step === 4 && <StepTextarea label="설명" value={memo} onChange={setMemo} placeholder="상태, 나눔 방식, 특징 등을 입력" />}
+      {step === 4 && <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>}
+      <button className="step-primary" type="button" disabled={!canNext} onClick={step === 4 ? finish : () => setStep((value) => value + 1)}>{step === 4 ? '등록' : '다음'}</button>
     </StepShell>
   )
 }
 
-function StepShell({ title, children, onBack }: { title: string; children: ReactNode; onBack: () => void }) {
+function StepShell({ title, children, onBack, progress }: { title: string; children: ReactNode; onBack: () => void; progress?: number }) {
   return (
     <main className="step-screen">
       <header className="step-header">
         <button className="back" type="button" aria-label="뒤로가기" onClick={onBack}>←</button>
         <strong>{title}</strong>
       </header>
+      {progress !== undefined && <div className="step-progress" aria-hidden="true"><span style={{ width: `${progress * 100}%` }} /></div>}
       <section className="step-card">{children}</section>
     </main>
   )
+}
+
+function StepDate({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="step-field"><span>{label}</span><input type="date" value={value} onChange={(event) => onChange(event.target.value)} /></label>
+}
+
+function PetSummary({ pet }: { pet: Pet }) {
+  return (
+    <div className="pet-summary">
+      {pet.photo ? <img src={pet.photo} alt="" /> : <div className="pet-card-icon"><CategoryTagIcon category={pet.group} /></div>}
+      <h2>{pet.name}</h2>
+      <dl>
+        <div><dt>종류</dt><dd>{animalCategoryLabels[pet.group]}</dd></div>
+        <div><dt>종</dt><dd>{pet.species}</dd></div>
+        <div><dt>성별</dt><dd>{genderLabel(pet.gender)}</dd></div>
+        <div><dt>체중</dt><dd>{pet.weight ? `${pet.weight}${pet.weightUnit ?? 'g'}` : '미입력'}</dd></div>
+        <div><dt>생일</dt><dd>{pet.birthday || '미입력'}</dd></div>
+        <div><dt>입양일</dt><dd>{pet.adoptionDate || '미입력'}</dd></div>
+      </dl>
+    </div>
+  )
+}
+
+function formatPetDetails(pet: Pet) {
+  const details = [
+    pet.weight ? `${pet.weight}${pet.weightUnit ?? 'g'}` : null,
+    pet.birthday ? `생일 ${pet.birthday}` : null,
+    pet.adoptionDate ? `입양일 ${pet.adoptionDate}` : null,
+  ].filter(Boolean)
+  return details.length ? details.join(' · ') : '선택 정보 미입력'
 }
 
 function StepText({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
@@ -786,6 +1364,23 @@ function loadNaverMaps(clientId: string) {
   return naverMapsLoader
 }
 
+function readBrowserLocation() {
+  return new Promise<Coordinates>((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is unavailable.'))
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({ lat: position.coords.latitude, lng: position.coords.longitude })
+      },
+      reject,
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 300_000 },
+    )
+  })
+}
+
 async function searchHospitals(query: string, category: AnimalCategory, location: Coordinates | null) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
   const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
@@ -841,7 +1436,7 @@ function transformHospitalItem(item: Record<string, unknown>, index: number, que
   const text = `${query} ${name} ${item.category ?? ''} ${item.description ?? ''} ${address}`
   const supportedAnimals = Array.isArray(item.supportedAnimals) ? item.supportedAnimals : []
   const categories = supportedAnimals
-    .filter((value): value is Exclude<AnimalCategory, 'all'> => value === 'reptile' || value === 'bird' || value === 'rodent' || value === 'amphibian')
+    .filter((value): value is Exclude<AnimalCategory, 'all'> => value === 'reptile' || value === 'bird' || value === 'rodent' || value === 'amphibian' || value === 'other')
   const guessed = categories.length > 0 ? categories : guessAnimalCategories(text, category)
 
   return {
@@ -940,14 +1535,19 @@ function readStoredReviews() {
   }
 }
 
-function readStoredList<T>(key: string): T[] {
-  try {
-    const stored = localStorage.getItem(key)
-    if (!stored) return []
-    const parsed = JSON.parse(stored)
-    return Array.isArray(parsed) ? parsed as T[] : []
-  } catch {
-    return []
+function normalizePet(pet: Pet & { category?: string }): Pet {
+  const rawCategory = pet.group ?? pet.category
+  const categoryAliases: Record<string, Exclude<AnimalCategory, 'all'>> = {
+    reptile: 'reptile', 파충류: 'reptile',
+    bird: 'bird', 조류: 'bird',
+    rodent: 'rodent', 설치류: 'rodent',
+    amphibian: 'amphibian', 양서류: 'amphibian',
+    other: 'other', 기타: 'other',
+  }
+  const inferredCategory = (Object.entries(petSpeciesOptions).find(([, species]) => species.includes(pet.species))?.[0] ?? 'other') as Exclude<AnimalCategory, 'all'>
+  return {
+    ...pet,
+    group: categoryAliases[String(rawCategory)] ?? inferredCategory,
   }
 }
 

@@ -1,4 +1,8 @@
 project_id = "project-v2"
 
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
 [functions.search-hospitals]
 verify_jwt = true
