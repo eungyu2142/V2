@@ -1023,6 +1023,30 @@ textarea {
   display: grid;
 }
 
+.qna-sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 2px 0 12px;
+}
+
+.qna-sort-bar button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid rgba(20, 48, 46, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #5f7872;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.qna-sort-bar button.active {
+  border-color: #079d96;
+  background: #e9fbf5;
+  color: #087f83;
+}
+
 .qna-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1037,9 +1061,42 @@ textarea {
 }
 
 .qna-category {
+  display: inline-grid;
+  min-height: 26px;
+  place-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #eef9f4;
   color: #079d96;
   font-size: 0.76rem;
   font-weight: 900;
+}
+
+.qna-row-badges,
+.qna-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qna-status {
+  display: inline-grid;
+  min-height: 26px;
+  place-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.qna-status.unresolved {
+  background: #fff7e8;
+  color: #9a6a10;
+}
+
+.qna-status.resolved {
+  background: #d9f3ea;
+  color: #087f83;
 }
 
 .qna-row h3 {
@@ -1073,6 +1130,22 @@ textarea {
   gap: 4px 12px;
   color: #7a8e89;
   font-size: 0.75rem;
+}
+
+.qna-attach-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.qna-attach-flags span {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f4fffb;
+  color: #5f7872;
+  font-size: 0.68rem;
+  font-weight: 900;
 }
 
 .qna-empty {
@@ -1146,6 +1219,22 @@ textarea {
   font-weight: 900;
 }
 
+.qna-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.qna-status-toggle {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(7, 157, 150, 0.25);
+  border-radius: 999px;
+  background: #f5fffb;
+  color: #087f83;
+  font-weight: 900;
+}
+
 .qna-comments {
   padding: 18px 6px 88px;
 }
@@ -1159,6 +1248,13 @@ textarea {
   position: relative;
   padding: 13px 0;
   border-bottom: 1px solid rgba(20, 48, 46, 0.08);
+}
+
+.qna-comments article.accepted {
+  padding: 13px 10px;
+  border: 1px solid rgba(7, 157, 150, 0.22);
+  border-radius: 8px;
+  background: #f4fffb;
 }
 
 .qna-comments article div {
@@ -1175,7 +1271,7 @@ textarea {
   margin: 7px 44px 0 0;
 }
 
-.qna-comments article > button {
+.qna-comments article > button:not(.qna-accept-button) {
   position: absolute;
   right: 0;
   bottom: 12px;
@@ -1183,6 +1279,33 @@ textarea {
   background: transparent;
   color: #718680;
   font-size: 0.75rem;
+}
+
+.accepted-answer-chip {
+  display: inline-grid;
+  width: fit-content;
+  min-height: 24px;
+  place-items: center;
+  margin-top: 7px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #d9f3ea;
+  color: #087f83;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.qna-accept-button {
+  width: fit-content;
+  min-height: 30px;
+  margin-top: 8px;
+  padding: 0 10px;
+  border: 1px solid rgba(7, 157, 150, 0.22);
+  border-radius: 999px;
+  background: #fff;
+  color: #087f83;
+  font-size: 0.74rem;
+  font-weight: 900;
 }
 
 .qna-comments form {
@@ -1409,6 +1532,29 @@ textarea {
   gap: 9px;
 }
 
+.record-picker-dates {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+}
+
+.record-picker-dates button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(20, 48, 46, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #294b47;
+  font-weight: 900;
+}
+
+.record-picker-dates button.active {
+  border-color: #079d96;
+  background: #d9f3ea;
+  color: #087f83;
+}
+
 .record-picker-list > button {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
@@ -1550,8 +1696,15 @@ textarea {
   gap: 18px;
 }
 
+.qna-compose-fields.natural {
+  gap: 16px;
+}
+
 .qna-compose-tools {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .qna-compose-tools button {
@@ -1562,6 +1715,93 @@ textarea {
   background: #f5fffb;
   color: #087f83;
   font-weight: 900;
+}
+
+.qna-compose-tools span {
+  color: #718680;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.qna-related-panel {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.qna-related-panel > strong {
+  color: #14302e;
+  font-size: 0.9rem;
+}
+
+.qna-related-section {
+  display: grid;
+  border: 1px solid rgba(20, 48, 46, 0.1);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.qna-related-section > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: #14302e;
+  font-weight: 900;
+}
+
+.qna-related-section > div {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.qna-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.qna-chip-grid button,
+.qna-category-chips button {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid rgba(20, 48, 46, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #294b47;
+  font-weight: 900;
+}
+
+.qna-chip-grid button {
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.qna-chip-grid small {
+  overflow: hidden;
+  color: #718680;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qna-chip-grid button.active,
+.qna-category-chips button.active {
+  border-color: #079d96;
+  background: #e9fbf5;
+  color: #087f83;
+}
+
+.qna-category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .attach-file-field {
@@ -3872,4 +4112,38 @@ textarea {
   .bottom-nav {
     display: none !important;
   }
+}
+
+/* Compact writing forms: labels should read like form labels, not page titles. */
+.step-field > span,
+.step-heading,
+.share-photo-input > span {
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.step-field input,
+.step-field textarea,
+.step-field select {
+  font-size: 0.95rem;
+}
+
+.step-field input[type="file"] {
+  font-size: 0.86rem;
+}
+
+.step-field input[type="file"]::file-selector-button,
+.share-photo-input input[type="file"]::file-selector-button {
+  min-height: 36px;
+  margin-right: 10px;
+  padding: 0 14px;
+  border: 1px solid rgba(7, 157, 150, 0.22);
+  border-radius: 8px;
+  background: #e2f7f1;
+  color: #087f74;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
 }

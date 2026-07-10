@@ -6,8 +6,13 @@
 .diary-pet-profile small{color:#66817a}
 .diary-pet-avatar{display:grid;width:52px;height:52px;place-items:center;flex:0 0 auto;border-radius:50%;background:#d8f5ec;font-size:1.7rem}
 .diary-pet-bar select{min-height:42px;padding:0 34px 0 12px;border:1px solid #bfe2d7;border-radius:8px;background:#fff}
+
+.diary-segment{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:min(360px,100%);margin:12px 0 4px;padding:4px;border:1px solid #bfe2d7;border-radius:8px;background:#ecfbf6}
+.diary-segment button{min-height:40px;border:0;border-radius:6px;background:transparent;color:#55746d;font-weight:900}
+.diary-segment button.active{background:#13b8a6;color:#fff}
+
 .diary-workspace{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:24px;padding-top:8px}
-.diary-calendar-area,.diary-detail-panel,.record-list-panel,.reminder-panel{background:transparent;box-shadow:none}
+.diary-calendar-area,.diary-detail-panel,.record-list-panel{background:transparent;box-shadow:none}
 
 .calendar-month-bar{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:12px}
 .calendar-month-bar strong{text-align:center;font-size:1.15rem}
@@ -21,26 +26,45 @@
 .calendar-day.muted{opacity:.43}
 .day-head{display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0}
 .day-number{font-weight:900}
-.alarm-dot{display:inline-grid;min-width:18px;height:18px;place-items:center;border-radius:999px;background:#fff0ba;color:#705818;font-size:.68rem;font-weight:900;line-height:1}
 .calendar-tags{display:grid;gap:3px;min-width:0}
 .calendar-tags small{display:flex;align-items:center;gap:3px;min-width:0;padding:3px 5px;border-radius:4px;background:#dff5eb;color:#245d54;font-size:.72rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .calendar-tags small i{font-style:normal;flex:0 0 auto}
 .calendar-tags em{color:#718d86;font-size:.68rem;font-style:normal}
 
 .diary-detail-panel{display:grid;align-content:start;gap:24px;border-left:1px solid #cde9df;padding-left:22px}
-.record-list-panel header,.reminder-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px}
-.record-list-panel h2,.reminder-panel h2{margin:0;font-size:1.05rem}
+.record-list-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px}
+.record-list-panel h2{margin:0;font-size:1.05rem}
 .record-list-panel header span{color:#079b8c;font-weight:800}
-.reminder-panel{padding-top:4px;border-top:1px solid #cde9df}
-.reminder-panel header>div{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
-.reminder-panel header button{min-height:36px;padding:0 12px;border:0;border-radius:6px;background:#13b8a6;color:#fff;font-weight:800;white-space:nowrap}
-.record-list article,.reminder-list article{display:grid;grid-template-columns:36px minmax(0,1fr) 30px;align-items:start;gap:8px;padding:12px 0;border-bottom:1px solid #d7ece5}
-.record-list article p,.reminder-list article p{margin:3px 0 0;color:#5e7872;font-size:.82rem}
-.record-list article button,.reminder-list article button{width:30px;height:30px;border:0;background:transparent;color:#77928b;font-size:1.25rem}
-.record-emoji,.reminder-list article>span{font-size:1.25rem}
-.reminder-list article div{display:grid;min-width:0}
-.reminder-list small{color:#66817a}
+.record-list article{display:grid;grid-template-columns:36px minmax(0,1fr) 30px;align-items:start;gap:8px;padding:12px 0;border-bottom:1px solid #d7ece5}
+.record-list article p{margin:3px 0 0;color:#5e7872;font-size:.82rem}
+.record-list article button{width:30px;height:30px;border:0;background:transparent;color:#77928b;font-size:1.25rem}
+.record-emoji{font-size:1.25rem}
 .diary-empty{padding:18px 0;color:#6b847e}
+
+.alarm-board{display:grid;gap:18px;padding-top:12px}
+.alarm-board-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid #cde9df}
+.alarm-board-head h2{margin:0;font-size:1.25rem}
+.alarm-board-head p{margin:3px 0 0;color:#66817a}
+.alarm-board-head>div:last-child{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.alarm-board-head button,.alarm-actions button{min-height:36px;padding:0 12px;border:0;border-radius:6px;background:#13b8a6;color:#fff;font-weight:900}
+.alarm-board-head button.ghost{border:1px solid #9bd8cc;background:#fff;color:#078c80}
+.alarm-calendar-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start;padding-bottom:6px;border-bottom:1px solid #cde9df}
+.alarm-calendar{min-width:0}
+.alarm-day.selected{box-shadow:inset 0 0 0 2px #d8a520;background:#fff9df}
+.alarm-count{display:inline-grid;min-width:18px;height:18px;place-items:center;border-radius:999px;background:#f3c84d;color:#513d00;font-size:.68rem;font-weight:900;line-height:1}
+.calendar-tags small.alarm-calendar-tag{background:#fff0ba;color:#6d5618}
+.alarm-section{display:grid;gap:8px}
+.alarm-section h3{margin:0;font-size:1rem;color:#214c45}
+.alarm-list{display:grid;gap:8px}
+.alarm-list article{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid #d7ece5}
+.alarm-list article>span{font-size:1.3rem}
+.alarm-list article>div:nth-child(2){display:grid;min-width:0}
+.alarm-list strong,.alarm-list small,.alarm-list p{overflow:hidden;text-overflow:ellipsis}
+.alarm-list small{color:#66817a}
+.alarm-list p{margin:4px 0 0;color:#5e7872;font-size:.86rem}
+.alarm-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.alarm-actions button{min-height:32px;padding:0 10px;background:#e7f7f1;color:#087f74}
+.alarm-actions button:first-child{background:#13b8a6;color:#fff}
 
 .floating-add{position:fixed;right:24px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:14;width:58px;height:58px;border:0;border-radius:50%;background:#13b8a6;color:#fff;box-shadow:0 12px 25px #079b8c4d;font-size:2rem}
 .diary-overlay{position:fixed;inset:0;z-index:100}
@@ -90,14 +114,20 @@
   .calendar-day{min-height:82px;padding:5px}
   .calendar-tags small{padding:2px 3px}
   .diary-modal{border-radius:16px 16px 0 0}
+  .alarm-calendar-layout{grid-template-columns:1fr}
+  .alarm-list article{grid-template-columns:32px minmax(0,1fr)}
+  .alarm-actions{grid-column:2;justify-content:flex-start}
 }
 
 @media(max-width:760px){
   .diary-pet-bar{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding-top:4px}
   .diary-pet-bar select{width:100%;min-width:0}
+  .diary-segment{width:100%}
   .floating-add{right:20px;bottom:calc(96px + env(safe-area-inset-bottom));width:58px;height:58px}
   .diary-detail-panel{gap:18px}
-  .reminder-panel{padding-top:14px}
+  .alarm-board-head{display:grid}
+  .alarm-board-head>div:last-child{justify-content:stretch}
+  .alarm-board-head button{flex:1}
 }
 
 @media(max-width:520px){
@@ -105,9 +135,13 @@
   .calendar-tags small i{display:none}
   .calendar-tags small{font-size:.66rem}
   .calendar-weekdays span{padding:6px 0}
-  .alarm-dot{min-width:16px;height:16px;font-size:.62rem}
 }
 
 @media(min-width:761px){
   .floating-add{right:28px;bottom:calc(24px + env(safe-area-inset-bottom))}
 }
+
+.create-title h1{font-size:1.18rem;line-height:1.35}
+.create-content label,.choice-field>label,.photo-picker{font-size:1rem;line-height:1.35;font-weight:800}
+.create-content input,.create-content textarea,.choice-field input{font-size:.95rem}
+.photo-picker span{min-height:44px;font-size:.95rem;font-weight:800}
