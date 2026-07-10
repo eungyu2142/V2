@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import './App.css'
 import AuthScreen from './components/AuthScreen'
 import DiaryPage from './features/diary/DiaryPage'
+import type { PetRecord, PetRecordType } from './features/diary/diaryTypes'
 import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
 import { supabase } from './lib/supabase'
 
@@ -33,6 +34,7 @@ type QnaComment = {
   body: string
   createdAt: string
   mine: boolean
+  hospitalSnapshot?: HospitalSnapshot
 }
 
 type QnaPost = {
@@ -46,6 +48,8 @@ type QnaPost = {
   animalGroup?: string
   animalSpecies?: string
   image?: string
+  linkedRecordId?: string
+  attachedRecordSnapshot?: AttachedRecordSnapshot
   createdAt: string
   liked: boolean
   likes: number
@@ -78,6 +82,12 @@ type DraftItem = {
   payload: QnaPost | ShareItem
 }
 
+type AppProfile = {
+  username: string
+  nickname: string
+  avatarUrl: string
+}
+
 type Coordinates = {
   lat: number
   lng: number
@@ -95,6 +105,31 @@ type Hospital = {
   distanceKm?: number
   categories: Exclude<AnimalCategory, 'all'>[]
   matchedQueries?: string[]
+}
+
+type HospitalSnapshot = {
+  id?: string
+  name: string
+  address: string
+  phone: string
+  lat: number
+  lng: number
+  animalTags: string[]
+  naverLink: string
+  source: 'naver_local_search' | 'local_hospital_data'
+}
+
+type AttachedRecordSnapshot = {
+  recordId: string
+  petId: string
+  petName: string
+  animalGroup: string
+  animalSpecies: string
+  recordDate: string
+  recordType: PetRecordType
+  recordTypeLabel: string
+  summary: string
+  photoUrl?: string
 }
 
 type HospitalReview = {
@@ -221,33 +256,72 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [sideNavOpen, setSideNavOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateMode>(null)
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
+  const [mapFocusHospital, setMapFocusHospital] = useState<HospitalSnapshot | null>(null)
   const [pets, setPets] = useState<Pet[]>([])
   const [qnaPosts, setQnaPosts] = useState<QnaPost[]>([])
   const [shareItems, setShareItems] = useState<ShareItem[]>([])
   const [drafts, setDrafts] = useState<DraftItem[]>([])
+  const [profile, setProfile] = useState<AppProfile>({ username: '', nickname: '', avatarUrl: '' })
   const [dataError, setDataError] = useState('')
 
   useEffect(() => {
     let active = true
+    const loadRequired = async <T,>(table: string) => loadAppData<T>(table)
+    const loadOptional = async <T,>(table: string) => loadAppData<T>(table).catch((error) => {
+      console.warn(`Optional data load failed: ${table}`, error)
+      return [] as T[]
+    })
+
     Promise.all([
-      loadAppData<Pet>('pets'),
-      loadAppData<QnaPost>(qnaTable),
-      loadAppData<ShareItem>('share_items'),
-      loadAppData<DraftItem>('drafts'),
+      loadRequired<Pet>('pets'),
+      loadRequired<QnaPost>(qnaTable),
+      loadRequired<ShareItem>('share_items'),
+      loadOptional<DraftItem>('drafts'),
     ]).then(([nextPets, nextPosts, nextItems, nextDrafts]) => {
       if (!active) return
       setPets(nextPets.map(normalizePet))
       setQnaPosts(nextPosts)
       setShareItems(nextItems)
       setDrafts(nextDrafts)
-    }).catch(() => active && setDataError('데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'))
+    }).catch((error) => {
+      if (!active) return
+      console.error('Initial data load failed:', error)
+      setDataError('데이터를 불러오지 못했습니다. 잠시 후 다시 새로고침해 주세요.')
+    })
     return () => { active = false }
   }, [session.user.id])
+
+  useEffect(() => {
+    let active = true
+    supabase
+      .from('profiles')
+      .select('username, nickname, avatar_url')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) {
+          setDataError('프로필 정보를 불러오지 못했습니다.')
+          return
+        }
+        setProfile({
+          username: String(data?.username ?? session.user.user_metadata?.username ?? ''),
+          nickname: String(data?.nickname ?? session.user.user_metadata?.nickname ?? ''),
+          avatarUrl: String(data?.avatar_url ?? ''),
+        })
+      })
+    return () => { active = false }
+  }, [session.user.id, session.user.user_metadata])
 
   const moveTab = (tab: Tab) => {
     setActiveTab(tab)
     setCreateMode(null)
     setEditingPet(null)
+  }
+
+  const openHospitalOnMap = (hospital: HospitalSnapshot) => {
+    setMapFocusHospital(hospital)
+    moveTab('map')
   }
 
   const savePet = async (pet: Pet) => {
@@ -359,8 +433,28 @@ function AuthenticatedApp({ session }: { session: Session }) {
     }
   }
 
+  const saveProfile = async (nextProfile: AppProfile) => {
+    try {
+      const normalized = {
+        username: nextProfile.username.trim(),
+        nickname: nextProfile.nickname.trim(),
+        avatarUrl: nextProfile.avatarUrl.trim(),
+      }
+      const { error } = await supabase.from('profiles').upsert({
+        id: session.user.id,
+        username: normalized.username || null,
+        nickname: normalized.nickname || null,
+        avatar_url: normalized.avatarUrl || null,
+      })
+      if (error) throw error
+      setProfile(normalized)
+    } catch {
+      setDataError('프로필 정보를 저장하지 못했습니다.')
+    }
+  }
+
   if (createMode === 'pet') return <PetCreateFlow initialPet={editingPet} onClose={() => { setCreateMode(null); setEditingPet(null) }} onSave={savePet} />
-  if (createMode === 'post') return <QnaCreateFlow pets={pets} onClose={() => setCreateMode(null)} onSave={saveQnaPost} onSaveDraft={saveDraft} />
+  if (createMode === 'post') return <QnaCreateFlow userId={session.user.id} pets={pets} onClose={() => setCreateMode(null)} onSave={saveQnaPost} onSaveDraft={saveDraft} />
   if (createMode === 'share') return <ShareCreateFlow pets={pets} onClose={() => setCreateMode(null)} onSave={saveShareItem} onSaveDraft={saveDraft} />
 
   return (
@@ -403,13 +497,13 @@ function AuthenticatedApp({ session }: { session: Session }) {
         </div>
       </header>
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen focusHospital={mapFocusHospital} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">
           {activeTab === 'pets' && <PetsScreen pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={() => moveTab('diary')} />}
           {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} onAddPet={() => { setEditingPet(null); setCreateMode('pet') }} />}
-          {activeTab === 'qna' && <QnaScreen posts={qnaPosts} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} />}
+          {activeTab === 'qna' && <QnaScreen posts={qnaPosts} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onOpenHospital={openHospitalOnMap} />}
           {activeTab === 'share' && <ShareScreen items={shareItems} onItemsChange={setShareItems} onSaveItem={saveShareItem} onDeleteItem={deleteShareItem} />}
         </main>
       )}
@@ -429,29 +523,37 @@ function AuthenticatedApp({ session }: { session: Session }) {
       </nav>
 
       {dataError && <button className="data-error" type="button" onClick={() => setDataError('')}>{dataError}</button>}
-      {profileOpen && <ProfilePanel qnaPosts={qnaPosts} shareItems={shareItems} drafts={drafts} onClose={() => setProfileOpen(false)} onSignOut={() => supabase.auth.signOut()} onDeleteDraft={deleteDraft} onPublishDraft={publishDraft} />}
+      {profileOpen && <ProfilePanel profile={profile} qnaPosts={qnaPosts} shareItems={shareItems} drafts={drafts} onClose={() => setProfileOpen(false)} onSignOut={() => supabase.auth.signOut()} onSaveProfile={saveProfile} onDeleteDraft={deleteDraft} onPublishDraft={publishDraft} />}
     </div>
   )
 }
 
 function ProfilePanel({
+  profile,
   qnaPosts,
   shareItems,
   drafts,
   onClose,
   onSignOut,
+  onSaveProfile,
   onDeleteDraft,
   onPublishDraft,
 }: {
+  profile: AppProfile
   qnaPosts: QnaPost[]
   shareItems: ShareItem[]
   drafts: DraftItem[]
   onClose: () => void
   onSignOut: () => void
+  onSaveProfile: (profile: AppProfile) => void
   onDeleteDraft: (draftId: string) => void
   onPublishDraft: (draft: DraftItem) => void
 }) {
   const [view, setView] = useState<'menu' | 'profile' | 'posts' | 'drafts' | 'saved' | 'logout'>('menu')
+  const [username, setUsername] = useState(profile.username)
+  const [nickname, setNickname] = useState(profile.nickname)
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl)
+  const [profileSaved, setProfileSaved] = useState(false)
   const posts = [
     ...qnaPosts.map((post) => ({ id: post.id, type: 'QNA', title: post.title, body: post.body })),
     ...shareItems.map((item) => ({ id: item.id, type: shareCategoryLabels[item.category ?? 'other'], title: item.title, body: item.memo })),
@@ -462,21 +564,35 @@ function ProfilePanel({
       <button className="overlay-dim" type="button" onClick={onClose} aria-label="close" />
       <section className="profile-panel">
         <div className="profile-panel-header">
-          {view !== 'menu' && <button className="profile-back" type="button" onClick={() => setView('menu')}>뒤로</button>}
+          {view !== 'menu' && <button className="profile-back" type="button" onClick={() => setView('menu')}>{'\uB4A4\uB85C'}</button>}
           <h2>&#54532;&#47196;&#54596;</h2>
         </div>
         {view === 'menu' && (
           <>
             <button type="button" onClick={() => setView('profile')}>&#45236; &#51221;&#48372; &#49688;&#51221;</button>
             <button type="button" onClick={() => setView('posts')}>&#45236;&#44032; &#50420; &#44544;</button>
-            <button type="button" onClick={() => setView('drafts')}>임시저장 <span>{drafts.length}</span></button>
+            <button type="button" onClick={() => setView('drafts')}>{'\uC784\uC2DC\uC800\uC7A5'}<span>{drafts.length}</span></button>
             <button type="button" onClick={() => setView('saved')}>&#51200;&#51109;&#54620; &#48337;&#50896;</button>
             <button type="button" onClick={() => setView('logout')}>&#47196;&#44536;&#50500;&#50883;</button>
           </>
         )}
         {view === 'profile' && (
           <div className="profile-panel-content">
-            <p>프로필 사진, 닉네임, 계정 관리는 DB 프로필 테이블과 연결할 예정입니다.</p>
+            <label>
+              <span>{'\uC544\uC774\uB514'}</span>
+              <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="username" />
+            </label>
+            <label>
+              <span>{'\uB2C9\uB124\uC784'}</span>
+              <input value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="nickname" />
+            </label>
+            <label>
+              <span>{'\uD504\uB85C\uD544 \uC0AC\uC9C4 URL'}</span>
+              <input value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://..." />
+            </label>
+            {avatarUrl && <img className="profile-avatar-preview" src={avatarUrl} alt="profile preview" />}
+            <button type="button" onClick={() => { onSaveProfile({ username, nickname, avatarUrl }); setProfileSaved(true) }}>{'\uC800\uC7A5'}</button>
+            {profileSaved && <p>{'\uD504\uB85C\uD544 \uC815\uBCF4\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.'}</p>}
           </div>
         )}
         {view === 'posts' && (
@@ -529,7 +645,7 @@ function ProfilePanel({
   )
 }
 
-function MapScreen() {
+function MapScreen({ focusHospital }: { focusHospital?: HospitalSnapshot | null }) {
   const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<AnimalCategory>('all')
@@ -558,6 +674,21 @@ function MapScreen() {
   const selectedHospital = filteredHospitals.find((hospital) => hospital.id === selectedHospitalId) ?? null
   const selectedHospitalReviews = selectedHospital ? reviews[selectedHospital.id] ?? [] : []
   const isReviewPanelOpen = Boolean(selectedHospital && reviewPanelHospitalId === selectedHospital.id)
+
+  useEffect(() => {
+    if (!focusHospital) return
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      const hospital = hospitalFromSnapshot(focusHospital)
+      setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
+      setSelectedHospitalId(hospital.id)
+      setReviewPanelHospitalId(null)
+      setQuery(hospital.name)
+      setSelectedCategory(hospital.categories[0] ?? 'all')
+    })
+    return () => { cancelled = true }
+  }, [focusHospital])
 
   useEffect(() => {
     if (!naverMapClientId) return
@@ -619,6 +750,16 @@ function MapScreen() {
     map.setCenter(position)
     map.setZoom(14)
   }, [currentLocation])
+
+  useEffect(() => {
+    const naver = window.naver
+    const map = mapInstanceRef.current
+    const hospital = selectedHospital
+    if (!naver || !map || !hospital) return
+    const position = new naver.maps.LatLng(hospital.lat, hospital.lng)
+    map.setCenter(position)
+    map.setZoom(16)
+  }, [selectedHospital])
 
   useEffect(() => {
     const naver = window.naver
@@ -857,11 +998,13 @@ function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary }: { pets: Pet[]
   )
 }
 
-function QnaScreen({ posts, onChange, onDeletePost }: { posts: QnaPost[]; onChange: (posts: QnaPost[]) => void; onDeletePost: (postId: string) => void }) {
+function QnaScreen({ posts, onChange, onDeletePost, onOpenHospital }: { posts: QnaPost[]; onChange: (posts: QnaPost[]) => void; onDeletePost: (postId: string) => void; onOpenHospital: (hospital: HospitalSnapshot) => void }) {
   const [category, setCategory] = useState<'전체' | QnaCategory>('전체')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
+  const [attachedHospital, setAttachedHospital] = useState<HospitalSnapshot | null>(null)
+  const [hospitalPickerOpen, setHospitalPickerOpen] = useState(false)
   const selected = posts.find((post) => post.id === selectedId)
   const filtered = posts.filter((post) => {
     const matchesCategory = category === '전체' || post.category === category
@@ -873,9 +1016,10 @@ function QnaScreen({ posts, onChange, onDeletePost }: { posts: QnaPost[]; onChan
   const toggleLike = (post: QnaPost) => updatePost({ ...post, liked: !post.liked, likes: Math.max(0, post.likes + (post.liked ? -1 : 1)) })
   const addComment = (event: FormEvent) => {
     event.preventDefault()
-    if (!selected || !comment.trim()) return
-    updatePost({ ...selected, comments: [...selected.comments, { id: crypto.randomUUID(), author: '나', body: comment.trim(), createdAt: new Date().toISOString(), mine: true }] })
+    if (!selected || (!comment.trim() && !attachedHospital)) return
+    updatePost({ ...selected, comments: [...selected.comments, { id: crypto.randomUUID(), author: '나', body: comment.trim(), createdAt: new Date().toISOString(), mine: true, hospitalSnapshot: attachedHospital ?? undefined }] })
     setComment('')
+    setAttachedHospital(null)
   }
 
   if (selected) {
@@ -891,6 +1035,7 @@ function QnaScreen({ posts, onChange, onDeletePost }: { posts: QnaPost[]; onChan
           <h2>{selected.title}</h2>
           <div className="qna-author"><strong>{selected.author}</strong><span>{formatQnaAnimal(selected)} · {formatQnaDate(selected.createdAt)}</span></div>
           {selected.image && <img src={selected.image} alt="" />}
+          {selected.attachedRecordSnapshot && <RecordAttachCard record={selected.attachedRecordSnapshot} mode="posted" />}
           <p>{selected.body}</p>
           <button className={`qna-like ${selected.liked ? 'active' : ''}`} type="button" onClick={() => toggleLike(selected)}>♡ {selected.likes}</button>
         </article>
@@ -899,12 +1044,23 @@ function QnaScreen({ posts, onChange, onDeletePost }: { posts: QnaPost[]; onChan
           {selected.comments.map((item) => (
             <article key={item.id}>
               <div><strong>{item.author}</strong><time>{formatQnaDate(item.createdAt)}</time></div>
-              <p>{item.body}</p>
+              {item.body && <p>{item.body}</p>}
+              {item.hospitalSnapshot && <HospitalAttachCard hospital={item.hospitalSnapshot} mode="posted" onOpen={() => onOpenHospital(item.hospitalSnapshot!)} />}
               {item.mine && <button type="button" onClick={() => updatePost({ ...selected, comments: selected.comments.filter((commentItem) => commentItem.id !== item.id) })}>삭제</button>}
             </article>
           ))}
-          <form onSubmit={addComment}><input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요" aria-label="댓글" /><button type="submit">등록</button></form>
+          <form onSubmit={addComment}>
+            {attachedHospital && <HospitalAttachCard hospital={attachedHospital} mode="draft" onRemove={() => setAttachedHospital(null)} />}
+            <div className="qna-comment-tools">
+              <button type="button" onClick={() => setHospitalPickerOpen(true)}>병원 첨부</button>
+            </div>
+            <div className="qna-comment-input-row">
+              <input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요" aria-label="댓글" />
+              <button type="submit">등록</button>
+            </div>
+          </form>
         </section>
+        {hospitalPickerOpen && <HospitalPicker onClose={() => setHospitalPickerOpen(false)} onSelect={(hospital) => { setAttachedHospital(toHospitalSnapshot(hospital)); setHospitalPickerOpen(false) }} />}
       </section>
     )
   }
@@ -917,7 +1073,6 @@ function QnaScreen({ posts, onChange, onDeletePost }: { posts: QnaPost[]; onChan
       query={query}
       onQueryChange={setQuery}
       placeholder="제목, 내용, 작성자, 동물 종"
-      controlsOrder="filters-first"
       filters={(['전체', '정보', '동물 병원', '건강/증상', '기타'] as const).map((item) => ({
         id: item,
         label: item,
@@ -1035,6 +1190,145 @@ function ShareScreen({ items, onItemsChange, onSaveItem, onDeleteItem }: { items
   )
 }
 
+function HospitalPicker({ onClose, onSelect }: { onClose: () => void; onSelect: (hospital: Hospital) => void }) {
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<AnimalCategory>('all')
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [status, setStatus] = useState('병원명이나 지역을 입력해 추천할 병원을 찾아보세요.')
+  const [loading, setLoading] = useState(false)
+
+  const submit = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault()
+    if (loading) return
+    setLoading(true)
+    setStatus('병원을 찾는 중이에요.')
+    try {
+      const results = await searchHospitals(buildHospitalSearchQuery(query, category), category, null)
+      setHospitals(results)
+      setStatus(results.length ? `${results.length}곳을 찾았어요.` : '검색 결과가 없어요. 검색어를 바꿔보세요.')
+    } catch (error) {
+      console.error('Hospital picker search error:', error)
+      setStatus(error instanceof Error ? error.message : '병원 검색 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="hospital-picker-overlay">
+      <button className="hospital-picker-dim" type="button" aria-label="병원 선택 닫기" onClick={onClose} />
+      <section className="hospital-picker-sheet" role="dialog" aria-modal="true" aria-label="지도에서 병원 가져오기">
+        <div className="hospital-picker-handle" aria-hidden="true" />
+        <header>
+          <div><strong>지도에서 병원 가져오기</strong><p>댓글에 추천할 특수동물 병원을 첨부합니다.</p></div>
+          <button type="button" aria-label="닫기" onClick={onClose}>×</button>
+        </header>
+        <form className="hospital-picker-search" onSubmit={submit}>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="지역명, 병원명, 특수동물 병원" />
+          <button type="submit" disabled={loading}>{loading ? '검색 중' : '검색'}</button>
+        </form>
+        <div className="hospital-picker-tags" aria-label="동물 분류">
+          {animalCategoryOptions.map((item) => (
+            <button className={category === item ? 'active' : ''} type="button" key={item} onClick={() => setCategory(item)}>{animalCategoryLabels[item]}</button>
+          ))}
+        </div>
+        <p className="hospital-picker-status">{status}</p>
+        <div className="hospital-picker-list">
+          {hospitals.map((hospital) => (
+            <button type="button" key={hospital.id} onClick={() => onSelect(hospital)}>
+              <strong>{hospital.name}</strong>
+              <span>{hospital.address || hospital.roadAddress || '주소 정보 없음'}</span>
+              <small>{hospital.phone || '전화번호 없음'}</small>
+              <div>{hospital.categories.map((item) => <em key={item}>{animalCategoryLabels[item]}</em>)}</div>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function RecordPicker({ pets, records, initialPetId, onClose, onSelect }: { pets: Pet[]; records: PetRecord[]; initialPetId: string; onClose: () => void; onSelect: (record: PetRecord, pet: Pet) => void }) {
+  const [selectedPetId, setSelectedPetId] = useState(initialPetId || pets[0]?.id || '')
+  const selectedPet = pets.find((pet) => pet.id === selectedPetId)
+  const petRecords = records
+    .filter((record) => record.petId === selectedPetId)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+
+  return (
+    <div className="record-picker-overlay">
+      <button className="record-picker-dim" type="button" aria-label="기록 선택 닫기" onClick={onClose} />
+      <section className="record-picker-sheet" role="dialog" aria-modal="true" aria-label="QNA에 기록 첨부">
+        <div className="hospital-picker-handle" aria-hidden="true" />
+        <header>
+          <div><strong>기록 첨부</strong><p>질문에 참고할 내 펫 기록을 선택합니다.</p></div>
+          <button type="button" aria-label="닫기" onClick={onClose}>×</button>
+        </header>
+        {pets.length === 0 ? (
+          <p className="record-picker-empty">등록된 마이 펫이 없습니다.</p>
+        ) : (
+          <>
+            <div className="record-picker-pets">
+              {pets.map((pet) => (
+                <button className={selectedPetId === pet.id ? 'active' : ''} type="button" key={pet.id} onClick={() => setSelectedPetId(pet.id)}>
+                  <strong>{pet.name}</strong>
+                  <span>{animalCategoryLabels[pet.group]} · {pet.species}</span>
+                </button>
+              ))}
+            </div>
+            <div className="record-picker-list">
+              {selectedPet && petRecords.length === 0 && <p className="record-picker-empty">이 펫의 기록이 없습니다.</p>}
+              {selectedPet && petRecords.map((record) => (
+                <button type="button" key={record.id} onClick={() => onSelect(record, selectedPet)}>
+                  {record.photoUrl && <img src={record.photoUrl} alt="" />}
+                  <div>
+                    <span>{formatRecordDate(record.date)} · {recordTypeLabels[record.type]}</span>
+                    <strong>{summarizeRecord(record)}</strong>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function RecordAttachCard({ record, mode, onRemove }: { record: AttachedRecordSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void }) {
+  return (
+    <div className={`record-attach-card ${mode}`}>
+      {record.photoUrl && <img src={record.photoUrl} alt="" />}
+      <div>
+        <span>{record.petName} · {record.animalGroup} · {record.animalSpecies}</span>
+        <strong>{formatRecordDate(record.recordDate)} · {record.recordTypeLabel}</strong>
+        <p>{record.summary}</p>
+      </div>
+      {mode === 'draft' && <button type="button" aria-label="첨부 기록 취소" onClick={onRemove}>×</button>}
+    </div>
+  )
+}
+
+function HospitalAttachCard({ hospital, mode, onRemove, onOpen }: { hospital: HospitalSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
+  const content = (
+    <>
+      <div>
+        <strong>{hospital.name}</strong>
+        <span>{hospital.address || '주소 정보 없음'}</span>
+        <small>{hospital.phone || '전화번호 없음'}</small>
+      </div>
+      <div className="hospital-attach-tags">{hospital.animalTags.map((tag) => <em key={tag}>{tag}</em>)}</div>
+    </>
+  )
+
+  return (
+    <div className={`hospital-attach-card ${mode}`}>
+      {mode === 'posted' ? <button type="button" onClick={onOpen} aria-label={`${hospital.name} 지도에서 보기`}>{content}</button> : content}
+      {mode === 'draft' && <button className="hospital-attach-remove" type="button" aria-label="첨부 병원 취소" onClick={onRemove}>×</button>}
+    </div>
+  )
+}
+
 function ItemActions({ onDelete }: { onDelete: () => void }) {
   return (
     <div className="item-actions">
@@ -1071,7 +1365,7 @@ function PetCreateFlow({ initialPet, onClose, onSave }: { initialPet: Pet | null
       {step === 0 && <StepSelect label="종류" value={group} options={animalCategoryOptions.filter((item) => item !== 'all')} labels={animalCategoryLabels} onChange={(value) => { setGroup(value as Exclude<AnimalCategory, 'all'>); setSpecies('') }} />}
       {step === 1 && <StepSelect label="종" value={species} options={petSpeciesOptions[group]} onChange={setSpecies} />}
       {step === 2 && <StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} />}
-      {step === 3 && <><StepText label="이름(닉네임)" value={name} onChange={setName} placeholder="예: 레오" /><label className="step-field photo-field"><span>사진 (선택)</span><input type="file" accept="image/*" onChange={attachPhoto} />{photo && <img src={photo} alt="선택한 펫 미리보기" />}</label></>}
+      {step === 3 && <><StepText label="이름(닉네임)" value={name} onChange={setName} placeholder="예: 레오" /><label className="step-field photo-field attach-file-field"><span>사진 (선택)</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={attachPhoto} /><small>{photo ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small>{photo && <img src={photo} alt="선택한 펫 미리보기" />}</label></>}
       {step === 4 && <div className="step-field"><span>체중 (선택)</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="체중 입력" /><div className="weight-unit">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></div>}
       {step === 5 && <StepDate label="생일 (선택)" value={birthday} onChange={setBirthday} />}
       {step === 6 && <StepDate label="입양일 (선택)" value={adoptionDate} onChange={setAdoptionDate} />}
@@ -1081,13 +1375,16 @@ function PetCreateFlow({ initialPet, onClose, onSave }: { initialPet: Pet | null
   )
 }
 
-function QnaCreateFlow({ pets, onClose, onSave, onSaveDraft }: { pets: Pet[]; onClose: () => void; onSave: (post: QnaPost) => void; onSaveDraft: (draft: DraftItem) => void }) {
+function QnaCreateFlow({ userId, pets, onClose, onSave, onSaveDraft }: { userId: string; pets: Pet[]; onClose: () => void; onSave: (post: QnaPost) => void; onSaveDraft: (draft: DraftItem) => void }) {
   const [step, setStep] = useState(0)
   const [petId, setPetId] = useState('')
   const [category, setCategory] = useState<QnaCategory>('정보')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [image, setImage] = useState<string>()
+  const [records, setRecords] = useState<PetRecord[]>([])
+  const [recordPickerOpen, setRecordPickerOpen] = useState(false)
+  const [attachedRecord, setAttachedRecord] = useState<AttachedRecordSnapshot | null>(null)
   const pet = pets.find((item) => item.id === petId)
   const hasNoAnimal = petId === 'none'
   const canNext = step === 1 ? Boolean(petId) : step < 2 || (title.trim().length > 0 && body.trim().length > 0)
@@ -1104,11 +1401,26 @@ function QnaCreateFlow({ pets, onClose, onSave, onSaveDraft }: { pets: Pet[]; on
     animalSpecies: selectedSpecies.trim(),
     petId: hasNoAnimal ? '' : petId,
     image,
+    linkedRecordId: attachedRecord?.recordId,
+    attachedRecordSnapshot: attachedRecord ?? undefined,
     createdAt: new Date().toISOString(),
     liked: false,
     likes: 0,
     comments: [],
   })
+
+  useEffect(() => {
+    let active = true
+    loadAppData<PetRecord>('care_records')
+      .then((nextRecords) => {
+        if (active) setRecords(nextRecords)
+      })
+      .catch(() => {
+        if (active) setRecords([])
+      })
+    return () => { active = false }
+  }, [userId])
+
   const finish = () => onSave(buildPost())
   const saveDraft = () => {
     const post = buildPost()
@@ -1144,11 +1456,16 @@ function QnaCreateFlow({ pets, onClose, onSave, onSaveDraft }: { pets: Pet[]; on
       {step === 2 && <div className="qna-compose-fields">
         <StepText label="제목" value={title} onChange={setTitle} placeholder="질문 제목을 입력하세요" />
         <StepTextarea label="내용" value={body} onChange={setBody} placeholder="궁금한 내용을 자세히 적어 주세요" />
-        <label className="step-field"><span>사진 첨부 (선택)</span><input type="file" accept="image/*" onChange={attachImage} /></label>
+        <label className="step-field attach-file-field"><span>사진 첨부 (선택)</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={attachImage} /><small>{image ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small></label>
         {image && <img className="qna-compose-preview" src={image} alt="첨부 사진 미리보기" />}
+        <div className="qna-compose-tools">
+          <button type="button" onClick={() => setRecordPickerOpen(true)}>기록 첨부</button>
+        </div>
+        {attachedRecord && <RecordAttachCard record={attachedRecord} mode="draft" onRemove={() => setAttachedRecord(null)} />}
       </div>}
       {step === 2 && <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>}
       <button className="step-primary" type="button" disabled={!canNext} onClick={step === 2 ? finish : () => setStep((value) => value + 1)}>{step === 2 ? '등록' : '다음'}</button>
+      {recordPickerOpen && <RecordPicker pets={pets} records={records} initialPetId={!hasNoAnimal ? petId : ''} onClose={() => setRecordPickerOpen(false)} onSelect={(record, recordPet) => { setAttachedRecord(toAttachedRecordSnapshot(record, recordPet)); setRecordPickerOpen(false) }} />}
     </StepShell>
   )
 }
@@ -1172,6 +1489,42 @@ function formatQnaAnimal(post: QnaPost) {
   const group = post.animalGroup || '분류 미지정'
   const species = post.animalSpecies || post.animal || '종 미지정'
   return `${group} · ${species}`
+}
+
+const recordTypeLabels: Record<PetRecordType, string> = {
+  food: '먹이',
+  weight: '무게',
+  shed: '탈피',
+  poop: '배변',
+  cleaning: '청소',
+  hospital: '병원',
+  other: '기록',
+}
+
+function toAttachedRecordSnapshot(record: PetRecord, pet: Pet): AttachedRecordSnapshot {
+  return {
+    recordId: record.id,
+    petId: pet.id,
+    petName: pet.name,
+    animalGroup: animalCategoryLabels[pet.group],
+    animalSpecies: pet.species,
+    recordDate: record.date,
+    recordType: record.type,
+    recordTypeLabel: recordTypeLabels[record.type],
+    summary: summarizeRecord(record),
+    photoUrl: record.photoUrl,
+  }
+}
+
+function summarizeRecord(record: PetRecord) {
+  if (record.memo?.trim()) return record.memo.trim()
+  if (record.type === 'food' && record.foods?.length) return record.foods.join(', ')
+  if (record.type === 'weight' && record.weight !== undefined) return `${record.weight}g`
+  return `${recordTypeLabels[record.type]} 기록`
+}
+
+function formatRecordDate(value: string) {
+  return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value))
 }
 
 function ShareCreateFlow({ pets, onClose, onSave, onSaveDraft }: { pets: Pet[]; onClose: () => void; onSave: (item: ShareItem) => void; onSaveDraft: (draft: DraftItem) => void }) {
@@ -1212,7 +1565,7 @@ function ShareCreateFlow({ pets, onClose, onSave, onSaveDraft }: { pets: Pet[]; 
       {step === 1 && shareType === 'animal' && <div className="share-animal-picker"><span className="step-heading">동물 선택</span><div className="share-source-tabs"><button className={source === 'pet' ? 'active' : ''} type="button" onClick={() => setSource('pet')}>마이 펫</button><button className={source === 'custom' ? 'active' : ''} type="button" onClick={() => setSource('custom')}>다른 종 직접 입력</button></div>{source === 'pet' ? <div className="share-pet-grid">{pets.length ? pets.map((pet) => <button className={petId === pet.id ? 'active' : ''} type="button" key={pet.id} onClick={() => setPetId(pet.id)}><strong>{pet.name}</strong><span>{pet.species}</span></button>) : <div className="share-animal-empty"><strong>등록된 마이 펫이 없습니다</strong><p>다른 종 직접 입력을 선택해 주세요.</p></div>}</div> : <><StepSelect label="동물 분류" value={category} options={['reptile', 'amphibian', 'rodent', 'bird', 'other']} labels={shareCategoryLabels} onChange={(value) => setCategory(value as ShareCategory)} /><StepText label="종" value={species} onChange={setSpecies} placeholder="예: 크레스티드 게코" /><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} /></>}</div>}
       {step === 1 && shareType === 'item' && <div className="share-category-picker"><span className="step-heading">물품 카테고리</span><div className="share-category-section">{(['food', 'supplies'] as const).map((value) => <button className={category === value ? 'active' : ''} type="button" key={value} onClick={() => { setCategory(value); setSubcategory(shareSubcategories[value][0]) }}>{shareCategoryLabels[value]}</button>)}</div><div className="share-subcategory-section">{shareSubcategories[category === 'supplies' ? 'supplies' : 'food'].map((value) => <button className={subcategory === value ? 'active' : ''} type="button" key={value} onClick={() => setSubcategory(value)}>{value}</button>)}</div></div>}
       {step === 2 && <div className="share-create-fields"><StepText label="머리글" value={title} onChange={setTitle} placeholder="나눔 내용을 한눈에 알 수 있게 입력" /><StepText label="지역 (선택)" value={area} onChange={setArea} placeholder="예: 서울 강남" /></div>}
-      {step === 3 && <label className="share-photo-input"><span className="step-heading">사진</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setImageUrl(String(reader.result)); reader.readAsDataURL(file) }} />{imageUrl && <img src={imageUrl} alt="첨부 미리보기" />}</label>}
+      {step === 3 && <label className="share-photo-input attach-file-field"><span className="step-heading">사진</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setImageUrl(String(reader.result)); reader.readAsDataURL(file) }} /><small>{imageUrl ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small>{imageUrl && <img src={imageUrl} alt="첨부 미리보기" />}</label>}
       {step === 4 && <StepTextarea label="설명" value={memo} onChange={setMemo} placeholder="상태, 나눔 방식, 특징 등을 입력" />}
       {step === 4 && <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>}
       <button className="step-primary" type="button" disabled={!canNext} onClick={step === 4 ? finish : () => setStep((value) => value + 1)}>{step === 4 ? '등록' : '다음'}</button>
@@ -1421,6 +1774,38 @@ function transformHospitalItems(items: Array<Record<string, unknown>>, query: st
   return dedupeHospitals(items
     .map((item, index) => transformHospitalItem(item, index, query, category))
     .filter((hospital): hospital is Hospital => Boolean(hospital)))
+}
+
+function toHospitalSnapshot(hospital: Hospital): HospitalSnapshot {
+  return {
+    id: hospital.id,
+    name: hospital.name,
+    address: hospital.address || hospital.roadAddress || '',
+    phone: hospital.phone,
+    lat: hospital.lat,
+    lng: hospital.lng,
+    animalTags: hospital.categories.map((category) => animalCategoryLabels[category]),
+    naverLink: hospital.link,
+    source: hospital.link ? 'naver_local_search' : 'local_hospital_data',
+  }
+}
+
+function hospitalFromSnapshot(snapshot: HospitalSnapshot): Hospital {
+  const categories = snapshot.animalTags
+    .map((tag) => Object.entries(animalCategoryLabels).find(([, label]) => label === tag)?.[0])
+    .filter((value): value is Exclude<AnimalCategory, 'all'> => value === 'reptile' || value === 'bird' || value === 'rodent' || value === 'amphibian' || value === 'other')
+
+  return {
+    id: snapshot.id || `${snapshot.name}-${snapshot.lat}-${snapshot.lng}`,
+    name: snapshot.name,
+    address: snapshot.address,
+    phone: snapshot.phone,
+    link: snapshot.naverLink,
+    lat: snapshot.lat,
+    lng: snapshot.lng,
+    categories: categories.length ? categories : ['other'],
+    matchedQueries: [snapshot.name],
+  }
 }
 
 function transformHospitalItem(item: Record<string, unknown>, index: number, query: string, category: AnimalCategory): Hospital | null {

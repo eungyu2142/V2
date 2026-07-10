@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
 import type { PetRecord, PetRecordType } from './diaryTypes'
 import { toDateKey } from './mockDiaryData'
@@ -79,6 +79,8 @@ export default function DiaryPage({
   const [createType, setCreateType] = useState<PetRecordType | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
   const [petWarningOpen, setPetWarningOpen] = useState(false)
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => getNotificationPermission())
+  const firedReminderKeys = useRef<Set<string>>(new Set())
 
   const selectedPet = pets.find((pet) => pet.id === selectedPetId) ?? pets[0]
   const effectivePetId = selectedPet?.id ?? ''
@@ -102,6 +104,33 @@ export default function DiaryPage({
     }
   }, [userId])
 
+  useEffect(() => {
+    firedReminderKeys.current = new Set(readFiredReminderKeys())
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (getNotificationPermission() !== 'granted') return
+
+      const now = new Date()
+      const todayKey = toDateKey(now)
+      const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+      reminders
+        .filter((reminder) => reminder.isActive && reminder.reminderTime === nowTime && reminderOccursOn(reminder, now))
+        .forEach((reminder) => {
+          const key = `${todayKey}:${reminder.id}:${reminder.reminderTime}`
+          if (firedReminderKeys.current.has(key)) return
+
+          firedReminderKeys.current.add(key)
+          writeFiredReminderKeys([...firedReminderKeys.current].slice(-80))
+          showReminderNotification(reminder, pets.find((pet) => pet.id === reminder.petId)?.name)
+        })
+    }, 15000)
+
+    return () => window.clearInterval(timer)
+  }, [pets, reminders])
+
   const saveRecordList = (next: PetRecord[]) => {
     const removed = records.find((record) => !next.some((item) => item.id === record.id))
     const added = next.find((record) => !records.some((item) => item.id === record.id))
@@ -123,6 +152,17 @@ export default function DiaryPage({
     setReminders(next)
     if (removed) void deleteAppData('feeding_reminders', removed.id)
     if (added) void saveAppData('feeding_reminders', userId, added, { pet_id: added.petId })
+  }
+
+  const deleteReminder = (reminderId: string) => {
+    setReminders((items) => items.filter((item) => item.id !== reminderId))
+    void deleteAppData('feeding_reminders', reminderId)
+  }
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return
+    const permission = await Notification.requestPermission()
+    setNotificationPermission(permission)
   }
 
   const openRecordTypes = () => {
@@ -230,7 +270,10 @@ export default function DiaryPage({
           <section className="reminder-panel">
             <header>
               <h2>예정 알람</h2>
-              <button type="button" onClick={() => selectedPet ? setReminderFormOpen(true) : setPetWarningOpen(true)}>+ 알람 추가</button>
+              <div>
+                {notificationPermission === 'default' && <button type="button" onClick={requestNotificationPermission}>알림 켜기</button>}
+                <button type="button" onClick={() => selectedPet ? setReminderFormOpen(true) : setPetWarningOpen(true)}>+ 알람 추가</button>
+              </div>
             </header>
             {dayReminders.length ? (
               <div className="reminder-list">
@@ -242,7 +285,7 @@ export default function DiaryPage({
                       <small>{formatReminderSchedule(reminder)}</small>
                       {reminder.memo && <p>{reminder.memo}</p>}
                     </div>
-                    <button aria-label="알람 삭제" title="삭제" onClick={() => saveReminderList(reminders.filter((item) => item.id !== reminder.id))}>×</button>
+                    <button aria-label="알람 삭제" title="삭제" onClick={() => deleteReminder(reminder.id)}>×</button>
                   </article>
                 ))}
               </div>
@@ -562,6 +605,41 @@ function formatReminderSchedule(reminder: Reminder) {
   return reminder.scheduleType === 'once'
     ? `${reminder.reminderDate} ${reminder.reminderTime}`
     : `${reminder.weekdays.map((day) => weekdays[day]).join('·')} ${reminder.reminderTime}`
+}
+
+function getNotificationPermission(): NotificationPermission {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'denied'
+  return Notification.permission
+}
+
+function showReminderNotification(reminder: Reminder, petName?: string) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return
+
+  const typeLabel = reminderMeta[reminder.reminderType].label
+  const body = [petName, typeLabel, reminder.memo].filter(Boolean).join(' · ')
+  new Notification(reminder.title, {
+    body,
+    tag: `reminder-${reminder.id}`,
+  })
+
+  if ('vibrate' in navigator) navigator.vibrate([200, 80, 200])
+}
+
+function readFiredReminderKeys() {
+  try {
+    const stored = localStorage.getItem('exocare-fired-reminders')
+    return stored ? JSON.parse(stored) as string[] : []
+  } catch {
+    return []
+  }
+}
+
+function writeFiredReminderKeys(keys: string[]) {
+  try {
+    localStorage.setItem('exocare-fired-reminders', JSON.stringify(keys))
+  } catch {
+    // Ignore storage failures; duplicate prevention is only a convenience.
+  }
 }
 
 function formatDate(date: string) {

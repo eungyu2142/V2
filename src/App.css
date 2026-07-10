@@ -294,6 +294,9 @@ textarea {
 
 .side-nav-profile {
   align-self: end;
+  display: grid !important;
+  visibility: visible;
+  margin-top: auto;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   background: rgba(255, 255, 255, 0.08) !important;
   color: white !important;
@@ -1184,16 +1187,361 @@ textarea {
 
 .qna-comments form {
   display: grid;
-  grid-template-columns: 1fr 62px;
-  gap: 7px;
+  gap: 8px;
   margin-top: 16px;
 }
 
-.qna-comments form button {
+.qna-comment-tools {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.qna-comment-tools button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid rgba(7, 157, 150, 0.25);
+  border-radius: 999px;
+  background: #f5fffb;
+  color: #087f83;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.qna-comment-input-row {
+  display: grid;
+  grid-template-columns: 1fr 62px;
+  gap: 7px;
+}
+
+.qna-comment-input-row button {
   border: 0;
   border-radius: 8px;
   background: #079d96;
   color: white;
+  font-weight: 900;
+}
+
+.hospital-attach-card {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(7, 157, 150, 0.22);
+  border-radius: 8px;
+  background: #f4fffb;
+}
+
+.hospital-attach-card.posted {
+  margin-right: 44px;
+}
+
+.hospital-attach-card > button:first-child {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.hospital-attach-card div {
+  display: grid;
+  gap: 4px;
+}
+
+.hospital-attach-card strong {
+  color: #14302e;
+  font-size: 0.92rem;
+}
+
+.hospital-attach-card span,
+.hospital-attach-card small {
+  color: #5f7872;
+  font-size: 0.78rem;
+}
+
+.hospital-attach-tags {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 5px !important;
+}
+
+.hospital-attach-tags em {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #d9f3ea;
+  color: #087f83;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.hospital-attach-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #687d78;
+  font-weight: 900;
+}
+
+.hospital-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  align-items: end;
+}
+
+.hospital-picker-dim,
+.record-picker-dim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(12, 34, 31, 0.36);
+}
+
+.record-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  align-items: end;
+}
+
+.hospital-picker-sheet,
+.record-picker-sheet {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  width: min(100%, 720px);
+  max-height: min(82vh, 720px);
+  margin: 0 auto;
+  padding: 10px 18px 20px;
+  overflow-y: auto;
+  border-radius: 18px 18px 0 0;
+  background: #fffdfa;
+  box-shadow: 0 -18px 40px rgba(20, 48, 46, 0.18);
+}
+
+.hospital-picker-handle {
+  width: 44px;
+  height: 4px;
+  margin: 0 auto 4px;
+  border-radius: 999px;
+  background: rgba(20, 48, 46, 0.16);
+}
+
+.hospital-picker-sheet header,
+.record-picker-sheet header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hospital-picker-sheet header strong,
+.record-picker-sheet header strong {
+  color: #14302e;
+  font-size: 1.05rem;
+}
+
+.hospital-picker-sheet header p,
+.hospital-picker-status,
+.record-picker-sheet header p,
+.record-picker-empty {
+  margin: 4px 0 0;
+  color: #718680;
+  font-size: 0.82rem;
+}
+
+.hospital-picker-sheet header button,
+.record-picker-sheet header button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #edf8f3;
+  color: #14302e;
+  font-size: 1.2rem;
+}
+
+.record-picker-pets {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.record-picker-pets button {
+  flex: 0 0 145px;
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid rgba(20, 48, 46, 0.12);
+  border-radius: 8px;
+  background: #fff;
+  color: #14302e;
+  text-align: left;
+}
+
+.record-picker-pets button.active {
+  border-color: #079d96;
+  background: #e9fbf5;
+}
+
+.record-picker-pets span {
+  overflow: hidden;
+  color: #5f7872;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-picker-list {
+  display: grid;
+  gap: 9px;
+}
+
+.record-picker-list > button {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 68px;
+  padding: 9px;
+  border: 1px solid rgba(20, 48, 46, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  color: #14302e;
+  text-align: left;
+}
+
+.record-picker-list img {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.record-picker-list > button > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.record-picker-list > button > div:first-child {
+  grid-column: 1 / -1;
+}
+
+.record-picker-list span,
+.record-picker-list strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-picker-list span {
+  color: #718680;
+  font-size: 0.75rem;
+}
+
+.record-picker-list strong {
+  font-size: 0.9rem;
+}
+
+.hospital-picker-search {
+  display: grid;
+  grid-template-columns: 1fr 68px;
+  gap: 8px;
+}
+
+.hospital-picker-search input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(7, 157, 150, 0.25);
+  border-radius: 8px;
+  background: #f4fffb;
+  color: #14302e;
+  font: inherit;
+  font-weight: 800;
+}
+
+.hospital-picker-search button,
+.hospital-picker-list > button {
+  border: 0;
+  border-radius: 8px;
+}
+
+.hospital-picker-search button {
+  background: #079d96;
+  color: #fff;
+  font-weight: 900;
+}
+
+.hospital-picker-tags {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+}
+
+.hospital-picker-tags button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(20, 48, 46, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #294b47;
+  font-weight: 900;
+}
+
+.hospital-picker-tags button.active {
+  border-color: #079d96;
+  background: #d9f3ea;
+  color: #087f83;
+}
+
+.hospital-picker-list {
+  display: grid;
+  gap: 9px;
+}
+
+.hospital-picker-list > button {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(20, 48, 46, 0.1);
+  background: #fff;
+  color: #14302e;
+  text-align: left;
+}
+
+.hospital-picker-list span,
+.hospital-picker-list small {
+  color: #5f7872;
+  font-size: 0.78rem;
+}
+
+.hospital-picker-list div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.hospital-picker-list em {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #eef9f4;
+  color: #087f83;
+  font-size: 0.68rem;
+  font-style: normal;
   font-weight: 900;
 }
 
@@ -1202,11 +1550,123 @@ textarea {
   gap: 18px;
 }
 
+.qna-compose-tools {
+  display: flex;
+}
+
+.qna-compose-tools button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(7, 157, 150, 0.25);
+  border-radius: 999px;
+  background: #f5fffb;
+  color: #087f83;
+  font-weight: 900;
+}
+
+.attach-file-field {
+  align-content: start;
+}
+
+.attach-file-field input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.attach-file-button {
+  display: inline-grid;
+  width: fit-content;
+  min-height: 32px;
+  place-items: center;
+  padding: 0 11px;
+  border: 1px solid rgba(7, 157, 150, 0.28);
+  border-radius: 8px;
+  background: #fff;
+  color: #087f83;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.attach-file-field small {
+  color: #718680;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
 .qna-compose-preview {
   width: min(100%, 360px);
   max-height: 280px;
   border-radius: 6px;
   object-fit: cover;
+}
+
+.record-attach-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(7, 157, 150, 0.22);
+  border-radius: 8px;
+  background: #f4fffb;
+}
+
+.record-attach-card.posted {
+  margin: 14px 0 4px;
+}
+
+.record-attach-card > img {
+  width: 58px;
+  height: 58px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #eaf5ef;
+}
+
+.record-attach-card > div {
+  min-width: 0;
+}
+
+.record-attach-card span,
+.record-attach-card p {
+  color: #5f7872;
+  font-size: 0.78rem;
+}
+
+.record-attach-card strong,
+.record-attach-card p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-attach-card strong {
+  display: block;
+  margin: 4px 0;
+  color: #14302e;
+  font-size: 0.9rem;
+}
+
+.record-attach-card p {
+  margin: 0;
+}
+
+.record-attach-card > button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #687d78;
+  font-weight: 900;
 }
 
 @media (max-width: 640px) {
@@ -2080,7 +2540,7 @@ textarea {
   bottom: calc(18px + env(safe-area-inset-bottom));
   left: calc(50% + (var(--side-nav-width) / 2));
   z-index: 20;
-  display: grid;
+  display: none;
   width: var(--bottom-nav-width);
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
@@ -2520,10 +2980,18 @@ textarea {
 }
 
 .qna-main-page .share-filter-row {
-  margin: 14px 0 10px;
+  margin: 0 0 14px;
 }
 
 .qna-main-page .board-search {
+  margin: 16px 0 12px;
+}
+
+.share-page .share-filter-row {
+  margin: 16px 0 10px;
+}
+
+.share-page .board-search {
   margin: 0 0 12px;
 }
 
@@ -2710,7 +3178,7 @@ textarea {
   bottom: calc(18px + env(safe-area-inset-bottom));
   left: calc(18px + var(--side-nav-width) + 14px);
   display: grid;
-  width: min(320px, calc(100vw - 36px));
+  width: min(380px, calc(100vw - 36px));
   gap: 8px;
   padding: 18px;
   border-radius: 8px;
@@ -2818,6 +3286,8 @@ textarea {
 
 .profile-panel h2 {
   margin: 0 0 8px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .profile-panel-header {
@@ -2827,6 +3297,10 @@ textarea {
 }
 
 .profile-panel button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   min-height: 44px;
   border: 1px solid rgba(20, 48, 46, 0.1);
   border-radius: 8px;
@@ -2836,6 +3310,8 @@ textarea {
 }
 
 .profile-panel .profile-back {
+  width: auto;
+  flex: 0 0 auto;
   min-height: 34px;
   padding: 0 10px;
   color: #079d96;
@@ -2844,6 +3320,34 @@ textarea {
 .profile-panel-content {
   display: grid;
   gap: 10px;
+}
+
+.profile-panel-content label {
+  display: grid;
+  gap: 6px;
+  color: #5f7872;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.profile-panel-content input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(20, 48, 46, 0.12);
+  border-radius: 8px;
+  background: #fbfffc;
+  color: #14302e;
+  font: inherit;
+  font-weight: 800;
+}
+
+.profile-avatar-preview {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid rgba(20, 48, 46, 0.12);
 }
 
 .profile-panel-content p {
@@ -3355,8 +3859,17 @@ textarea {
 @media (max-width: 760px) {
   .my-pet-section .pet-list { grid-template-columns: 1fr; }
   .section-block { padding-top: 0; padding-bottom: 0; }
+  .bottom-nav {
+    display: grid;
+  }
   .app-fab {
     right: 20px;
     bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 761px) {
+  .bottom-nav {
+    display: none !important;
   }
 }

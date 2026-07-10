@@ -51,3 +51,56 @@
 ### 검증
 
 - `npm run build`를 실행했고 TypeScript 및 Vite 빌드가 통과했다.
+## 2026-07-10 프로필 버튼 표시 보정 기록
+
+### 사용자 확인
+
+프로필과 DB 연결이 완료되었는지 확인했고, 프로필에 버튼이 보이지 않는다고 말했다.
+
+### 확인 내용
+
+- 사이드바 하단 `side-nav-profile` 버튼은 `src/App.tsx`에 렌더링되어 있었다.
+- 프로필 패널의 `임시저장` 메뉴도 `src/App.tsx`에 렌더링되어 있었다.
+- `drafts` 테이블 로드/저장/삭제/등록 흐름은 코드상 Supabase helper와 연결되어 있었다.
+
+### 보정 내용
+
+- 프로필 패널의 한글 라벨이 인코딩 문제로 깨져 보일 수 있어 유니코드 이스케이프 형태로 교체했다.
+- `.side-nav-profile`에 `display: grid !important`, `visibility: visible`, `margin-top: auto`를 추가해 사이드바 하단 버튼이 확실히 보이도록 했다.
+- `.profile-panel button`에 `display: flex`, `justify-content: space-between`, `width: 100%`를 추가해 `임시저장` 버튼과 개수 배지가 보이도록 했다.
+
+### 검증
+
+- `npm run build`를 실행했고 TypeScript 및 Vite 빌드가 통과했다.
+## 2026-07-10 프로필 DB 연결 및 레이아웃 수정 기록
+
+### 사용자 지적
+
+프로필 패널에서 글자 간격과 배치가 이상하고, `내 정보 수정`이 실제 DB와 연결되어 있지 않은 것 같다고 지적했다.
+
+### 원인
+
+- `.profile-panel button`에 `width: 100%`가 적용되어 `뒤로` 버튼도 전체 폭을 차지했고, 그 결과 `프로필` 제목이 좁은 영역에서 세로로 줄바꿈되었다.
+- `내 정보 수정` 화면은 실제 폼이 아니라 안내 문구만 표시하고 있었다.
+
+### 구현 내용
+
+- `AppProfile` 타입을 추가했다.
+- Supabase `profiles` 테이블에서 현재 로그인 사용자의 `username`, `nickname`, `avatar_url`을 로드하도록 연결했다.
+- `내 정보 수정` 화면을 실제 입력 폼으로 변경했다.
+- 프로필 저장 시 `profiles` 테이블에 `id`, `username`, `nickname`, `avatar_url`을 upsert하도록 연결했다.
+- 저장 성공 시 로컬 상태도 갱신하도록 했다.
+- 프로필 사진 URL 미리보기 이미지를 추가했다.
+- `뒤로` 버튼이 전체 폭을 차지하지 않도록 `.profile-back`의 폭과 flex 동작을 보정했다.
+- 프로필 패널 폭을 넓히고 제목 줄바꿈을 막아 `프로필` 글자가 세로로 찢어지지 않게 했다.
+- 프로필 입력 필드와 프로필 사진 미리보기 스타일을 추가했다.
+
+### DB 연결
+
+- 사용 테이블: `public.profiles`
+- 사용 컬럼: `id`, `username`, `nickname`, `avatar_url`
+- RLS 정책은 기존 마이그레이션에서 본인 프로필 select/insert/update가 허용되어 있음을 확인했다.
+
+### 검증
+
+- `npm run build`를 실행했고 TypeScript 및 Vite 빌드가 통과했다.
