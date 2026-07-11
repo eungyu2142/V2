@@ -10,6 +10,8 @@ export type DiaryPet = {
   group: 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
   species: string
   gender: 'male' | 'female' | 'unknown'
+  weight?: string
+  weightUnit?: 'g' | 'kg'
 }
 
 type DiaryMode = 'records' | 'alarms'
@@ -84,6 +86,7 @@ export default function DiaryPage({
   const [createType, setCreateType] = useState<PetRecordType | null>(null)
   const [recordInitialDraft, setRecordInitialDraft] = useState<RecordDraft | undefined>()
   const [recordDate, setRecordDate] = useState(selectedDate)
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [completingReminder, setCompletingReminder] = useState<Reminder | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null)
@@ -96,6 +99,7 @@ export default function DiaryPage({
   const activeReminders = reminders.filter((reminder) => reminder.isActive)
   const petRecords = records.filter((record) => record.petId === effectivePetId)
   const dayRecords = petRecords.filter((record) => record.date === selectedDate)
+  const selectedRecord = selectedRecordId ? records.find((record) => record.id === selectedRecordId) : null
 
   useEffect(() => {
     let active = true
@@ -240,6 +244,21 @@ export default function DiaryPage({
     )
   }
 
+  if (selectedRecord) {
+    const recordPet = pets.find((pet) => pet.id === selectedRecord.petId)
+    return (
+      <RecordDetailScreen
+        record={selectedRecord}
+        pet={recordPet}
+        onBack={() => setSelectedRecordId(null)}
+        onDelete={() => {
+          saveRecordList(records.filter((item) => item.id !== selectedRecord.id))
+          setSelectedRecordId(null)
+        }}
+      />
+    )
+  }
+
   if (reminderFormOpen) {
     return (
       <ReminderCreateScreen
@@ -304,11 +323,13 @@ export default function DiaryPage({
                 <div className="record-list">
                   {dayRecords.map((record) => (
                     <article key={record.id}>
-                      <span className="record-emoji">{recordMeta[record.type].icon}</span>
-                      <div>
-                        <strong>{recordMeta[record.type].label}</strong>
-                        <p>{record.memo}</p>
-                      </div>
+                      <button className="record-open" type="button" onClick={() => setSelectedRecordId(record.id)}>
+                        <span className="record-emoji">{recordMeta[record.type].icon}</span>
+                        <div>
+                          <strong>{recordMeta[record.type].label}</strong>
+                          <p>{record.memo}</p>
+                        </div>
+                      </button>
                       <button aria-label="기록 삭제" title="삭제" onClick={() => saveRecordList(records.filter((item) => item.id !== record.id))}>×</button>
                     </article>
                   ))}
@@ -455,11 +476,7 @@ function AlarmBoard({
 }) {
   const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()))
   const [visibleMonth, setVisibleMonth] = useState(new Date())
-  const now = new Date()
   const selectedItems = reminders.filter((reminder) => reminderOccursOn(reminder, parseDateKey(selectedDate)))
-  const todayItems = reminders.filter((reminder) => reminderOccursOn(reminder, now))
-  const weekItems = reminders.filter((reminder) => occursWithinDays(reminder, now, 7) && !todayItems.some((item) => item.id === reminder.id))
-  const repeatItems = reminders.filter((reminder) => reminder.scheduleType === 'repeat')
 
   return (
     <main className="alarm-board">
@@ -481,12 +498,8 @@ function AlarmBoard({
           onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))}
           onSelect={setSelectedDate}
         />
-        <AlarmSection title={`${formatDate(selectedDate)} 알람`} items={selectedItems} pets={pets} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} empty="이 날짜 알람이 없어요" />
+        <AlarmSection title={`${formatDate(selectedDate)} 알람`} items={selectedItems} pets={pets} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} empty="알람 없음" />
       </div>
-
-      <AlarmSection title="오늘 예정 알람" items={todayItems} pets={pets} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} empty="오늘 예정 알람이 없어요" />
-      <AlarmSection title="이번 주 예정 알람" items={weekItems} pets={pets} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} empty="이번 주 예정 알람이 없어요" />
-      <AlarmSection title="반복 알람" items={repeatItems} pets={pets} onEdit={onEdit} onDelete={onDelete} onComplete={onComplete} empty="반복 알람이 없어요" />
     </main>
   )
 }
@@ -544,6 +557,48 @@ function AlarmCalendar({
   )
 }
 
+function RecordDetailScreen({
+  record,
+  pet,
+  onBack,
+  onDelete,
+}: {
+  record: PetRecord
+  pet?: DiaryPet
+  onBack: () => void
+  onDelete: () => void
+}) {
+  return (
+    <main className="diary-create-screen record-detail-screen">
+      <header>
+        <button type="button" aria-label="뒤로가기" onClick={onBack}>←</button>
+        <strong>상세 보기</strong>
+        <span />
+      </header>
+      <section className="record-detail-view">
+        <div className="record-detail-title">
+          <span>{recordMeta[record.type].icon}</span>
+          <div>
+            <h1>{recordMeta[record.type].label}</h1>
+            <p>{pet?.name ?? '펫 없음'} · {formatDate(record.date)}</p>
+          </div>
+        </div>
+
+        <dl className="record-detail-list">
+          <div><dt>종류</dt><dd>{recordMeta[record.type].label}</dd></div>
+          <div><dt>날짜</dt><dd>{formatDate(record.date)}</dd></div>
+          {record.type === 'weight' && record.weight !== undefined && <div><dt>무게</dt><dd>{formatWeightValue(record.weight)}g</dd></div>}
+          {record.foods?.length ? <div><dt>먹이</dt><dd>{record.foods.join(', ')}</dd></div> : null}
+          {record.memo && <div><dt>메모</dt><dd>{record.memo}</dd></div>}
+        </dl>
+
+        {record.photoUrl && <div className="record-detail-photo"><img src={record.photoUrl} alt="" /></div>}
+        <button className="record-detail-delete" type="button" onClick={onDelete}>삭제</button>
+      </section>
+    </main>
+  )
+}
+
 function AlarmSection({
   title,
   items,
@@ -592,6 +647,18 @@ function AlarmSection({
   )
 }
 
+function createRecordDraftInitialValue(type: PetRecordType, pet: DiaryPet): RecordDraft {
+  return {
+    type,
+    foods: [],
+    customFood: '',
+    weight: type === 'weight' ? getPetWeightInGrams(pet) : '',
+    status: '',
+    hospital: '',
+    memo: '',
+  }
+}
+
 function RecordCreateScreen({
   pet,
   type,
@@ -609,7 +676,7 @@ function RecordCreateScreen({
 }) {
   const steps = type === 'other' ? ['memo', 'photo'] : ['detail', 'memo', 'photo']
   const [step, setStep] = useState(0)
-  const [draft, setDraft] = useState<RecordDraft>(initialDraft ?? { type, foods: [], customFood: '', weight: '', status: '', hospital: '', memo: '' })
+  const [draft, setDraft] = useState<RecordDraft>(initialDraft ?? createRecordDraftInitialValue(type, pet))
   const current = steps[step]
   const update = (patch: Partial<RecordDraft>) => setDraft((value) => ({ ...value, ...patch }))
   const submit = (event: FormEvent) => {
@@ -643,11 +710,31 @@ function RecordCreateScreen({
 
 function RecordDetail({ draft, update }: { draft: RecordDraft; update: (patch: Partial<RecordDraft>) => void }) {
   if (draft.type === 'food') return <ChoiceField label="먹이 종류" options={['귀뚜라미', '밀웜', '채소', '사료', '기타']} values={draft.foods} multiple onChange={(foods) => update({ foods })} custom={draft.customFood} onCustom={(customFood) => update({ customFood })} />
-  if (draft.type === 'weight') return <label>무게<input type="number" min="0" step="0.1" value={draft.weight} onChange={(event) => update({ weight: event.target.value })} placeholder="g 단위로 입력" /></label>
+  if (draft.type === 'weight') return <WeightField value={draft.weight} onChange={(weight) => update({ weight })} />
   if (draft.type === 'shed') return <ChoiceField label="탈피 상태를 선택하세요" options={['탈피 중', '탈피 완료', '부분 탈피', '이상 있음', '기타']} values={[draft.status]} onChange={([status]) => update({ status })} />
   if (draft.type === 'poop') return <ChoiceField label="배변 상태를 선택하세요" options={['정상', '묽음', '없음', '이상 있음', '기타']} values={[draft.status]} onChange={([status]) => update({ status })} />
   if (draft.type === 'cleaning') return <ChoiceField label="청소 범위를 선택하세요" options={['전체 청소', '부분 청소', '물그릇', '바닥재', '기타']} values={[draft.status]} onChange={([status]) => update({ status })} />
   return <label>병원<input value={draft.hospital} onChange={(event) => update({ hospital: event.target.value })} placeholder="병원 이름" /></label>
+}
+
+function WeightField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const adjust = (amount: number) => {
+    const current = Number(value || 0)
+    const next = Math.max(0, Math.round((current + amount) * 10) / 10)
+    onChange(formatWeightValue(next))
+  }
+
+  return (
+    <div className="weight-step-field">
+      <label>무게<input type="number" min="0" step="0.1" value={value} onChange={(event) => onChange(event.target.value)} placeholder="g" /></label>
+      <div className="weight-step-buttons" aria-label="무게 빠른 조절">
+        <button type="button" onClick={() => adjust(-1)}>-1g</button>
+        <button type="button" onClick={() => adjust(-0.1)}>-0.1g</button>
+        <button type="button" onClick={() => adjust(0.1)}>+0.1g</button>
+        <button type="button" onClick={() => adjust(1)}>+1g</button>
+      </div>
+    </div>
+  )
 }
 
 function ReminderCreateScreen({
@@ -803,6 +890,17 @@ function validateDetail(draft: RecordDraft) {
   return draft.status.length > 0
 }
 
+function getPetWeightInGrams(pet: DiaryPet) {
+  const rawWeight = Number(pet.weight)
+  if (!Number.isFinite(rawWeight) || rawWeight <= 0) return ''
+  const grams = pet.weightUnit === 'kg' ? rawWeight * 1000 : rawWeight
+  return formatWeightValue(grams)
+}
+
+function formatWeightValue(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '')
+}
+
 function createDraftFromReminder(reminder: Reminder): RecordDraft {
   const type = reminderMeta[reminder.reminderType].recordType
   const memo = [reminder.title, reminder.memo].filter(Boolean).join('\n')
@@ -842,14 +940,6 @@ function reminderOccursOn(reminder: Reminder, date: Date) {
 function parseDateKey(date: string) {
   const [year, month, day] = date.split('-').map(Number)
   return new Date(year, month - 1, day)
-}
-
-function occursWithinDays(reminder: Reminder, start: Date, days: number) {
-  return Array.from({ length: days }, (_, index) => {
-    const date = new Date(start)
-    date.setDate(start.getDate() + index)
-    return date
-  }).some((date) => reminderOccursOn(reminder, date))
 }
 
 function formatReminderSchedule(reminder: Reminder) {

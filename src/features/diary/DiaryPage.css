@@ -35,9 +35,10 @@
 .record-list-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px}
 .record-list-panel h2{margin:0;font-size:1.05rem}
 .record-list-panel header span{color:#079b8c;font-weight:800}
-.record-list article{display:grid;grid-template-columns:36px minmax(0,1fr) 30px;align-items:start;gap:8px;padding:12px 0;border-bottom:1px solid #d7ece5}
+.record-list article{display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:start;gap:8px;padding:12px 0;border-bottom:1px solid #d7ece5}
 .record-list article p{margin:3px 0 0;color:#5e7872;font-size:.82rem}
 .record-list article button{width:30px;height:30px;border:0;background:transparent;color:#77928b;font-size:1.25rem}
+.record-list article .record-open{display:grid;width:100%;height:auto;grid-template-columns:36px minmax(0,1fr);align-items:start;gap:8px;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit}
 .record-emoji{font-size:1.25rem}
 .diary-empty{padding:18px 0;color:#6b847e}
 
@@ -99,6 +100,10 @@
 .choice-field>div{display:flex;flex-wrap:wrap;gap:8px}
 .choice-field button,.weekday-picker button{min-height:42px;padding:0 14px;border:1px solid #bfe2d7;border-radius:999px;background:#fff;color:#173b36;font-weight:800}
 .choice-field button.selected,.weekday-picker button.selected{border-color:#10ad9e;background:#d9f5ec;color:#078c80}
+.weight-step-field{display:grid;gap:12px}
+.weight-step-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.weight-step-buttons button{min-height:42px;border:1px solid #bfe2d7;border-radius:999px;background:#fff;color:#078c80;font-weight:900}
+.weight-step-buttons button:nth-child(n+3){border-color:#10ad9e;background:#d9f5ec}
 .weekday-picker{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .weekday-picker button{padding:0}
 .photo-picker span{position:relative;display:grid;min-height:56px;place-items:center;border:1px dashed #79bfb0;border-radius:8px;background:#fff;color:#078c80}
@@ -106,6 +111,17 @@
 .photo-picker small{color:#66817a;font-size:.85rem}
 .create-submit{position:fixed;right:18px;bottom:calc(14px + env(safe-area-inset-bottom));left:18px;max-width:760px;min-height:52px;margin:auto;border:0;border-radius:8px;background:#13b8a6;color:#fff;font-size:1rem;font-weight:900}
 .create-submit:disabled{opacity:.45}
+.record-detail-view{display:grid;gap:18px;max-width:760px;margin:auto}
+.record-detail-title{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #cde9df}
+.record-detail-title>span{display:grid;width:52px;height:52px;place-items:center;border-radius:50%;background:#d8f5ec;font-size:1.6rem}
+.record-detail-title h1{margin:0;font-size:1.55rem}
+.record-detail-title p{margin:4px 0 0;color:#66817a;font-weight:800}
+.record-detail-list{display:grid;gap:0;margin:0}
+.record-detail-list div{display:grid;grid-template-columns:86px minmax(0,1fr);gap:12px;padding:13px 0;border-bottom:1px solid #d7ece5}
+.record-detail-list dt{color:#66817a;font-weight:900}
+.record-detail-list dd{margin:0;white-space:pre-wrap}
+.record-detail-photo img{display:block;max-width:100%;border-radius:8px;border:1px solid #cde9df}
+.record-detail-delete{min-height:46px;border:0;border-radius:8px;background:#eaf7f2;color:#087f74;font-weight:900}
 
 @media(max-width:900px){
   .diary-page{min-height:calc(100svh - 130px)}
