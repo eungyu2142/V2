@@ -10,16 +10,19 @@
 .diary-segment{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:min(360px,100%);margin:12px 0 4px;padding:4px;border:1px solid #bfe2d7;border-radius:8px;background:#ecfbf6}
 .diary-segment button{min-height:40px;border:0;border-radius:6px;background:transparent;color:#55746d;font-weight:900}
 .diary-segment button.active{background:#13b8a6;color:#fff}
+.diary-segment button:first-child{font-size:0}
+.diary-segment button:first-child::after{content:'기록';font-size:1rem}
 
-.diary-workspace{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:24px;padding-top:8px}
+.diary-workspace{display:grid;grid-template-columns:minmax(0,6.5fr) minmax(300px,3.5fr);gap:40px;padding-top:8px}
 .diary-calendar-area,.diary-detail-panel,.record-list-panel{background:transparent;box-shadow:none}
+.diary-calendar-area,.alarm-calendar{width:min(100%,64rem);margin:0 auto}
 
 .calendar-month-bar{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:12px}
 .calendar-month-bar strong{text-align:center;font-size:1.15rem}
 .calendar-month-bar button{height:42px;border:0;background:transparent;color:#079b8c;font-size:2rem}
 .calendar-weekdays,.calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
 .calendar-weekdays span{padding:8px;text-align:center;color:#718d86;font-size:.78rem;font-weight:800}
-.calendar-day{display:grid;grid-template-rows:auto 1fr;align-content:start;gap:5px;min-width:0;min-height:105px;padding:8px;border:0;border-top:1px solid #d3ebe3;border-right:1px solid #d3ebe3;background:#fbfffc;color:#163b36;text-align:left}
+.calendar-day{display:grid;grid-template-rows:auto 1fr;align-content:start;gap:5px;min-width:0;min-height:0;aspect-ratio:1 / 1;overflow:hidden;padding:8px;border:0;border-top:1px solid #d3ebe3;border-right:1px solid #d3ebe3;background:#fbfffc;color:#163b36;text-align:left}
 .calendar-day:nth-child(7n+1){border-left:1px solid #d3ebe3}
 .calendar-day:nth-last-child(-n+7){border-bottom:1px solid #d3ebe3}
 .calendar-day.selected{box-shadow:inset 0 0 0 2px #10b6a5;background:#eafaf4}
@@ -30,15 +33,54 @@
 .calendar-tags small{display:flex;align-items:center;gap:3px;min-width:0;padding:3px 5px;border-radius:4px;background:#dff5eb;color:#245d54;font-size:.72rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .calendar-tags small i{font-style:normal;flex:0 0 auto}
 .calendar-tags em{color:#718d86;font-size:.68rem;font-style:normal}
+.calendar-dots{display:flex;align-items:center;justify-content:center;gap:4px;min-height:18px;padding-top:2px}
+.calendar-dots .calendar-dot{display:block;width:6px;height:6px;padding:0;border-radius:50%;background:#13b8a6;overflow:hidden}
+.calendar-dots .calendar-dot.food{background:#22a66f}
+.calendar-dots .calendar-dot.weight{background:#e56d6d}
+.calendar-dots .calendar-dot.shed{background:#9872d5}
+.calendar-dots .calendar-dot.poop{background:#a67b57}
+.calendar-dots .calendar-dot.cleaning{background:#36a9c7}
+.calendar-dots .calendar-dot.hospital{background:#4e83d1}
+.calendar-dots .calendar-dot.other{background:#7c9891}
+.calendar-dots .calendar-dot.feed{background:#22a66f}
+.calendar-dots .calendar-dot.medicine{background:#e58a3a}
+.calendar-dots .calendar-dot.alarm-dot.cleaning{background:#36a9c7}
+.calendar-dots em{color:#718d86;font-size:.68rem;font-style:normal}
 
 .diary-detail-panel{display:grid;align-content:start;gap:24px;border-left:1px solid #cde9df;padding-left:22px}
 .record-list-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px}
 .record-list-panel h2{margin:0;font-size:1.05rem}
 .record-list-panel header span{color:#079b8c;font-weight:800}
-.record-list article{display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:start;gap:8px;padding:12px 0;border-bottom:1px solid #d7ece5}
+.record-list-heading{display:flex;align-items:baseline;gap:8px;min-width:0}
+.record-list-heading span{font-size:.8rem}
+.record-scope-toggle{min-height:32px;padding:0 10px;border:1px solid #bfe2d7;border-radius:999px;background:#fff;color:#078c80;font-size:.78rem;font-weight:900}
+.record-list{position:relative;display:grid;gap:10px;padding:5px 0 5px 18px}
+.record-list::before{position:absolute;top:12px;bottom:12px;left:5px;width:2px;background:#d5e4df;content:''}
+.record-list article{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:start;gap:8px;padding:0;border:0}
+.record-list article::before{position:absolute;top:18px;left:-18px;width:10px;height:10px;border:3px solid #13b8a6;border-radius:50%;background:#fbfffc;content:'';z-index:1}
+.record-list article.food::before{border-color:#22a66f}
+.record-list article.weight::before{border-color:#e56d6d}
+.record-list article.shed::before{border-color:#9872d5}
+.record-list article.poop::before{border-color:#a67b57}
+.record-list article.cleaning::before{border-color:#36a9c7}
+.record-list article.hospital::before{border-color:#4e83d1}
+.record-list article.other::before{border-color:#7c9891}
 .record-list article p{margin:3px 0 0;color:#5e7872;font-size:.82rem}
 .record-list article button{width:30px;height:30px;border:0;background:transparent;color:#77928b;font-size:1.25rem}
-.record-list article .record-open{display:grid;width:100%;height:auto;grid-template-columns:36px minmax(0,1fr);align-items:start;gap:8px;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit}
+.record-list article .record-open{display:grid;width:100%;height:auto;grid-template-columns:36px minmax(0,1fr);align-items:start;gap:8px;padding:12px;border:1px solid #d7ece5;border-radius:8px;background:#fff;color:inherit;text-align:left;font:inherit;box-shadow:0 4px 12px #163b3608}
+.record-list article.food .record-open{border-left:4px solid #22a66f}
+.record-list article.weight .record-open{border-left:4px solid #e58a3a}
+.record-list article.shed .record-open{border-left:4px solid #9872d5}
+.record-list article.poop .record-open{border-left:4px solid #a67b57}
+.record-list article.cleaning .record-open{border-left:4px solid #36a9c7}
+.record-list article.hospital .record-open{border-left:4px solid #4e83d1}
+.record-list article.other .record-open{border-left:4px solid #7c9891}
+.record-list article .record-open:hover{border-color:#8bd5c6}
+.record-list article .record-open>div{min-width:0}
+.record-list article .record-open strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.record-list article .record-open p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timeline-card-date{display:block;margin-bottom:3px;color:#66817a;font-size:.75rem;font-weight:800}
+.record-list article>button:last-child{margin-top:8px}
 .record-emoji{font-size:1.25rem}
 .diary-empty{padding:18px 0;color:#6b847e}
 
@@ -49,7 +91,7 @@
 .alarm-board-head>div:last-child{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .alarm-board-head button,.alarm-actions button{min-height:36px;padding:0 12px;border:0;border-radius:6px;background:#13b8a6;color:#fff;font-weight:900}
 .alarm-board-head button.ghost{border:1px solid #9bd8cc;background:#fff;color:#078c80}
-.alarm-calendar-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start;padding-bottom:6px;border-bottom:1px solid #cde9df}
+.alarm-calendar-layout{display:grid;grid-template-columns:minmax(0,6.5fr) minmax(300px,3.5fr);gap:40px;align-items:start;padding-bottom:6px;border-bottom:1px solid #cde9df}
 .alarm-calendar{min-width:0}
 .alarm-day.selected{box-shadow:inset 0 0 0 2px #d8a520;background:#fff9df}
 .alarm-count{display:inline-grid;min-width:18px;height:18px;place-items:center;border-radius:999px;background:#f3c84d;color:#513d00;font-size:.68rem;font-weight:900;line-height:1}
@@ -125,9 +167,9 @@
 
 @media(max-width:900px){
   .diary-page{min-height:calc(100svh - 130px)}
-  .diary-workspace{grid-template-columns:1fr}
+  .diary-workspace{grid-template-columns:1fr;gap:20px}
   .diary-detail-panel{border:0;padding:0}
-  .calendar-day{min-height:82px;padding:5px}
+  .calendar-day{min-height:0;aspect-ratio:1 / 1;padding:5px}
   .calendar-tags small{padding:2px 3px}
   .diary-modal{border-radius:16px 16px 0 0}
   .alarm-calendar-layout{grid-template-columns:1fr}
@@ -147,7 +189,7 @@
 }
 
 @media(max-width:520px){
-  .calendar-day{min-height:70px}
+  .calendar-day{min-height:0}
   .calendar-tags small i{display:none}
   .calendar-tags small{font-size:.66rem}
   .calendar-weekdays span{padding:6px 0}
@@ -161,3 +203,75 @@
 .create-content label,.choice-field>label,.photo-picker{font-size:1rem;line-height:1.35;font-weight:800}
 .create-content input,.create-content textarea,.choice-field input{font-size:.95rem}
 .photo-picker span{min-height:44px;font-size:.95rem;font-weight:800}
+
+.step-progress-selectable{position:relative;display:flex;align-items:center;overflow:visible;background:#cce9df}
+.step-progress-selectable .step-progress-fill{position:absolute;inset:0 auto 0 0;z-index:0;width:0;border-radius:inherit;background:#12b8a6;transition:width 180ms ease}
+.step-progress-selectable button{position:relative;z-index:1;display:grid;flex:1;height:24px;min-width:0;place-items:center;padding:0;border:0;background:transparent;color:rgba(20,48,46,.58);cursor:pointer}
+.step-progress-selectable button span{display:grid;width:18px;height:18px;place-items:center;border:2px solid currentColor;border-radius:50%;background:#f4fffb;font-size:.65rem;font-weight:900;line-height:1}
+.step-progress-selectable button.active,.step-progress-selectable button:hover,.step-progress-selectable button:focus-visible{color:#079d96}
+.step-progress-selectable button.active span{background:#12b8a6;color:#fff}
+
+/* Keep diary and writing screens on one compact surface. */
+.diary-page,
+.diary-workspace,
+.diary-detail-panel,
+.record-list-panel,
+.calendar-month,
+.alarm-calendar,
+.alarm-section,
+.record-detail-view {
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.timeline-card,
+.alarm-list article,
+.record-detail-list div {
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.timeline-card + .timeline-card,
+.alarm-list article + article,
+.record-detail-list div + div {
+  border-top: 1px solid rgba(23, 59, 54, .08);
+}
+
+.diary-create-screen {
+  padding: 10px 12px 82px;
+}
+
+.diary-create-screen>header {
+  margin-bottom: 8px;
+}
+
+.diary-create-screen form,
+.create-content {
+  gap: 8px;
+}
+
+.create-title {
+  padding-bottom: 4px;
+}
+
+.create-content {
+  min-height: 0;
+  align-content: start;
+}
+
+.create-content input,
+.create-content textarea,
+.choice-field input {
+  border-radius: 6px;
+}
+
+.diary-overlay .diary-modal {
+  border-radius: 8px 8px 0 0;
+}

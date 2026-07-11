@@ -17,7 +17,7 @@ export type DiaryPet = {
 type DiaryMode = 'records' | 'alarms'
 type ReminderType = 'feed' | 'medicine' | 'cleaning' | 'other'
 
-type Reminder = {
+export type Reminder = {
   id: string
   petId: string
   title: string
@@ -33,7 +33,7 @@ type Reminder = {
   completedAt?: string
 }
 
-type RecordDraft = {
+export type RecordDraft = {
   type: PetRecordType
   foods: string[]
   customFood: string
@@ -42,7 +42,40 @@ type RecordDraft = {
   hospital: string
   memo: string
   photo?: string
+  step?: number
 }
+
+type DiaryRecordDraftPayload = {
+  petId: string
+  date: string
+  draft: RecordDraft
+}
+
+type DiaryReminderDraftPayload = {
+  reminder: Reminder
+}
+
+type DiaryRecordDraftItem = {
+  id: string
+  draftType: 'care_record'
+  title: string
+  body: string
+  updatedAt: string
+  step?: number
+  payload: DiaryRecordDraftPayload
+}
+
+type DiaryReminderDraftItem = {
+  id: string
+  draftType: 'reminder'
+  title: string
+  body: string
+  updatedAt: string
+  step?: number
+  payload: DiaryReminderDraftPayload
+}
+
+type DiaryDraftItem = DiaryRecordDraftItem | DiaryReminderDraftItem
 
 const recordTypes: PetRecordType[] = ['food', 'weight', 'shed', 'poop', 'cleaning', 'hospital', 'other']
 const reminderTypes: ReminderType[] = ['feed', 'medicine', 'cleaning', 'other']
@@ -70,10 +103,16 @@ export default function DiaryPage({
   userId,
   pets,
   onAddPet,
+  initialDraft,
+  onSaveDraft,
+  onDeleteDraft,
 }: {
   userId: string
   pets: DiaryPet[]
   onAddPet: () => void
+  initialDraft?: DiaryDraftItem | null
+  onSaveDraft?: (draft: DiaryDraftItem) => void | Promise<void>
+  onDeleteDraft?: (draftId: string) => void | Promise<void>
 }) {
   const today = toDateKey(new Date())
   const [mode, setMode] = useState<DiaryMode>('records')
@@ -87,6 +126,7 @@ export default function DiaryPage({
   const [recordInitialDraft, setRecordInitialDraft] = useState<RecordDraft | undefined>()
   const [recordDate, setRecordDate] = useState(selectedDate)
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
+  const [recordScope, setRecordScope] = useState<'day' | 'all'>('day')
   const [completingReminder, setCompletingReminder] = useState<Reminder | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null)
@@ -99,6 +139,9 @@ export default function DiaryPage({
   const activeReminders = reminders.filter((reminder) => reminder.isActive)
   const petRecords = records.filter((record) => record.petId === effectivePetId)
   const dayRecords = petRecords.filter((record) => record.date === selectedDate)
+  const visibleRecords = recordScope === 'all'
+    ? [...petRecords].sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`))
+    : dayRecords
   const selectedRecord = selectedRecordId ? records.find((record) => record.id === selectedRecordId) : null
 
   useEffect(() => {
@@ -119,6 +162,26 @@ export default function DiaryPage({
   useEffect(() => {
     firedReminderKeys.current = new Set(readFiredReminderKeys())
   }, [])
+
+  useEffect(() => {
+    if (!initialDraft || initialDraft.draftType !== 'care_record') return
+    const payload = initialDraft.payload
+    setMode('records')
+    setSelectedPetId(payload.petId)
+    setSelectedDate(payload.date)
+    setRecordDate(payload.date)
+    setRecordInitialDraft({ ...payload.draft, step: initialDraft.step ?? payload.draft.step })
+    setCompletingReminder(null)
+    setCreateType(payload.draft.type)
+  }, [initialDraft])
+
+  useEffect(() => {
+    if (!initialDraft || initialDraft.draftType !== 'reminder') return
+    setMode('alarms')
+    setSelectedPetId(initialDraft.payload.reminder.petId)
+    setEditingReminder(initialDraft.payload.reminder)
+    setReminderFormOpen(true)
+  }, [initialDraft])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -239,6 +302,21 @@ export default function DiaryPage({
           closeRecordCreate()
           setMode('records')
           setSelectedDate(recordDate)
+          if (initialDraft) void onDeleteDraft?.(initialDraft.id)
+        }}
+        onSaveDraft={(draft, step) => {
+          void Promise.resolve(onSaveDraft?.({
+            id: initialDraft?.id ?? crypto.randomUUID(),
+            draftType: 'care_record',
+            title: `${selectedPet.name} 기록`,
+            body: getRecordMemo(draft),
+            updatedAt: new Date().toISOString(),
+            step,
+            payload: { petId: selectedPet.id, date: recordDate, draft: { ...draft, step } },
+          })).then(() => {
+            closeRecordCreate()
+            setMode('records')
+          })
         }}
       />
     )
@@ -273,6 +351,22 @@ export default function DiaryPage({
           setReminderFormOpen(false)
           setEditingReminder(null)
           setMode('alarms')
+          if (initialDraft?.draftType === 'reminder') void onDeleteDraft?.(initialDraft.id)
+        }}
+        onSaveDraft={(reminder, step) => {
+          void Promise.resolve(onSaveDraft?.({
+            id: initialDraft?.draftType === 'reminder' ? initialDraft.id : crypto.randomUUID(),
+            draftType: 'reminder',
+            title: reminder.title || '알림 초안',
+            body: formatReminderSchedule(reminder),
+            updatedAt: new Date().toISOString(),
+            step,
+            payload: { reminder },
+          })).then(() => {
+            setReminderFormOpen(false)
+            setEditingReminder(null)
+            setMode('alarms')
+          })
         }}
       />
     )
@@ -314,19 +408,26 @@ export default function DiaryPage({
           <aside className="diary-detail-panel">
             <section className="record-list-panel">
               <header>
-                <h2>{formatDate(selectedDate)}</h2>
+                <div className="record-list-heading">
+                  <h2>{recordScope === 'all' ? '전체 기록' : formatDate(selectedDate)}</h2>
+                  <span>{visibleRecords.length}개</span>
+                </div>
+                <button className="record-scope-toggle" type="button" onClick={() => setRecordScope(recordScope === 'day' ? 'all' : 'day')}>
+                  {recordScope === 'day' ? '전체 기록' : '선택 날짜'}
+                </button>
                 <span>{dayRecords.length}개</span>
               </header>
-              {selectedDate > today ? (
+              {recordScope === 'day' && selectedDate > today ? (
                 <EmptyState title="미래 날짜에는 기록할 수 없어요" />
-              ) : dayRecords.length ? (
-                <div className="record-list">
-                  {dayRecords.map((record) => (
-                    <article key={record.id}>
+              ) : visibleRecords.length ? (
+                <div className="record-list timeline-feed">
+                  {visibleRecords.map((record) => (
+                    <article className={`timeline-card ${record.type}`} key={record.id}>
                       <button className="record-open" type="button" onClick={() => setSelectedRecordId(record.id)}>
                         <span className="record-emoji">{recordMeta[record.type].icon}</span>
                         <div>
-                          <strong>{recordMeta[record.type].label}</strong>
+                          {recordScope === 'all' && <span className="timeline-card-date">{formatDate(record.date)}</span>}
+                          <strong>{record.type === 'weight' && record.weight !== undefined ? `${formatWeightValue(record.weight)}g` : record.type === 'food' && record.foods?.length ? record.foods.join(', ') : recordMeta[record.type].label}</strong>
                           <p>{record.memo}</p>
                         </div>
                       </button>
@@ -438,14 +539,11 @@ function Calendar({
               <span className="day-head">
                 <span className="day-number">{day.getDate()}</span>
               </span>
-              <span className="calendar-tags">
-                {dayRecords.slice(0, 2).map((record) => (
-                  <small key={record.id}>
-                    <i>{recordMeta[record.type].icon}</i>
-                    {recordMeta[record.type].label}
-                  </small>
+              <span className="calendar-dots" aria-label={`${dayRecords.length} records`}>
+                {dayRecords.slice(0, 5).map((record) => (
+                  <small className={`calendar-dot ${record.type}`} key={record.id} aria-label={recordMeta[record.type].label} />
                 ))}
-                {dayRecords.length > 2 && <em>+{dayRecords.length - 2}</em>}
+                {dayRecords.length > 5 && <em>+{dayRecords.length - 5}</em>}
               </span>
             </button>
           )
@@ -540,14 +638,11 @@ function AlarmCalendar({
                 <span className="day-number">{day.getDate()}</span>
                 {dayReminders.length > 0 && <span className="alarm-count">{dayReminders.length}</span>}
               </span>
-              <span className="calendar-tags">
-                {dayReminders.slice(0, 2).map((reminder) => (
-                  <small className="alarm-calendar-tag" key={reminder.id}>
-                    <i>{reminderMeta[reminder.reminderType].icon}</i>
-                    {reminderMeta[reminder.reminderType].label}
-                  </small>
+              <span className="calendar-dots alarm-dots" aria-label={`${dayReminders.length} alarms`}>
+                {dayReminders.slice(0, 5).map((reminder) => (
+                  <small className={`calendar-dot alarm-dot ${reminder.reminderType}`} key={reminder.id} aria-label={reminderMeta[reminder.reminderType].label} />
                 ))}
-                {dayReminders.length > 2 && <em>+{dayReminders.length - 2}</em>}
+                {dayReminders.length > 5 && <em>+{dayReminders.length - 5}</em>}
               </span>
             </button>
           )
@@ -666,6 +761,7 @@ function RecordCreateScreen({
   initialDraft,
   onBack,
   onSave,
+  onSaveDraft,
 }: {
   pet: DiaryPet
   type: PetRecordType
@@ -673,9 +769,10 @@ function RecordCreateScreen({
   initialDraft?: RecordDraft
   onBack: () => void
   onSave: (draft: RecordDraft) => void
+  onSaveDraft?: (draft: RecordDraft, step: number) => void
 }) {
   const steps = type === 'other' ? ['memo', 'photo'] : ['detail', 'memo', 'photo']
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(initialDraft?.step ?? 0)
   const [draft, setDraft] = useState<RecordDraft>(initialDraft ?? createRecordDraftInitialValue(type, pet))
   const current = steps[step]
   const update = (patch: Partial<RecordDraft>) => setDraft((value) => ({ ...value, ...patch }))
@@ -688,11 +785,11 @@ function RecordCreateScreen({
     <main className="diary-create-screen">
       <header>
         <button type="button" aria-label="뒤로가기" onClick={() => step ? setStep(step - 1) : onBack()}>←</button>
-        <strong>다이어리 작성</strong>
+        <strong>기록</strong>
         <span />
       </header>
       <form onSubmit={submit}>
-        <div className="step-progress"><span style={{ width: `${((step + 1) / steps.length) * 100}%` }} /></div>
+        <StepProgress currentStep={step} stepCount={steps.length} onStepChange={setStep} />
         <div className="create-title">
           <h1>{recordMeta[type].icon} {recordMeta[type].label}</h1>
           <p>{pet.name} · {date} · {step + 1}/{steps.length}</p>
@@ -702,6 +799,7 @@ function RecordCreateScreen({
           {current === 'memo' && <label>메모<textarea autoFocus value={draft.memo} onChange={(event) => update({ memo: event.target.value })} placeholder="메모" /></label>}
           {current === 'photo' && <PhotoPicker value={draft.photo} onChange={(photo) => update({ photo })} />}
         </div>
+        <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(draft, step)}>임시저장</button>
         <button className="create-submit" disabled={current === 'detail' && !validateDetail(draft)}>{step === steps.length - 1 ? '작성 완료' : '다음'}</button>
       </form>
     </main>
@@ -743,12 +841,14 @@ function ReminderCreateScreen({
   initialReminder,
   onBack,
   onSave,
+  onSaveDraft,
 }: {
   pets: DiaryPet[]
   selectedPetId: string
   initialReminder: Reminder | null
   onBack: () => void
   onSave: (reminder: Reminder) => void
+  onSaveDraft?: (reminder: Reminder, step: number) => void
 }) {
   const [step, setStep] = useState(0)
   const [petId, setPetId] = useState(initialReminder?.petId ?? selectedPetId ?? pets[0]?.id ?? '')
@@ -760,6 +860,21 @@ function ReminderCreateScreen({
   const [time, setTime] = useState(initialReminder?.reminderTime ?? '')
   const [memo, setMemo] = useState(initialReminder?.memo ?? '')
   const valid = step === 0 ? Boolean(petId && title.trim()) : step === 1 ? Boolean(schedule === 'repeat' ? selectedWeekdays.length && time : date && time) : true
+  const buildReminder = (): Reminder => ({
+    id: initialReminder?.id ?? crypto.randomUUID(),
+    petId,
+    title: title.trim(),
+    reminderType: type,
+    scheduleType: schedule,
+    weekdays: schedule === 'repeat' ? selectedWeekdays : [],
+    reminderDate: schedule === 'once' ? date : '',
+    reminderTime: time,
+    memo: memo.trim(),
+    isActive: true,
+    createdAt: initialReminder?.createdAt ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    completedAt: initialReminder?.completedAt,
+  })
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!valid) return
@@ -767,31 +882,17 @@ function ReminderCreateScreen({
       setStep(step + 1)
       return
     }
-    onSave({
-      id: initialReminder?.id ?? crypto.randomUUID(),
-      petId,
-      title: title.trim(),
-      reminderType: type,
-      scheduleType: schedule,
-      weekdays: schedule === 'repeat' ? selectedWeekdays : [],
-      reminderDate: schedule === 'once' ? date : '',
-      reminderTime: time,
-      memo: memo.trim(),
-      isActive: true,
-      createdAt: initialReminder?.createdAt ?? new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      completedAt: initialReminder?.completedAt,
-    })
+    onSave(buildReminder())
   }
   return (
     <main className="diary-create-screen">
       <header>
         <button type="button" aria-label="뒤로가기" onClick={() => step ? setStep(step - 1) : onBack()}>←</button>
-        <strong>알람 작성</strong>
+        <strong>알람</strong>
         <span />
       </header>
       <form onSubmit={submit}>
-        <div className="step-progress"><span style={{ width: `${((step + 1) / 3) * 100}%` }} /></div>
+        <StepProgress currentStep={step} stepCount={3} onStepChange={setStep} />
         <div className="create-title">
           <h1>🔔 알람</h1>
           <p>{step + 1}/3</p>
@@ -824,9 +925,23 @@ function ReminderCreateScreen({
           )}
           {step === 2 && <label>메모<textarea autoFocus value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="메모" /></label>}
         </div>
+        <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(buildReminder(), step)}>임시저장</button>
         <button className="create-submit" disabled={!valid}>{step === 2 ? '저장' : '다음'}</button>
       </form>
     </main>
+  )
+}
+
+function StepProgress({ currentStep, stepCount, onStepChange }: { currentStep: number; stepCount: number; onStepChange: (step: number) => void }) {
+  return (
+    <div className="step-progress step-progress-selectable" role="tablist" aria-label="작성 단계">
+      <span className="step-progress-fill" style={{ width: `${((currentStep + 1) / stepCount) * 100}%` }} />
+      {Array.from({ length: stepCount }, (_, index) => (
+        <button key={index} className={index === currentStep ? 'active' : ''} type="button" role="tab" aria-selected={index === currentStep} aria-label={`${index + 1}단계`} onClick={() => onStepChange(index)}>
+          <span>{index + 1}</span>
+        </button>
+      ))}
+    </div>
   )
 }
 

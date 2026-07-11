@@ -161,3 +161,53 @@
 - 처리: 목록의 삭제 버튼은 상세 보기 진입과 분리해 그대로 즉시 삭제 동작만 수행한다.
 - 변경 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
 - 검증: tsc -b, npm run lint, npm run build 통과.
+
+## 2026-07-11 다이어리 캘린더 및 타임라인 피드 개선
+
+- 요청: 기록 캘린더를 실제 활동 확인 중심으로 구성하고 선택 날짜의 기록을 오른쪽 타임라인으로 표시.
+- 처리: 기록 캘린더 셀에서 긴 유형 텍스트를 제거하고 먹이/무게/탈피/배변/청소/병원/기타별 색상 점으로 표시.
+- 처리: 선택 날짜 기록 목록을 흰색 카드와 세로 연결선/노드가 있는 타임라인 피드로 변경하고, 무게/먹이 기록은 핵심 값을 카드에 표시.
+- 처리: 기존 반려동물 선택, 다이어리/알람 탭, 기록 상세 보기, 삭제 동작은 유지.
+- 참고: 현재 프로젝트에 Tailwind 설정이 없어 기존 DiaryPage CSS 구조 안에서 동일한 TypeScript/React UX를 구현.
+- 변경 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
+- 검증: tsc -b, npm run lint, npm run build 성공.
+
+## 2026-07-11 달력 점 표시 및 타임라인 간격 개선
+
+- 달력 날짜 셀의 기록 텍스트를 제거하고 6px 원형 점만 표시하도록 변경.
+- 먹이는 녹색, 배변은 갈색을 포함해 기록 종류별 점 색상을 유지.
+- 타임라인 카드에 먹이 녹색, 무게 주황색 등 카테고리별 왼쪽 강조 테두리 추가.
+- 데스크톱 달력/타임라인 간격을 40px로 확대하고 좁은 화면은 20px로 조정.
+- 변경 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
+- 검증: tsc -b, npm run lint, npm run build 성공.
+
+## 2026-07-11 기록 작성 단계 바로 이동
+
+- 기록과 알람 작성 화면의 진행 게이지를 단계 버튼으로 변경했다.
+- 단계 버튼을 눌러 상세, 메모, 사진 또는 알람 정보 단계로 즉시 이동할 수 있다.
+
+## 2026-07-11 다이어리 화면 6.5:3.5 레이아웃 정리
+
+- 사이드바/하단 내비바의 다이어리 명칭은 유지하고 화면 내부 전환 버튼은 기록/알람으로 표시.
+- 기록 캘린더와 알람 캘린더를 동일한 최대 너비 및 셀 비율로 통일.
+- 중앙 캘린더 영역과 우측 오늘 일지 영역을 6.5:3.5 비율로 배치하고 데스크톱 간격을 40px로 확대.
+- 날짜 셀을 정사각형에 가까운 높이로 조정하고 기록/알람 유형명 대신 색상 점만 표시.
+- 변경 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
+- 검증: tsc -b, npm run lint, npm run build 성공.
+
+## 2026-07-11 달력 날짜 셀 겹침 수정
+
+- 원인: 날짜 셀에 고정 최소 높이와 정사각형 비율이 함께 적용되어 좁은 화면에서 셀 내용이 밀릴 수 있었음.
+- 처리: 고정 최소 높이를 제거하고 너비 기반 정사각형 비율과 overflow 제한을 적용.
+- 처리: 모바일도 동일하게 정사각형 기준을 사용해 날짜 숫자와 색상 점이 서로 겹치지 않도록 수정.
+- 변경 파일: src/features/diary/DiaryPage.css
+- 검증: tsc -b, npm run lint, npm run build 성공.
+
+## 2026-07-11 전체 기록 보기 기능 추가
+
+- 요청: 선택한 날짜 기록뿐 아니라 다른 날짜의 기록도 한 번에 확인할 수 있는 기능.
+- 처리: 우측 기록 패널에 전체 기록/선택 날짜 전환 버튼 추가.
+- 처리: 전체 기록 모드에서 현재 선택 펫의 기록을 날짜 및 생성 시각 내림차순으로 표시하고 카드에 기록 날짜 표시.
+- 처리: 기존 달력 날짜 선택, 기록 상세 보기, 삭제 동작 유지.
+- 변경 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
+- 검증: DiaryPage.tsx 개별 eslint 성공. 전체 tsc/lint/build는 기존 App.tsx의 RecordDraft export/초안 props 불일치 및 리뷰 초안 미사용 오류로 실패.

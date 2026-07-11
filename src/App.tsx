@@ -2,7 +2,7 @@ import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, u
 import type { Session } from '@supabase/supabase-js'
 import './App.css'
 import AuthScreen from './components/AuthScreen'
-import DiaryPage from './features/diary/DiaryPage'
+import DiaryPage, { type RecordDraft, type Reminder } from './features/diary/DiaryPage'
 import type { PetRecord, PetRecordType } from './features/diary/diaryTypes'
 import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
 import { supabase } from './lib/supabase'
@@ -76,7 +76,22 @@ type ShareItem = {
   liked?: boolean
 }
 
-type DraftKind = 'question' | 'share_item'
+type DiaryRecordDraftPayload = {
+  petId: string
+  date: string
+  draft: RecordDraft
+}
+
+type HospitalReviewDraftPayload = {
+  hospital: HospitalSnapshot
+  review: HospitalReview
+}
+
+type ReminderDraftPayload = {
+  reminder: Reminder
+}
+
+type DraftKind = 'question' | 'share_item' | 'pet' | 'care_record' | 'hospital_review' | 'reminder'
 
 type DraftItem = {
   id: string
@@ -84,7 +99,8 @@ type DraftItem = {
   title: string
   body: string
   updatedAt: string
-  payload: QnaPost | ShareItem
+  step?: number
+  payload: QnaPost | ShareItem | Pet | DiaryRecordDraftPayload | HospitalReviewDraftPayload | ReminderDraftPayload
 }
 
 type AppProfile = {
@@ -430,7 +446,28 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const continueDraft = (draft: DraftItem) => {
     setProfileOpen(false)
     setEditingDraft(draft)
-    setCreateMode(draft.draftType === 'question' ? 'post' : 'share')
+    if (draft.draftType === 'question') {
+      setCreateMode('post')
+      return
+    }
+    if (draft.draftType === 'share_item') {
+      setCreateMode('share')
+      return
+    }
+    if (draft.draftType === 'pet') {
+      setEditingPet(draft.payload as Pet)
+      setCreateMode('pet')
+      return
+    }
+    if (draft.draftType === 'care_record' || draft.draftType === 'reminder') {
+      setActiveTab('diary')
+      setCreateMode(null)
+      return
+    }
+    if (draft.draftType === 'hospital_review') {
+      setActiveTab('map')
+      setCreateMode(null)
+    }
   }
 
   const saveProfile = async (nextProfile: AppProfile) => {
@@ -453,7 +490,19 @@ function AuthenticatedApp({ session }: { session: Session }) {
     }
   }
 
-  if (createMode === 'pet') return <PetCreateFlow initialPet={editingPet} onClose={() => { setCreateMode(null); setEditingPet(null) }} onSave={savePet} />
+  if (createMode === 'pet') return (
+    <PetCreateFlow
+      initialPet={editingDraft?.draftType === 'pet' ? editingDraft.payload as Pet : editingPet}
+      initialDraft={editingDraft?.draftType === 'pet' ? editingDraft : null}
+      onClose={() => { setCreateMode(null); setEditingPet(null); setEditingDraft(null) }}
+      onSave={async (pet) => {
+        await savePet(pet)
+        if (editingDraft?.draftType === 'pet') await deleteDraft(editingDraft.id)
+        setEditingDraft(null)
+      }}
+      onSaveDraft={saveDraft}
+    />
+  )
   if (createMode === 'post') return (
     <QnaCreateFlow
       userId={session.user.id}
@@ -522,12 +571,12 @@ function AuthenticatedApp({ session }: { session: Session }) {
         </div>
       </header>
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen focusHospital={mapFocusHospital} /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} onSaveDraft={async (draft) => { await saveDraft(draft); setEditingDraft(null) }} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">
           {activeTab === 'pets' && <PetsScreen pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={() => moveTab('diary')} />}
-          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} onAddPet={() => { setEditingPet(null); setCreateMode('pet') }} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onSaveDraft={async (draft) => { await saveDraft(draft); setEditingDraft(null) }} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
           {activeTab === 'qna' && <QnaScreen posts={qnaPosts} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onOpenHospital={openHospitalOnMap} />}
           {activeTab === 'share' && <ShareScreen items={shareItems} onItemsChange={setShareItems} onSaveItem={saveShareItem} onDeleteItem={deleteShareItem} />}
         </main>
@@ -641,7 +690,7 @@ function ProfilePanel({
               <div className="profile-list">
                 {drafts.map((draft) => (
                   <article key={draft.id}>
-                    <span>{draft.draftType === 'question' ? 'QNA' : '나눔'} · {formatReviewDate(draft.updatedAt)}</span>
+                    <span>{draftTypeLabel(draft.draftType)} · {formatReviewDate(draft.updatedAt)}</span>
                     <strong>{draft.title || '제목 없음'}</strong>
                     <p>{draft.body || '내용 없음'}</p>
                     <div className="profile-row-actions">
@@ -670,7 +719,16 @@ function ProfilePanel({
   )
 }
 
-function MapScreen({ focusHospital }: { focusHospital?: HospitalSnapshot | null }) {
+function draftTypeLabel(type: DraftKind) {
+  if (type === 'question') return 'QNA'
+  if (type === 'share_item') return '나눔'
+  if (type === 'pet') return '마이펫'
+  if (type === 'care_record') return '기록'
+  if (type === 'reminder') return '알림'
+  return '병원 리뷰'
+}
+
+function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: { focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; onSaveDraft: (draft: DraftItem) => void | Promise<void>; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
   const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<AnimalCategory>('all')
@@ -699,6 +757,7 @@ function MapScreen({ focusHospital }: { focusHospital?: HospitalSnapshot | null 
   const selectedHospital = filteredHospitals.find((hospital) => hospital.id === selectedHospitalId) ?? null
   const selectedHospitalReviews = selectedHospital ? reviews[selectedHospital.id] ?? [] : []
   const isReviewPanelOpen = Boolean(selectedHospital && reviewPanelHospitalId === selectedHospital.id)
+  const reviewDraftPayload = reviewDraft?.draftType === 'hospital_review' ? reviewDraft.payload as HospitalReviewDraftPayload : null
 
   useEffect(() => {
     if (!focusHospital) return
@@ -714,6 +773,20 @@ function MapScreen({ focusHospital }: { focusHospital?: HospitalSnapshot | null 
     })
     return () => { cancelled = true }
   }, [focusHospital])
+
+  useEffect(() => {
+    if (!reviewDraftPayload) return
+    const hospital = hospitalFromSnapshot(reviewDraftPayload.hospital)
+    setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
+    setSelectedHospitalId(hospital.id)
+    setReviewPanelHospitalId(hospital.id)
+    setIsReviewFormOpen(true)
+    setReviewAuthor(reviewDraftPayload.review.author)
+    setReviewRating(reviewDraftPayload.review.rating)
+    setReviewBody(reviewDraftPayload.review.body)
+    setQuery(hospital.name)
+    setSelectedCategory(hospital.categories[0] ?? 'all')
+  }, [reviewDraftPayload])
 
   useEffect(() => {
     if (!naverMapClientId) return
@@ -861,12 +934,12 @@ function MapScreen({ focusHospital }: { focusHospital?: HospitalSnapshot | null 
     if (!selectedHospital || reviewBody.trim().length === 0) return
 
     const review: HospitalReview = {
-      id: crypto.randomUUID(),
+      id: reviewDraftPayload?.review.id ?? crypto.randomUUID(),
       hospitalId: selectedHospital.id,
       author: reviewAuthor.trim() || '익명',
       rating: reviewRating,
       body: reviewBody.trim(),
-      createdAt: new Date().toISOString(),
+      createdAt: reviewDraftPayload?.review.createdAt ?? new Date().toISOString(),
     }
 
     setReviews((previous) => {
@@ -878,6 +951,27 @@ function MapScreen({ focusHospital }: { focusHospital?: HospitalSnapshot | null 
     setReviewRating(5)
     setReviewBody('')
     setIsReviewFormOpen(false)
+    if (reviewDraft) void onDeleteDraft(reviewDraft.id)
+  }
+
+  const saveReviewDraft = () => {
+    if (!selectedHospital) return
+    const review: HospitalReview = {
+      id: reviewDraftPayload?.review.id ?? crypto.randomUUID(),
+      hospitalId: selectedHospital.id,
+      author: reviewAuthor.trim() || '익명',
+      rating: reviewRating,
+      body: reviewBody.trim(),
+      createdAt: reviewDraftPayload?.review.createdAt ?? new Date().toISOString(),
+    }
+    void Promise.resolve(onSaveDraft({
+      id: reviewDraft?.id ?? crypto.randomUUID(),
+      draftType: 'hospital_review',
+      title: selectedHospital.name,
+      body: review.body,
+      updatedAt: new Date().toISOString(),
+      payload: { hospital: toHospitalSnapshot(selectedHospital), review },
+    })).then(() => setIsReviewFormOpen(false))
   }
 
   return (
@@ -952,6 +1046,7 @@ function MapScreen({ focusHospital }: { focusHospital?: HospitalSnapshot | null 
                       </select>
                     </div>
                     <textarea value={reviewBody} onChange={(event) => setReviewBody(event.target.value)} placeholder="방문 경험을 남겨주세요." />
+                    <button type="button" onClick={saveReviewDraft}>임시저장</button>
                     <button type="submit" disabled={reviewBody.trim().length === 0}>등록</button>
                   </form>
                 )}
@@ -986,8 +1081,8 @@ function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary }: { pets: Pet[]
   })
 
   return (
-    <section className="page-stack">
-      <section className="section-block my-pet-tools">
+    <section className="page-stack my-pet-dashboard">
+      <section className="section-block my-pet-tools my-pet-dashboard-panel">
         <label className="my-pet-search"><span>동물 검색</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름, 종, 분류 검색" /></label>
         <div className="filter-tags" aria-label="동물 분류 필터">
           {animalCategoryOptions.map((item) => (
@@ -997,22 +1092,30 @@ function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary }: { pets: Pet[]
           ))}
         </div>
       </section>
-      <section className="section-block my-pet-section">
+      <section className="section-block my-pet-section my-pet-dashboard-panel">
         <div className="section-title"><h2>등록된 펫</h2><span>{filteredPets.length}마리</span></div>
         {filteredPets.length === 0 ? <p className="empty-state">{pets.length === 0 ? '등록된 펫이 없습니다.' : '검색 조건에 맞는 펫이 없습니다.'}</p> : (
           <div className="pet-list">
             {filteredPets.map((pet) => (
               <article className="pet-card" key={pet.id}>
-                <div className="pet-card-icon">{pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} /> : <CategoryTagIcon category={pet.group} />}</div>
-                <div className="pet-card-main">
-                  <strong>{pet.name}</strong>
-                  <small>{animalCategoryLabels[pet.group]} · {pet.species} · {genderLabel(pet.gender)}</small>
-                  <small>{formatPetDetails(pet)}</small>
+                <div className="pet-card-topline">
+                  <span className="pet-category-badge">{animalCategoryLabels[pet.group]}</span>
+                  <div className="pet-card-actions">
+                    <button className="item-action-button pet-diary-button" type="button" aria-label="기록으로 이동" onClick={onOpenDiary}>⌁</button>
+                    <button className="item-action-button" type="button" aria-label="수정" onClick={() => onEditPet(pet)}>✎</button>
+                    <ItemActions onDelete={() => onDeletePet(pet.id)} />
+                  </div>
                 </div>
-                <div className="item-actions">
-                  <button className="item-action-button pet-diary-button" type="button" aria-label="기록으로 이동" onClick={onOpenDiary}>⌁</button>
-                  <button className="item-action-button" type="button" aria-label="수정" onClick={() => onEditPet(pet)}>✎</button>
-                  <ItemActions onDelete={() => onDeletePet(pet.id)} />
+                <div className="pet-card-visual">
+                  <div className="pet-card-icon">{pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} /> : <CategoryTagIcon category={pet.group} />}</div>
+                  <div className="pet-card-title-row"><strong>{pet.name}</strong></div>
+                  <small className="pet-species-line">{pet.species}</small>
+                </div>
+                <div className="pet-info-badges">
+                  <span><b>성별</b>{genderLabel(pet.gender)}</span>
+                  {pet.weight && <span><b>무게</b>{pet.weight}{pet.weightUnit ?? 'g'}</span>}
+                  {pet.birthday && <span><b>생일</b>{pet.birthday}</span>}
+                  {pet.adoptionDate && <span><b>입양일</b>{pet.adoptionDate}</span>}
                 </div>
               </article>
             ))}
@@ -1120,7 +1223,10 @@ function QnaScreen({ posts, onChange, onDeletePost, onOpenHospital }: { posts: Q
         ))}
       </div>
       {feedCategory && <button className="qna-feed-clear" type="button" onClick={() => { setFeedCategory(null); setVisibleCount(6) }}>전체 질문 보기</button>}
-      {feedPosts.length === 0 ? <div className="share-empty qna-empty-state"><strong>표시할 QNA 글이 없습니다</strong><p>{sort === 'resolved' ? '아직 해결된 사례가 없어요.' : '궁금한 점을 질문해 보세요.'}</p></div> : (
+      {feedPosts.length === 0 ? <div className="qna-empty-state">
+        <div className="qna-empty-icon" aria-hidden="true">⌕</div>
+        <strong>아직 등록된 질문이 없어요.</strong>
+      </div> : (
         <section className="qna-feed-section">
           <div className="qna-feed-list">
                 {visiblePosts.map((post) => <QnaHelpCard post={post} key={post.id} onOpen={() => setSelectedId(post.id)} onDelete={sort === 'resolved' && post.mine !== false ? () => onDeletePost(post.id) : undefined} />)}
@@ -1444,19 +1550,45 @@ function ItemActions({ onDelete }: { onDelete: () => void }) {
   )
 }
 
-function PetCreateFlow({ initialPet, onClose, onSave }: { initialPet: Pet | null; onClose: () => void; onSave: (pet: Pet) => void }) {
+function PetCreateFlow({ initialPet, initialDraft, onClose, onSave, onSaveDraft }: { initialPet: Pet | null; initialDraft?: DraftItem | null; onClose: () => void; onSave: (pet: Pet) => void | Promise<void>; onSaveDraft: (draft: DraftItem) => void | Promise<void> }) {
   const [step, setStep] = useState(0)
   const [name, setName] = useState(initialPet?.name ?? '')
-  const [group, setGroup] = useState<Exclude<AnimalCategory, 'all'>>(initialPet?.group === 'all' || !initialPet?.group ? 'reptile' : initialPet.group)
+  const [group, setGroup] = useState<Exclude<AnimalCategory, 'all'> | ''>(initialPet?.group === 'all' || !initialPet?.group ? '' : initialPet.group)
   const [species, setSpecies] = useState(initialPet?.species ?? '')
-  const [gender, setGender] = useState<Pet['gender']>(initialPet?.gender ?? 'unknown')
+  const [gender, setGender] = useState<Pet['gender'] | ''>(initialPet?.gender ?? '')
   const [photo, setPhoto] = useState<string | undefined>(initialPet?.photo)
   const [weight, setWeight] = useState(initialPet?.weight ?? '')
   const [weightUnit, setWeightUnit] = useState<'g' | 'kg'>(initialPet?.weightUnit ?? 'g')
   const [birthday, setBirthday] = useState(initialPet?.birthday ?? '')
   const [adoptionDate, setAdoptionDate] = useState(initialPet?.adoptionDate ?? '')
-  const canNext = step === 1 ? Boolean(species) : step === 3 ? name.trim().length > 0 : true
-  const finish = () => onSave({ id: initialPet?.id ?? crypto.randomUUID(), name: name.trim(), group, species, gender, photo, weight: weight.trim() || undefined, weightUnit, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined })
+  const canNext = step === 0 ? Boolean(group) : step === 1 ? Boolean(species) : step === 2 ? Boolean(gender) : step === 3 ? name.trim().length > 0 : true
+  const finish = () => {
+    if (!group || !species || !gender || !name.trim()) return
+    onSave({ id: initialPet?.id ?? crypto.randomUUID(), name: name.trim(), group, species, gender, photo, weight: weight.trim() || undefined, weightUnit, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined })
+  }
+  const saveDraft = () => {
+    const pet: Pet = {
+      id: initialPet?.id ?? crypto.randomUUID(),
+      name: name.trim(),
+      group: group || 'other',
+      species: species.trim(),
+      gender: gender || 'unknown',
+      photo,
+      weight: weight.trim() || undefined,
+      weightUnit,
+      birthday: birthday || undefined,
+      adoptionDate: adoptionDate || undefined,
+    }
+    onSaveDraft({
+      id: initialDraft?.id ?? crypto.randomUUID(),
+      draftType: 'pet',
+      title: pet.name || '마이펫 초안',
+      body: [animalCategoryLabels[pet.group], pet.species].filter(Boolean).join(' · '),
+      updatedAt: new Date().toISOString(),
+      step,
+      payload: pet,
+    })
+  }
   const attachPhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -1466,15 +1598,16 @@ function PetCreateFlow({ initialPet, onClose, onSave }: { initialPet: Pet | null
   }
 
   return (
-    <StepShell title={initialPet ? '펫 수정' : '펫 등록'} onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} progress={(step + 1) / 8}>
+    <StepShell title="펫" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={8} onStepChange={setStep}>
       {step === 0 && <StepSelect label="종류" value={group} options={animalCategoryOptions.filter((item) => item !== 'all')} labels={animalCategoryLabels} onChange={(value) => { setGroup(value as Exclude<AnimalCategory, 'all'>); setSpecies('') }} />}
-      {step === 1 && <StepSelect label="종" value={species} options={petSpeciesOptions[group]} onChange={setSpecies} />}
+      {step === 1 && <StepSelect label="종" value={species} options={group ? petSpeciesOptions[group] : []} onChange={setSpecies} />}
       {step === 2 && <StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} />}
       {step === 3 && <><StepText label="이름(닉네임)" value={name} onChange={setName} placeholder="예: 레오" /><label className="step-field photo-field attach-file-field"><span>사진 (선택)</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={attachPhoto} /><small>{photo ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small>{photo && <img src={photo} alt="선택한 펫 미리보기" />}</label></>}
       {step === 4 && <div className="step-field"><span>체중 (선택)</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="체중 입력" /><div className="weight-unit">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></div>}
       {step === 5 && <StepDate label="생일 (선택)" value={birthday} onChange={setBirthday} />}
       {step === 6 && <StepDate label="입양일 (선택)" value={adoptionDate} onChange={setAdoptionDate} />}
-      {step === 7 && <PetSummary pet={{ id: initialPet?.id ?? '', name, group, species, gender, photo, weight, weightUnit, birthday, adoptionDate }} />}
+      {step === 7 && <PetSummary pet={{ id: initialPet?.id ?? '', name, group: group || 'other', species, gender: gender || 'unknown', photo, weight, weightUnit, birthday, adoptionDate }} />}
+      <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>
       <button className="step-primary" type="button" disabled={!canNext} onClick={step === 7 ? finish : () => setStep((value) => value + 1)}>{step === 7 ? '등록 완료' : '다음'}</button>
     </StepShell>
   )
@@ -1482,9 +1615,9 @@ function PetCreateFlow({ initialPet, onClose, onSave }: { initialPet: Pet | null
 
 function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraft }: { userId: string; pets: Pet[]; initialDraft?: DraftItem | null; onClose: () => void; onSave: (post: QnaPost) => void | Promise<void>; onSaveDraft: (draft: DraftItem) => void | Promise<void> }) {
   const initialPost = initialDraft?.draftType === 'question' ? initialDraft.payload as QnaPost : null
-  const [step, setStep] = useState(0)
-  const [petId, setPetId] = useState(initialPost?.petId || 'none')
-  const [category, setCategory] = useState<QnaCategory>(initialPost ? normalizeQnaCategory(initialPost.category) : '건강/증상')
+  const [step, setStep] = useState(initialDraft?.step ?? 0)
+  const [petId, setPetId] = useState(initialPost?.petId || '')
+  const [category, setCategory] = useState<QnaCategory | ''>(initialPost ? normalizeQnaCategory(initialPost.category) : '')
   const [title, setTitle] = useState(initialPost?.title ?? '')
   const [body, setBody] = useState(initialPost?.body ?? '')
   const [image, setImage] = useState<string | undefined>(initialPost?.image)
@@ -1494,11 +1627,12 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
   const pet = pets.find((item) => item.id === petId)
   const hasNoAnimal = petId === 'none'
   const canSubmit = title.trim().length > 0 && body.trim().length > 0
+  const canNext = step === 0 ? Boolean(category) : step === 1 ? Boolean(petId) : canSubmit
   const selectedGroup = hasNoAnimal ? '동물 X' : pet ? animalCategoryLabels[pet.group] : ''
   const selectedSpecies = hasNoAnimal ? '' : pet?.species || ''
   const buildPost = (): QnaPost => ({
     id: initialPost?.id ?? crypto.randomUUID(),
-    category,
+    category: category || '건강/증상',
     status: 'unresolved',
     title: title.trim(),
     body: body.trim(),
@@ -1538,6 +1672,7 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
       title: post.title || '제목 없음',
       body: post.body,
       updatedAt: new Date().toISOString(),
+      step,
       payload: post,
     })
   }
@@ -1550,7 +1685,7 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
   }
 
   return (
-    <StepShell title="QNA 작성" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} progress={(step + 1) / 3}>
+    <StepShell title="NA" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={3} onStepChange={setStep}>
       {step === 0 && <StepSelect label="질문 유형" value={category} options={['건강/증상', '사육/관리', '병원/진료']} onChange={(value) => setCategory(value as QnaCategory)} />}
       {step === 1 && <StepSelect
         label="관련 펫"
@@ -1571,7 +1706,7 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
         </div>
       </div>}
       {step === 2 && <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>}
-      <button className="step-primary" type="button" disabled={step === 2 && !canSubmit} onClick={step === 2 ? finish : () => setStep((value) => value + 1)}>{step === 2 ? '등록' : '다음'}</button>
+      <button className="step-primary" type="button" disabled={!canNext} onClick={step === 2 ? finish : () => setStep((value) => value + 1)}>{step === 2 ? '등록' : '다음'}</button>
       {recordPickerOpen && <RecordPicker pets={pets} records={records} initialPetId={!hasNoAnimal ? petId : ''} onClose={() => setRecordPickerOpen(false)} onSelect={(record, recordPet) => { setAttachedRecord(toAttachedRecordSnapshot(record, recordPet)); setRecordPickerOpen(false) }} />}
     </StepShell>
   )
@@ -1698,10 +1833,10 @@ function getRecordPickerCalendarDays(month: Date) {
 function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: { pets: Pet[]; initialDraft?: DraftItem | null; onClose: () => void; onSave: (item: ShareItem) => void | Promise<void>; onSaveDraft: (draft: DraftItem) => void | Promise<void> }) {
   const initialItem = initialDraft?.draftType === 'share_item' ? initialDraft.payload as ShareItem : null
   const initialShareType = initialItem?.category === 'food' || initialItem?.category === 'supplies' ? 'item' : 'animal'
-  const [step, setStep] = useState(0)
-  const [shareType, setShareType] = useState<'animal' | 'item'>(initialShareType)
-  const [category, setCategory] = useState<ShareCategory>(initialItem?.category ?? 'reptile')
-  const [subcategory, setSubcategory] = useState(initialItem?.subcategory ?? '개코')
+  const [step, setStep] = useState(initialDraft?.step ?? 0)
+  const [shareType, setShareType] = useState<'animal' | 'item' | ''>(initialItem ? initialShareType : '')
+  const [category, setCategory] = useState<ShareCategory | ''>(initialItem?.category ?? '')
+  const [subcategory, setSubcategory] = useState(initialItem?.subcategory ?? '')
   const [source, setSource] = useState<'pet' | 'custom'>(initialItem?.species ? 'custom' : 'pet')
   const [petId, setPetId] = useState('')
   const [species, setSpecies] = useState(initialItem?.species ?? '')
@@ -1714,8 +1849,8 @@ function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: {
   const resolvedSpecies = source === 'pet' && selectedPet ? selectedPet.species : species
   const resolvedGender = source === 'pet' && selectedPet ? selectedPet.gender : gender
   const resolvedCategory = shareType === 'animal' && selectedPet && selectedPet.group !== 'all' ? selectedPet.group : category
-  const canNext = step === 1 ? (shareType === 'animal' ? Boolean(resolvedSpecies.trim()) : Boolean(subcategory)) : step === 2 ? title.trim().length > 0 : step === 3 ? Boolean(imageUrl) : step === 4 ? memo.trim().length > 0 : true
-  const buildItem = (): ShareItem => ({ id: initialItem?.id ?? crypto.randomUUID(), title: title.trim(), area: area.trim(), memo: memo.trim(), category: resolvedCategory, subcategory: shareType === 'animal' ? resolvedSpecies.trim() : subcategory, species: shareType === 'animal' ? resolvedSpecies.trim() : '', gender: shareType === 'animal' ? resolvedGender : 'unknown', imageUrl, createdAt: initialItem?.createdAt ?? new Date().toISOString(), likes: initialItem?.likes ?? 0, liked: initialItem?.liked ?? false })
+  const canNext = step === 0 ? Boolean(shareType) : step === 1 ? (shareType === 'animal' ? Boolean(resolvedCategory && resolvedSpecies.trim()) : Boolean(category && subcategory)) : step === 2 ? title.trim().length > 0 : step === 3 ? Boolean(imageUrl) : step === 4 ? memo.trim().length > 0 : true
+  const buildItem = (): ShareItem => ({ id: initialItem?.id ?? crypto.randomUUID(), title: title.trim(), area: area.trim(), memo: memo.trim(), category: resolvedCategory || 'other', subcategory: shareType === 'animal' ? resolvedSpecies.trim() : subcategory, species: shareType === 'animal' ? resolvedSpecies.trim() : '', gender: shareType === 'animal' ? resolvedGender : 'unknown', imageUrl, createdAt: initialItem?.createdAt ?? new Date().toISOString(), likes: initialItem?.likes ?? 0, liked: initialItem?.liked ?? false })
   const finish = () => onSave(buildItem())
   const saveDraft = () => {
     const item = buildItem()
@@ -1725,15 +1860,16 @@ function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: {
       title: item.title || '제목 없음',
       body: item.memo,
       updatedAt: new Date().toISOString(),
+      step,
       payload: item,
     })
   }
 
   return (
-    <StepShell title="무료분양/나눔 작성" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} progress={(step + 1) / 5}>
-      {step === 0 && <div className="share-type-picker"><span className="step-heading">무엇을 나눔하나요?</span><div><button className={shareType === 'animal' ? 'active' : ''} type="button" onClick={() => { setShareType('animal'); setCategory('reptile'); setSubcategory('개코') }}><strong>동물</strong><span>무료분양할 동물을 선택합니다</span></button><button className={shareType === 'item' ? 'active' : ''} type="button" onClick={() => { setShareType('item'); setCategory('food'); setSubcategory(shareSubcategories.food[0]) }}><strong>물품</strong><span>먹이 또는 용품을 나눔합니다</span></button></div></div>}
+    <StepShell title="나눔" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={5} onStepChange={setStep}>
+      {step === 0 && <div className="share-type-picker"><span className="step-heading">무엇을 나눔하나요?</span><div><button className={shareType === 'animal' ? 'active' : ''} type="button" onClick={() => { setShareType('animal'); setCategory(''); setSubcategory('') }}><strong>동물</strong><span>무료분양할 동물을 선택합니다</span></button><button className={shareType === 'item' ? 'active' : ''} type="button" onClick={() => { setShareType('item'); setCategory(''); setSubcategory('') }}><strong>물품</strong><span>먹이 또는 용품을 나눔합니다</span></button></div></div>}
       {step === 1 && shareType === 'animal' && <div className="share-animal-picker"><span className="step-heading">동물 선택</span><div className="share-source-tabs"><button className={source === 'pet' ? 'active' : ''} type="button" onClick={() => setSource('pet')}>마이 펫</button><button className={source === 'custom' ? 'active' : ''} type="button" onClick={() => setSource('custom')}>다른 종 직접 입력</button></div>{source === 'pet' ? <div className="share-pet-grid">{pets.length ? pets.map((pet) => <button className={petId === pet.id ? 'active' : ''} type="button" key={pet.id} onClick={() => setPetId(pet.id)}><strong>{pet.name}</strong><span>{pet.species}</span></button>) : <div className="share-animal-empty"><strong>등록된 마이 펫이 없습니다</strong><p>다른 종 직접 입력을 선택해 주세요.</p></div>}</div> : <><StepSelect label="동물 분류" value={category} options={['reptile', 'amphibian', 'rodent', 'bird', 'other']} labels={shareCategoryLabels} onChange={(value) => setCategory(value as ShareCategory)} /><StepText label="종" value={species} onChange={setSpecies} placeholder="예: 크레스티드 게코" /><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} /></>}</div>}
-      {step === 1 && shareType === 'item' && <div className="share-category-picker"><span className="step-heading">물품 카테고리</span><div className="share-category-section">{(['food', 'supplies'] as const).map((value) => <button className={category === value ? 'active' : ''} type="button" key={value} onClick={() => { setCategory(value); setSubcategory(shareSubcategories[value][0]) }}>{shareCategoryLabels[value]}</button>)}</div><div className="share-subcategory-section">{shareSubcategories[category === 'supplies' ? 'supplies' : 'food'].map((value) => <button className={subcategory === value ? 'active' : ''} type="button" key={value} onClick={() => setSubcategory(value)}>{value}</button>)}</div></div>}
+      {step === 1 && shareType === 'item' && <div className="share-category-picker"><span className="step-heading">물품 카테고리</span><div className="share-category-section">{(['food', 'supplies'] as const).map((value) => <button className={category === value ? 'active' : ''} type="button" key={value} onClick={() => { setCategory(value); setSubcategory('') }}>{shareCategoryLabels[value]}</button>)}</div><div className="share-subcategory-section">{(category ? shareSubcategories[category] : []).map((value) => <button className={subcategory === value ? 'active' : ''} type="button" key={value} onClick={() => setSubcategory(value)}>{value}</button>)}</div></div>}
       {step === 2 && <div className="share-create-fields"><StepText label="머리글" value={title} onChange={setTitle} placeholder="나눔 내용을 한눈에 알 수 있게 입력" /><StepText label="지역 (선택)" value={area} onChange={setArea} placeholder="예: 서울 강남" /></div>}
       {step === 3 && <label className="share-photo-input attach-file-field"><span className="step-heading">사진</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setImageUrl(String(reader.result)); reader.readAsDataURL(file) }} /><small>{imageUrl ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small>{imageUrl && <img src={imageUrl} alt="첨부 미리보기" />}</label>}
       {step === 4 && <StepTextarea label="설명" value={memo} onChange={setMemo} placeholder="상태, 나눔 방식, 특징 등을 입력" />}
@@ -1743,14 +1879,18 @@ function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: {
   )
 }
 
-function StepShell({ title, children, onBack, progress }: { title: string; children: ReactNode; onBack: () => void; progress?: number }) {
+function StepShell({ title, children, onBack, currentStep, stepCount, onStepChange }: { title: string; children: ReactNode; onBack: () => void; currentStep?: number; stepCount?: number; onStepChange?: (step: number) => void }) {
+  const progress = currentStep !== undefined && stepCount ? (currentStep + 1) / stepCount : undefined
   return (
     <main className="step-screen">
       <header className="step-header">
         <button className="back" type="button" aria-label="뒤로가기" onClick={onBack}>←</button>
         <strong>{title}</strong>
       </header>
-      {progress !== undefined && <div className="step-progress" aria-hidden="true"><span style={{ width: `${progress * 100}%` }} /></div>}
+      {progress !== undefined && stepCount && <div className="step-progress step-progress-selectable" role="tablist" aria-label="작성 단계">
+        <span className="step-progress-fill" style={{ width: `${progress * 100}%` }} />
+        {Array.from({ length: stepCount }, (_, index) => <button key={index} className={index === currentStep ? 'active' : ''} type="button" role="tab" aria-selected={index === currentStep} aria-label={`${index + 1}단계`} onClick={() => onStepChange?.(index)}><span>{index + 1}</span></button>)}
+      </div>}
       <section className="step-card">{children}</section>
     </main>
   )
@@ -1775,15 +1915,6 @@ function PetSummary({ pet }: { pet: Pet }) {
       </dl>
     </div>
   )
-}
-
-function formatPetDetails(pet: Pet) {
-  const details = [
-    pet.weight ? `${pet.weight}${pet.weightUnit ?? 'g'}` : null,
-    pet.birthday ? `생일 ${pet.birthday}` : null,
-    pet.adoptionDate ? `입양일 ${pet.adoptionDate}` : null,
-  ].filter(Boolean)
-  return details.length ? details.join(' · ') : '선택 정보 미입력'
 }
 
 function StepText({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
