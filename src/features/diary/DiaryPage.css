@@ -53,7 +53,6 @@
 .record-list-panel header span{color:#079b8c;font-weight:800}
 .record-list-heading{display:flex;align-items:baseline;gap:8px;min-width:0}
 .record-list-heading span{font-size:.8rem}
-.record-scope-toggle{min-height:32px;padding:0 10px;border:1px solid #bfe2d7;border-radius:999px;background:#fff;color:#078c80;font-size:.78rem;font-weight:900}
 .record-list{position:relative;display:grid;gap:10px;padding:5px 0 5px 18px}
 .record-list::before{position:absolute;top:12px;bottom:12px;left:5px;width:2px;background:#d5e4df;content:''}
 .record-list article{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:start;gap:8px;padding:0;border:0}
@@ -113,6 +112,7 @@
 .diary-overlay{position:fixed;inset:0;z-index:100}
 .diary-dim{position:absolute;inset:0;border:0;background:#173b3659}
 .diary-modal{position:absolute;right:0;bottom:0;left:0;max-height:88svh;overflow:auto;border-radius:16px 16px 0 0;background:#fbfffc}
+.diary-modal:has(.warning-dialog){right:auto;bottom:50%;left:50%;width:min(460px,calc(100vw - 32px));max-height:none;transform:translate(-50%,50%);border-radius:12px;box-shadow:0 20px 60px #173b3652}
 .record-type-sheet{padding:10px 18px calc(18px + env(safe-area-inset-bottom))}
 .sheet-handle{display:block;width:42px;height:5px;margin:0 auto 14px;border-radius:9px;background:#c8e6dc}
 .record-type-sheet h2{margin:0}
@@ -172,6 +172,7 @@
   .calendar-day{min-height:0;aspect-ratio:1 / 1;padding:5px}
   .calendar-tags small{padding:2px 3px}
   .diary-modal{border-radius:16px 16px 0 0}
+  .diary-modal:has(.warning-dialog){right:0;bottom:0;left:0;width:100%;transform:none;border-radius:16px 16px 0 0}
   .alarm-calendar-layout{grid-template-columns:1fr}
   .alarm-list article{grid-template-columns:32px minmax(0,1fr)}
   .alarm-actions{grid-column:2;justify-content:flex-start}

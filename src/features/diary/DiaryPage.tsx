@@ -102,6 +102,7 @@ const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 export default function DiaryPage({
   userId,
   pets,
+  initialPetId,
   onAddPet,
   initialDraft,
   onSaveDraft,
@@ -109,6 +110,7 @@ export default function DiaryPage({
 }: {
   userId: string
   pets: DiaryPet[]
+  initialPetId?: string
   onAddPet: () => void
   initialDraft?: DiaryDraftItem | null
   onSaveDraft?: (draft: DiaryDraftItem) => void | Promise<void>
@@ -116,7 +118,7 @@ export default function DiaryPage({
 }) {
   const today = toDateKey(new Date())
   const [mode, setMode] = useState<DiaryMode>('records')
-  const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id ?? '')
+  const [selectedPetId, setSelectedPetId] = useState(initialPetId ?? pets[0]?.id ?? '')
   const [selectedDate, setSelectedDate] = useState(today)
   const [visibleMonth, setVisibleMonth] = useState(new Date())
   const [records, setRecords] = useState<PetRecord[]>([])
@@ -126,7 +128,6 @@ export default function DiaryPage({
   const [recordInitialDraft, setRecordInitialDraft] = useState<RecordDraft | undefined>()
   const [recordDate, setRecordDate] = useState(selectedDate)
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
-  const [recordScope, setRecordScope] = useState<'day' | 'all'>('day')
   const [completingReminder, setCompletingReminder] = useState<Reminder | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null)
@@ -138,10 +139,7 @@ export default function DiaryPage({
   const effectivePetId = selectedPet?.id ?? ''
   const activeReminders = reminders.filter((reminder) => reminder.isActive)
   const petRecords = records.filter((record) => record.petId === effectivePetId)
-  const dayRecords = petRecords.filter((record) => record.date === selectedDate)
-  const visibleRecords = recordScope === 'all'
-    ? [...petRecords].sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`))
-    : dayRecords
+  const visibleRecords = [...petRecords].sort((a, b) => `${b.date}-${b.createdAt}`.localeCompare(`${a.date}-${a.createdAt}`))
   const selectedRecord = selectedRecordId ? records.find((record) => record.id === selectedRecordId) : null
 
   useEffect(() => {
@@ -166,6 +164,8 @@ export default function DiaryPage({
   useEffect(() => {
     if (!initialDraft || initialDraft.draftType !== 'care_record') return
     const payload = initialDraft.payload
+    // Restore a draft opened from the profile activity list.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode('records')
     setSelectedPetId(payload.petId)
     setSelectedDate(payload.date)
@@ -177,6 +177,8 @@ export default function DiaryPage({
 
   useEffect(() => {
     if (!initialDraft || initialDraft.draftType !== 'reminder') return
+    // Restore a reminder draft opened from the profile activity list.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode('alarms')
     setSelectedPetId(initialDraft.payload.reminder.petId)
     setEditingReminder(initialDraft.payload.reminder)
@@ -409,24 +411,18 @@ export default function DiaryPage({
             <section className="record-list-panel">
               <header>
                 <div className="record-list-heading">
-                  <h2>{recordScope === 'all' ? '전체 기록' : formatDate(selectedDate)}</h2>
+                  <h2>{formatDate(selectedDate)} 전체 기록</h2>
                   <span>{visibleRecords.length}개</span>
                 </div>
-                <button className="record-scope-toggle" type="button" onClick={() => setRecordScope(recordScope === 'day' ? 'all' : 'day')}>
-                  {recordScope === 'day' ? '전체 기록' : '선택 날짜'}
-                </button>
-                <span>{dayRecords.length}개</span>
               </header>
-              {recordScope === 'day' && selectedDate > today ? (
-                <EmptyState title="미래 날짜에는 기록할 수 없어요" />
-              ) : visibleRecords.length ? (
+              {visibleRecords.length ? (
                 <div className="record-list timeline-feed">
                   {visibleRecords.map((record) => (
                     <article className={`timeline-card ${record.type}`} key={record.id}>
                       <button className="record-open" type="button" onClick={() => setSelectedRecordId(record.id)}>
                         <span className="record-emoji">{recordMeta[record.type].icon}</span>
                         <div>
-                          {recordScope === 'all' && <span className="timeline-card-date">{formatDate(record.date)}</span>}
+                          <span className="timeline-card-date">{formatDate(record.date)}</span>
                           <strong>{record.type === 'weight' && record.weight !== undefined ? `${formatWeightValue(record.weight)}g` : record.type === 'food' && record.foods?.length ? record.foods.join(', ') : recordMeta[record.type].label}</strong>
                           <p>{record.memo}</p>
                         </div>

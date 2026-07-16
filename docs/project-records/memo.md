@@ -211,3 +211,21 @@
 - 처리: 기존 달력 날짜 선택, 기록 상세 보기, 삭제 동작 유지.
 - 변경 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
 - 검증: DiaryPage.tsx 개별 eslint 성공. 전체 tsc/lint/build는 기존 App.tsx의 RecordDraft export/초안 props 불일치 및 리뷰 초안 미사용 오류로 실패.
+
+## 2026-07-13 동물별 전체 기록 표시 방식으로 변경
+
+- 요청: 기록 종류/날짜를 별도로 선택하지 않고 마이 펫에서 선택한 동물의 기록 전체를 항상 표시.
+- 처리: 기록 패널의 전체 기록/선택 날짜 전환 버튼과 날짜별 필터 제거.
+- 처리: 달력 날짜 클릭은 선택 날짜 강조만 변경하고 기록 목록은 해당 동물 전체 기록을 유지.
+- 처리: 전체 기록 카드마다 기록 날짜를 표시하고 기록 클릭 시 기존 상세 화면으로 이동.
+- 변경 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
+- 검증: 이번 변경 구간 확인 완료. 전체 tsc/lint는 기존 App.tsx 미사용 StepDate/PetSummary 및 DiaryPage 초안 복원 effect의 setState 규칙 오류로 실패.
+
+## 2026-07-16 펫 미등록 경고창 크기 수정
+
+- 문제: 경고창이 데스크톱에서 화면 전체 폭으로 늘어나 문구와 버튼이 잘리는 현상.
+- 처리: 경고창만 중앙 모달로 제한하고 최대 너비 460px 및 화면 좌우 여백 적용.
+- 처리: 모바일에서는 전체 폭 하단 시트로 전환하되 화면을 넘지 않도록 수정.
+- 기록 추가 시트 등 다른 오버레이 동작은 유지.
+- 변경 파일: src/features/diary/DiaryPage.css
+- 검증: 다이어리 파일 린트 성공. 전체 tsc는 기존 App.tsx의 shareAreaSuggestions 미사용 및 ShareBoard onEditItem props 타입 오류로 실패.

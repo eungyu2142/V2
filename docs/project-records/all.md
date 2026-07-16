@@ -134,3 +134,25 @@
 - 반복 항목 사이에는 구분을 위한 최소 간격만 유지했다.
 - 변경 파일: `src/App.css`, `src/features/diary/DiaryPage.css`.
 - 검증: `npm run build`, `npm run lint` 통과.
+
+## 2026-07-13 작성자 프로필 사진 표시
+
+- 프로필의 `avatarUrl`을 QNA와 나눔 게시글 작성 시 `authorAvatarUrl`로 게시글 데이터에 함께 저장한다.
+- QNA 목록/상세와 나눔 목록에서 작성자 이름 옆에 프로필 사진을 표시한다.
+- 기존 게시글은 사진이 없을 때 현재 내 프로필 사진을 fallback으로 사용하고, 사진이 전혀 없으면 이름 첫 글자 마크를 표시한다.
+- 작성 화면의 임시저장/다음 버튼을 같은 높이의 액션 행으로 배치해 세로 공간을 줄였다.
+- 검증: `npm run build`, `npm run lint` 통과.
+
+## 2026-07-16 임시저장 DB 제약조건 정리
+
+- 임시저장 기능이 저장되지 않던 원인은 앱이 사용하는 `pet`, `reminder`, `hospital_review` 유형이 기존 `drafts.draft_type` 허용 목록에 빠져 있었기 때문이다.
+- `supabase/migrations/202607160001_fix_draft_types.sql`을 추가해 모든 작성 흐름의 유형을 허용하고 RLS 정책과 인덱스를 보강했다.
+- Supabase SQL Editor에 해당 마이그레이션을 실행해야 실제 프로젝트 DB에 반영된다.
+- 검증: `npm run build` 통과.
+
+## 2026-07-16 임시저장 즉시 동작 보강
+
+- Supabase `drafts` 저장이 제약조건 또는 RLS 오류로 실패해도 작성 내용이 브라우저 `localStorage`에 보존되도록 fallback을 추가했다.
+- 앱 시작 시 Supabase 임시저장과 로컬 임시저장을 합쳐 프로필의 임시저장 목록에서 이어쓸 수 있다.
+- Supabase 오류는 개발자 콘솔에 기록하고 사용자 흐름은 중단하지 않는다.
+- 검증: `npm run build`, `npm run lint` 통과.

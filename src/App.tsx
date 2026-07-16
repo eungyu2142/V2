@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { type ChangeEvent, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import './App.css'
 import AuthScreen from './components/AuthScreen'
@@ -12,6 +12,7 @@ type CreateMode = 'pet' | 'post' | 'share' | null
 type AnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
 type ShareCategory = 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other' | 'food' | 'supplies'
 type ShareSort = 'latest' | 'popular'
+type ShareStatus = 'active' | 'completed'
 
 type Pet = {
   id: string
@@ -24,9 +25,13 @@ type Pet = {
   weightUnit?: 'g' | 'kg'
   birthday?: string
   adoptionDate?: string
+  registeredAt?: string
+  description?: string
+  ageStage?: string
+  ageText?: string
 }
 
-type QnaCategory = '건강/증상' | '사육/관리' | '병원/진료'
+type QnaCategory = '건강/증상' | '사육/관리'
 type QnaStatus = 'unresolved' | 'resolved'
 type QnaSort = 'needsAnswer' | 'latest' | 'comments' | 'resolved'
 
@@ -47,6 +52,7 @@ type QnaPost = {
   title: string
   body: string
   author: string
+  authorAvatarUrl?: string
   mine?: boolean
   animal: string
   petId: string
@@ -66,6 +72,9 @@ type ShareItem = {
   title: string
   area: string
   memo: string
+  author?: string
+  authorAvatarUrl?: string
+  status?: ShareStatus
   category?: ShareCategory
   subcategory?: string
   species?: string
@@ -107,6 +116,21 @@ type AppProfile = {
   username: string
   nickname: string
   avatarUrl: string
+}
+
+const LOCAL_DRAFTS_KEY = 'exocare:drafts'
+
+function readLocalDrafts() {
+  try {
+    const value = JSON.parse(localStorage.getItem(LOCAL_DRAFTS_KEY) ?? '[]')
+    return Array.isArray(value) ? value as DraftItem[] : []
+  } catch {
+    return []
+  }
+}
+
+function writeLocalDrafts(items: DraftItem[]) {
+  localStorage.setItem(LOCAL_DRAFTS_KEY, JSON.stringify(items))
 }
 
 type Coordinates = {
@@ -245,6 +269,7 @@ const shareSubcategories: Record<ShareCategory, string[]> = {
   food: ['영양제', '귀뚜라미', '밀웜', '누에', '마우스', '사료', '기타'],
   supplies: ['사육장', '식급수기', '은신처', '바닥재', '온습도계', '난방용품', '기타'],
 }
+const shareAreaSuggestions = ['서울', '경기', '인천', '부산', '대구', '대전', '광주', '울산', '세종', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주']
 void shareSubcategories
 let naverMapsLoader: Promise<NaverMapApi> | null = null
 const qnaTable = ['comm', 'unity_posts'].join('')
@@ -276,7 +301,10 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [sideNavOpen, setSideNavOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateMode>(null)
+  const [qnaOpenId, setQnaOpenId] = useState<string | null>(null)
+  const [shareOpenId, setShareOpenId] = useState<string | null>(null)
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
+  const [diaryPetId, setDiaryPetId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState<DraftItem | null>(null)
   const [mapFocusHospital, setMapFocusHospital] = useState<HospitalSnapshot | null>(null)
   const [pets, setPets] = useState<Pet[]>([])
@@ -298,7 +326,12 @@ function AuthenticatedApp({ session }: { session: Session }) {
       loadRequired<Pet>('pets'),
       loadRequired<QnaPost>(qnaTable),
       loadRequired<ShareItem>('share_items'),
-      loadOptional<DraftItem>('drafts'),
+      loadOptional<DraftItem>('drafts').then((items) => {
+        const localItems = readLocalDrafts()
+        const merged = [...items, ...localItems.filter((local) => !items.some((item) => item.id === local.id))]
+        writeLocalDrafts(merged)
+        return merged
+      }).catch(() => readLocalDrafts()),
     ]).then(([nextPets, nextPosts, nextItems, nextDrafts]) => {
       if (!active) return
       setPets(nextPets.map(normalizePet))
@@ -354,7 +387,6 @@ function AuthenticatedApp({ session }: { session: Session }) {
         gender: pet.gender, photo_url: pet.photo ?? null,
       })
       setPets((items) => [pet, ...items.filter((item) => item.id !== pet.id)])
-      setCreateMode(null)
     } catch {
       setDataError('펫 정보를 저장하지 못했습니다.')
     }
@@ -427,20 +459,24 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const saveDraft = async (draft: DraftItem) => {
     try {
       await saveAppData('drafts', session.user.id, draft, { draft_type: draft.draftType })
-      setDrafts((items) => [draft, ...items.filter((item) => item.id !== draft.id)])
-      setCreateMode(null)
-    } catch {
-      setDataError('임시저장을 저장하지 못했습니다.')
+    } catch (error) {
+      console.error('Supabase draft save failed; using local draft storage.', error)
     }
+    const nextDrafts = [draft, ...readLocalDrafts().filter((item) => item.id !== draft.id)]
+    writeLocalDrafts(nextDrafts)
+    setDrafts((items) => [draft, ...items.filter((item) => item.id !== draft.id)])
+    setCreateMode(null)
   }
 
   const deleteDraft = async (draftId: string) => {
     try {
       await deleteAppData('drafts', draftId)
-      setDrafts((items) => items.filter((item) => item.id !== draftId))
-    } catch {
-      setDataError('임시저장을 삭제하지 못했습니다.')
+    } catch (error) {
+      console.error('Supabase draft delete failed; deleting local draft.', error)
     }
+    const nextDrafts = readLocalDrafts().filter((item) => item.id !== draftId)
+    writeLocalDrafts(nextDrafts)
+    setDrafts((items) => items.filter((item) => item.id !== draftId))
   }
 
   const continueDraft = (draft: DraftItem) => {
@@ -468,6 +504,43 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setActiveTab('map')
       setCreateMode(null)
     }
+  }
+
+  const openWrittenPost = (kind: 'question' | 'share_item', id: string) => {
+    setProfileOpen(false)
+    setCreateMode(null)
+    if (kind === 'question') {
+      setActiveTab('qna')
+      setQnaOpenId(id)
+      setShareOpenId(null)
+      return
+    }
+    setActiveTab('share')
+    setShareOpenId(id)
+    setQnaOpenId(null)
+  }
+
+  const editWrittenPost = (kind: 'question' | 'share_item', id: string) => {
+    const payload = kind === 'question' ? qnaPosts.find((post) => post.id === id) : shareItems.find((item) => item.id === id)
+    if (!payload) return
+    setProfileOpen(false)
+    setEditingDraft({
+      id,
+      draftType: kind,
+      title: 'title' in payload ? payload.title : '',
+      body: 'body' in payload ? payload.body : 'memo' in payload ? payload.memo : '',
+      updatedAt: new Date().toISOString(),
+      payload,
+    } as DraftItem)
+    setCreateMode(kind === 'question' ? 'post' : 'share')
+  }
+
+  const deleteWrittenPost = (kind: 'question' | 'share_item', id: string) => {
+    if (kind === 'question') {
+      void deleteQnaPost(id)
+      return
+    }
+    void deleteShareItem(id)
   }
 
   const saveProfile = async (nextProfile: AppProfile) => {
@@ -511,7 +584,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       onClose={() => { setCreateMode(null); setEditingDraft(null) }}
       onSave={async (post) => {
         await saveQnaPost(post)
-        if (editingDraft) await deleteDraft(editingDraft.id)
+        if (editingDraft && drafts.some((draft) => draft.id === editingDraft.id)) await deleteDraft(editingDraft.id)
         setEditingDraft(null)
       }}
       onSaveDraft={saveDraft}
@@ -524,7 +597,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       onClose={() => { setCreateMode(null); setEditingDraft(null) }}
       onSave={async (item) => {
         await saveShareItem(item)
-        if (editingDraft) await deleteDraft(editingDraft.id)
+        if (editingDraft && drafts.some((draft) => draft.id === editingDraft.id)) await deleteDraft(editingDraft.id)
         setEditingDraft(null)
       }}
       onSaveDraft={saveDraft}
@@ -575,10 +648,10 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
       {activeTab !== 'map' && (
         <main className="app-main">
-          {activeTab === 'pets' && <PetsScreen pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={() => moveTab('diary')} />}
-          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onSaveDraft={async (draft) => { await saveDraft(draft); setEditingDraft(null) }} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
-          {activeTab === 'qna' && <QnaScreen posts={qnaPosts} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onOpenHospital={openHospitalOnMap} />}
-          {activeTab === 'share' && <ShareScreen items={shareItems} onItemsChange={setShareItems} onSaveItem={saveShareItem} onDeleteItem={deleteShareItem} />}
+          {activeTab === 'pets' && <PetsScreen pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={(petId) => { setDiaryPetId(petId); moveTab('diary') }} onRegisterPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} initialPetId={diaryPetId ?? undefined} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onSaveDraft={async (draft) => { await saveDraft(draft); setEditingDraft(null) }} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
+          {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onOpenHospital={openHospitalOnMap} />}
+          {activeTab === 'share' && <ShareScreen items={shareItems} openItemId={shareOpenId} onOpenHandled={() => setShareOpenId(null)} onItemsChange={setShareItems} onSaveItem={saveShareItem} onDeleteItem={deleteShareItem} onEditItem={(item) => editWrittenPost('share_item', item.id)} />}
         </main>
       )}
 
@@ -597,7 +670,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       </nav>
 
       {dataError && <button className="data-error" type="button" onClick={() => setDataError('')}>{dataError}</button>}
-      {profileOpen && <ProfilePanel profile={profile} qnaPosts={qnaPosts} shareItems={shareItems} drafts={drafts} onClose={() => setProfileOpen(false)} onSignOut={() => supabase.auth.signOut()} onSaveProfile={saveProfile} onDeleteDraft={deleteDraft} onContinueDraft={continueDraft} />}
+      {profileOpen && <ProfilePanel profile={profile} qnaPosts={qnaPosts} shareItems={shareItems} drafts={drafts} onClose={() => setProfileOpen(false)} onSignOut={() => supabase.auth.signOut()} onSaveProfile={saveProfile} onDeleteDraft={deleteDraft} onContinueDraft={continueDraft} onOpenWrittenPost={openWrittenPost} onEditWrittenPost={editWrittenPost} onDeleteWrittenPost={deleteWrittenPost} />}
     </div>
   )
 }
@@ -612,6 +685,9 @@ function ProfilePanel({
   onSaveProfile,
   onDeleteDraft,
   onContinueDraft,
+  onOpenWrittenPost,
+  onEditWrittenPost,
+  onDeleteWrittenPost,
 }: {
   profile: AppProfile
   qnaPosts: QnaPost[]
@@ -622,16 +698,30 @@ function ProfilePanel({
   onSaveProfile: (profile: AppProfile) => void
   onDeleteDraft: (draftId: string) => void
   onContinueDraft: (draft: DraftItem) => void
+  onOpenWrittenPost: (kind: 'question' | 'share_item', id: string) => void
+  onEditWrittenPost: (kind: 'question' | 'share_item', id: string) => void
+  onDeleteWrittenPost: (kind: 'question' | 'share_item', id: string) => void
 }) {
-  const [view, setView] = useState<'menu' | 'profile' | 'posts' | 'drafts' | 'saved' | 'logout'>('menu')
+  const [view, setView] = useState<'menu' | 'profile' | 'posts' | 'drafts' | 'liked' | 'logout'>('menu')
   const [username, setUsername] = useState(profile.username)
   const [nickname, setNickname] = useState(profile.nickname)
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl)
   const [profileSaved, setProfileSaved] = useState(false)
-  const posts = [
-    ...qnaPosts.map((post) => ({ id: post.id, type: 'QNA', title: post.title, body: post.body })),
-    ...shareItems.map((item) => ({ id: item.id, type: shareCategoryLabels[item.category ?? 'other'], title: item.title, body: item.memo })),
+  const posts: Array<{ id: string; kind: 'question' | 'share_item'; type: string; title: string; body: string }> = [
+    ...qnaPosts.filter((post) => post.mine !== false).map((post) => ({ id: post.id, kind: 'question' as const, type: 'QNA', title: post.title, body: post.body })),
+    ...shareItems.map((item) => ({ id: item.id, kind: 'share_item' as const, type: shareCategoryLabels[item.category ?? 'other'], title: item.title, body: item.memo })),
   ]
+  const likedItems: Array<{ id: string; kind: 'question' | 'share_item'; type: string; title: string; body: string }> = [
+    ...qnaPosts.filter((post) => post.liked).map((post) => ({ id: post.id, kind: 'question' as const, type: 'QNA', title: post.title, body: post.body })),
+    ...shareItems.filter((item) => item.liked).map((item) => ({ id: item.id, kind: 'share_item' as const, type: shareCategoryLabels[item.category ?? 'other'], title: item.title, body: item.memo })),
+  ]
+  const attachAvatar = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setAvatarUrl(typeof reader.result === 'string' ? reader.result : '')
+    reader.readAsDataURL(file)
+  }
 
   return (
     <div className="overlay">
@@ -646,7 +736,7 @@ function ProfilePanel({
             <button type="button" onClick={() => setView('profile')}>&#45236; &#51221;&#48372; &#49688;&#51221;</button>
             <button type="button" onClick={() => setView('posts')}>&#45236;&#44032; &#50420; &#44544;</button>
             <button type="button" onClick={() => setView('drafts')}>{'\uC784\uC2DC\uC800\uC7A5'}<span>{drafts.length}</span></button>
-            <button type="button" onClick={() => setView('saved')}>&#51200;&#51109;&#54620; &#48337;&#50896;</button>
+            <button type="button" onClick={() => setView('liked')}>좋아요한<span>{likedItems.length}</span></button>
             <button type="button" onClick={() => setView('logout')}>&#47196;&#44536;&#50500;&#50883;</button>
           </>
         )}
@@ -661,8 +751,9 @@ function ProfilePanel({
               <input value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="nickname" />
             </label>
             <label>
-              <span>{'\uD504\uB85C\uD544 \uC0AC\uC9C4 URL'}</span>
-              <input value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://..." />
+              <span>{'\uD504\uB85C\uD544 \uC0AC\uC9C4'}</span>
+              <span className="profile-file-button">사진 선택</span>
+              <input type="file" accept="image/*" onChange={attachAvatar} />
             </label>
             {avatarUrl && <img className="profile-avatar-preview" src={avatarUrl} alt="profile preview" />}
             <button type="button" onClick={() => { onSaveProfile({ username, nickname, avatarUrl }); setProfileSaved(true) }}>{'\uC800\uC7A5'}</button>
@@ -678,6 +769,11 @@ function ProfilePanel({
                     <span>{post.type}</span>
                     <strong>{post.title}</strong>
                     <p>{post.body}</p>
+                    <div className="profile-row-actions three">
+                      <button type="button" onClick={() => onOpenWrittenPost(post.kind, post.id)}>열기</button>
+                      <button type="button" onClick={() => onEditWrittenPost(post.kind, post.id)}>수정</button>
+                      <button type="button" onClick={() => onDeleteWrittenPost(post.kind, post.id)}>삭제</button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -703,9 +799,22 @@ function ProfilePanel({
             )}
           </div>
         )}
-        {view === 'saved' && (
+        {view === 'liked' && (
           <div className="profile-panel-content">
-            <p>저장한 병원 목록은 좋아요/저장 DB 연결 후 이곳에 표시됩니다.</p>
+            {likedItems.length === 0 ? <p>좋아요한 항목이 없습니다.</p> : (
+              <div className="profile-list">
+                {likedItems.map((item) => (
+                  <article key={`liked-${item.kind}-${item.id}`}>
+                    <span>{item.type}</span>
+                    <strong>{item.title}</strong>
+                    <p>{item.body}</p>
+                    <div className="profile-row-actions">
+                      <button type="button" onClick={() => onOpenWrittenPost(item.kind, item.id)}>열기</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {view === 'logout' && (
@@ -777,6 +886,8 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
   useEffect(() => {
     if (!reviewDraftPayload) return
     const hospital = hospitalFromSnapshot(reviewDraftPayload.hospital)
+    // This effect restores a draft opened from another screen.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
     setSelectedHospitalId(hospital.id)
     setReviewPanelHospitalId(hospital.id)
@@ -1072,17 +1183,54 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
   )
 }
 
-function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary }: { pets: Pet[]; onDeletePet: (petId: string) => void; onEditPet: (pet: Pet) => void; onOpenDiary: () => void }) {
+function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary, onRegisterPet }: { pets: Pet[]; onDeletePet: (petId: string) => void; onEditPet: (pet: Pet) => void; onOpenDiary: (petId: string) => void; onRegisterPet: () => void }) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<AnimalCategory>('all')
+  const [sort, setSort] = useState<'latest' | 'oldest'>('latest')
+  const [view, setView] = useState<'card' | 'list'>(() => localStorage.getItem('exocare-pet-view') === 'list' ? 'list' : 'card')
+  const [records, setRecords] = useState<PetRecord[]>([])
+  const [menuPetId, setMenuPetId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Pet | null>(null)
+  const [detailPet, setDetailPet] = useState<Pet | null>(null)
+
+  useEffect(() => {
+    localStorage.setItem('exocare-pet-view', view)
+  }, [view])
+
+  useEffect(() => {
+    let active = true
+    loadAppData<PetRecord>('care_records').then((items) => {
+      if (active) setRecords(items)
+    }).catch(() => {
+      if (active) setRecords([])
+    })
+    return () => { active = false }
+  }, [pets.length])
+
   const filteredPets = pets.filter((pet) => {
     const text = `${pet.name} ${pet.species} ${animalCategoryLabels[pet.group]}`.toLowerCase()
     return (category === 'all' || pet.group === category) && text.includes(query.trim().toLowerCase())
+  }).sort((a, b) => {
+    const aDate = new Date(a.registeredAt ?? 0).getTime()
+    const bDate = new Date(b.registeredAt ?? 0).getTime()
+    return sort === 'latest' ? bDate - aDate : aDate - bDate
   })
+
+  const recentRecords = (petId: string) => records.filter((record) => record.petId === petId).sort((a, b) => `${b.date}${b.createdAt}`.localeCompare(`${a.date}${a.createdAt}`)).slice(0, 4)
+  const openDeleteConfirm = (pet: Pet) => {
+    setMenuPetId(null)
+    setDeleteTarget(pet)
+  }
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    onDeletePet(deleteTarget.id)
+    setDeleteTarget(null)
+  }
 
   return (
     <section className="page-stack my-pet-dashboard">
       <section className="section-block my-pet-tools my-pet-dashboard-panel">
+        <div className="my-pet-dashboard-heading"><div><h2>마이 펫</h2><p>반려동물 관리</p></div></div>
         <label className="my-pet-search"><span>동물 검색</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름, 종, 분류 검색" /></label>
         <div className="filter-tags" aria-label="동물 분류 필터">
           {animalCategoryOptions.map((item) => (
@@ -1093,17 +1241,16 @@ function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary }: { pets: Pet[]
         </div>
       </section>
       <section className="section-block my-pet-section my-pet-dashboard-panel">
-        <div className="section-title"><h2>등록된 펫</h2><span>{filteredPets.length}마리</span></div>
-        {filteredPets.length === 0 ? <p className="empty-state">{pets.length === 0 ? '등록된 펫이 없습니다.' : '검색 조건에 맞는 펫이 없습니다.'}</p> : (
-          <div className="pet-list">
+        <div className="pet-list-toolbar"><div className="section-title"><h2>등록된 펫</h2><span>{filteredPets.length}마리</span></div><div className="pet-list-controls"><select value={sort} onChange={(event) => setSort(event.target.value as 'latest' | 'oldest')} aria-label="정렬"><option value="latest">최신 등록순</option><option value="oldest">오래된 등록순</option></select><div className="pet-view-toggle" aria-label="보기 방식"><button className={view === 'card' ? 'active' : ''} type="button" onClick={() => setView('card')} aria-label="카드형 보기">▦</button><button className={view === 'list' ? 'active' : ''} type="button" onClick={() => setView('list')} aria-label="리스트형 보기">☷</button></div></div></div>
+        {filteredPets.length === 0 ? <div className="pet-empty-state"><strong>{pets.length === 0 ? '등록된 펫 없음' : '해당 분류에 펫 없음'}</strong><p>{pets.length === 0 ? '첫 펫을 등록해보세요.' : '필터를 바꿔보세요.'}</p>{pets.length === 0 && <button type="button" onClick={onRegisterPet}>+ 펫 등록</button>}</div> : (
+          <div className={`pet-list ${view === 'list' ? 'list-view' : 'card-view'}`}>
             {filteredPets.map((pet) => (
-              <article className="pet-card" key={pet.id}>
+              <article className="pet-card" key={pet.id} onClick={() => setDetailPet(pet)}>
                 <div className="pet-card-topline">
                   <span className="pet-category-badge">{animalCategoryLabels[pet.group]}</span>
                   <div className="pet-card-actions">
-                    <button className="item-action-button pet-diary-button" type="button" aria-label="기록으로 이동" onClick={onOpenDiary}>⌁</button>
-                    <button className="item-action-button" type="button" aria-label="수정" onClick={() => onEditPet(pet)}>✎</button>
-                    <ItemActions onDelete={() => onDeletePet(pet.id)} />
+                    <button className="pet-more-button" type="button" aria-label="펫 메뉴" onClick={(event) => { event.stopPropagation(); setMenuPetId(menuPetId === pet.id ? null : pet.id) }}>⋮</button>
+                    {menuPetId === pet.id && <div className="pet-more-menu"><button type="button" onClick={(event) => { event.stopPropagation(); setMenuPetId(null); onEditPet(pet) }}>수정</button><button className="danger" type="button" onClick={(event) => { event.stopPropagation(); openDeleteConfirm(pet) }}>삭제</button></div>}
                   </div>
                 </div>
                 <div className="pet-card-visual">
@@ -1111,22 +1258,60 @@ function PetsScreen({ pets, onDeletePet, onEditPet, onOpenDiary }: { pets: Pet[]
                   <div className="pet-card-title-row"><strong>{pet.name}</strong></div>
                   <small className="pet-species-line">{pet.species}</small>
                 </div>
-                <div className="pet-info-badges">
-                  <span><b>성별</b>{genderLabel(pet.gender)}</span>
-                  {pet.weight && <span><b>무게</b>{pet.weight}{pet.weightUnit ?? 'g'}</span>}
-                  {pet.birthday && <span><b>생일</b>{pet.birthday}</span>}
-                  {pet.adoptionDate && <span><b>입양일</b>{pet.adoptionDate}</span>}
+                <div className="pet-card-body">
+                  <div className="pet-info-badges"><span><b>성별</b>{genderLabel(pet.gender)}</span>{(pet.ageText || pet.ageStage) && <span><b>나이</b>{pet.ageText || pet.ageStage}</span>}{pet.registeredAt && <span><b>등록</b>{formatPetDate(pet.registeredAt)}</span>}{pet.weight && <span><b>무게</b>{pet.weight}{pet.weightUnit ?? 'g'}</span>}</div>
+                  {pet.description && <p className="pet-description">{pet.description}</p>}
+                </div>
+                <div className="pet-recent-records"><strong>최근 기록</strong>{recentRecords(pet.id).length === 0 ? <p>기록 없음</p> : recentRecords(pet.id).map((record) => <div key={record.id}><span>{recordTypeLabels[record.type]}{record.weight ? ` ${record.weight}g` : ''}</span><time>{formatPetDate(record.date)}</time></div>)}</div>
+                <div className="pet-card-footer"><button type="button" title="상세 정보" onClick={(event) => { event.stopPropagation(); setDetailPet(pet) }}>상세</button><button type="button" title="기록 추가" onClick={(event) => { event.stopPropagation(); onOpenDiary(pet.id) }}>기록</button><button type="button" title="수정" onClick={(event) => { event.stopPropagation(); onEditPet(pet) }}>수정</button>
                 </div>
               </article>
             ))}
           </div>
         )}
       </section>
+      {detailPet && <PetDetailModal pet={detailPet} records={recentRecords(detailPet.id)} onClose={() => setDetailPet(null)} onEdit={() => { setDetailPet(null); onEditPet(detailPet) }} onOpenDiary={() => onOpenDiary(detailPet.id)} />}
+      {deleteTarget && <DeletePetModal pet={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
     </section>
   )
 }
 
-function QnaScreen({ posts, onChange, onDeletePost, onOpenHospital }: { posts: QnaPost[]; onChange: (posts: QnaPost[]) => void; onDeletePost: (postId: string) => void; onOpenHospital: (hospital: HospitalSnapshot) => void }) {
+function formatPetDate(value?: string) {
+  if (!value) return '정보 없음'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '정보 없음'
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
+}
+
+function PetDetailModal({ pet, records, onClose, onEdit, onOpenDiary }: { pet: Pet; records: PetRecord[]; onClose: () => void; onEdit: () => void; onOpenDiary: () => void }) {
+  return (
+    <div className="pet-detail-overlay">
+      <button className="overlay-dim" type="button" aria-label="펫 상세 닫기" onClick={onClose} />
+      <section className="pet-detail-modal" role="dialog" aria-modal="true" aria-label={`${pet.name} 상세 정보`}>
+        <button className="pet-detail-close" type="button" aria-label="닫기" onClick={onClose}>×</button>
+        <div className="pet-detail-hero">{pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} /> : <div className="pet-card-icon"><CategoryTagIcon category={pet.group} /></div>}<div><span>{animalCategoryLabels[pet.group]}</span><h2>{pet.name}</h2><p>{pet.species} · {genderLabel(pet.gender)}</p></div></div>
+        <div className="pet-detail-grid"><div><b>성별</b><span>{genderLabel(pet.gender)}</span></div><div><b>나이</b><span>{pet.ageText || pet.ageStage || '정보 없음'}</span></div><div><b>등록일</b><span>{formatPetDate(pet.registeredAt)}</span></div><div><b>무게</b><span>{pet.weight ? `${pet.weight}${pet.weightUnit ?? 'g'}` : '정보 없음'}</span></div></div>
+        <section className="pet-detail-records"><h3>최근 기록</h3>{records.length === 0 ? <p>아직 작성된 기록이 없습니다.</p> : records.map((record) => <div key={record.id}><span>{recordTypeLabels[record.type]}{record.weight ? ` ${record.weight}g` : ''}</span><time>{formatPetDate(record.date)}</time></div>)}</section>
+        <div className="pet-detail-actions"><button type="button" onClick={onOpenDiary}>기록 작성</button><button type="button" onClick={onEdit}>수정</button></div>
+      </section>
+    </div>
+  )
+}
+
+function DeletePetModal({ pet, onCancel, onConfirm }: { pet: Pet; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="pet-detail-overlay">
+      <button className="overlay-dim" type="button" aria-label="삭제 확인 닫기" onClick={onCancel} />
+      <section className="delete-pet-modal" role="dialog" aria-modal="true" aria-label="펫 삭제 확인">
+        <h2>‘{pet.name}’을 삭제하시겠습니까?</h2>
+        <p>관련 기록도 함께 삭제될 수 있습니다.</p>
+        <div><button type="button" onClick={onCancel}>취소</button><button className="danger" type="button" onClick={onConfirm}>삭제</button></div>
+      </section>
+    </div>
+  )
+}
+
+function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, onChange, onDeletePost, onOpenHospital }: { userId: string; profile: AppProfile; posts: QnaPost[]; openPostId?: string | null; onOpenHandled?: () => void; onChange: (posts: QnaPost[]) => void; onDeletePost: (postId: string) => void; onOpenHospital: (hospital: HospitalSnapshot) => void }) {
   const [sort, setSort] = useState<QnaSort>('latest')
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
   const [feedCategory, setFeedCategory] = useState<QnaCategory | null>(null)
@@ -1136,7 +1321,30 @@ function QnaScreen({ posts, onChange, onDeletePost, onOpenHospital }: { posts: Q
   const [comment, setComment] = useState('')
   const [attachedHospital, setAttachedHospital] = useState<HospitalSnapshot | null>(null)
   const [hospitalPickerOpen, setHospitalPickerOpen] = useState(false)
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, QnaComment[]>>({})
   const selected = posts.find((post) => post.id === selectedId)
+  const selectedComments = selected ? commentsByPost[selected.id] ?? selected.comments : []
+  useEffect(() => {
+    let active = true
+    supabase.from('post_comments').select('id, post_id, user_id, body, created_at, payload').then(({ data, error }) => {
+      if (!active || error) return
+      const grouped: Record<string, QnaComment[]> = {}
+      for (const row of data ?? []) {
+        const payload = (row.payload ?? {}) as { author?: string; hospitalSnapshot?: HospitalSnapshot }
+        const item: QnaComment = { id: row.id, author: payload.author ?? (row.user_id === userId ? '나' : '작성자'), body: row.body, createdAt: row.created_at, mine: row.user_id === userId, hospitalSnapshot: payload.hospitalSnapshot }
+        grouped[row.post_id] = [...(grouped[row.post_id] ?? []), item]
+      }
+      setCommentsByPost(grouped)
+    })
+    return () => { active = false }
+  }, [userId, posts.length])
+  useEffect(() => {
+    if (!openPostId) return
+    // This effect consumes a profile deep-link into the selected post.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedId(openPostId)
+    onOpenHandled?.()
+  }, [openPostId, onOpenHandled])
   const searchedPosts = posts.filter((post) => {
     const text = `${post.title} ${post.body} ${post.author} ${post.animalGroup ?? ''} ${post.animalSpecies ?? post.animal}`.toLowerCase()
     return text.includes(query.trim().toLowerCase())
@@ -1149,45 +1357,48 @@ function QnaScreen({ posts, onChange, onDeletePost, onOpenHospital }: { posts: Q
   const toggleLike = (post: QnaPost) => updatePost({ ...post, liked: !post.liked, likes: Math.max(0, post.likes + (post.liked ? -1 : 1)) })
   const toggleStatus = (post: QnaPost) => updatePost({ ...post, status: qnaStatus(post) === 'resolved' ? 'unresolved' : 'resolved' })
   const selectAnswer = (post: QnaPost, commentId: string) => updatePost(post.selectedAnswerCommentId === commentId ? { ...post, status: 'unresolved', selectedAnswerCommentId: undefined } : { ...post, status: 'resolved', selectedAnswerCommentId: commentId })
-  const addComment = (event: FormEvent) => {
+  const addComment = async (event: FormEvent) => {
     event.preventDefault()
     if (!selected || (!comment.trim() && !attachedHospital)) return
-    updatePost({ ...selected, comments: [...selected.comments, { id: crypto.randomUUID(), author: '나', body: comment.trim(), createdAt: new Date().toISOString(), mine: true, hospitalSnapshot: attachedHospital ?? undefined }] })
+    const newComment: QnaComment = { id: crypto.randomUUID(), author: '나', body: comment.trim(), createdAt: new Date().toISOString(), mine: true, hospitalSnapshot: attachedHospital ?? undefined }
+    const { error } = await supabase.from('post_comments').insert({ id: newComment.id, post_id: selected.id, user_id: userId, body: newComment.body, payload: { author: newComment.author, hospitalSnapshot: newComment.hospitalSnapshot ?? null } })
+    if (error) return
+    setCommentsByPost((items) => ({ ...items, [selected.id]: [...(items[selected.id] ?? selected.comments), newComment] }))
     setComment('')
     setAttachedHospital(null)
   }
 
   if (selected) {
-    const sortedComments = [...selected.comments].sort((a, b) => (a.id === selected.selectedAnswerCommentId ? -1 : 0) - (b.id === selected.selectedAnswerCommentId ? -1 : 0))
+    const sortedComments = [...selectedComments].sort((a, b) => (a.id === selected.selectedAnswerCommentId ? -1 : 0) - (b.id === selected.selectedAnswerCommentId ? -1 : 0))
     return (
       <section className="qna-detail">
         <header className="qna-detail-header">
           <button className="qna-back" type="button" aria-label="뒤로가기" onClick={() => setSelectedId(null)}>←</button>
           <strong>QNA</strong>
-          <ItemActions onDelete={() => { onDeletePost(selected.id); setSelectedId(null) }} />
+          {selected.mine === true && <ItemActions onDelete={() => { onDeletePost(selected.id); setSelectedId(null) }} />}
         </header>
         <article className="qna-detail-post">
           <div className="qna-detail-badges"><span className="qna-category">{normalizeQnaCategory(selected.category)}</span><span className={`qna-status ${qnaStatus(selected)}`}>{qnaStatusLabel(qnaStatus(selected))}</span></div>
           <h2>{selected.title}</h2>
-          <div className="qna-author"><strong>{selected.author}</strong><span>{formatQnaAnimal(selected)} · {formatQnaDate(selected.createdAt)}</span></div>
+          <div className="qna-author"><UserAvatar url={selected.authorAvatarUrl || (selected.mine === true ? profile.avatarUrl : '')} name={selected.author} /><div><strong>{selected.author}</strong><span>{formatQnaAnimal(selected)} · {formatQnaDate(selected.createdAt)}</span></div></div>
           {selected.image && <img src={selected.image} alt="" />}
           {selected.attachedRecordSnapshot && <RecordAttachCard record={selected.attachedRecordSnapshot} mode="posted" />}
           <p>{selected.body}</p>
           <div className="qna-detail-actions">
             <button className={`qna-like ${selected.liked ? 'active' : ''}`} type="button" onClick={() => toggleLike(selected)}>♡ {selected.likes}</button>
-            {selected.mine !== false && <button className="qna-status-toggle" type="button" onClick={() => toggleStatus(selected)}>{qnaStatus(selected) === 'resolved' ? '다시 답변 필요' : '해결 완료'}</button>}
+            {selected.mine === true && <button className="qna-status-toggle" type="button" onClick={() => toggleStatus(selected)}>{qnaStatus(selected) === 'resolved' ? '다시 답변 필요' : '해결 완료'}</button>}
           </div>
         </article>
         <section className="qna-comments">
-          <h3>댓글 {selected.comments.length}</h3>
+          <h3>댓글 {selectedComments.length}</h3>
           {sortedComments.map((item) => (
             <article className={selected.selectedAnswerCommentId === item.id ? 'accepted' : ''} key={item.id}>
               <div><strong>{item.author}</strong><time>{formatQnaDate(item.createdAt)}</time></div>
               {selected.selectedAnswerCommentId === item.id && <span className="accepted-answer-chip">채택 답변</span>}
               {item.body && <p>{item.body}</p>}
               {item.hospitalSnapshot && <HospitalAttachCard hospital={item.hospitalSnapshot} mode="posted" onOpen={() => onOpenHospital(item.hospitalSnapshot!)} />}
-              {selected.mine !== false && <button className="qna-accept-button" type="button" onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '답변 채택'}</button>}
-              {item.mine && <button type="button" onClick={() => updatePost({ ...selected, comments: selected.comments.filter((commentItem) => commentItem.id !== item.id) })}>삭제</button>}
+              {selected.mine === true && <button className="qna-accept-button" type="button" onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '답변 채택'}</button>}
+              {item.mine && <button type="button" onClick={async () => { await supabase.from('post_comments').delete().eq('id', item.id).eq('user_id', userId); setCommentsByPost((items) => ({ ...items, [selected.id]: (items[selected.id] ?? []).filter((commentItem) => commentItem.id !== item.id) })) }}>삭제</button>}
             </article>
           ))}
           <form onSubmit={addComment}>
@@ -1229,7 +1440,7 @@ function QnaScreen({ posts, onChange, onDeletePost, onOpenHospital }: { posts: Q
       </div> : (
         <section className="qna-feed-section">
           <div className="qna-feed-list">
-                {visiblePosts.map((post) => <QnaHelpCard post={post} key={post.id} onOpen={() => setSelectedId(post.id)} onDelete={sort === 'resolved' && post.mine !== false ? () => onDeletePost(post.id) : undefined} />)}
+                {visiblePosts.map((post) => <QnaHelpCard post={post} fallbackAvatarUrl={post.mine === true ? profile.avatarUrl : ''} key={post.id} onOpen={() => setSelectedId(post.id)} onDelete={sort === 'resolved' && post.mine === true ? () => onDeletePost(post.id) : undefined} />)}
           </div>
           {visiblePosts.length < feedPosts.length && <button className="qna-load-more" type="button" onClick={() => setVisibleCount((count) => count + 6)}>더보기</button>}
         </section>
@@ -1239,7 +1450,7 @@ function QnaScreen({ posts, onChange, onDeletePost, onOpenHospital }: { posts: Q
   )
 }
 
-function QnaHelpCard({ post, onOpen, onDelete }: { post: QnaPost; onOpen: () => void; onDelete?: () => void }) {
+function QnaHelpCard({ post, fallbackAvatarUrl, onOpen, onDelete }: { post: QnaPost; fallbackAvatarUrl?: string; onOpen: () => void; onDelete?: () => void }) {
   const record = post.attachedRecordSnapshot
   return (
     <article className={`qna-help-card ${qnaStatus(post)}`} onClick={onOpen}>
@@ -1250,11 +1461,12 @@ function QnaHelpCard({ post, onOpen, onDelete }: { post: QnaPost; onOpen: () => 
       </div>
       <h3>{post.title}</h3>
       <footer>
+        <span>{formatQnaAnimal(post)}</span>
         <span>댓글 {post.comments.length}</span>
         <span>{formatQnaDate(post.createdAt)}</span>
-        <span>{post.author}</span>
+        <span className="post-author"><UserAvatar url={post.authorAvatarUrl || fallbackAvatarUrl} name={post.author} />{post.author}</span>
       </footer>
-      <div className="qna-attach-flags">{post.petId && <span>{formatQnaAnimal(post)}</span>}{post.image && <span>사진</span>}{record && <span>{formatRecordDate(record.recordDate)} · {record.recordTypeLabel}</span>}</div>
+      {(post.image || record) && <div className="qna-attach-flags">{post.image && <span>사진 첨부</span>}{record && <span>기록 첨부 · {formatRecordDate(record.recordDate)}</span>}</div>}
     </article>
   )
 }
@@ -1271,6 +1483,11 @@ function QnaSortSheet({ value, onChange, onClose }: { value: QnaSort; onChange: 
       </section>
     </div>
   )
+}
+
+function UserAvatar({ url, name }: { url?: string; name: string }) {
+  if (url) return <img className="user-avatar" src={url} alt="" />
+  return <span className="user-avatar user-avatar-fallback" aria-hidden="true">{name.trim().slice(0, 1) || '?'}</span>
 }
 
 type BoardFilter = {
@@ -1305,14 +1522,28 @@ function BoardSurface({ className = '', title, count, query, onQueryChange, plac
   )
 }
 
-function ShareScreen({ items, onItemsChange, onSaveItem, onDeleteItem }: { items: ShareItem[]; onItemsChange: (items: ShareItem[]) => void; onSaveItem: (item: ShareItem) => void; onDeleteItem: (itemId: string) => void }) {
+function ShareScreen({ items, openItemId, onOpenHandled, onItemsChange, onSaveItem, onDeleteItem, onEditItem }: { items: ShareItem[]; openItemId?: string | null; onOpenHandled?: () => void; onItemsChange: (items: ShareItem[]) => void; onSaveItem: (item: ShareItem) => void; onDeleteItem: (itemId: string) => void; onEditItem: (item: ShareItem) => void }) {
   const [query, setQuery] = useState('')
+  const [status, setStatus] = useState<ShareStatus>('active')
   const [category, setCategory] = useState<'all' | ShareCategory>('all')
   const [gender, setGender] = useState<'all' | Pet['gender']>('all')
   const [sort, setSort] = useState<ShareSort>('latest')
   const [openFilter, setOpenFilter] = useState<'category' | 'sort' | 'gender' | 'all' | null>(null)
-  const normalized = items.map((item) => ({ ...item, category: item.category ?? 'supplies' as ShareCategory, subcategory: item.subcategory ?? '', species: item.species ?? '', gender: item.gender ?? 'unknown' as const, imageUrl: item.imageUrl ?? '', createdAt: item.createdAt ?? new Date(0).toISOString(), likes: item.likes ?? 0, liked: item.liked ?? false }))
-  const filtered = normalized.filter((item) => category === 'all' || item.category === category).filter((item) => gender === 'all' || item.gender === gender).filter((item) => `${item.title} ${item.subcategory} ${item.species} ${item.memo}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === 'popular' ? b.likes - a.likes : b.createdAt.localeCompare(a.createdAt))
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const normalized = items.map((item) => ({ ...item, status: item.status ?? 'active' as ShareStatus, category: item.category ?? 'supplies' as ShareCategory, subcategory: item.subcategory ?? '', species: item.species ?? '', gender: item.gender ?? 'unknown' as const, imageUrl: item.imageUrl ?? '', createdAt: item.createdAt ?? new Date(0).toISOString(), likes: item.likes ?? 0, liked: item.liked ?? false }))
+  const selectedItem = normalized.find((item) => item.id === selectedItemId)
+  useEffect(() => {
+    if (!openItemId) return
+    const item = normalized.find((shareItem) => shareItem.id === openItemId)
+    if (item) {
+      // This effect consumes a profile deep-link into the selected item.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStatus(item.status)
+      setSelectedItemId(item.id)
+    }
+    onOpenHandled?.()
+  }, [openItemId, onOpenHandled, normalized])
+  const filtered = normalized.filter((item) => item.status === status).filter((item) => category === 'all' || item.category === category).filter((item) => gender === 'all' || item.gender === gender).filter((item) => `${item.title} ${item.subcategory} ${item.species} ${item.memo}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === 'popular' ? b.likes - a.likes : b.createdAt.localeCompare(a.createdAt))
   const categoryLabels = { all: '전체', ...shareCategoryLabels }
   const sortLabels = { latest: '최신순', popular: '인기순' }
   const genderLabels = { all: '전체', male: '수컷', female: '암컷', unknown: '미구분' }
@@ -1334,6 +1565,36 @@ function ShareScreen({ items, onItemsChange, onSaveItem, onDeleteItem }: { items
     const changed = next.find((item) => item.id === id)
     if (changed) onSaveItem(changed)
   }
+  const toggleShareStatus = (id: string) => {
+    const next = normalized.map((item) => item.id === id ? { ...item, status: item.status === 'completed' ? 'active' as ShareStatus : 'completed' as ShareStatus } : item)
+    onItemsChange(next)
+    const changed = next.find((item) => item.id === id)
+    if (changed) onSaveItem(changed)
+  }
+  if (selectedItem) {
+    return (
+      <section className="share-detail">
+        <header className="qna-detail-header">
+          <button className="qna-back" type="button" aria-label="뒤로가기" onClick={() => setSelectedItemId(null)}>←</button>
+          <strong>나눔</strong>
+          <div className="share-detail-header-actions">
+            <button className="share-edit-button" type="button" onClick={() => onEditItem(selectedItem)}>수정</button>
+            <ItemActions onDelete={() => { onDeleteItem(selectedItem.id); setSelectedItemId(null) }} />
+          </div>
+        </header>
+        <article className="qna-detail-post">
+          <div className="qna-detail-badges"><span className="qna-category">{shareCategoryLabels[selectedItem.category]}</span><span>{selectedItem.area || '지역 미입력'}</span></div>
+          <h2>{selectedItem.title}</h2>
+          {selectedItem.imageUrl && <img src={selectedItem.imageUrl} alt="" />}
+          <p>{selectedItem.memo}</p>
+          <div className="qna-detail-actions">
+            <button className={`qna-like ${selectedItem.liked ? 'active' : ''}`} type="button" onClick={() => toggleLike(selectedItem.id)}>♥ {selectedItem.likes}</button>
+            <button className="qna-status-toggle" type="button" onClick={() => toggleShareStatus(selectedItem.id)}>{selectedItem.status === 'completed' ? '다시 나눔중' : '나눔 완료'}</button>
+          </div>
+        </article>
+      </section>
+    )
+  }
   return (
     <BoardSurface
       className="share-page"
@@ -1341,8 +1602,9 @@ function ShareScreen({ items, onItemsChange, onSaveItem, onDeleteItem }: { items
       count={filtered.length}
       query={query}
       onQueryChange={setQuery}
-      placeholder="머리글, 물품 이름, 동물 종, 내용 검색"
+      placeholder="제목, 물품 이름, 동물 종, 내용 검색"
       filters={[
+        { id: 'status', label: status === 'active' ? '진행중' : '완료', active: status === 'completed', onClick: () => { setStatus(status === 'active' ? 'completed' : 'active'); setOpenFilter(null) } },
         { id: 'category', label: category === 'all' ? '종류' : shareCategoryLabels[category], active: openFilter === 'category' || category !== 'all', onClick: () => setOpenFilter(openFilter === 'category' ? null : 'category') },
         { id: 'sort', label: sortLabels[sort], active: openFilter === 'sort' || sort !== 'latest', onClick: () => setOpenFilter(openFilter === 'sort' ? null : 'sort') },
         { id: 'gender', label: gender === 'all' ? '성별' : genderLabel(gender), active: openFilter === 'gender' || gender !== 'all', onClick: () => setOpenFilter(openFilter === 'gender' ? null : 'gender') },
@@ -1354,11 +1616,11 @@ function ShareScreen({ items, onItemsChange, onSaveItem, onDeleteItem }: { items
           {(openFilter === 'sort' || openFilter === 'all') && <FilterGroup title="정렬" options={['latest', 'popular']} value={sort} labels={sortLabels} onChange={setSortFilter} />}
           {(openFilter === 'gender' || openFilter === 'all') && <FilterGroup title="성별" options={['all', 'male', 'female', 'unknown']} value={gender} labels={genderLabels} onChange={setGenderFilter} />}
         </div>}
-          {filtered.length === 0 ? <div className="share-empty"><strong>게시글이 없습니다</strong><p>조건을 바꾸거나 첫 무료분양/나눔 글을 작성해 보세요.</p></div> : <div className="share-card-grid">
+          {filtered.length === 0 ? <div className="share-empty"><strong>{status === 'completed' ? '완료된 글이 없습니다' : '게시글이 없습니다'}</strong><p>{status === 'completed' ? '나눔 완료 처리한 글이 이곳에 모입니다.' : '조건을 바꾸거나 첫 무료분양/나눔 글을 작성해 보세요.'}</p></div> : <div className="share-card-grid">
             {filtered.map((item) => (
-              <article className="share-card" key={item.id}>
-                <div className="share-card-media">{item.imageUrl ? <img src={item.imageUrl} alt="" /> : <span>사진 없음</span>}<button className={item.liked ? 'liked' : ''} type="button" aria-label="좋아요" onClick={() => toggleLike(item.id)}>♥</button></div>
-                <div className="share-card-body"><strong>{item.title}</strong><p>{item.species || item.subcategory}</p><div className="share-card-tags"><span>{shareCategoryLabels[item.category]}</span>{!['food', 'supplies'].includes(item.category) && <span>{genderLabel(item.gender)}</span>}</div><div className="share-card-meta"><span>{item.area || '지역 미입력'} · ♥ {item.likes}</span><ItemActions onDelete={() => onDeleteItem(item.id)} /></div></div>
+              <article className={`share-card ${item.status === 'completed' ? 'completed' : ''}`} key={item.id} onClick={() => setSelectedItemId(item.id)}>
+                <div className="share-card-media">{item.imageUrl ? <img src={item.imageUrl} alt="" /> : <span>사진 없음</span>}<button className={item.liked ? 'liked' : ''} type="button" aria-label="좋아요" onClick={(event) => { event.stopPropagation(); toggleLike(item.id) }}>♥</button></div>
+                <div className="share-card-body"><strong>{item.title}</strong><p>{item.species || item.subcategory}</p><div className="share-card-tags">{item.status === 'completed' && <span className="share-status-tag">완료</span>}<span>{shareCategoryLabels[item.category]}</span>{!['food', 'supplies'].includes(item.category) && <span>{genderLabel(item.gender)}</span>}</div><div className="share-card-meta"><span>{item.area || '지역 미입력'} · ♥ {item.likes}</span><ItemActions onDelete={() => onDeleteItem(item.id)} /></div><div className="share-card-actions"><button className="share-edit-button" type="button" onClick={(event) => { event.stopPropagation(); onEditItem(item) }}>수정</button><button className="share-complete-button" type="button" onClick={(event) => { event.stopPropagation(); toggleShareStatus(item.id) }}>{item.status === 'completed' ? '다시 나눔중' : '나눔 완료'}</button></div></div>
               </article>
             ))}
           </div>}
@@ -1543,7 +1805,7 @@ function HospitalAttachCard({ hospital, mode, onRemove, onOpen }: { hospital: Ho
 function ItemActions({ onDelete }: { onDelete: () => void }) {
   return (
     <div className="item-actions">
-      <button className="item-action-button danger" type="button" aria-label="삭제" onClick={onDelete}>
+      <button className="item-action-button danger" type="button" aria-label="삭제" onClick={(event) => { event.stopPropagation(); onDelete() }}>
         <span className="item-action-icon delete" aria-hidden="true" />
       </button>
     </div>
@@ -1552,6 +1814,7 @@ function ItemActions({ onDelete }: { onDelete: () => void }) {
 
 function PetCreateFlow({ initialPet, initialDraft, onClose, onSave, onSaveDraft }: { initialPet: Pet | null; initialDraft?: DraftItem | null; onClose: () => void; onSave: (pet: Pet) => void | Promise<void>; onSaveDraft: (draft: DraftItem) => void | Promise<void> }) {
   const [step, setStep] = useState(0)
+  const [completedPet, setCompletedPet] = useState<Pet | null>(null)
   const [name, setName] = useState(initialPet?.name ?? '')
   const [group, setGroup] = useState<Exclude<AnimalCategory, 'all'> | ''>(initialPet?.group === 'all' || !initialPet?.group ? '' : initialPet.group)
   const [species, setSpecies] = useState(initialPet?.species ?? '')
@@ -1561,10 +1824,12 @@ function PetCreateFlow({ initialPet, initialDraft, onClose, onSave, onSaveDraft 
   const [weightUnit, setWeightUnit] = useState<'g' | 'kg'>(initialPet?.weightUnit ?? 'g')
   const [birthday, setBirthday] = useState(initialPet?.birthday ?? '')
   const [adoptionDate, setAdoptionDate] = useState(initialPet?.adoptionDate ?? '')
-  const canNext = step === 0 ? Boolean(group) : step === 1 ? Boolean(species) : step === 2 ? Boolean(gender) : step === 3 ? name.trim().length > 0 : true
-  const finish = () => {
+  const canNext = step === 0 ? Boolean(group) : step === 1 ? Boolean(species && gender) : name.trim().length > 0
+  const finishRequired = async () => {
     if (!group || !species || !gender || !name.trim()) return
-    onSave({ id: initialPet?.id ?? crypto.randomUUID(), name: name.trim(), group, species, gender, photo, weight: weight.trim() || undefined, weightUnit, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined })
+    const pet: Pet = { id: initialPet?.id ?? crypto.randomUUID(), name: name.trim(), group, species, gender, registeredAt: initialPet?.registeredAt ?? new Date().toISOString() }
+    await onSave(pet)
+    setCompletedPet(pet)
   }
   const saveDraft = () => {
     const pet: Pet = {
@@ -1597,18 +1862,34 @@ function PetCreateFlow({ initialPet, initialDraft, onClose, onSave, onSaveDraft 
     reader.readAsDataURL(file)
   }
 
+  if (completedPet) {
+    const completedWithDetails = { ...completedPet, photo, weight: weight.trim() || undefined, weightUnit, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined }
+    const hasAdditionalDetails = Boolean(photo || weight.trim() || birthday || adoptionDate)
+    return (
+      <main className="pet-complete-screen">
+        <section className="pet-complete-card">
+          <div className="pet-complete-mark">✓</div>
+          <h1>{completedPet.name}가 등록되었습니다.</h1>
+          <p>더 자세한 정보를 지금 추가할 수 있어요.</p>
+          <div className="pet-detail-add-grid">
+            <label className="pet-detail-add"><span>사진 추가</span><input type="file" accept="image/*" onChange={attachPhoto} />{photo && <img src={photo} alt="선택한 펫 사진" />}</label>
+            <label className="pet-detail-add"><span>몸무게 추가</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="몸무게" /><div className="weight-unit">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></label>
+            <label className="pet-detail-add"><span>생일 추가</span><input type="date" value={birthday} onChange={(event) => setBirthday(event.target.value)} /></label>
+            <label className="pet-detail-add"><span>입양일 추가</span><input type="date" value={adoptionDate} onChange={(event) => setAdoptionDate(event.target.value)} /></label>
+          </div>
+          <div className="pet-complete-actions"><button type="button" onClick={onClose}>나중에</button><button className="step-primary" type="button" disabled={!hasAdditionalDetails} onClick={async () => { await onSave(completedWithDetails); onClose() }}>추가 정보 저장</button></div>
+        </section>
+      </main>
+    )
+  }
+
   return (
-    <StepShell title="펫" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={8} onStepChange={setStep}>
+    <StepShell title="펫" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={3} onStepChange={setStep}>
       {step === 0 && <StepSelect label="종류" value={group} options={animalCategoryOptions.filter((item) => item !== 'all')} labels={animalCategoryLabels} onChange={(value) => { setGroup(value as Exclude<AnimalCategory, 'all'>); setSpecies('') }} />}
-      {step === 1 && <StepSelect label="종" value={species} options={group ? petSpeciesOptions[group] : []} onChange={setSpecies} />}
-      {step === 2 && <StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} />}
-      {step === 3 && <><StepText label="이름(닉네임)" value={name} onChange={setName} placeholder="예: 레오" /><label className="step-field photo-field attach-file-field"><span>사진 (선택)</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={attachPhoto} /><small>{photo ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small>{photo && <img src={photo} alt="선택한 펫 미리보기" />}</label></>}
-      {step === 4 && <div className="step-field"><span>체중 (선택)</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="체중 입력" /><div className="weight-unit">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></div>}
-      {step === 5 && <StepDate label="생일 (선택)" value={birthday} onChange={setBirthday} />}
-      {step === 6 && <StepDate label="입양일 (선택)" value={adoptionDate} onChange={setAdoptionDate} />}
-      {step === 7 && <PetSummary pet={{ id: initialPet?.id ?? '', name, group: group || 'other', species, gender: gender || 'unknown', photo, weight, weightUnit, birthday, adoptionDate }} />}
+      {step === 1 && <div className="pet-species-gender-step"><StepSelect label="종" value={species} options={group ? petSpeciesOptions[group] : []} onChange={setSpecies} /><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} /></div>}
+      {step === 2 && <StepText label="이름(닉네임)" value={name} onChange={setName} placeholder="예: 레오" />}
       <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>
-      <button className="step-primary" type="button" disabled={!canNext} onClick={step === 7 ? finish : () => setStep((value) => value + 1)}>{step === 7 ? '등록 완료' : '다음'}</button>
+      <button className="step-primary" type="button" disabled={!canNext} onClick={step === 2 ? finishRequired : () => setStep((value) => value + 1)}>{step === 2 ? '등록 완료' : '다음'}</button>
     </StepShell>
   )
 }
@@ -1686,7 +1967,7 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
 
   return (
     <StepShell title="NA" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={3} onStepChange={setStep}>
-      {step === 0 && <StepSelect label="질문 유형" value={category} options={['건강/증상', '사육/관리', '병원/진료']} onChange={(value) => setCategory(value as QnaCategory)} />}
+      {step === 0 && <StepSelect label="질문 유형" value={category} options={['건강/증상', '사육/관리']} onChange={(value) => setCategory(value as QnaCategory)} />}
       {step === 1 && <StepSelect
         label="관련 펫"
         value={petId}
@@ -1734,7 +2015,7 @@ function formatQnaAnimal(post: QnaPost) {
 }
 
 function normalizeQnaCategory(category: string): QnaCategory {
-  if (category === '동물 병원' || category === '병원/진료') return '병원/진료'
+  if (category === '동물 병원' || category === '병원/진료') return '건강/증상'
   if (category === '정보' || category === '기타' || category === '사육/관리') return '사육/관리'
   return '건강/증상'
 }
@@ -1747,7 +2028,7 @@ function qnaStatusLabel(status: QnaStatus) {
   return status === 'resolved' ? '해결 완료' : '답변 기다리는 중'
 }
 
-const qnaCategoryCards: QnaCategory[] = ['건강/증상', '사육/관리', '병원/진료']
+const qnaCategoryCards: QnaCategory[] = ['건강/증상', '사육/관리']
 
 function qnaSortLabel(sort: QnaSort) {
   if (sort === 'latest') return '최신순'
@@ -1850,7 +2131,7 @@ function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: {
   const resolvedGender = source === 'pet' && selectedPet ? selectedPet.gender : gender
   const resolvedCategory = shareType === 'animal' && selectedPet && selectedPet.group !== 'all' ? selectedPet.group : category
   const canNext = step === 0 ? Boolean(shareType) : step === 1 ? (shareType === 'animal' ? Boolean(resolvedCategory && resolvedSpecies.trim()) : Boolean(category && subcategory)) : step === 2 ? title.trim().length > 0 : step === 3 ? Boolean(imageUrl) : step === 4 ? memo.trim().length > 0 : true
-  const buildItem = (): ShareItem => ({ id: initialItem?.id ?? crypto.randomUUID(), title: title.trim(), area: area.trim(), memo: memo.trim(), category: resolvedCategory || 'other', subcategory: shareType === 'animal' ? resolvedSpecies.trim() : subcategory, species: shareType === 'animal' ? resolvedSpecies.trim() : '', gender: shareType === 'animal' ? resolvedGender : 'unknown', imageUrl, createdAt: initialItem?.createdAt ?? new Date().toISOString(), likes: initialItem?.likes ?? 0, liked: initialItem?.liked ?? false })
+  const buildItem = (): ShareItem => ({ id: initialItem?.id ?? crypto.randomUUID(), title: title.trim(), area: area.trim(), memo: memo.trim(), status: initialItem?.status ?? 'active', category: resolvedCategory || 'other', subcategory: shareType === 'animal' ? resolvedSpecies.trim() : subcategory, species: shareType === 'animal' ? resolvedSpecies.trim() : '', gender: shareType === 'animal' ? resolvedGender : 'unknown', imageUrl, createdAt: initialItem?.createdAt ?? new Date().toISOString(), likes: initialItem?.likes ?? 0, liked: initialItem?.liked ?? false })
   const finish = () => onSave(buildItem())
   const saveDraft = () => {
     const item = buildItem()
@@ -1870,7 +2151,7 @@ function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: {
       {step === 0 && <div className="share-type-picker"><span className="step-heading">무엇을 나눔하나요?</span><div><button className={shareType === 'animal' ? 'active' : ''} type="button" onClick={() => { setShareType('animal'); setCategory(''); setSubcategory('') }}><strong>동물</strong><span>무료분양할 동물을 선택합니다</span></button><button className={shareType === 'item' ? 'active' : ''} type="button" onClick={() => { setShareType('item'); setCategory(''); setSubcategory('') }}><strong>물품</strong><span>먹이 또는 용품을 나눔합니다</span></button></div></div>}
       {step === 1 && shareType === 'animal' && <div className="share-animal-picker"><span className="step-heading">동물 선택</span><div className="share-source-tabs"><button className={source === 'pet' ? 'active' : ''} type="button" onClick={() => setSource('pet')}>마이 펫</button><button className={source === 'custom' ? 'active' : ''} type="button" onClick={() => setSource('custom')}>다른 종 직접 입력</button></div>{source === 'pet' ? <div className="share-pet-grid">{pets.length ? pets.map((pet) => <button className={petId === pet.id ? 'active' : ''} type="button" key={pet.id} onClick={() => setPetId(pet.id)}><strong>{pet.name}</strong><span>{pet.species}</span></button>) : <div className="share-animal-empty"><strong>등록된 마이 펫이 없습니다</strong><p>다른 종 직접 입력을 선택해 주세요.</p></div>}</div> : <><StepSelect label="동물 분류" value={category} options={['reptile', 'amphibian', 'rodent', 'bird', 'other']} labels={shareCategoryLabels} onChange={(value) => setCategory(value as ShareCategory)} /><StepText label="종" value={species} onChange={setSpecies} placeholder="예: 크레스티드 게코" /><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} /></>}</div>}
       {step === 1 && shareType === 'item' && <div className="share-category-picker"><span className="step-heading">물품 카테고리</span><div className="share-category-section">{(['food', 'supplies'] as const).map((value) => <button className={category === value ? 'active' : ''} type="button" key={value} onClick={() => { setCategory(value); setSubcategory('') }}>{shareCategoryLabels[value]}</button>)}</div><div className="share-subcategory-section">{(category ? shareSubcategories[category] : []).map((value) => <button className={subcategory === value ? 'active' : ''} type="button" key={value} onClick={() => setSubcategory(value)}>{value}</button>)}</div></div>}
-      {step === 2 && <div className="share-create-fields"><StepText label="머리글" value={title} onChange={setTitle} placeholder="나눔 내용을 한눈에 알 수 있게 입력" /><StepText label="지역 (선택)" value={area} onChange={setArea} placeholder="예: 서울 강남" /></div>}
+      {step === 2 && <div className="share-create-fields"><StepText label="제목" value={title} onChange={setTitle} placeholder="나눔 내용을 한눈에 알 수 있게 입력" /><ShareAreaField value={area} onChange={setArea} /></div>}
       {step === 3 && <label className="share-photo-input attach-file-field"><span className="step-heading">사진</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setImageUrl(String(reader.result)); reader.readAsDataURL(file) }} /><small>{imageUrl ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small>{imageUrl && <img src={imageUrl} alt="첨부 미리보기" />}</label>}
       {step === 4 && <StepTextarea label="설명" value={memo} onChange={setMemo} placeholder="상태, 나눔 방식, 특징 등을 입력" />}
       {step === 4 && <button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button>}
@@ -1896,29 +2177,20 @@ function StepShell({ title, children, onBack, currentStep, stepCount, onStepChan
   )
 }
 
-function StepDate({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="step-field"><span>{label}</span><input type="date" value={value} onChange={(event) => onChange(event.target.value)} /></label>
-}
-
-function PetSummary({ pet }: { pet: Pet }) {
-  return (
-    <div className="pet-summary">
-      {pet.photo ? <img src={pet.photo} alt="" /> : <div className="pet-card-icon"><CategoryTagIcon category={pet.group} /></div>}
-      <h2>{pet.name}</h2>
-      <dl>
-        <div><dt>종류</dt><dd>{animalCategoryLabels[pet.group]}</dd></div>
-        <div><dt>종</dt><dd>{pet.species}</dd></div>
-        <div><dt>성별</dt><dd>{genderLabel(pet.gender)}</dd></div>
-        <div><dt>체중</dt><dd>{pet.weight ? `${pet.weight}${pet.weightUnit ?? 'g'}` : '미입력'}</dd></div>
-        <div><dt>생일</dt><dd>{pet.birthday || '미입력'}</dd></div>
-        <div><dt>입양일</dt><dd>{pet.adoptionDate || '미입력'}</dd></div>
-      </dl>
-    </div>
-  )
-}
-
 function StepText({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
   return <label className="step-field"><span>{label}</span><input autoFocus value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} /></label>
+}
+
+function ShareAreaField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="step-field share-area-field">
+      <span>지역/주소 (선택)</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="주소나 지역을 직접 입력" />
+      <div className="share-area-options" aria-label="지역 선택">
+        {shareAreaSuggestions.map((area) => <button className={value === area ? 'active' : ''} type="button" key={area} onClick={() => onChange(area)}>{area}</button>)}
+      </div>
+    </div>
+  )
 }
 
 function StepTextarea({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
@@ -2266,3 +2538,4 @@ function normalizeText(value: string) {
 }
 
 export default App
+
