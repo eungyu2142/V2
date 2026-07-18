@@ -4,16 +4,27 @@ export type AppDataTable = string
 
 type StoredRow<T> = {
   id: string
+  user_id?: string
   payload: T
 }
 
-export async function loadAppData<T>(table: AppDataTable) {
-  const { data, error } = await supabase
+export async function loadAppData<T>(table: AppDataTable, options: { userId?: string; scope?: 'mine' | 'all' } = {}) {
+  let query = supabase
     .from(table)
-    .select('id, payload')
+    .select('id, user_id, payload')
     .order('created_at', { ascending: false })
+
+  if (options.userId && options.scope === 'mine') {
+    query = query.eq('user_id', options.userId)
+  }
+
+  const { data, error } = await query
   if (error) throw error
-  return ((data ?? []) as StoredRow<T>[]).map((row) => ({ ...row.payload, id: row.id }))
+  return ((data ?? []) as StoredRow<T>[]).map((row) => ({
+    ...row.payload,
+    id: row.id,
+    ...(options.userId ? { mine: row.user_id === options.userId } : {}),
+  }))
 }
 
 export async function saveAppData<T extends { id: string }>(

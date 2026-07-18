@@ -103,6 +103,7 @@ export default function DiaryPage({
   userId,
   pets,
   initialPetId,
+  readOnly = false,
   onAddPet,
   initialDraft,
   onSaveDraft,
@@ -111,6 +112,7 @@ export default function DiaryPage({
   userId: string
   pets: DiaryPet[]
   initialPetId?: string
+  readOnly?: boolean
   onAddPet: () => void
   initialDraft?: DiaryDraftItem | null
   onSaveDraft?: (draft: DiaryDraftItem) => void | Promise<void>
@@ -145,8 +147,8 @@ export default function DiaryPage({
   useEffect(() => {
     let active = true
     Promise.all([
-      loadAppData<PetRecord>('care_records').catch(() => []),
-      loadAppData<Reminder>('feeding_reminders').catch(() => []),
+      loadAppData<PetRecord>('care_records', { userId, scope: 'mine' }).catch(() => []),
+      loadAppData<Reminder>('feeding_reminders', { userId, scope: 'mine' }).catch(() => []),
     ]).then(([nextRecords, nextReminders]) => {
       if (!active) return
       setRecords(nextRecords)
@@ -330,6 +332,7 @@ export default function DiaryPage({
       <RecordDetailScreen
         record={selectedRecord}
         pet={recordPet}
+        readOnly={readOnly}
         onBack={() => setSelectedRecordId(null)}
         onDelete={() => {
           saveRecordList(records.filter((item) => item.id !== selectedRecord.id))
@@ -384,17 +387,17 @@ export default function DiaryPage({
             <small>{selectedPet ? `${selectedPet.species} ${genderLabel(selectedPet.gender)}` : '펫을 먼저 등록해 주세요'}</small>
           </span>
         </div>
-        {pets.length > 1 && (
+        {!readOnly && pets.length > 1 && (
           <select aria-label="반려동물 선택" value={effectivePetId} onChange={(event) => setSelectedPetId(event.target.value)}>
             {pets.map((pet) => <option key={pet.id} value={pet.id}>{pet.name}</option>)}
           </select>
         )}
       </div>
 
-      <div className="diary-segment" role="tablist" aria-label="다이어리 알람 전환">
+      {!readOnly && <div className="diary-segment" role="tablist" aria-label="다이어리 알람 전환">
         <button type="button" role="tab" aria-selected={mode === 'records'} className={mode === 'records' ? 'active' : ''} onClick={() => setMode('records')}>다이어리</button>
         <button type="button" role="tab" aria-selected={mode === 'alarms'} className={mode === 'alarms' ? 'active' : ''} onClick={() => setMode('alarms')}>알람</button>
-      </div>
+      </div>}
 
       {mode === 'records' ? (
         <div className="diary-workspace">
@@ -460,7 +463,7 @@ export default function DiaryPage({
         />
       )}
 
-      {mode === 'records' && !typeSheetOpen && selectedDate <= today && <button className="floating-add" aria-label="다이어리 추가" onClick={openRecordTypes}>+</button>}
+      {!readOnly && mode === 'records' && !typeSheetOpen && selectedDate <= today && <button className="floating-add" aria-label="다이어리 추가" onClick={openRecordTypes}>+</button>}
       {typeSheetOpen && (
         <Overlay onClose={() => setTypeSheetOpen(false)}>
           <div className="record-type-sheet">
@@ -651,11 +654,13 @@ function AlarmCalendar({
 function RecordDetailScreen({
   record,
   pet,
+  readOnly,
   onBack,
   onDelete,
 }: {
   record: PetRecord
   pet?: DiaryPet
+  readOnly?: boolean
   onBack: () => void
   onDelete: () => void
 }) {
@@ -684,7 +689,7 @@ function RecordDetailScreen({
         </dl>
 
         {record.photoUrl && <div className="record-detail-photo"><img src={record.photoUrl} alt="" /></div>}
-        <button className="record-detail-delete" type="button" onClick={onDelete}>삭제</button>
+        {!readOnly && <button className="record-detail-delete" type="button" onClick={onDelete}>삭제</button>}
       </section>
     </main>
   )
@@ -795,8 +800,10 @@ function RecordCreateScreen({
           {current === 'memo' && <label>메모<textarea autoFocus value={draft.memo} onChange={(event) => update({ memo: event.target.value })} placeholder="메모" /></label>}
           {current === 'photo' && <PhotoPicker value={draft.photo} onChange={(photo) => update({ photo })} />}
         </div>
-        <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(draft, step)}>임시저장</button>
-        <button className="create-submit" disabled={current === 'detail' && !validateDetail(draft)}>{step === steps.length - 1 ? '작성 완료' : '다음'}</button>
+        <div className="step-actions">
+          <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(draft, step)}>임시저장</button>
+          <button className="create-submit" disabled={current === 'detail' && !validateDetail(draft)}>{step === steps.length - 1 ? '작성 완료' : '다음'}</button>
+        </div>
       </form>
     </main>
   )
@@ -921,8 +928,10 @@ function ReminderCreateScreen({
           )}
           {step === 2 && <label>메모<textarea autoFocus value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="메모" /></label>}
         </div>
-        <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(buildReminder(), step)}>임시저장</button>
-        <button className="create-submit" disabled={!valid}>{step === 2 ? '저장' : '다음'}</button>
+        <div className="step-actions">
+          <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(buildReminder(), step)}>임시저장</button>
+          <button className="create-submit" disabled={!valid}>{step === 2 ? '저장' : '다음'}</button>
+        </div>
       </form>
     </main>
   )

@@ -153,6 +153,11 @@
 .photo-picker small{color:#66817a;font-size:.85rem}
 .create-submit{position:fixed;right:18px;bottom:calc(14px + env(safe-area-inset-bottom));left:18px;max-width:760px;min-height:52px;margin:auto;border:0;border-radius:8px;background:#13b8a6;color:#fff;font-size:1rem;font-weight:900}
 .create-submit:disabled{opacity:.45}
+.step-actions{display:flex;align-items:stretch;gap:8px;width:100%;margin:16px 0 0}
+.step-actions .create-submit{position:static;inset:auto;flex:1;min-width:0;height:46px;min-height:46px;margin:0;max-width:none}
+.step-actions .create-submit.secondary{background:#e2f6ef;color:#078c80}
+.choice-field>div{gap:6px}
+.choice-field button,.weekday-picker button{min-height:38px;height:38px;padding:0 10px;font-size:.86rem}
 .record-detail-view{display:grid;gap:18px;max-width:760px;margin:auto}
 .record-detail-title{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #cde9df}
 .record-detail-title>span{display:grid;width:52px;height:52px;place-items:center;border-radius:50%;background:#d8f5ec;font-size:1.6rem}

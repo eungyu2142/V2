@@ -107,3 +107,77 @@
 ### ??
 
 - `cmd /c npm.cmd run build` ??.
+
+
+## 2026-07-18 지도 병원 검색 필터 연결
+
+### 계획/구현
+
+- QNA 병원 첨부에서 쓰는 search-hospitals Edge Function 경로를 지도 검색에서도 병원 전용으로 쓰도록 정리했다.
+- 지도/QNA 공용 병원 검색 결과에서 일반 상점, 카페, 펫샵, 용품점, 호텔 등이 섞이지 않도록 프론트 필터를 추가했다.
+- 검색어 자체에 동물병원이 들어가면 모든 결과가 통과하는 문제가 있어, 필터 판단은 네이버 응답의 제목/카테고리/설명/주소만 기준으로 하게 했다.
+- 전체 검색에서 사용자가 지역명이나 병원명만 입력해도 특수동물병원 검색어가 붙도록 바꿨다.
+- Supabase Edge Function search-hospitals도 기본 검색어를 특수동물병원으로 고치고 서버 측 병원 후보 필터를 추가했다.
+
+### 수정 파일
+
+- src/App.tsx
+- supabase/functions/search-hospitals/index.ts
+- docs/project-records/maps.md
+
+### 오류/처리
+
+- Edge Function의 기존 기본 검색어가 깨진 문자열로 남아 있어 일반 패치가 한 번 실패했다.
+- ASCII 문맥 기준 패치와 Node.js 안전 치환으로 기본 검색어를 복구했다.
+
+### 검증
+
+- cmd /c npm.cmd run build 통과.
+- cmd /c npx.cmd supabase functions deploy search-hospitals 성공.
+
+
+## 2026-07-18 지도 초기 위치 문구 제거
+
+### 계획/구현
+
+- 지도 첫 진입 시 내 위치 기준으로 지도를 열었어요. 상태 문구가 표시되지 않도록 제거했다.
+- 위치 권한이 허용되면 기존처럼 내 위치 중심으로 조용히 지도를 연다.
+- 초기 위치 권한 실패 시에도 지도 위에 fallback 안내 문구를 남기지 않도록 정리했다.
+
+### 수정 파일
+
+- src/App.tsx
+- docs/project-records/maps.md
+
+### 오류/처리
+
+- 추가 오류 없음.
+
+### 검증
+
+- cmd /c npm.cmd run build 통과.
+
+
+## 2026-07-18 지도 병원 마커 미표시 수정
+
+### 계획/구현
+
+- 네이버 지도와 내 위치 마커는 뜨지만 병원 H 마커가 보이지 않는 문제를 확인했다.
+- search-hospitals Edge Function은 실제로 콩닥동물의료센터, 24시애니동물병원 등 병원 결과를 반환하고 있었다.
+- 지도 첫 진입 시 병원 검색이 자동 실행되지 않아 병원 상태가 비어 있을 수 있어, 지도 준비 후 특수동물병원 검색을 1회 자동 실행하도록 추가했다.
+- 네이버 지역 검색 응답의 mapx/mapy가 1269521422, 375461940처럼 경도/위도에 1e7을 곱한 형태로 들어오는 것을 확인했다.
+- 해당 범위에서는 SDK TransCoord보다 직접 lng=mapx/1e7, lat=mapy/1e7 변환을 우선 사용하도록 고쳤다.
+
+### 수정 파일
+
+- src/App.tsx
+- docs/project-records/maps.md
+
+### 오류/처리
+
+- 추가 빌드 오류는 없었다.
+
+### 검증
+
+- Edge Function 직접 호출 결과 status: 200, count: 5 확인.
+- cmd /c npm.cmd run build 통과.

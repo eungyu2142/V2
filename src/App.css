@@ -1228,6 +1228,17 @@ textarea {
   line-height: 1.35;
 }
 
+.qna-help-card-preview {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #66807b;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .qna-help-card footer {
   display: flex;
   flex-wrap: wrap;
@@ -1419,6 +1430,32 @@ textarea {
   color: #5f7872;
   font-size: 0.68rem;
   font-weight: 900;
+}
+
+.record-picker-pets button.disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.record-picker-pets button small {
+  display: block;
+  margin-top: 3px;
+  color: #9aa9a6;
+  font-size: 0.68rem;
+}
+
+.record-attach-open {
+  align-self: center;
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(7, 157, 150, 0.22);
+  border-radius: 999px;
+  background: #fff;
+  color: #087f83;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .qna-empty {
@@ -2194,6 +2231,14 @@ textarea {
   margin: 14px 0 4px;
 }
 
+.record-attach-card.posted:has(.record-attach-open) {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
 .record-attach-card > img {
   width: 58px;
   height: 58px;
@@ -2241,6 +2286,24 @@ textarea {
   background: #fff;
   color: #687d78;
   font-weight: 900;
+}
+
+.record-attach-card > button.record-attach-open {
+  position: static;
+  width: auto;
+  height: 46px;
+  min-width: 180px;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid rgba(7, 157, 150, 0.25);
+  border-radius: 999px;
+  background: #fff;
+  color: #087f83;
+  font-size: 0.95rem;
+  font-weight: 900;
+  grid-column: auto;
+  justify-self: center;
+  margin-top: 0;
 }
 
 @media (max-width: 640px) {
@@ -2376,6 +2439,23 @@ textarea {
   backdrop-filter: blur(16px);
 }
 
+.map-side-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 24;
+  display: grid;
+  width: min(430px, calc(100vw - var(--side-nav-width) - 58px));
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  pointer-events: none;
+}
+
+.map-side-panel > * {
+  pointer-events: auto;
+}
+
 .map-search-panel label {
   display: block;
   font-size: 0;
@@ -2447,6 +2527,112 @@ textarea {
 .map-category-tags .category-tag-icon {
   width: 23px;
   height: 23px;
+}
+
+.map-side-panel .map-search-panel {
+  position: static;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr) 88px 88px;
+}
+
+.map-side-panel .map-category-tags {
+  position: static;
+  inset: auto;
+  display: flex;
+  width: 100%;
+  padding: 0 0 3px;
+}
+
+.map-hospital-list {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid rgba(7, 157, 150, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.95);
+  box-shadow: 0 16px 44px rgba(20, 48, 46, 0.14);
+  backdrop-filter: blur(16px);
+}
+
+.map-side-head {
+  display: grid;
+  gap: 4px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid rgba(7, 157, 150, 0.12);
+}
+
+.map-side-head strong {
+  color: #14302e;
+  font-size: 1rem;
+}
+
+.map-side-head span,
+.map-side-empty {
+  color: #5f7872;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.map-side-empty {
+  margin: 12px 2px;
+}
+
+.map-hospital-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-height: 70px;
+  padding: 10px;
+  border: 1px solid rgba(7, 157, 150, 0.1);
+  border-radius: 14px;
+  background: #fbfffc;
+  color: inherit;
+  text-align: left;
+}
+
+.map-hospital-row:hover,
+.map-hospital-row:focus-visible {
+  border-color: rgba(7, 157, 150, 0.32);
+  background: #ecfbf6;
+}
+
+.map-hospital-row .category-tag-icon {
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #d9f3ea;
+  color: #079d96;
+}
+
+.map-hospital-row span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.map-hospital-row strong,
+.map-hospital-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-hospital-row strong {
+  color: #14302e;
+  font-size: 0.92rem;
+}
+
+.map-hospital-row small {
+  color: #5f7872;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .map-canvas {
@@ -2594,6 +2780,22 @@ textarea {
   border-radius: 18px;
   background: #fbfffc;
   box-shadow: 0 10px 28px rgba(20, 48, 46, 0.07);
+}
+
+.map-side-panel .map-hospital-panel {
+  position: static;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  max-width: none;
+  margin: 0;
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: 0 16px 44px rgba(20, 48, 46, 0.14);
+  backdrop-filter: blur(16px);
 }
 
 .panel-close {
@@ -3426,6 +3628,60 @@ textarea {
   width: auto;
 }
 
+.step-actions {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.step-actions.single .step-primary {
+  width: 100%;
+}
+
+.step-actions .step-primary,
+.step-actions .step-secondary {
+  min-height: 46px;
+  height: 46px;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Compact option controls keep long writing forms scannable. */
+.choice-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: 6px;
+}
+
+.choice-grid button {
+  min-height: 38px;
+  height: 38px;
+  padding: 0 10px;
+  gap: 5px;
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+.choice-icon {
+  width: 22px;
+  height: 22px;
+  font-size: .8rem;
+}
+
+.share-category-section,
+.share-subcategory-section,
+.share-source-tabs,
+.share-pet-grid {
+  gap: 6px;
+}
+
+.share-category-section button,
+.share-subcategory-section button,
+.share-source-tabs button,
+.share-pet-grid button {
+  min-height: 38px;
+  padding: 7px 10px;
+  font-size: .86rem;
+}
+
 .user-avatar {
   display: inline-grid;
   width: 30px;
@@ -4080,6 +4336,655 @@ textarea {
   }
 }
 
+/* Card view stays compact instead of stretching across the dashboard. */
+.my-pet-dashboard .pet-list.card-view {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 360px));
+  justify-content: start;
+  gap: 14px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto auto;
+  gap: 10px;
+  min-height: 0;
+  padding: 16px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-visual,
+.my-pet-dashboard .pet-list.card-view .pet-card-body,
+.my-pet-dashboard .pet-list.card-view .pet-recent-records,
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-column: 1;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-visual {
+  grid-row: 2;
+  grid-template-columns: 64px minmax(0, 1fr);
+  justify-content: start;
+  gap: 10px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon .category-tag-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body {
+  grid-row: 3;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-recent-records {
+  grid-row: 4;
+  padding: 8px 0 0;
+  border-top: 1px solid #edf1ef;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-row: 5;
+  display: flex;
+  gap: 6px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer button {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 7px;
+  font-size: .78rem;
+}
+
+@media (max-width: 760px) {
+  .my-pet-dashboard .pet-list.card-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.step-progress-labels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 7px;
+  color: #94a39d;
+  font-size: 0.67rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.step-progress-labels-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.step-progress-labels span.active {
+  color: #079d96;
+  font-weight: 900;
+}
+
+.pet-date-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pet-complete-card > p {
+  margin-bottom: 18px;
+}
+
+.pet-detail-add-grid {
+  gap: 4px 18px;
+}
+
+.pet-detail-add {
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid #edf1ef;
+  border-radius: 0;
+  background: transparent;
+}
+
+.pet-detail-add > span {
+  color: #52625e;
+}
+
+.pet-complete-actions > button:first-child {
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .step-progress-labels {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 5px;
+    white-space: normal;
+  }
+
+  .step-progress-labels-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .step-progress-labels-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pet-date-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Final two-column profile card layout. */
+.my-pet-dashboard .pet-list.card-view .pet-card {
+  grid-template-columns: 148px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  gap: 18px 24px;
+  min-height: 280px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-visual {
+  grid-column: 1;
+  grid-row: 2 / span 3;
+  justify-content: center;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon {
+  width: 132px;
+  height: 132px;
+  border-radius: 20px;
+  background: #e1f7f0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon:has(img) {
+  background: transparent;
+  border-radius: 16px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-recent-records {
+  grid-column: 2;
+  grid-row: 3;
+  align-self: stretch;
+  padding: 12px 0 0;
+  border-top: 1px solid #edf1ef;
+  border-left: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-column: 2;
+  grid-row: 4;
+  margin-top: 0;
+}
+
+.my-pet-dashboard .pet-card-title-row {
+  justify-content: flex-start;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-title-row strong {
+  font-size: 1.45rem;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-species-line {
+  font-size: 0.92rem;
+}
+
+.my-pet-dashboard .pet-card-body .pet-info-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.my-pet-dashboard .pet-card-body .pet-info-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0f4f2;
+  color: #52625e;
+  font-size: 0.76rem;
+}
+
+.my-pet-dashboard .pet-card-body .pet-info-badges b {
+  color: #7a8b85;
+  font-size: 0.68rem;
+}
+
+/* Responsive pet cards: fill the available width and keep each information zone stable. */
+.my-pet-dashboard .pet-list.card-view {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)) !important;
+  gap: 20px !important;
+  width: 100% !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 300px !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  display: grid !important;
+  grid-template-columns: 96px minmax(0, 1fr) !important;
+  grid-template-rows: auto 1fr auto auto !important;
+  gap: 14px 16px !important;
+  padding: 16px !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-topline {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-visual {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  align-content: start;
+  justify-items: center;
+  min-width: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon {
+  display: grid;
+  width: 96px !important;
+  height: 96px !important;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  align-content: start;
+  min-width: 0;
+  gap: 10px;
+}
+
+.pet-card-identity {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.pet-card-identity strong,
+.pet-card-identity small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-card-identity strong {
+  color: #14302e;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.pet-card-identity small {
+  color: #5f7872;
+  font-size: 0.8rem;
+}
+
+/* The card is a vertical flex surface so every footer shares the same baseline. */
+.my-pet-dashboard .pet-list.card-view .pet-card {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-main {
+  display: grid !important;
+  grid-template-columns: 96px minmax(0, 1fr) !important;
+  gap: 14px 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: start;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-main .pet-card-visual {
+  grid-column: 1 !important;
+  grid-row: auto !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-main .pet-card-body {
+  grid-column: 2 !important;
+  grid-row: auto !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  margin-top: auto !important;
+  gap: 8px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer button {
+  display: grid;
+  width: 100% !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  place-items: center;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body .pet-info-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body .pet-info-badges span {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 9px;
+  font-size: 0.7rem;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-recent-records {
+  grid-column: 1 / -1 !important;
+  grid-row: 3 !important;
+  min-width: 0;
+  padding: 9px 0 0;
+  border-top: 1px solid #edf1ef;
+  border-left: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-column: 1 / -1 !important;
+  grid-row: 4 !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer button {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  height: 30px;
+  padding: 0 6px;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 640px) {
+  .my-pet-dashboard .pet-list.card-view .pet-card {
+    aspect-ratio: auto;
+    min-height: 280px;
+  }
+}
+
+@media (max-width: 720px) {
+  .my-pet-dashboard .pet-list.card-view .pet-card {
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+    gap: 14px 16px;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card-icon {
+    width: 84px;
+    height: 84px;
+    border-radius: 16px;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card-title-row strong {
+    font-size: 1.15rem;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card-visual {
+    grid-row: 2 / span 3;
+  }
+}
+
+/* Final compact square cards: match the previous card height. */
+.my-pet-dashboard .pet-list.card-view {
+  grid-template-columns: repeat(auto-fit, 280px) !important;
+  justify-content: start !important;
+  gap: 18px !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card {
+  width: 280px !important;
+  height: 280px !important;
+  min-height: 280px !important;
+  aspect-ratio: auto !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: auto auto 1fr auto auto !important;
+  gap: 8px !important;
+  padding: 14px !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-topline,
+.my-pet-dashboard .pet-list.card-view .pet-card-visual,
+.my-pet-dashboard .pet-list.card-view .pet-card-body,
+.my-pet-dashboard .pet-list.card-view .pet-recent-records,
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-column: 1;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-topline { grid-row: 1 !important; }
+
+.my-pet-dashboard .pet-list.card-view .pet-card-visual {
+  grid-row: 2 !important;
+  justify-self: center;
+  align-self: center;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon {
+  width: 76px !important;
+  height: 76px !important;
+  border-radius: 16px !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-title-row strong {
+  font-size: 1.05rem;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-species-line {
+  font-size: 0.76rem;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body {
+  grid-row: 3 !important;
+  align-self: start;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-recent-records {
+  grid-row: 4 !important;
+  padding: 6px 0 0;
+  border-top: 1px solid #edf1ef;
+  border-left: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-row: 5 !important;
+  display: flex;
+  gap: 5px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer button {
+  flex: 1 1 0;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 6px;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 720px) {
+  .my-pet-dashboard .pet-list.card-view {
+    grid-template-columns: minmax(0, 280px);
+    justify-content: center;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card {
+    width: 280px;
+  }
+}
+
+/* Card view uses compact rounded squares instead of stretched dashboard rows. */
+.my-pet-dashboard .pet-list.card-view {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 300px));
+  justify-content: start;
+  gap: 18px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-topline,
+.my-pet-dashboard .pet-list.card-view .pet-card-visual,
+.my-pet-dashboard .pet-list.card-view .pet-card-body,
+.my-pet-dashboard .pet-list.card-view .pet-recent-records,
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-column: 1;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-topline {
+  grid-row: 1;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-visual {
+  grid-row: 2;
+  justify-self: center;
+  align-self: center;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon {
+  width: 92px;
+  height: 92px;
+  border-radius: 18px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body {
+  grid-row: 3;
+  align-self: start;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-recent-records {
+  grid-row: 4;
+  padding: 8px 0 0;
+  border-top: 1px solid #edf1ef;
+  border-left: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-row: 5;
+  display: flex;
+  gap: 6px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer button {
+  flex: 1 1 0;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 720px) {
+  .my-pet-dashboard .pet-list.card-view {
+    grid-template-columns: minmax(0, 340px);
+    justify-content: center;
+  }
+}
+
+/* Final registration-flow refinements. */
+.step-progress-labels {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 7px;
+  color: #94a39d;
+  font-size: 0.67rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.step-progress-labels-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.step-progress-labels span.active {
+  color: #079d96;
+  font-weight: 900;
+}
+
+.pet-date-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pet-detail-add-grid {
+  gap: 4px 18px;
+}
+
+.pet-detail-add {
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid #edf1ef;
+  border-radius: 0;
+  background: transparent;
+}
+
+.pet-detail-add > span {
+  color: #52625e;
+}
+
+.pet-complete-actions > button:first-child {
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .step-progress-labels {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 5px;
+    white-space: normal;
+  }
+
+  .pet-date-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Compact, single-line My Pet controls. */
 .my-pet-dashboard .my-pet-tools {
   display: block;
@@ -4312,6 +5217,18 @@ textarea {
   gap: 10px;
 }
 
+.profile-panel-header > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profile-panel-header > div > span {
+  color: #5f7872;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .profile-panel button {
   display: flex;
   align-items: center;
@@ -4323,6 +5240,17 @@ textarea {
   background: #fbfffc;
   text-align: left;
   font-weight: 800;
+}
+
+.profile-panel button.danger {
+  border-color: rgba(179, 59, 50, 0.22);
+  background: #fff7f5;
+  color: #b33b32;
+}
+
+.profile-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .profile-panel .profile-back {
@@ -4389,6 +5317,19 @@ textarea {
   margin: 0;
   color: #5f7872;
   font-weight: 800;
+}
+
+.profile-danger-box {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(179, 59, 50, 0.22);
+  border-radius: 8px;
+  background: #fff7f5;
+}
+
+.profile-danger-box strong {
+  color: #9c3029;
 }
 
 .profile-list {
@@ -4527,6 +5468,17 @@ textarea {
     left: 10px;
   }
 
+  .map-side-panel {
+    top: 10px;
+    right: 10px;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    left: 10px;
+    width: auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 8px;
+    pointer-events: none;
+  }
+
   .top-bar h1 {
     font-size: 1.35rem;
   }
@@ -4537,10 +5489,9 @@ textarea {
   }
 
   .map-search-panel {
-    top: 10px;
-    right: 10px;
-    left: 10px;
-    z-index: 23;
+    position: static;
+    inset: auto;
+    z-index: auto;
     grid-template-columns: minmax(0, 1fr) 88px 88px;
     gap: 6px;
     max-width: none;
@@ -4559,10 +5510,8 @@ textarea {
   }
 
   .map-category-tags {
-    top: 64px;
-    right: 10px;
-    bottom: auto;
-    left: 10px;
+    position: static;
+    inset: auto;
     justify-content: flex-start;
     gap: 8px;
     overflow-x: auto;
@@ -4588,7 +5537,23 @@ textarea {
   }
 
   .map-hospital-panel {
-    bottom: calc(92px + env(safe-area-inset-bottom));
+    align-self: end;
+    max-height: min(48vh, 430px);
+  }
+
+  .map-hospital-list {
+    align-self: end;
+    max-height: min(36vh, 310px);
+    padding: 10px;
+  }
+
+  .map-hospital-row {
+    min-height: 60px;
+    padding: 8px;
+  }
+
+  .map-side-head {
+    display: none;
   }
 
   .map-shell .top-bar {
@@ -5271,6 +6236,99 @@ textarea {
   gap: 24px;
 }
 
+/* Species are short selectable chips, so the list can use the available width. */
+.pet-species-gender-step .step-field:first-child .choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pet-species-gender-step .step-field:first-child .choice-grid button {
+  flex: 0 1 180px;
+  width: auto;
+  min-height: 42px;
+  height: 42px;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .pet-species-gender-step .step-field:first-child .choice-grid button {
+    flex: 1 1 140px;
+  }
+}
+
+/* Keep writing steps in one predictable vertical flow. */
+.step-screen .step-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  justify-content: stretch;
+  gap: 16px;
+}
+
+.step-screen .step-card > * {
+  grid-column: 1 / -1;
+}
+
+.step-screen .choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-screen .choice-grid button {
+  flex: 0 1 180px;
+  width: auto;
+  min-width: 0;
+  min-height: 42px;
+  height: 42px;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+
+.step-screen .share-type-picker {
+  display: grid;
+  gap: 16px;
+}
+
+.step-screen .share-type-picker > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.step-screen .share-type-picker button {
+  width: 100%;
+  min-height: 132px;
+  height: auto;
+  white-space: normal;
+}
+
+.step-screen .step-card > .step-secondary,
+.step-screen .step-card > .step-primary {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  height: 42px;
+}
+
+@media (max-width: 560px) {
+  .step-screen .step-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .step-screen .choice-grid button {
+    flex: 1 1 140px;
+  }
+
+  .step-screen .share-type-picker > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .pet-complete-screen {
   display: grid;
   min-height: 100svh;
@@ -5320,10 +6378,9 @@ textarea {
 .pet-detail-add {
   display: grid;
   gap: 8px;
-  padding: 14px;
-  border: 1px solid #e6efeb;
-  border-radius: 10px;
-  background: #fbfdfc;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf3f0;
+  background: transparent;
 }
 
 .pet-detail-add > span {
@@ -5369,6 +6426,54 @@ textarea {
   .pet-detail-add-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Keep the completion form flat and prevent long actions from escaping. */
+.pet-complete-card,
+.pet-detail-add-grid,
+.pet-detail-add,
+.pet-detail-add > * {
+  min-width: 0;
+}
+
+.pet-complete-card h1,
+.pet-complete-card > p,
+.pet-complete-actions button {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.pet-detail-add {
+  padding: 4px 0;
+  border: 0;
+}
+
+.pet-detail-add input,
+.pet-detail-add .weight-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.pet-detail-add .weight-input {
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 6px;
+}
+
+.pet-complete-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px;
+}
+
+.pet-complete-actions > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  height: auto;
+  padding: 8px 10px;
+  line-height: 1.25;
+  white-space: normal;
 }
 
 /* My Pet management dashboard */
@@ -5953,5 +7058,108 @@ textarea {
 
   .my-pet-dashboard .pet-card {
     min-height: 310px;
+  }
+}
+
+/* Keep the final card surface split into one visual column and one information column. */
+.my-pet-dashboard .pet-list.card-view .pet-card {
+  grid-template-columns: 148px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  gap: 18px 24px;
+  min-height: 280px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-visual {
+  grid-column: 1;
+  grid-row: 2 / span 3;
+  justify-content: center;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon {
+  width: 132px;
+  height: 132px;
+  border-radius: 20px;
+  background: #e1f7f0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-icon:has(img) {
+  background: transparent;
+  border-radius: 16px;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-body {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-recent-records {
+  grid-column: 2;
+  grid-row: 3;
+  padding: 12px 0 0;
+  border-top: 1px solid #edf1ef;
+  border-left: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-footer {
+  grid-column: 2;
+  grid-row: 4;
+  margin-top: 0;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-title-row {
+  justify-content: flex-start;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card-title-row strong {
+  font-size: 1.45rem;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-species-line {
+  font-size: 0.92rem;
+}
+
+.my-pet-dashboard .pet-card-body .pet-info-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.my-pet-dashboard .pet-card-body .pet-info-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0f4f2;
+  color: #52625e;
+  font-size: 0.76rem;
+}
+
+.my-pet-dashboard .pet-card-body .pet-info-badges b {
+  color: #7a8b85;
+  font-size: 0.68rem;
+}
+
+@media (max-width: 720px) {
+  .my-pet-dashboard .pet-list.card-view .pet-card {
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+    gap: 14px 16px;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card-icon {
+    width: 84px;
+    height: 84px;
+    border-radius: 16px;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card-title-row strong {
+    font-size: 1.15rem;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card-visual {
+    grid-row: 2 / span 3;
   }
 }
