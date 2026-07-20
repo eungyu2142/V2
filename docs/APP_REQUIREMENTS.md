@@ -332,3 +332,15 @@
 - 임시 저장 데이터는 프로필에서 다시 이어 작성할 수 있어야 한다.
 - 리뷰 작성과 질문 작성은 동물 기록/캘린더와 연결한다.
 - 지도 병원 데이터와 리뷰 데이터는 서로 연결되어야 한다.
+
+
+## Hospital Data Collection Policy
+
+- PWA frontend must not call the Naver Local Search API directly.
+- Naver Search Client ID/Secret stay only in server-side environments or GitHub Actions secrets.
+- Hospital base data is collected weekly from the Naver Local Search API and written to public/data/exotic-hospitals.json.
+- Collection uses nationwide si/gun/gu regions with special-animal search keywords and low-concurrency sequential requests.
+- Duplicate hospitals are merged by normalized hospital name and address.
+- supportedAnimals stores specific matched animal categories. If no specific category is found, the app shows the hospital as 기타.
+- classification is confirmed when a hospital is found through specific animal keywords, multiple queries, or has supported animals; otherwise it is candidate.
+- Reviews, likes, recent treated species, and user activity remain app DB/user-data features and update immediately without waiting for weekly collection.

@@ -1,0 +1,35 @@
+name: Collect exotic hospitals
+
+on:
+  schedule:
+    - cron: '15 18 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Collect hospitals
+        env:
+          NAVER_SEARCH_CLIENT_ID: ${{ secrets.NAVER_SEARCH_CLIENT_ID }}
+          NAVER_SEARCH_CLIENT_SECRET: ${{ secrets.NAVER_SEARCH_CLIENT_SECRET }}
+          COLLECT_DELAY_MS: 650
+          COLLECT_DISPLAY: 5
+        run: node scripts/collect-exotic-hospitals.mjs
+
+      - name: Commit collected data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update collected exotic hospital data'
+          file_pattern: public/data/exotic-hospitals.json public/data/exotic-hospitals.meta.json

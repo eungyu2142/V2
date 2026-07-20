@@ -21,13 +21,10 @@ type NaverLocalItem = {
 
 const DEFAULT_QUERY = '특수동물병원'
 const NAVER_LOCAL_LIMIT = 20
-const HOSPITAL_POSITIVE_KEYWORDS = ['동물병원', '동물 병원', '특수동물', '특수 동물', '이국동물', '이국 동물', '파충류', '조류', '설치류', '양서류', '햄스터', '토끼', '페럿', '앵무새', '거북', '도마뱀']
 const HOSPITAL_NEGATIVE_KEYWORDS = ['애견카페', '카페', '펫샵', '애견샵', '용품', '미용', '호텔', '분양', '수족관', '아쿠아리움', '사료', '간식', '훈련소', '보호소']
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
     const body = await readRequest(request)
@@ -43,8 +40,7 @@ Deno.serve(async (request) => {
     const start = clamp(body.start, 1, 1000, 1)
     const sort = body.sort === 'comment' ? 'comment' : 'random'
     const items = await searchNaverLocalPages({ query, display: requestedDisplay, start, sort, clientId, clientSecret })
-
-    const hospitalItems = items.filter((item) => isHospitalCandidate(item, query))
+    const hospitalItems = items.filter(isHospitalCandidate)
 
     return json({ count: hospitalItems.length, query, items: hospitalItems })
   } catch (error) {
@@ -106,18 +102,18 @@ async function searchNaverLocalPages({
   }
 
   return collected.map((item, index) => ({
-      id: `${cleanHtml(item.title)}-${item.mapx}-${item.mapy}-${index}`,
-      title: cleanHtml(item.title),
-      link: item.link,
-      category: cleanHtml(item.category),
-      description: cleanHtml(item.description),
-      telephone: item.telephone,
-      address: item.address,
-      roadAddress: item.roadAddress,
-      mapx: item.mapx,
-      mapy: item.mapy,
-      query,
-    }))
+    id: `${cleanHtml(item.title)}-${item.mapx}-${item.mapy}-${index}`,
+    title: cleanHtml(item.title),
+    link: item.link,
+    category: cleanHtml(item.category),
+    description: cleanHtml(item.description),
+    telephone: item.telephone,
+    address: item.address,
+    roadAddress: item.roadAddress,
+    mapx: item.mapx,
+    mapy: item.mapy,
+    query,
+  }))
 }
 
 async function readRequest(request: Request): Promise<SearchRequest> {
@@ -131,11 +127,16 @@ async function readRequest(request: Request): Promise<SearchRequest> {
     }
   }
 
-  if (request.method !== 'POST') {
-    throw new Error('Only GET and POST are supported.')
-  }
+  if (request.method !== 'POST') throw new Error('Only GET and POST are supported.')
 
   return await request.json().catch(() => ({}))
+}
+
+function isHospitalCandidate(item: NaverLocalItem) {
+  const text = normalizeText(`${item.title} ${item.category} ${item.description} ${item.address} ${item.roadAddress}`)
+  const isAnimalHospital = text.includes(normalizeText('동물병원')) || text.includes(normalizeText('동물 병원'))
+  if (!isAnimalHospital) return false
+  return !HOSPITAL_NEGATIVE_KEYWORDS.some((word) => text.includes(normalizeText(word)))
 }
 
 function clamp(value: number | undefined, min: number, max: number, fallback: number) {
@@ -151,16 +152,6 @@ function parseNumber(value: string | null) {
 
 function cleanHtml(value: string) {
   return value.replaceAll(/<[^>]*>/g, '').replaceAll('&amp;', '&').trim()
-}
-
-function isHospitalCandidate(item: NaverLocalItem & { query?: string }, query: string) {
-  void query
-  const text = normalizeText(`${item.title} ${item.category} ${item.description} ${item.address} ${item.roadAddress}`)
-  const hasPositiveSignal = HOSPITAL_POSITIVE_KEYWORDS.some((keyword) => text.includes(normalizeText(keyword)))
-  const hasCategoryHospitalSignal = text.includes(normalizeText('동물병원')) || text.includes(normalizeText('동물 병원'))
-  const hasNegativeSignal = HOSPITAL_NEGATIVE_KEYWORDS.some((keyword) => text.includes(normalizeText(keyword)))
-
-  return hasPositiveSignal && (!hasNegativeSignal || hasCategoryHospitalSignal)
 }
 
 function normalizeText(value: string) {

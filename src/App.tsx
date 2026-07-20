@@ -3,15 +3,19 @@ import type { Session } from '@supabase/supabase-js'
 import './App.css'
 import AuthScreen from './components/AuthScreen'
 import DiaryPage, { type RecordDraft, type Reminder } from './features/diary/DiaryPage'
+import HospitalReviewForm, { type ReviewAnimalCategory } from './features/hospital-map/HospitalReviewForm'
 import type { PetRecord, PetRecordType } from './features/diary/diaryTypes'
+import { linkReviewToDiary } from './features/diary/diaryService'
 import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
 import { supabase } from './lib/supabase'
 
-type Tab = 'pets' | 'diary' | 'map' | 'qna' | 'share'
+type Tab = 'pets' | 'diary' | 'map' | 'qna' | 'share' | 'profile'
 type CreateMode = 'pet' | 'post' | 'share' | null
 type AnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
 type ShareCategory = 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other' | 'food' | 'supplies'
 type ShareSort = 'latest' | 'popular'
+type HospitalSort = 'distance' | 'reviews' | 'rating'
+type MobileMapSheetState = 'collapsed' | 'middle' | 'expanded'
 type ShareStatus = 'active' | 'completed'
 
 type Pet = {
@@ -61,6 +65,7 @@ type QnaPost = {
   image?: string
   linkedRecordId?: string
   attachedRecordSnapshot?: AttachedRecordSnapshot
+  attachedDiarySnapshot?: AttachedDiarySnapshot
   createdAt: string
   liked: boolean
   likes: number
@@ -138,6 +143,34 @@ function writeLocalDrafts(userId: string, items: DraftItem[]) {
   localStorage.setItem(localDraftsKey(userId), JSON.stringify(items))
 }
 
+function readSavedHospitalSnapshots() {
+  try {
+    const stored = localStorage.getItem(savedHospitalDetailsStorageKey)
+    if (!stored) {
+      return readSavedHospitalIds().map((id) => ({
+        id,
+        name: id,
+        address: '',
+        phone: '',
+        lat: 0,
+        lng: 0,
+        animalTags: [],
+        naverLink: '',
+        source: 'local_hospital_data' as const,
+      }))
+    }
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed as HospitalSnapshot[] : []
+  } catch {
+    return []
+  }
+}
+
+function writeSavedHospitalSnapshots(items: HospitalSnapshot[]) {
+  localStorage.setItem(savedHospitalDetailsStorageKey, JSON.stringify(items))
+  localStorage.setItem(savedHospitalStorageKey, JSON.stringify(items.map((item) => item.id).filter(Boolean)))
+}
+
 type Coordinates = {
   lat: number
   lng: number
@@ -182,12 +215,47 @@ type AttachedRecordSnapshot = {
   photoUrl?: string
 }
 
+type AttachedDiarySnapshot = {
+  petId: string
+  petName: string
+  petPhoto?: string
+  records: PetRecord[]
+  startDate: string
+  endDate: string
+  totalCount: number
+}
+
 type HospitalReview = {
   id: string
   hospitalId: string
+  userId?: string
+  petId?: string
+  petName?: string
   author: string
+  animalCategory?: Exclude<AnimalCategory, 'all'>
+  species?: string
   rating: number
+  visitDate?: string
+  cost?: number
+  diagnosis?: string
+  treatment?: string
+  medicine?: string
+  medicineDose?: string
+  medicineStartDate?: string
+  medicineEndDate?: string
+  medicineDailyCount?: number
+  medicineInstructions?: string
+  medicineBagImage?: string
+  medicineOcrRaw?: unknown
+  tags?: string[]
   body: string
+  content?: string
+  images?: string[]
+  mine?: boolean
+  liked?: boolean
+  likes?: number
+  hospitalName?: string
+  hospitalSnapshot?: HospitalSnapshot
   createdAt: string
 }
 
@@ -222,7 +290,6 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: 'diary', label: '다이어리' },
   { id: 'map', label: '지도' },
   { id: 'qna', label: 'QNA' },
-  { id: 'share', label: '나눔' },
 ]
 
 const animalCategoryOptions: AnimalCategory[] = ['all', 'reptile', 'rodent', 'amphibian', 'bird', 'other']
@@ -265,6 +332,8 @@ const petSpeciesOptions: Record<Exclude<AnimalCategory, 'all'>, string[]> = {
 }
 
 const reviewStorageKey = 'exocare-hospital-reviews'
+const savedHospitalStorageKey = 'exocare-saved-hospitals'
+const savedHospitalDetailsStorageKey = 'exocare-liked-hospitals'
 const shareCategoryLabels: Record<ShareCategory, string> = {
   reptile: '파충류', bird: '조류', rodent: '설치류', amphibian: '양서류',
   other: '기타', food: '먹이', supplies: '용품',
@@ -307,11 +376,9 @@ function App() {
 
 function AuthenticatedApp({ session }: { session: Session }) {
   const [activeTab, setActiveTab] = useState<Tab>('map')
-  const [profileOpen, setProfileOpen] = useState(false)
   const [sideNavOpen, setSideNavOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateMode>(null)
   const [qnaOpenId, setQnaOpenId] = useState<string | null>(null)
-  const [shareOpenId, setShareOpenId] = useState<string | null>(null)
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
   const [diaryPetId, setDiaryPetId] = useState<string | null>(null)
   const [diaryReadOnly, setDiaryReadOnly] = useState(false)
@@ -321,11 +388,30 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [qnaPosts, setQnaPosts] = useState<QnaPost[]>([])
   const [shareItems, setShareItems] = useState<ShareItem[]>([])
   const [drafts, setDrafts] = useState<DraftItem[]>([])
+  const [hospitalReviews, setHospitalReviews] = useState<Record<string, HospitalReview[]>>(() => readStoredReviews())
+  const [likedHospitals, setLikedHospitals] = useState<HospitalSnapshot[]>(() => readSavedHospitalSnapshots())
   const [profile, setProfile] = useState<AppProfile>({ username: '', nickname: '', avatarUrl: '' })
   const [dataError, setDataError] = useState('')
+  const bottomNavDragStartRef = useRef<number | null>(null)
+  const suppressNextBottomNavClickRef = useRef(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- reset local app state when the signed-in user changes. */
   useEffect(() => {
     let active = true
+    setPets([])
+    setQnaPosts([])
+    setShareItems([])
+    setDrafts([])
+    setHospitalReviews(readStoredReviews())
+    setLikedHospitals(readSavedHospitalSnapshots())
+    setProfile({ username: '', nickname: '', avatarUrl: '' })
+    setCreateMode(null)
+    setEditingPet(null)
+    setEditingDraft(null)
+    setQnaOpenId(null)
+    setDiaryPetId(null)
+    setDiaryReadOnly(false)
+    setDataError('')
     const loadMine = async <T,>(table: string) => loadAppData<T>(table, { userId: session.user.id, scope: 'mine' })
     const loadAll = async <T,>(table: string) => loadAppData<T>(table, { userId: session.user.id, scope: 'all' })
     const loadOptionalMine = async <T,>(table: string) => loadMine<T>(table).catch((error) => {
@@ -356,6 +442,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
     })
     return () => { active = false }
   }, [session.user.id])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     let active = true
@@ -381,9 +468,38 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   const moveTab = (tab: Tab) => {
     setActiveTab(tab)
+    if (tab !== 'diary') {
+      setDiaryPetId(null)
+      setDiaryReadOnly(false)
+    }
     setCreateMode(null)
     setEditingPet(null)
     setEditingDraft(null)
+  }
+
+  const beginBottomNavDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number }) => {
+    if (activeTab !== 'map') return
+    bottomNavDragStartRef.current = event.clientY
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+
+  const moveBottomNavDrag = (event: { clientY: number; preventDefault: () => void }) => {
+    if (activeTab !== 'map' || bottomNavDragStartRef.current === null) return
+    const dragY = event.clientY - bottomNavDragStartRef.current
+    if (dragY < -12) event.preventDefault()
+  }
+
+  const finishBottomNavDrag = (event: { clientY: number; preventDefault: () => void }) => {
+    if (activeTab !== 'map' || bottomNavDragStartRef.current === null) return
+    const dragY = event.clientY - bottomNavDragStartRef.current
+    bottomNavDragStartRef.current = null
+    if (dragY > -42) return
+    suppressNextBottomNavClickRef.current = true
+    event.preventDefault()
+    window.dispatchEvent(new CustomEvent('map-bottom-nav-swipe-up'))
+    window.setTimeout(() => {
+      suppressNextBottomNavClickRef.current = false
+    }, 0)
   }
 
   const openHospitalOnMap = (hospital: HospitalSnapshot) => {
@@ -392,14 +508,15 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }
 
   const savePet = async (pet: Pet) => {
+    setPets((items) => [pet, ...items.filter((item) => item.id !== pet.id)])
+    setCreateMode(null)
     try {
       await saveAppData('pets', session.user.id, pet, {
         name: pet.name, species: pet.species, category: pet.group,
         gender: pet.gender, photo_url: pet.photo ?? null,
       })
-      setPets((items) => [pet, ...items.filter((item) => item.id !== pet.id)])
-    } catch {
-      setDataError('펫 정보를 저장하지 못했습니다.')
+    } catch (error) {
+      console.error('Supabase pet save failed; kept local state.', error)
     }
   }
 
@@ -413,14 +530,14 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }
 
   const saveQnaPost = async (post: QnaPost) => {
+    setQnaPosts((items) => [post, ...items.filter((item) => item.id !== post.id)])
+    setCreateMode(null)
     try {
       await saveAppData(qnaTable, session.user.id, post, {
         category: qnaDatabaseCategory, title: post.title, body: post.body,
       })
-      setQnaPosts((items) => [post, ...items.filter((item) => item.id !== post.id)])
-      setCreateMode(null)
-    } catch {
-      setDataError('질문을 저장하지 못했습니다.')
+    } catch (error) {
+      console.error('Supabase QNA save failed; kept local state.', error)
     }
   }
 
@@ -447,14 +564,14 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }
 
   const saveShareItem = async (item: ShareItem) => {
+    setShareItems((items) => [item, ...items.filter((shareItem) => shareItem.id !== item.id)])
+    setCreateMode(null)
     try {
       await saveAppData('share_items', session.user.id, item, {
         title: item.title, area: item.area, memo: item.memo,
       })
-      setShareItems((items) => [item, ...items.filter((shareItem) => shareItem.id !== item.id)])
-      setCreateMode(null)
-    } catch {
-      setDataError('나눔 글을 저장하지 못했습니다.')
+    } catch (error) {
+      console.error('Supabase share save failed; kept local state.', error)
     }
   }
 
@@ -491,14 +608,13 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }
 
   const continueDraft = (draft: DraftItem) => {
-    setProfileOpen(false)
     setEditingDraft(draft)
     if (draft.draftType === 'question') {
       setCreateMode('post')
       return
     }
     if (draft.draftType === 'share_item') {
-      setCreateMode('share')
+      setDataError('나눔 기능은 현재 준비 중입니다.')
       return
     }
     if (draft.draftType === 'pet') {
@@ -518,23 +634,24 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }
 
   const openWrittenPost = (kind: 'question' | 'share_item', id: string) => {
-    setProfileOpen(false)
     setCreateMode(null)
     if (kind === 'question') {
       setActiveTab('qna')
       setQnaOpenId(id)
-      setShareOpenId(null)
       return
     }
-    setActiveTab('share')
-    setShareOpenId(id)
+    void id
+    setDataError('나눔 기능은 현재 준비 중입니다.')
     setQnaOpenId(null)
   }
 
   const editWrittenPost = (kind: 'question' | 'share_item', id: string) => {
     const payload = kind === 'question' ? qnaPosts.find((post) => post.id === id) : shareItems.find((item) => item.id === id)
     if (!payload) return
-    setProfileOpen(false)
+    if (kind === 'share_item') {
+      setDataError('나눔 기능은 현재 준비 중입니다.')
+      return
+    }
     setEditingDraft({
       id,
       draftType: kind,
@@ -543,7 +660,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       updatedAt: new Date().toISOString(),
       payload,
     } as DraftItem)
-    setCreateMode(kind === 'question' ? 'post' : 'share')
+    setCreateMode('post')
   }
 
   const deleteWrittenPost = (kind: 'question' | 'share_item', id: string) => {
@@ -579,11 +696,13 @@ function AuthenticatedApp({ session }: { session: Session }) {
       const { error } = await supabase.rpc('delete_own_account')
       if (error) throw error
       await supabase.auth.signOut()
-      setProfileOpen(false)
     } catch {
       setDataError('계정을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.')
     }
   }
+
+  // 나눔 기능은 프론트엔드에서 보류 중이지만, 저장 로직은 재활성화 대비로 보존한다.
+  void saveShareItem
 
   if (createMode === 'pet') return (
     <PetCreateFlow
@@ -606,19 +725,6 @@ function AuthenticatedApp({ session }: { session: Session }) {
       onClose={() => { setCreateMode(null); setEditingDraft(null) }}
       onSave={async (post) => {
         await saveQnaPost(post)
-        if (editingDraft && drafts.some((draft) => draft.id === editingDraft.id)) await deleteDraft(editingDraft.id)
-        setEditingDraft(null)
-      }}
-      onSaveDraft={saveDraft}
-    />
-  )
-  if (createMode === 'share') return (
-    <ShareCreateFlow
-      pets={pets}
-      initialDraft={editingDraft?.draftType === 'share_item' ? editingDraft : null}
-      onClose={() => { setCreateMode(null); setEditingDraft(null) }}
-      onSave={async (item) => {
-        await saveShareItem(item)
         if (editingDraft && drafts.some((draft) => draft.id === editingDraft.id)) await deleteDraft(editingDraft.id)
         setEditingDraft(null)
       }}
@@ -654,7 +760,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
             </button>
           ))}
         </nav>
-        <button className="side-nav-profile" type="button" onClick={() => setProfileOpen(true)}>
+        <button className={`side-nav-profile ${activeTab === 'profile' ? 'active' : ''}`} type="button" onClick={() => { moveTab('profile'); setSideNavOpen(false) }}>
           <span className="side-nav-icon profile" aria-hidden="true" />
           <span>&#54532;&#47196;&#54596;</span>
         </button>
@@ -662,67 +768,75 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
       <header className="top-bar">
         <div>
-          <h1>{tabs.find((tab) => tab.id === activeTab)?.label}</h1>
+          <h1>{activeTab === 'profile' ? '프로필' : tabs.find((tab) => tab.id === activeTab)?.label}</h1>
         </div>
       </header>
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} onSaveDraft={async (draft) => { await saveDraft(draft); setEditingDraft(null) }} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} pets={pets} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={setLikedHospitals} onSaveDraft={async (draft) => { await saveDraft(draft); setEditingDraft(null) }} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">
           {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={(petId) => { setDiaryPetId(petId); moveTab('diary') }} onRegisterPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
           {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} initialPetId={diaryPetId ?? undefined} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onSaveDraft={async (draft) => { await saveDraft(draft); setEditingDraft(null) }} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
           {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onOpenHospital={openHospitalOnMap} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setDiaryReadOnly(readOnly); moveTab('diary') }} />}
-          {activeTab === 'share' && <ShareScreen items={shareItems} openItemId={shareOpenId} onOpenHandled={() => setShareOpenId(null)} onItemsChange={setShareItems} onSaveItem={saveShareItem} onDeleteItem={deleteShareItem} onEditItem={(item) => editWrittenPost('share_item', item.id)} />}
+          {activeTab === 'profile' && <ProfileScreen key={`${profile.username}-${profile.nickname}-${profile.avatarUrl}`} profile={profile} qnaPosts={qnaPosts} hospitalReviews={hospitalReviews} likedHospitals={likedHospitals} drafts={drafts} onSignOut={() => supabase.auth.signOut()} onDeleteAccount={deleteAccount} onSaveProfile={saveProfile} onDeleteDraft={deleteDraft} onContinueDraft={continueDraft} onOpenWrittenPost={openWrittenPost} onOpenHospital={openHospitalOnMap} onEditWrittenPost={editWrittenPost} onDeleteWrittenPost={deleteWrittenPost} />}
         </main>
       )}
 
-      {activeTab !== 'map' && activeTab !== 'diary' && (
-        <button className="app-fab" type="button" aria-label="작성" onClick={() => { setEditingPet(null); setEditingDraft(null); setCreateMode(activeTab === 'pets' ? 'pet' : activeTab === 'qna' ? 'post' : 'share') }}>
+      {activeTab !== 'map' && activeTab !== 'diary' && activeTab !== 'profile' && (
+        <button className="app-fab" type="button" aria-label="작성" onClick={() => { setEditingPet(null); setEditingDraft(null); setCreateMode(activeTab === 'pets' ? 'pet' : 'post') }}>
           +
         </button>
       )}
 
-      <nav className="bottom-nav">
+      <nav
+        className={`bottom-nav ${activeTab === 'map' ? 'map-bottom-nav' : ''}`}
+        onPointerDown={beginBottomNavDrag}
+        onPointerMove={moveBottomNavDrag}
+        onPointerUp={finishBottomNavDrag}
+        onPointerCancel={() => { bottomNavDragStartRef.current = null }}
+      >
         {tabs.map((tab) => (
-          <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={() => moveTab(tab.id)}>
-            {tab.label}
+          <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={(event) => { if (suppressNextBottomNavClickRef.current) { event.preventDefault(); return } moveTab(tab.id) }}>
+            <span className={`bottom-nav-icon side-nav-icon ${tab.id}`} aria-hidden="true" />
+            <span className="bottom-nav-label">{tab.label}</span>
           </button>
         ))}
       </nav>
 
       {dataError && <button className="data-error" type="button" onClick={() => setDataError('')}>{dataError}</button>}
-      {profileOpen && <ProfilePanel key={`${profile.username}-${profile.nickname}-${profile.avatarUrl}`} profile={profile} qnaPosts={qnaPosts} shareItems={shareItems} drafts={drafts} onClose={() => setProfileOpen(false)} onSignOut={() => supabase.auth.signOut()} onDeleteAccount={deleteAccount} onSaveProfile={saveProfile} onDeleteDraft={deleteDraft} onContinueDraft={continueDraft} onOpenWrittenPost={openWrittenPost} onEditWrittenPost={editWrittenPost} onDeleteWrittenPost={deleteWrittenPost} />}
     </div>
   )
 }
 
-function ProfilePanel({
+function ProfileScreen({
   profile,
   qnaPosts,
-  shareItems,
+  hospitalReviews,
+  likedHospitals,
   drafts,
-  onClose,
   onSignOut,
   onDeleteAccount,
   onSaveProfile,
   onDeleteDraft,
   onContinueDraft,
   onOpenWrittenPost,
+  onOpenHospital,
   onEditWrittenPost,
   onDeleteWrittenPost,
 }: {
   profile: AppProfile
   qnaPosts: QnaPost[]
-  shareItems: ShareItem[]
+  hospitalReviews: Record<string, HospitalReview[]>
+  likedHospitals: HospitalSnapshot[]
   drafts: DraftItem[]
-  onClose: () => void
   onSignOut: () => void
   onDeleteAccount: () => void | Promise<void>
   onSaveProfile: (profile: AppProfile) => void
   onDeleteDraft: (draftId: string) => void
   onContinueDraft: (draft: DraftItem) => void
   onOpenWrittenPost: (kind: 'question' | 'share_item', id: string) => void
+  onOpenHospital: (hospital: HospitalSnapshot) => void
   onEditWrittenPost: (kind: 'question' | 'share_item', id: string) => void
   onDeleteWrittenPost: (kind: 'question' | 'share_item', id: string) => void
 }) {
@@ -734,14 +848,20 @@ function ProfilePanel({
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deletingAccount, setDeletingAccount] = useState(false)
   const displayName = profile.nickname || profile.username || '사용자'
+  const visibleDrafts = drafts.filter((draft) => draft.draftType !== 'share_item')
   const posts: Array<{ id: string; kind: 'question' | 'share_item'; type: string; title: string; body: string }> = [
     ...qnaPosts.filter((post) => post.mine === true).map((post) => ({ id: post.id, kind: 'question' as const, type: 'QNA', title: post.title, body: post.body })),
-    ...shareItems.filter((item) => item.mine === true).map((item) => ({ id: item.id, kind: 'share_item' as const, type: shareCategoryLabels[item.category ?? 'other'], title: item.title, body: item.memo })),
   ]
-  const likedItems: Array<{ id: string; kind: 'question' | 'share_item'; type: string; title: string; body: string }> = [
-    ...qnaPosts.filter((post) => post.liked).map((post) => ({ id: post.id, kind: 'question' as const, type: 'QNA', title: post.title, body: post.body })),
-    ...shareItems.filter((item) => item.liked).map((item) => ({ id: item.id, kind: 'share_item' as const, type: shareCategoryLabels[item.category ?? 'other'], title: item.title, body: item.memo })),
-  ]
+  const likedQnaItems = qnaPosts.filter((post) => post.liked).map((post) => ({ id: post.id, kind: 'question' as const, type: 'QNA', title: post.title, body: post.body }))
+  const likedReviewItems = Object.entries(hospitalReviews).flatMap(([hospitalId, reviews]) => reviews.filter((review) => review.liked).map((review) => ({
+    id: review.id,
+    hospitalId,
+    type: '리뷰',
+    title: review.hospitalName || review.hospitalSnapshot?.name || '병원 리뷰',
+    body: review.body || review.content || '',
+    hospital: review.hospitalSnapshot,
+  })))
+  const likedCount = likedQnaItems.length + likedHospitals.length + likedReviewItems.length
   const attachAvatar = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -751,9 +871,7 @@ function ProfilePanel({
   }
 
   return (
-    <div className="overlay">
-      <button className="overlay-dim" type="button" onClick={onClose} aria-label="close" />
-      <section className="profile-panel">
+      <section className="profile-screen">
         <div className="profile-panel-header">
           {view !== 'menu' && <button className="profile-back" type="button" onClick={() => setView('menu')}>{'\uB4A4\uB85C'}</button>}
           <div>
@@ -765,8 +883,8 @@ function ProfilePanel({
           <>
             <button type="button" onClick={() => setView('profile')}>&#45236; &#51221;&#48372; &#49688;&#51221;</button>
             <button type="button" onClick={() => setView('posts')}>&#45236;&#44032; &#50420; &#44544;</button>
-            <button type="button" onClick={() => setView('drafts')}>{'\uC784\uC2DC\uC800\uC7A5'}<span>{drafts.length}</span></button>
-            <button type="button" onClick={() => setView('liked')}>좋아요한<span>{likedItems.length}</span></button>
+            <button type="button" onClick={() => setView('drafts')}>{'\uC784\uC2DC\uC800\uC7A5'}<span>{visibleDrafts.length}</span></button>
+            <button type="button" onClick={() => setView('liked')}>좋아요한<span>{likedCount}</span></button>
             <button type="button" onClick={() => setView('logout')}>&#47196;&#44536;&#50500;&#50883;</button>
             <button className="danger" type="button" onClick={() => setView('delete-account')}>계정 삭제</button>
           </>
@@ -813,9 +931,9 @@ function ProfilePanel({
         )}
         {view === 'drafts' && (
           <div className="profile-panel-content">
-            {drafts.length === 0 ? <p>임시저장한 글이 없습니다.</p> : (
+            {visibleDrafts.length === 0 ? <p>임시저장한 글이 없습니다.</p> : (
               <div className="profile-list">
-                {drafts.map((draft) => (
+                {visibleDrafts.map((draft) => (
                   <article key={draft.id}>
                     <span>{draftTypeLabel(draft.draftType)} · {formatReviewDate(draft.updatedAt)}</span>
                     <strong>{draft.title || '제목 없음'}</strong>
@@ -832,9 +950,9 @@ function ProfilePanel({
         )}
         {view === 'liked' && (
           <div className="profile-panel-content">
-            {likedItems.length === 0 ? <p>좋아요한 항목이 없습니다.</p> : (
+            {likedCount === 0 ? <p>좋아요한 항목이 없습니다.</p> : (
               <div className="profile-list">
-                {likedItems.map((item) => (
+                {likedQnaItems.map((item) => (
                   <article key={`liked-${item.kind}-${item.id}`}>
                     <span>{item.type}</span>
                     <strong>{item.title}</strong>
@@ -842,6 +960,28 @@ function ProfilePanel({
                     <div className="profile-row-actions">
                       <button type="button" onClick={() => onOpenWrittenPost(item.kind, item.id)}>열기</button>
                     </div>
+                  </article>
+                ))}
+                {likedHospitals.map((hospital) => (
+                  <article key={`liked-hospital-${hospital.id ?? hospital.name}`}>
+                    <span>병원</span>
+                    <strong>{hospital.name}</strong>
+                    <p>{hospital.address || '주소 정보 없음'}</p>
+                    <div className="profile-row-actions">
+                      <button type="button" onClick={() => onOpenHospital(hospital)}>열기</button>
+                    </div>
+                  </article>
+                ))}
+                {likedReviewItems.map((review) => (
+                  <article key={`liked-review-${review.id}`}>
+                    <span>{review.type}</span>
+                    <strong>{review.title}</strong>
+                    <p>{review.body}</p>
+                    {review.hospital && (
+                      <div className="profile-row-actions">
+                        <button type="button" onClick={() => onOpenHospital(review.hospital!)}>병원 열기</button>
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
@@ -882,7 +1022,6 @@ function ProfilePanel({
           </div>
         )}
       </section>
-    </div>
   )
 }
 
@@ -895,36 +1034,68 @@ function draftTypeLabel(type: DraftKind) {
   return '병원 리뷰'
 }
 
-function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: { focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; onSaveDraft: (draft: DraftItem) => void | Promise<void>; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
+function MapScreen({ userId, pets, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onSaveDraft, onDeleteDraft }: { userId: string; pets: Pet[]; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onSaveDraft: (draft: DraftItem) => void | Promise<void>; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
   const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
   const [query, setQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<AnimalCategory>('all')
+  const [selectedCategories, setSelectedCategories] = useState<Array<Exclude<AnimalCategory, 'all'>>>([])
+  const [selectedSort, setSelectedSort] = useState<HospitalSort>('distance')
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
   const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null)
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'error')
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'idle')
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState(naverMapClientId ? '' : '.env.local의 VITE_NAVER_MAP_CLIENT_ID를 확인해주세요.')
-  const [reviewPanelHospitalId, setReviewPanelHospitalId] = useState<string | null>(null)
+  const [, setMessage] = useState(naverMapClientId ? '' : '.env.local의 VITE_NAVER_MAP_CLIENT_ID를 확인해주세요.')
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false)
   const [reviewAuthor, setReviewAuthor] = useState('')
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewBody, setReviewBody] = useState('')
-  const [reviews, setReviews] = useState<Record<string, HospitalReview[]>>(() => readStoredReviews())
+  const [reviewAnimalCategory, setReviewAnimalCategory] = useState<ReviewAnimalCategory>('reptile')
+  const [reviewSpecies, setReviewSpecies] = useState('')
+  const [reviewVisitDate, setReviewVisitDate] = useState(new Date().toISOString().slice(0, 10))
+  const [reviewCost, setReviewCost] = useState('')
+  const [reviewDiagnosis, setReviewDiagnosis] = useState('')
+  const [reviewTreatment, setReviewTreatment] = useState('')
+  const [reviewMedicine, setReviewMedicine] = useState('')
+  const [reviewPetId, setReviewPetId] = useState(pets[0]?.id ?? '')
+  const [reviewMedicineDose, setReviewMedicineDose] = useState('')
+  const [reviewMedicineStartDate, setReviewMedicineStartDate] = useState(new Date().toISOString().slice(0, 10))
+  const [reviewMedicineEndDate, setReviewMedicineEndDate] = useState('')
+  const [reviewMedicineDailyCount, setReviewMedicineDailyCount] = useState('1')
+  const [reviewMedicineInstructions, setReviewMedicineInstructions] = useState('')
+  const [reviewMedicineBagImage, setReviewMedicineBagImage] = useState('')
+  const [reviewMedicineOcrRaw, setReviewMedicineOcrRaw] = useState<unknown>(null)
+  const [medicineRecognitionStatus, setMedicineRecognitionStatus] = useState('')
+  const [reviewTags, setReviewTags] = useState<string[]>([])
+  const savedHospitalIds = likedHospitals.map((hospital) => hospital.id).filter(Boolean) as string[]
+  const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false)
+  const [sheetDismissed, setSheetDismissed] = useState(false)
+  const [mobileSheetState, setMobileSheetState] = useState<MobileMapSheetState>('middle')
+  void mobileSheetState
+  void setMobileSheetState
+  const [sheetDragY, setSheetDragY] = useState(0)
   const mapElementRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<InstanceType<NaverMapApi['maps']['Map']> | null>(null)
   const markersRef = useRef<Array<InstanceType<NaverMapApi['maps']['Marker']>>>([])
   const currentLocationMarkerRef = useRef<InstanceType<NaverMapApi['maps']['Marker']> | null>(null)
-  const initialHospitalSearchDoneRef = useRef(false)
+  const searchTimerRef = useRef<number | null>(null)
+  const lastHospitalSearchKeyRef = useRef('')
+  const sheetDragStartRef = useRef<number | null>(null)
 
   const sortedHospitals = useMemo(() => sortHospitalsByDistance(hospitals, currentLocation), [hospitals, currentLocation])
   const filteredHospitals = useMemo(() => {
-    return sortedHospitals.filter((hospital) => selectedCategory === 'all' || hospital.categories.includes(selectedCategory))
-  }, [selectedCategory, sortedHospitals])
+    return sortedHospitals
+      .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
+      .sort((a, b) => {
+        if (selectedSort === 'reviews') return getReviewSummary(reviews[b.id] ?? []).count - getReviewSummary(reviews[a.id] ?? []).count
+        if (selectedSort === 'rating') return getReviewSummary(reviews[b.id] ?? []).average - getReviewSummary(reviews[a.id] ?? []).average
+        return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
+      })
+  }, [reviews, selectedCategories, selectedSort, sortedHospitals])
   const selectedHospital = filteredHospitals.find((hospital) => hospital.id === selectedHospitalId) ?? null
   const selectedHospitalReviews = selectedHospital ? reviews[selectedHospital.id] ?? [] : []
-  const isReviewPanelOpen = Boolean(selectedHospital && reviewPanelHospitalId === selectedHospital.id)
+  const selectedHospitalSummary = getReviewSummary(selectedHospitalReviews)
+  const selectedHospitalRecentSpecies = getRecentSpecies(selectedHospitalReviews)
   const reviewDraftPayload = reviewDraft?.draftType === 'hospital_review' ? reviewDraft.payload as HospitalReviewDraftPayload : null
 
   useEffect(() => {
@@ -935,9 +1106,10 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
       const hospital = hospitalFromSnapshot(focusHospital)
       setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
       setSelectedHospitalId(hospital.id)
-      setReviewPanelHospitalId(null)
+      setSheetDismissed(false)
+      setMobileSheetState('expanded')
       setQuery(hospital.name)
-      setSelectedCategory(hospital.categories[0] ?? 'all')
+      setSelectedCategories([...hospital.categories])
     })
     return () => { cancelled = true }
   }, [focusHospital])
@@ -949,14 +1121,31 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
     setSelectedHospitalId(hospital.id)
-    setReviewPanelHospitalId(hospital.id)
+    setSheetDismissed(false)
+    setMobileSheetState('expanded')
     setIsReviewFormOpen(true)
     setReviewAuthor(reviewDraftPayload.review.author)
     setReviewRating(reviewDraftPayload.review.rating)
     setReviewBody(reviewDraftPayload.review.body)
+    setReviewAnimalCategory(reviewDraftPayload.review.animalCategory ?? 'reptile')
+    setReviewSpecies(reviewDraftPayload.review.species ?? '')
+    setReviewVisitDate(reviewDraftPayload.review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewCost(reviewDraftPayload.review.cost ? reviewDraftPayload.review.cost.toLocaleString('ko-KR') : '')
+    setReviewDiagnosis(reviewDraftPayload.review.diagnosis ?? '')
+    setReviewTreatment(reviewDraftPayload.review.treatment ?? '')
+    setReviewMedicine(reviewDraftPayload.review.medicine ?? '')
+    setReviewPetId(reviewDraftPayload.review.petId ?? pets[0]?.id ?? '')
+    setReviewMedicineDose(reviewDraftPayload.review.medicineDose ?? '')
+    setReviewMedicineStartDate(reviewDraftPayload.review.medicineStartDate ?? reviewDraftPayload.review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewMedicineEndDate(reviewDraftPayload.review.medicineEndDate ?? '')
+    setReviewMedicineDailyCount(String(reviewDraftPayload.review.medicineDailyCount ?? 1))
+    setReviewMedicineInstructions(reviewDraftPayload.review.medicineInstructions ?? '')
+    setReviewMedicineBagImage(reviewDraftPayload.review.medicineBagImage ?? '')
+    setReviewMedicineOcrRaw(reviewDraftPayload.review.medicineOcrRaw ?? null)
+    setReviewTags(reviewDraftPayload.review.tags ?? [])
     setQuery(hospital.name)
-    setSelectedCategory(hospital.categories[0] ?? 'all')
-  }, [reviewDraftPayload])
+    setSelectedCategories([...hospital.categories])
+  }, [pets, reviewDraftPayload])
 
   useEffect(() => {
     if (!naverMapClientId) return
@@ -1020,24 +1209,18 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
   }, [currentLocation])
 
   useEffect(() => {
-    if (mapStatus !== 'ready' || initialHospitalSearchDoneRef.current || focusHospital || reviewDraftPayload) return
+    if (mapStatus !== 'ready' || focusHospital || reviewDraftPayload) return
 
-    let cancelled = false
-    initialHospitalSearchDoneRef.current = true
-
-    searchHospitals(buildHospitalSearchQuery('', 'all'), 'all', currentLocation)
-      .then((results) => {
-        if (cancelled) return
-        setHospitals(results)
-      })
-      .catch((error) => {
-        console.error('Initial hospital search error:', error)
-      })
+    if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = window.setTimeout(() => {
+      void runHospitalSearch(query, selectedCategories[0] ?? 'all', currentLocation)
+    }, 600)
 
     return () => {
-      cancelled = true
+      if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current)
     }
-  }, [currentLocation, focusHospital, mapStatus, reviewDraftPayload])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLocation, focusHospital, mapStatus, query, reviewDraftPayload, selectedCategories])
 
   useEffect(() => {
     const naver = window.naver
@@ -1067,7 +1250,8 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
       })
       naver.maps.Event.addListener(marker, 'click', () => {
         setSelectedHospitalId(hospital.id)
-        setReviewPanelHospitalId(null)
+        setSheetDismissed(false)
+        setMobileSheetState('expanded')
         map.setCenter(position)
         map.setZoom(16)
       })
@@ -1096,50 +1280,154 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
     })
   }
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (isLoading) return
+  const toggleSavedHospital = (hospital: Hospital) => {
+    const snapshot = toHospitalSnapshot(hospital)
+    const next = likedHospitals.some((item) => item.id === snapshot.id)
+      ? likedHospitals.filter((item) => item.id !== snapshot.id)
+      : [snapshot, ...likedHospitals.filter((item) => item.id !== snapshot.id)]
+    writeSavedHospitalSnapshots(next)
+    onLikedHospitalsChange(next)
+  }
 
+  async function runHospitalSearch(searchQuery: string, category: AnimalCategory, location: Coordinates | null) {
+    const resolvedQuery = buildHospitalSearchQuery(searchQuery, category)
+    const cacheKey = `${resolvedQuery}:${category}:${location ? `${Math.round(location.lat * 100)}:${Math.round(location.lng * 100)}` : 'no-location'}`
+    if (lastHospitalSearchKeyRef.current === cacheKey || isLoading) return
+
+    lastHospitalSearchKeyRef.current = cacheKey
     setIsLoading(true)
-    setSelectedHospitalId(null)
-    setReviewPanelHospitalId(null)
-    setMessage('병원을 검색하는 중이에요.')
-
-    const location = currentLocation ?? await getCurrentLocation().catch(() => null)
 
     try {
-      const results = await searchHospitals(buildHospitalSearchQuery(query, selectedCategory), selectedCategory, location)
+      const results = await searchHospitals(resolvedQuery, category, location)
       setHospitals(results)
-      setMessage(results.length > 0 ? `가까운 병원 ${results.length}곳을 찾았어요.` : '검색 결과가 없어요. 검색어를 바꿔보세요.')
     } catch (error) {
       console.error('Hospital search error:', error)
-      setMessage(error instanceof Error ? error.message : '병원 검색 중 오류가 발생했습니다.')
+      lastHospitalSearchKeyRef.current = ''
     } finally {
       setIsLoading(false)
     }
   }
 
-  const submitReview = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!selectedHospital || reviewBody.trim().length === 0) return
+    if (isLoading) return
+
+    setSelectedHospitalId(null)
+    setSheetDismissed(false)
+
+    const location = currentLocation ?? await getCurrentLocation().catch(() => null)
+    lastHospitalSearchKeyRef.current = ''
+    await runHospitalSearch(query, selectedCategories[0] ?? 'all', location)
+  }
+
+  const recognizeMedicineBag = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const image = typeof reader.result === 'string' ? reader.result : ''
+      if (!image) return
+      setReviewMedicineBagImage(image)
+      setMedicineRecognitionStatus('약봉투를 인식하는 중이에요.')
+      const { data, error } = await supabase.functions.invoke('recognize-medication-bag', { body: { image } })
+      if (error || !data) {
+        setMedicineRecognitionStatus('인식 결과를 확인할 수 없어 직접 입력해 주세요.')
+        return
+      }
+      const result = data as { name?: string; dose?: string; startDate?: string; endDate?: string; dailyCount?: number; instructions?: string; raw?: unknown }
+      setReviewMedicine(result.name ?? '')
+      setReviewMedicineDose(result.dose ?? '')
+      setReviewMedicineStartDate(result.startDate ?? reviewVisitDate)
+      setReviewMedicineEndDate(result.endDate ?? '')
+      setReviewMedicineDailyCount(String(result.dailyCount ?? 1))
+      setReviewMedicineInstructions(result.instructions ?? '')
+      setReviewMedicineOcrRaw(result.raw ?? result)
+      setMedicineRecognitionStatus('인식 결과를 확인하고 필요하면 수정해 주세요.')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const submitReview = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedHospital || !reviewPetId || reviewBody.trim().length === 0) return
+
+    const reviewPet = pets.find((pet) => pet.id === reviewPetId)
 
     const review: HospitalReview = {
       id: reviewDraftPayload?.review.id ?? crypto.randomUUID(),
       hospitalId: selectedHospital.id,
+      petId: reviewPetId,
+      petName: reviewPet?.name,
       author: reviewAuthor.trim() || '익명',
+      animalCategory: reviewAnimalCategory === 'all' ? undefined : reviewAnimalCategory,
+      species: reviewSpecies.trim(),
       rating: reviewRating,
+      visitDate: reviewVisitDate,
+      cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
+      diagnosis: reviewDiagnosis.trim(),
+      treatment: reviewTreatment.trim(),
+      medicine: reviewMedicine.trim(),
+      medicineDose: reviewMedicineDose.trim(),
+      medicineStartDate: reviewMedicineStartDate,
+      medicineEndDate: reviewMedicineEndDate,
+      medicineDailyCount: Math.max(1, Number(reviewMedicineDailyCount) || 1),
+      medicineInstructions: reviewMedicineInstructions.trim(),
+      medicineBagImage: reviewMedicineBagImage || undefined,
+      medicineOcrRaw: reviewMedicineOcrRaw ?? undefined,
+      tags: reviewTags,
       body: reviewBody.trim(),
+      content: reviewBody.trim(),
+      mine: true,
+      liked: reviewDraftPayload?.review.liked ?? false,
+      likes: reviewDraftPayload?.review.likes ?? 0,
+      hospitalName: selectedHospital.name,
+      hospitalSnapshot: toHospitalSnapshot(selectedHospital),
       createdAt: reviewDraftPayload?.review.createdAt ?? new Date().toISOString(),
     }
 
-    setReviews((previous) => {
-      const next = { ...previous, [selectedHospital.id]: [review, ...(previous[selectedHospital.id] ?? [])] }
-      localStorage.setItem(reviewStorageKey, JSON.stringify(next))
-      return next
-    })
+    const nextReviews = { ...reviews, [selectedHospital.id]: [review, ...(reviews[selectedHospital.id] ?? []).filter((item) => item.id !== review.id)] }
+    localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
+    onReviewsChange(nextReviews)
+    try {
+      await linkReviewToDiary({
+        userId,
+        reviewId: review.id,
+        petId: reviewPetId,
+        hospitalName: selectedHospital.name,
+        visitDate: reviewVisitDate,
+        diagnosis: reviewDiagnosis.trim(),
+        treatment: reviewTreatment.trim(),
+        medicine: reviewMedicine.trim() && reviewMedicineDose.trim() ? {
+          name: reviewMedicine.trim(),
+          dose: reviewMedicineDose.trim(),
+          startDate: reviewMedicineStartDate || reviewVisitDate,
+          endDate: reviewMedicineEndDate || undefined,
+          dailyCount: Math.max(1, Number(reviewMedicineDailyCount) || 1),
+          instructions: reviewMedicineInstructions.trim(),
+          ocrRaw: reviewMedicineOcrRaw,
+        } : undefined,
+      })
+    } catch (error) {
+      console.error('Review diary link failed.', error)
+      setMessage('리뷰는 저장됐지만 다이어리 연결에 실패했어요.')
+    }
     setReviewAuthor('')
     setReviewRating(5)
     setReviewBody('')
+    setReviewAnimalCategory('reptile')
+    setReviewSpecies('')
+    setReviewVisitDate(new Date().toISOString().slice(0, 10))
+    setReviewCost('')
+    setReviewDiagnosis('')
+    setReviewTreatment('')
+    setReviewMedicine('')
+    setReviewMedicineDose('')
+    setReviewMedicineStartDate(new Date().toISOString().slice(0, 10))
+    setReviewMedicineEndDate('')
+    setReviewMedicineDailyCount('1')
+    setReviewMedicineInstructions('')
+    setReviewMedicineBagImage('')
+    setReviewMedicineOcrRaw(null)
+    setMedicineRecognitionStatus('')
+    setReviewTags([])
     setIsReviewFormOpen(false)
     if (reviewDraft) void onDeleteDraft(reviewDraft.id)
   }
@@ -1149,9 +1437,32 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
     const review: HospitalReview = {
       id: reviewDraftPayload?.review.id ?? crypto.randomUUID(),
       hospitalId: selectedHospital.id,
+      petId: reviewPetId,
+      petName: pets.find((pet) => pet.id === reviewPetId)?.name,
       author: reviewAuthor.trim() || '익명',
+      animalCategory: reviewAnimalCategory === 'all' ? undefined : reviewAnimalCategory,
+      species: reviewSpecies.trim(),
       rating: reviewRating,
+      visitDate: reviewVisitDate,
+      cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
+      diagnosis: reviewDiagnosis.trim(),
+      treatment: reviewTreatment.trim(),
+      medicine: reviewMedicine.trim(),
+      medicineDose: reviewMedicineDose.trim(),
+      medicineStartDate: reviewMedicineStartDate,
+      medicineEndDate: reviewMedicineEndDate,
+      medicineDailyCount: Math.max(1, Number(reviewMedicineDailyCount) || 1),
+      medicineInstructions: reviewMedicineInstructions.trim(),
+      medicineBagImage: reviewMedicineBagImage || undefined,
+      medicineOcrRaw: reviewMedicineOcrRaw ?? undefined,
+      tags: reviewTags,
       body: reviewBody.trim(),
+      content: reviewBody.trim(),
+      mine: true,
+      liked: reviewDraftPayload?.review.liked ?? false,
+      likes: reviewDraftPayload?.review.likes ?? 0,
+      hospitalName: selectedHospital.name,
+      hospitalSnapshot: toHospitalSnapshot(selectedHospital),
       createdAt: reviewDraftPayload?.review.createdAt ?? new Date().toISOString(),
     }
     void Promise.resolve(onSaveDraft({
@@ -1164,37 +1475,165 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
     })).then(() => setIsReviewFormOpen(false))
   }
 
+  const toggleReviewTag = (tag: string) => {
+    setReviewTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : current.length >= 5 ? current : [...current, tag])
+  }
+
+  const toggleReviewLike = (hospitalId: string, reviewId: string) => {
+    const nextReviews = {
+      ...reviews,
+      [hospitalId]: (reviews[hospitalId] ?? []).map((review) => {
+        if (review.id !== reviewId) return review
+        const liked = !review.liked
+        const likes = Math.max(0, (review.likes ?? 0) + (liked ? 1 : -1))
+        return { ...review, liked, likes }
+      }),
+    }
+    localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
+    onReviewsChange(nextReviews)
+  }
+
+  const beginSheetDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number; stopPropagation: () => void }) => {
+    sheetDragStartRef.current = event.clientY
+    setSheetDragY(0)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.stopPropagation()
+  }
+
+  const moveSheetDrag = (event: { clientY: number; preventDefault: () => void }) => {
+    if (sheetDragStartRef.current === null) return
+    const nextDragY = Math.max(0, event.clientY - sheetDragStartRef.current)
+    setSheetDragY(nextDragY)
+    if (nextDragY > 0) event.preventDefault()
+  }
+
+  const finishSheetDrag = () => {
+    const shouldClose = sheetDragY > 72
+    sheetDragStartRef.current = null
+    setSheetDragY(0)
+    if (!shouldClose) return
+    if (mobileSheetState === 'expanded') {
+      setMobileSheetState('middle')
+      return
+    }
+    if (selectedHospital) {
+      setSelectedHospitalId(null)
+      setIsReviewFormOpen(false)
+      setMobileSheetState('middle')
+      return
+    }
+    setMobileSheetState('collapsed')
+    setSheetDismissed(true)
+  }
+
+  const sheetDragHandlers = {
+    onPointerDown: beginSheetDrag,
+    onPointerMove: moveSheetDrag,
+    onPointerUp: finishSheetDrag,
+    onPointerCancel: finishSheetDrag,
+  }
+
+  const beginReopenDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number; stopPropagation: () => void }) => {
+    sheetDragStartRef.current = event.clientY
+    setSheetDragY(0)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.stopPropagation()
+  }
+
+  const moveReopenDrag = (event: { clientY: number; preventDefault: () => void }) => {
+    if (sheetDragStartRef.current === null) return
+    const nextDragY = Math.min(0, event.clientY - sheetDragStartRef.current)
+    setSheetDragY(nextDragY)
+    if (nextDragY < 0) event.preventDefault()
+  }
+
+  const finishReopenDrag = () => {
+    const shouldOpen = sheetDragY < -34
+    sheetDragStartRef.current = null
+    setSheetDragY(0)
+    if (shouldOpen) {
+      setSheetDismissed(false)
+      setMobileSheetState('expanded')
+    }
+  }
+
+  const reopenDragHandlers = {
+    onPointerDown: beginReopenDrag,
+    onPointerMove: moveReopenDrag,
+    onPointerUp: finishReopenDrag,
+    onPointerCancel: finishReopenDrag,
+  }
+
+  useEffect(() => {
+    document.documentElement.classList.add('map-overscroll-lock')
+    document.body.classList.add('map-overscroll-lock')
+    return () => {
+      document.documentElement.classList.remove('map-overscroll-lock')
+      document.body.classList.remove('map-overscroll-lock')
+    }
+  }, [])
+
+  useEffect(() => {
+    const openFromBottomNav = () => {
+      setIsReviewFormOpen(false)
+      setSheetDismissed(false)
+      setMobileSheetState((state) => state === 'expanded' ? 'expanded' : 'expanded')
+    }
+    window.addEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
+    return () => window.removeEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
+  }, [])
+
   return (
-    <section className="map-page">
+    <section className={`map-page ${selectedHospital ? 'has-selected-hospital' : ''}`}>
       <section className="map-area">
         <div className="map-canvas" ref={mapElementRef}>
           {mapStatus !== 'ready' && (
-            <span>{mapStatus === 'error' ? '지도를 불러오지 못했습니다' : '네이버 지도를 불러오는 중입니다'}</span>
+            <div className="map-load-state">
+              <strong>{mapStatus === 'error' ? '지도를 불러오지 못했습니다' : '네이버 지도를 불러오는 중입니다'}</strong>
+              {mapStatus === 'error' && <small>네이버 콘솔 Web 서비스 URL에 {window.location.origin} 을 등록해 주세요.</small>}
+            </div>
           )}
         </div>
-        {message && <p className={`status-copy ${mapStatus === 'error' ? 'error' : ''}`}>{message}</p>}
       </section>
-      <aside className="map-side-panel" aria-label="병원 검색과 정보">
+      <aside className={`map-side-panel ${isSidePanelCollapsed ? 'collapsed' : ''}`} aria-label="병원 검색과 정보">
+        <button className="map-side-collapse-toggle" type="button" onClick={() => setIsSidePanelCollapsed((value) => !value)} aria-label={isSidePanelCollapsed ? '병원 목록 열기' : '병원 목록 닫기'}>
+          <span aria-hidden="true" />
+          <b>{isSidePanelCollapsed ? '열기' : '닫기'}</b>
+        </button>
+        {!isSidePanelCollapsed && (
+          <button className="map-panel-close-button" type="button" onClick={() => setIsSidePanelCollapsed(true)} aria-label="병원 찾기 닫기">
+            <span aria-hidden="true" />
+          </button>
+        )}
         <form className="map-search-panel" onSubmit={submit}>
           <label>
             병원 검색
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="지역명, 병원명, 특수동물 병원" />
+            <input value={query} onChange={(event) => { setQuery(event.target.value); setSheetDismissed(false) }} placeholder="지역명, 병원명, 특수동물 병원" />
           </label>
-          <button className="secondary-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation}>
-            {locationStatus === 'loading' ? '확인중' : '내 위치'}
+          <button className="map-search-icon-button" type="submit" disabled={isLoading} aria-label="검색">
+            <span aria-hidden="true" />
           </button>
-          <button type="submit" disabled={isLoading}>{isLoading ? '검색 중' : '검색'}</button>
+          <button className="secondary-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation}>
+            <span className="location-button-icon" aria-hidden="true" />
+            <span>{locationStatus === 'loading' ? '확인중' : '내 위치'}</span>
+          </button>
         </form>
 
         <div className="map-category-tags" aria-label="동물 분류 필터">
           {animalCategoryOptions.map((category) => (
             <button
-              className={selectedCategory === category ? 'active' : ''}
+              className={(category === 'all' ? selectedCategories.length === 0 : selectedCategories.includes(category)) ? 'active' : ''}
               key={category}
               type="button"
+              aria-pressed={category === 'all' ? selectedCategories.length === 0 : selectedCategories.includes(category)}
               onClick={() => {
-                setSelectedCategory(category)
+                if (category === 'all') {
+                  setSelectedCategories([])
+                } else {
+                  setSelectedCategories((current) => current.includes(category) ? current.filter((item) => item !== category) : [...current, category])
+                }
                 setSelectedHospitalId(null)
+                setSheetDismissed(false)
               }}
             >
               <CategoryTagIcon category={category} />
@@ -1203,8 +1642,21 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
           ))}
         </div>
 
-        {!selectedHospital && (
-          <section className="map-hospital-list" aria-label="검색된 병원">
+        <div className="map-sort-tabs" aria-label="병원 정렬">
+          {([
+            ['distance', '가까운 순'],
+            ['reviews', '리뷰 많은 순'],
+            ['rating', '평점 높은 순'],
+          ] as Array<[HospitalSort, string]>).map(([sort, label]) => (
+            <button className={selectedSort === sort ? 'active' : ''} type="button" key={sort} onClick={() => setSelectedSort(sort)}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {!sheetDismissed && (
+          <section className={`map-hospital-list mobile-sheet-${mobileSheetState}`} aria-label="검색된 병원" style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
+            <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
             <div className="map-side-head">
               <strong>{isLoading ? '병원을 찾는 중' : `병원 ${filteredHospitals.length}곳`}</strong>
               <span>{currentLocation ? '내 위치 기준 가까운 순' : '위치 권한 허용 시 거리순'}</span>
@@ -1213,20 +1665,37 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
               <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
             ) : (
               filteredHospitals.slice(0, 30).map((hospital) => (
-                <button className="map-hospital-row" type="button" key={hospital.id} onClick={() => setSelectedHospitalId(hospital.id)}>
-                  <CategoryTagIcon category={hospital.categories[0] ?? 'all'} />
-                  <span>
-                    <strong>{hospital.name}</strong>
-                    <small>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`} · {hospital.address || '주소 정보 없음'}</small>
-                  </span>
-                </button>
+                <HospitalListRow
+                  hospital={hospital}
+                  key={hospital.id}
+                  reviews={reviews[hospital.id] ?? []}
+                  active={hospital.id === selectedHospitalId}
+                  onSelect={() => { setSelectedHospitalId(hospital.id); setSheetDismissed(false); setMobileSheetState('expanded') }}
+                />
               ))
             )}
           </section>
         )}
 
-        {selectedHospital && (
-          <article className="map-hospital-panel">
+        {!selectedHospital && sheetDismissed && filteredHospitals.length > 0 && (
+          <button
+            className="map-sheet-reopen"
+            type="button"
+            onClick={() => setSheetDismissed(false)}
+            aria-label="병원 목록 열기"
+            style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}
+            {...reopenDragHandlers}
+          >
+            <span aria-hidden="true" />
+            병원 {filteredHospitals.length}곳
+          </button>
+        )}
+
+      </aside>
+
+      {selectedHospital && (
+        <article className={`map-hospital-panel map-detail-dock mobile-sheet-${mobileSheetState}`} style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
+            <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
             <button className="panel-close" type="button" aria-label="닫기" onClick={() => setSelectedHospitalId(null)} />
             <div className="hospital-card-main">
               <CategoryTagIcon category={selectedHospital.categories[0] ?? 'all'} />
@@ -1234,63 +1703,149 @@ function MapScreen({ focusHospital, reviewDraft, onSaveDraft, onDeleteDraft }: {
                 <strong>{selectedHospital.name}</strong>
                 <p><span className="meta-icon location" aria-hidden="true" />{selectedHospital.address || '주소 정보 없음'}</p>
                 <small><span className="meta-icon distance" aria-hidden="true" />{selectedHospital.distanceKm === undefined ? '내 위치 기준 거리 계산 전' : `내 위치에서 ${selectedHospital.distanceKm.toFixed(1)}km`}</small>
-                <small><span className="meta-icon phone" aria-hidden="true" />{selectedHospital.phone || '전화번호 없음'}</small>
+                <small><span className="meta-icon species" aria-hidden="true" />최근 진료종 {selectedHospitalRecentSpecies || '리뷰 데이터 없음'}</small>
+                <small><span className="meta-icon review" aria-hidden="true" />리뷰 {selectedHospitalSummary.count}개</small>
               </div>
             </div>
             <div className="hospital-tags">
               {selectedHospital.categories.map((category) => <span key={category}>{animalCategoryLabels[category]}</span>)}
             </div>
             <div className="hospital-actions">
-              <button type="button" onClick={() => setReviewPanelHospitalId(selectedHospital.id)}>리뷰 보기</button>
+              <button type="button" onClick={() => toggleSavedHospital(selectedHospital)}>
+                {savedHospitalIds.includes(selectedHospital.id) ? '좋아요 취소' : '좋아요'}
+              </button>
+              <button type="button" onClick={() => setIsReviewFormOpen((value) => !value)}>리뷰 작성</button>
               {selectedHospital.phone && <a href={`tel:${selectedHospital.phone}`}>전화하기</a>}
             </div>
-            {isReviewPanelOpen && (
-              <section className="hospital-review-panel">
-                <div className="review-panel-head">
-                  <div><strong>리뷰</strong><span>{selectedHospitalReviews.length}개</span></div>
-                  <button className="review-add-button" type="button" aria-label="리뷰 작성" onClick={() => setIsReviewFormOpen((value) => !value)} />
+            <section className="hospital-review-panel">
+              <div className="review-panel-head">
+                <div><strong>리뷰</strong><span>{selectedHospitalSummary.count === 0 ? '아직 리뷰가 없습니다' : `${selectedHospitalSummary.average.toFixed(1)}점 · ${selectedHospitalSummary.count}개`}</span></div>
+              </div>
+              <HospitalReviewSummary reviews={selectedHospitalReviews} />
+              {isReviewFormOpen && (
+                <HospitalReviewForm
+                  author={reviewAuthor}
+                  rating={reviewRating}
+                  body={reviewBody}
+                  animalCategory={reviewAnimalCategory}
+                  species={reviewSpecies}
+                  visitDate={reviewVisitDate}
+                  cost={reviewCost}
+                  diagnosis={reviewDiagnosis}
+                  treatment={reviewTreatment}
+                  medicine={reviewMedicine}
+                  pets={pets.map((pet) => ({ id: pet.id, name: pet.name }))}
+                  selectedPetId={reviewPetId}
+                  medicineDose={reviewMedicineDose}
+                  medicineStartDate={reviewMedicineStartDate}
+                  medicineEndDate={reviewMedicineEndDate}
+                  medicineDailyCount={reviewMedicineDailyCount}
+                  medicineInstructions={reviewMedicineInstructions}
+                  medicineBagImage={reviewMedicineBagImage}
+                  medicineRecognitionStatus={medicineRecognitionStatus}
+                  selectedTags={reviewTags}
+                  canSubmit={Boolean(reviewPetId) && reviewBody.trim().length > 0 && reviewVisitDate.trim().length > 0 && reviewRating >= 1}
+                  onAuthorChange={setReviewAuthor}
+                  onRatingChange={setReviewRating}
+                  onBodyChange={setReviewBody}
+                  onAnimalCategoryChange={setReviewAnimalCategory}
+                  onSpeciesChange={setReviewSpecies}
+                  onVisitDateChange={setReviewVisitDate}
+                  onCostChange={setReviewCost}
+                  onDiagnosisChange={setReviewDiagnosis}
+                  onTreatmentChange={setReviewTreatment}
+                  onMedicineChange={setReviewMedicine}
+                  onPetChange={setReviewPetId}
+                  onMedicineDoseChange={setReviewMedicineDose}
+                  onMedicineStartDateChange={setReviewMedicineStartDate}
+                  onMedicineEndDateChange={setReviewMedicineEndDate}
+                  onMedicineDailyCountChange={setReviewMedicineDailyCount}
+                  onMedicineInstructionsChange={setReviewMedicineInstructions}
+                  onMedicineBagChange={recognizeMedicineBag}
+                  onToggleTag={toggleReviewTag}
+                  onSaveDraft={saveReviewDraft}
+                  onSubmit={submitReview}
+                />
+              )}
+              {selectedHospitalReviews.length === 0 ? (
+                <p className="review-empty">아직 리뷰가 없습니다. 리뷰 작성 버튼으로 첫 경험을 남겨주세요.</p>
+              ) : (
+                <div className="review-list">
+                  {selectedHospitalReviews.map((review) => (
+                    <HospitalReviewItem review={review} key={review.id} onToggleLike={() => toggleReviewLike(selectedHospital.id, review.id)} />
+                  ))}
                 </div>
-                {isReviewFormOpen && (
-                  <form className="review-form" onSubmit={submitReview}>
-                    <div className="step-progress review-progress" aria-hidden="true"><span style={{ width: '100%' }} /></div>
-                    <div className="review-form-row">
-                      <input value={reviewAuthor} onChange={(event) => setReviewAuthor(event.target.value)} placeholder="닉네임" />
-                      <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))}>
-                        {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating}점</option>)}
-                      </select>
-                    </div>
-                    <textarea value={reviewBody} onChange={(event) => setReviewBody(event.target.value)} placeholder="방문 경험을 남겨주세요." />
-                    <div className="step-actions review-form-actions">
-                      <button type="button" className="step-secondary" onClick={saveReviewDraft}>임시저장</button>
-                      <button type="submit" className="step-primary" disabled={reviewBody.trim().length === 0}>등록</button>
-                    </div>
-                  </form>
-                )}
-                {selectedHospitalReviews.length === 0 ? (
-                  <p className="review-empty">아직 리뷰가 없어요. + 버튼으로 첫 리뷰를 남겨주세요.</p>
-                ) : (
-                  <div className="review-list">
-                    {selectedHospitalReviews.map((review) => (
-                      <article className="review-item" key={review.id}>
-                        <div><strong>{review.author}</strong><span>{review.rating}점</span></div>
-                        <p>{review.body}</p>
-                        <time dateTime={review.createdAt}>{formatReviewDate(review.createdAt)}</time>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
+              )}
+            </section>
           </article>
         )}
-      </aside>
     </section>
+  )
+}
+
+function HospitalListRow({ hospital, reviews, active, onSelect }: { hospital: Hospital; reviews: HospitalReview[]; active: boolean; onSelect: () => void }) {
+  const summary = getReviewSummary(reviews)
+  const recentSpecies = getRecentSpecies(reviews)
+
+  return (
+    <article className={`map-hospital-row ${active ? 'active' : ''}`}>
+      <button className="map-hospital-row-main" type="button" onClick={onSelect}>
+        <CategoryTagIcon category={hospital.categories[0] ?? 'all'} />
+        <span>
+          <strong>{hospital.name}</strong>
+          <small>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`} · {hospital.address || '주소 정보 없음'}</small>
+          {summary.count > 0 && <small>{`${summary.average.toFixed(1)}점 · 리뷰 ${summary.count}개`}{recentSpecies ? ` · 최근 ${recentSpecies}` : ''}</small>}
+        </span>
+      </button>
+    </article>
+  )
+}
+
+function HospitalReviewSummary({ reviews }: { reviews: HospitalReview[] }) {
+  const summary = getReviewSummary(reviews)
+  if (summary.count === 0) return <div className="review-summary-empty">아직 쌓인 리뷰 통계가 없습니다.</div>
+
+  return (
+    <div className="review-summary">
+      <div className="review-summary-score">
+        <strong>{summary.average.toFixed(1)}</strong>
+        <span>리뷰 {summary.count}개</span>
+      </div>
+      <div className="review-score-bars">
+        {[5, 4, 3, 2, 1].map((rating) => (
+          <div key={rating}>
+            <span>{rating}점</span>
+            <i><b style={{ width: `${summary.count ? (summary.distribution[rating] / summary.count) * 100 : 0}%` }} /></i>
+          </div>
+        ))}
+      </div>
+      {summary.topTags.length > 0 && <div className="review-summary-tags">{summary.topTags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+      {summary.topAnimal && <p>가장 많이 방문한 분류: {animalCategoryLabels[summary.topAnimal]}</p>}
+    </div>
+  )
+}
+
+function HospitalReviewItem({ review, onToggleLike }: { review: HospitalReview; onToggleLike: () => void }) {
+  return (
+    <article className="review-item">
+      <div><strong>{review.author}</strong><span>{review.rating}점</span></div>
+      <small>{[review.petName, review.animalCategory ? animalCategoryLabels[review.animalCategory] : '', review.species, review.visitDate, review.cost ? `${review.cost.toLocaleString('ko-KR')}원` : ''].filter(Boolean).join(' · ')}</small>
+      {(review.diagnosis || review.treatment) && <small>{[review.diagnosis, review.treatment].filter(Boolean).join(' · ')}</small>}
+      <p>{review.body || review.content}</p>
+      {review.tags && review.tags.length > 0 && <div className="review-item-tags">{review.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+      <footer className="review-item-footer">
+        <time dateTime={review.createdAt}>{formatReviewDate(review.createdAt)}</time>
+        <button className={`review-like-button ${review.liked ? 'active' : ''}`} type="button" onClick={onToggleLike}>
+          좋아요 {review.likes ?? 0}
+        </button>
+      </footer>
+    </article>
   )
 }
 
 function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpenDiary, onRegisterPet }: { userId: string; pets: Pet[]; onDeletePet: (petId: string) => void; onEditPet: (pet: Pet) => void; onOpenDiary: (petId: string) => void; onRegisterPet: () => void }) {
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<AnimalCategory>('all')
+  const [selectedCategories, setSelectedCategories] = useState<Exclude<AnimalCategory, 'all'>[]>([])
   const sort: 'latest' | 'oldest' = 'latest'
   const [records, setRecords] = useState<PetRecord[]>([])
   const [menuPetId, setMenuPetId] = useState<string | null>(null)
@@ -1309,7 +1864,7 @@ function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpenDiary, onRegis
 
   const filteredPets = pets.filter((pet) => {
     const text = `${pet.name} ${pet.species} ${animalCategoryLabels[pet.group]}`.toLowerCase()
-    return (category === 'all' || pet.group === category) && text.includes(query.trim().toLowerCase())
+    return (selectedCategories.length === 0 || (pet.group !== 'all' && selectedCategories.includes(pet.group))) && text.includes(query.trim().toLowerCase())
   }).sort((a, b) => {
     const aDate = new Date(a.registeredAt ?? 0).getTime()
     const bDate = new Date(b.registeredAt ?? 0).getTime()
@@ -1326,6 +1881,13 @@ function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpenDiary, onRegis
     onDeletePet(deleteTarget.id)
     setDeleteTarget(null)
   }
+  const toggleCategory = (item: AnimalCategory) => {
+    if (item === 'all') {
+      setSelectedCategories([])
+      return
+    }
+    setSelectedCategories((current) => current.includes(item) ? current.filter((category) => category !== item) : [...current, item])
+  }
 
   return (
     <section className="page-stack my-pet-dashboard">
@@ -1334,7 +1896,7 @@ function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpenDiary, onRegis
         <label className="my-pet-search"><span>동물 검색</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름, 종, 분류 검색" /></label>
         <div className="filter-tags" aria-label="동물 분류 필터">
           {animalCategoryOptions.map((item) => (
-            <button className={category === item ? 'active' : ''} type="button" key={item} onClick={() => setCategory(item)}>
+            <button className={(item === 'all' ? selectedCategories.length === 0 : selectedCategories.includes(item)) ? 'active' : ''} type="button" key={item} onClick={() => toggleCategory(item)} aria-pressed={item === 'all' ? selectedCategories.length === 0 : selectedCategories.includes(item)}>
               <CategoryTagIcon category={item} /><span>{animalCategoryLabels[item]}</span>
             </button>
           ))}
@@ -1345,7 +1907,7 @@ function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpenDiary, onRegis
         {filteredPets.length === 0 ? <div className="pet-empty-state"><strong>{pets.length === 0 ? '등록된 펫 없음' : '해당 분류에 펫 없음'}</strong><p>{pets.length === 0 ? '첫 펫을 등록해보세요.' : '필터를 바꿔보세요.'}</p>{pets.length === 0 && <button type="button" onClick={onRegisterPet}>+ 펫 등록</button>}</div> : (
           <div className="pet-list card-view">
             {filteredPets.map((pet) => (
-              <article className="pet-card" key={pet.id} onClick={() => setDetailPet(pet)}>
+              <article className="pet-card" key={pet.id}>
                 <div className="pet-card-topline">
                   <span className="pet-category-badge">{animalCategoryLabels[pet.group]}</span>
                   <div className="pet-card-actions">
@@ -1359,12 +1921,11 @@ function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpenDiary, onRegis
                   </div>
                   <div className="pet-card-body">
                     <div className="pet-card-identity"><strong>{pet.name}</strong><small>{pet.species}</small></div>
-                    <div className="pet-info-badges"><span><b>성별</b>{genderLabel(pet.gender)}</span>{(pet.ageText || pet.ageStage) && <span><b>나이</b>{pet.ageText || pet.ageStage}</span>}{pet.registeredAt && <span><b>등록</b>{formatPetDate(pet.registeredAt)}</span>}{pet.weight && <span><b>무게</b>{pet.weight}{pet.weightUnit ?? 'g'}</span>}</div>
+                    <div className="pet-info-badges"><span><b>성별</b>{genderLabel(pet.gender)}</span>{(pet.ageText || pet.ageStage) && <span><b>나이</b>{pet.ageText || pet.ageStage}</span>}{pet.weight && <span><b>무게</b>{pet.weight}{pet.weightUnit ?? 'g'}</span>}</div>
                     {pet.description && <p className="pet-description">{pet.description}</p>}
                   </div>
                 </div>
-                <div className="pet-recent-records"><strong>최근 기록</strong>{recentRecords(pet.id).length === 0 ? <p>기록 없음</p> : recentRecords(pet.id).map((record) => <div key={record.id}><span>{recordTypeLabels[record.type]}{record.weight ? ` ${record.weight}g` : ''}</span><time>{formatPetDate(record.date)}</time></div>)}</div>
-                <div className="pet-card-footer"><button type="button" title="상세 정보" onClick={(event) => { event.stopPropagation(); setDetailPet(pet) }}>상세</button><button type="button" title="기록 추가" onClick={(event) => { event.stopPropagation(); onOpenDiary(pet.id) }}>기록</button><button type="button" title="수정" onClick={(event) => { event.stopPropagation(); onEditPet(pet) }}>수정</button>
+                <div className="pet-card-footer"><button type="button" title="기록 작성" onClick={(event) => { event.stopPropagation(); onOpenDiary(pet.id) }}>기록 작성</button>
                 </div>
               </article>
             ))}
@@ -1483,7 +2044,8 @@ function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, onChange
           <h2>{selected.title}</h2>
           <div className="qna-author"><UserAvatar url={selected.authorAvatarUrl || (selected.mine === true ? profile.avatarUrl : '')} name={selected.author} /><div><strong>{selected.author}</strong><span>{formatQnaAnimal(selected)} · {formatQnaDate(selected.createdAt)}</span></div></div>
           {selected.image && <img src={selected.image} alt="" />}
-          {selected.attachedRecordSnapshot && <RecordAttachCard record={selected.attachedRecordSnapshot} mode="posted" onOpen={() => onOpenDiary(selected.attachedRecordSnapshot!.petId, selected.mine !== true)} />}
+          {selected.attachedDiarySnapshot && <DiaryTimelineAttachment snapshot={selected.attachedDiarySnapshot} mode="posted" />}
+          {!selected.attachedDiarySnapshot && selected.attachedRecordSnapshot && <RecordAttachCard record={selected.attachedRecordSnapshot} mode="posted" onOpen={() => onOpenDiary(selected.attachedRecordSnapshot!.petId, selected.mine !== true)} />}
           <p>{selected.body}</p>
           <div className="qna-detail-actions">
             <button className={`qna-like ${selected.liked ? 'active' : ''}`} type="button" onClick={() => toggleLike(selected)}>♡ {selected.likes}</button>
@@ -1550,6 +2112,7 @@ function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, onChange
 
 function QnaHelpCard({ post, fallbackAvatarUrl, onOpen, onDelete }: { post: QnaPost; fallbackAvatarUrl?: string; onOpen: () => void; onDelete?: () => void }) {
   const record = post.attachedRecordSnapshot
+  const diary = post.attachedDiarySnapshot
   return (
     <article className={`qna-help-card ${qnaStatus(post)}`} onClick={onOpen}>
       <div className="qna-help-card-top">
@@ -1565,7 +2128,7 @@ function QnaHelpCard({ post, fallbackAvatarUrl, onOpen, onDelete }: { post: QnaP
         <span>{formatQnaDate(post.createdAt)}</span>
         <span className="post-author"><UserAvatar url={post.authorAvatarUrl || fallbackAvatarUrl} name={post.author} />{post.author}</span>
       </footer>
-      {(post.image || record) && <div className="qna-attach-flags">{post.image && <span>사진 첨부</span>}{record && <span>기록 첨부 · {formatRecordDate(record.recordDate)}</span>}</div>}
+      {(post.image || record || diary) && <div className="qna-attach-flags">{post.image && <span>사진 첨부</span>}{diary && <span>전체 기록 첨부 · {diary.totalCount}개</span>}{!diary && record && <span>기록 첨부 · {formatRecordDate(record.recordDate)}</span>}</div>}
     </article>
   )
 }
@@ -1788,22 +2351,20 @@ function HospitalPicker({ onClose, onSelect }: { onClose: () => void; onSelect: 
   )
 }
 
-function RecordPicker({ pets, records, initialPetId, onClose, onSelect }: { pets: Pet[]; records: PetRecord[]; initialPetId: string; onClose: () => void; onSelect: (record: PetRecord, pet: Pet) => void }) {
+function RecordPicker({ pets, records, initialPetId, onClose }: { pets: Pet[]; records: PetRecord[]; initialPetId: string; onClose: () => void }) {
   const petsWithRecords = new Set(records.map((record) => record.petId))
   const firstAvailablePetId = pets.find((pet) => petsWithRecords.has(pet.id))?.id || ''
   const initialSelectedPetId = initialPetId && petsWithRecords.has(initialPetId) ? initialPetId : firstAvailablePetId
-  const initialRecord = records.filter((record) => record.petId === initialSelectedPetId).sort((a, b) => b.date.localeCompare(a.date))[0]
   const [selectedPetId, setSelectedPetId] = useState(initialSelectedPetId)
-  const [visibleMonth, setVisibleMonth] = useState(initialRecord ? new Date(initialRecord.date) : new Date())
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
   const petRecords = records
     .filter((record) => record.petId === selectedPetId)
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-  const recordDates = Array.from(new Set(petRecords.map((record) => record.date)))
-  const [selectedDate, setSelectedDate] = useState(recordDates[0] ?? '')
-  const activeDate = recordDates.includes(selectedDate) ? selectedDate : recordDates[0] ?? ''
-  const dayRecords = petRecords.filter((record) => !activeDate || record.date === activeDate)
-  const calendarDays = getRecordPickerCalendarDays(visibleMonth)
+  const recordTypeCounts = Object.entries(petRecords.reduce<Record<string, number>>((counts, record) => {
+    counts[record.type] = (counts[record.type] ?? 0) + 1
+    return counts
+  }, {})).sort(([, a], [, b]) => b - a)
+  const maxTypeCount = Math.max(1, ...recordTypeCounts.map(([, count]) => count))
 
   return (
     <div className="record-picker-overlay">
@@ -1811,59 +2372,41 @@ function RecordPicker({ pets, records, initialPetId, onClose, onSelect }: { pets
       <section className="record-picker-sheet" role="dialog" aria-modal="true" aria-label="QNA에 기록 첨부">
         <div className="hospital-picker-handle" aria-hidden="true" />
         <header>
-          <div><strong>기록 첨부</strong><p>질문에 참고할 내 펫 기록을 선택합니다.</p></div>
+          <div><strong>기록 첨부</strong><p>선택한 펫의 기록을 확인합니다.</p></div>
           <button type="button" aria-label="닫기" onClick={onClose}>×</button>
         </header>
         {pets.length === 0 ? (
           <p className="record-picker-empty">등록된 마이 펫이 없습니다.</p>
         ) : (
           <>
-            <div className="record-picker-pets">
+            {!initialPetId && <div className="record-picker-pets">
               {pets.map((pet) => (
                 <button className={`${selectedPetId === pet.id ? 'active ' : ''}${!petsWithRecords.has(pet.id) ? 'disabled' : ''}`} type="button" key={pet.id} disabled={!petsWithRecords.has(pet.id)} onClick={() => {
-                  const nextRecords = records.filter((record) => record.petId === pet.id).sort((a, b) => b.date.localeCompare(a.date))
                   setSelectedPetId(pet.id)
-                  setSelectedDate('')
-                  if (nextRecords[0]) setVisibleMonth(new Date(nextRecords[0].date))
                 }}>
                   <strong>{pet.name}</strong>
                   <span>{animalCategoryLabels[pet.group]} · {pet.species}</span>
                   {!petsWithRecords.has(pet.id) && <small>기록 없음</small>}
                 </button>
               ))}
-            </div>
-            {selectedPet && petRecords.length > 0 && <section className="record-picker-calendar">
-              <header>
-                <button type="button" aria-label="이전 달" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))}>‹</button>
-                <strong>{visibleMonth.getFullYear()}년 {visibleMonth.getMonth() + 1}월</strong>
-                <button type="button" aria-label="다음 달" onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))}>›</button>
-              </header>
-              <div className="record-picker-weekdays">{['일', '월', '화', '수', '목', '금', '토'].map((day) => <span key={day}>{day}</span>)}</div>
-              <div className="record-picker-days">
-                {calendarDays.map((day) => {
-                  const key = toRecordDateKey(day)
-                  const count = petRecords.filter((record) => record.date === key).length
-                  const isCurrentMonth = day.getMonth() === visibleMonth.getMonth()
-                  return (
-                    <button className={`${activeDate === key ? 'active' : ''}${!isCurrentMonth ? ' muted' : ''}`} type="button" key={key} onClick={() => count > 0 && setSelectedDate(key)} disabled={count === 0}>
-                      <span>{day.getDate()}</span>
-                      {count > 0 && <small>{count}</small>}
-                    </button>
-                  )
-                })}
+            </div>}
+            {selectedPet && petRecords.length > 0 && <section className="record-picker-chart" aria-label={`${selectedPet.name} 기록 통계`}>
+              <div className="record-picker-chart-head"><strong>전체 기록 {petRecords.length}개</strong><span>기록 유형별</span></div>
+              <div className="record-picker-bars">
+                {recordTypeCounts.map(([type, count]) => <div className="record-picker-bar-row" key={type}><span>{recordTypeLabels[type as PetRecordType]}</span><div><i style={{ width: `${(count / maxTypeCount) * 100}%` }} /></div><strong>{count}</strong></div>)}
               </div>
             </section>}
             <div className="record-picker-list">
               {selectedPet && petRecords.length === 0 && <p className="record-picker-empty">이 펫의 기록이 없습니다.</p>}
-              {selectedPet && dayRecords.length > 0 && <strong className="record-picker-selected-date">{formatRecordDate(activeDate)} 전체 기록</strong>}
-              {selectedPet && dayRecords.map((record) => (
-                <button type="button" key={record.id} onClick={() => onSelect(record, selectedPet)}>
+              {selectedPet && petRecords.length > 0 && <strong className="record-picker-selected-date">전체 기록</strong>}
+              {selectedPet && petRecords.map((record) => (
+                <div className="record-picker-record" key={record.id}>
                   {record.photoUrl && <img src={record.photoUrl} alt="" />}
                   <div>
                     <span>{formatRecordDate(record.date)} · {recordTypeLabels[record.type]}</span>
                     <strong>{summarizeRecord(record)}</strong>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </>
@@ -1873,11 +2416,14 @@ function RecordPicker({ pets, records, initialPetId, onClose, onSelect }: { pets
   )
 }
 
+void RecordPicker
+
 function RecordAttachCard({ record, mode, onRemove, onOpen }: { record: AttachedRecordSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
-  if (mode === 'posted' && onOpen) {
+  if (onOpen) {
     return (
-      <div className="record-attach-card posted">
+      <div className={`record-attach-card ${mode} compact`}>
         <button className="record-attach-open" type="button" onClick={onOpen}>{record.petName}의 기록</button>
+        {mode === 'draft' && <button type="button" aria-label="첨부 기록 취소" onClick={onRemove}>×</button>}
       </div>
     )
   }
@@ -2026,9 +2572,10 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
   const [title, setTitle] = useState(initialPost?.title ?? '')
   const [body, setBody] = useState(initialPost?.body ?? '')
   const [image, setImage] = useState<string | undefined>(initialPost?.image)
-  const [records, setRecords] = useState<PetRecord[]>([])
-  const [recordPickerOpen, setRecordPickerOpen] = useState(false)
   const [attachedRecord, setAttachedRecord] = useState<AttachedRecordSnapshot | null>(initialPost?.attachedRecordSnapshot ?? null)
+  const [attachedDiary, setAttachedDiary] = useState<AttachedDiarySnapshot | null>(initialPost?.attachedDiarySnapshot ?? null)
+  const [diaryLoading, setDiaryLoading] = useState(false)
+  const diaryAttachmentRef = useRef<HTMLDivElement | null>(null)
   const pet = pets.find((item) => item.id === petId)
   const hasNoAnimal = petId === 'none'
   const canSubmit = title.trim().length > 0 && body.trim().length > 0
@@ -2050,23 +2597,30 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
     image,
     linkedRecordId: attachedRecord?.recordId,
     attachedRecordSnapshot: attachedRecord ?? undefined,
+    attachedDiarySnapshot: attachedDiary ?? undefined,
     createdAt: initialPost?.createdAt ?? new Date().toISOString(),
     liked: false,
     likes: 0,
     comments: [],
   })
 
-  useEffect(() => {
-    let active = true
-    loadAppData<PetRecord>('care_records', { userId, scope: 'mine' })
-      .then((nextRecords) => {
-        if (active) setRecords(nextRecords)
-      })
-      .catch(() => {
-        if (active) setRecords([])
-      })
-    return () => { active = false }
-  }, [userId])
+  const attachDiary = async () => {
+    if (attachedDiary) {
+      diaryAttachmentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    if (hasNoAnimal || !petId || !pet || diaryLoading) return
+    setDiaryLoading(true)
+    try {
+      const loaded = await loadAppData<PetRecord>('care_records', { userId, scope: 'mine' })
+      const petRecords = loaded.filter((record) => record.petId === petId).sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
+      if (petRecords.length > 0) {
+        setAttachedDiary({ petId: pet.id, petName: pet.name, petPhoto: pet.photo, records: petRecords, startDate: petRecords[0].date, endDate: petRecords[petRecords.length - 1].date, totalCount: petRecords.length })
+      }
+    } finally {
+      setDiaryLoading(false)
+    }
+  }
 
   const finish = () => onSave(buildPost())
   const saveDraft = () => {
@@ -2105,14 +2659,16 @@ function QnaCreateFlow({ userId, pets, initialDraft, onClose, onSave, onSaveDraf
         <label className="step-field attach-file-field"><span>사진 첨부 (선택)</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={attachImage} /><small>{image ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small></label>
         {image && <img className="qna-compose-preview" src={image} alt="첨부 사진 미리보기" />}
         {attachedRecord && <RecordAttachCard record={attachedRecord} mode="draft" onRemove={() => setAttachedRecord(null)} />}
-        <div className="qna-compose-tools">
-          <button type="button" onClick={() => setRecordPickerOpen(true)}>기록 첨부</button>
-          <span>{attachedRecord ? `${attachedRecord.recordTypeLabel} 기록 첨부됨` : '선택 사항'}</span>
+        {!hasNoAnimal && petId && <div className="qna-compose-tools">
+          <button type="button" onClick={attachDiary}>{attachedDiary ? '기록 첨부됨' : diaryLoading ? '기록 불러오는 중' : '기록 첨부'}</button>
+        </div>}
+        <div ref={diaryAttachmentRef}>
+          {diaryLoading && <DiaryTimelineSkeleton />}
+          {attachedDiary && !diaryLoading && <DiaryTimelineAttachment snapshot={attachedDiary} mode="draft" onRemove={() => setAttachedDiary(null)} />}
         </div>
       </div>}
       {step === 2 && <div className="step-actions"><button className="step-secondary" type="button" onClick={saveDraft}>임시저장</button><button className="step-primary" type="button" disabled={!canNext} onClick={finish}>등록</button></div>}
       {step !== 2 && <div className="step-actions single"><button className="step-primary" type="button" disabled={!canNext} onClick={() => setStep((value) => value + 1)}>다음</button></div>}
-      {recordPickerOpen && <RecordPicker pets={pets} records={records} initialPetId={!hasNoAnimal ? petId : ''} onClose={() => setRecordPickerOpen(false)} onSelect={(record, recordPet) => { setAttachedRecord(toAttachedRecordSnapshot(record, recordPet)); setRecordPickerOpen(false) }} />}
     </StepShell>
   )
 }
@@ -2210,6 +2766,8 @@ function toAttachedRecordSnapshot(record: PetRecord, pet: Pet): AttachedRecordSn
   }
 }
 
+void toAttachedRecordSnapshot
+
 function summarizeRecord(record: PetRecord) {
   if (record.memo?.trim()) return record.memo.trim()
   if (record.type === 'food' && record.foods?.length) return record.foods.join(', ')
@@ -2219,20 +2777,6 @@ function summarizeRecord(record: PetRecord) {
 
 function formatRecordDate(value: string) {
   return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value))
-}
-
-function toRecordDateKey(date: Date) {
-  const year = date.getFullYear()
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function getRecordPickerCalendarDays(month: Date) {
-  const start = new Date(month.getFullYear(), month.getMonth(), 1)
-  const first = new Date(start)
-  first.setDate(start.getDate() - start.getDay())
-  return Array.from({ length: 42 }, (_, index) => new Date(first.getFullYear(), first.getMonth(), first.getDate() + index))
 }
 
 function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: { pets: Pet[]; initialDraft?: DraftItem | null; onClose: () => void; onSave: (item: ShareItem) => void | Promise<void>; onSaveDraft: (draft: DraftItem) => void | Promise<void> }) {
@@ -2284,14 +2828,126 @@ function ShareCreateFlow({ pets, initialDraft, onClose, onSave, onSaveDraft }: {
   )
 }
 
+type DiaryTimelinePoint = { key: string; label: string; records: PetRecord[] }
+
+const diaryTimelineMeta: Record<string, { label: string; icon: string }> = {
+  food: { label: '먹이', icon: '🍽' },
+  poop: { label: '배변', icon: '◉' },
+  memo: { label: '메모', icon: '📝' },
+  environment: { label: '환경', icon: '🌿' },
+  photo: { label: '사진', icon: '▣' },
+  other: { label: '기타', icon: '•' },
+}
+
+function diaryTimelineKind(record: PetRecord) {
+  if (record.type === 'food') return 'food'
+  if (record.type === 'poop') return 'poop'
+  if (record.photoUrl) return 'photo'
+  if (record.type === 'cleaning' || record.type === 'weight' || record.type === 'shed') return 'environment'
+  if (record.memo?.trim()) return 'memo'
+  return 'other'
+}
+
+function diaryTimelineGranularity(startDate: string, endDate: string) {
+  const days = Math.floor((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000) + 1
+  return days > 180 ? 'month' : days > 31 ? 'week' : 'day'
+}
+
+function diaryTimelinePointKey(date: string, granularity: 'day' | 'week' | 'month') {
+  const parsed = new Date(`${date}T00:00:00`)
+  if (granularity === 'day') return date
+  if (granularity === 'month') return date.slice(0, 7)
+  const first = new Date(parsed.getFullYear(), 0, 1)
+  const week = Math.ceil((((parsed.getTime() - first.getTime()) / 86400000) + first.getDay() + 1) / 7)
+  return `${parsed.getFullYear()}-W${String(week).padStart(2, '0')}`
+}
+
+function diaryTimelineLabel(key: string, granularity: 'day' | 'week' | 'month') {
+  if (granularity === 'month') return key.slice(5).replace('-', '월') + '월'
+  if (granularity === 'week') return key.slice(5)
+  return new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric' }).format(new Date(`${key}T00:00:00`))
+}
+
+function diaryRecordSummary(record: PetRecord) {
+  if (record.memo?.trim()) return record.memo.trim()
+  if (record.foods?.length) return record.foods.join(', ')
+  if (record.weight !== undefined) return `${record.weight}g`
+  return recordTypeLabels[record.type]
+}
+
+function DiaryTimelineSkeleton() {
+  return <section className="qna-diary-attachment qna-diary-skeleton" aria-label="기록 불러오는 중"><i /><i /><i /><i /></section>
+}
+
+function DiaryTimelineAttachment({ snapshot, mode, onRemove }: { snapshot: AttachedDiarySnapshot; mode: 'draft' | 'posted'; onRemove?: () => void }) {
+  const [expanded, setExpanded] = useState(mode === 'draft')
+  const granularity = diaryTimelineGranularity(snapshot.startDate, snapshot.endDate)
+  const points = useMemo<DiaryTimelinePoint[]>(() => {
+    const grouped = new Map<string, PetRecord[]>()
+    snapshot.records.forEach((record) => {
+      const key = diaryTimelinePointKey(record.date, granularity)
+      grouped.set(key, [...(grouped.get(key) ?? []), record])
+    })
+    return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, records]) => ({ key, records, label: diaryTimelineLabel(key, granularity) }))
+  }, [granularity, snapshot.records])
+  const [selectedKey, setSelectedKey] = useState(points[points.length - 1]?.key ?? '')
+  const selectedPoint = points.find((point) => point.key === selectedKey) ?? points[points.length - 1]
+  const maxCount = Math.max(1, ...points.map((point) => point.records.length))
+  if (snapshot.records.length === 0) return <section className="qna-diary-attachment qna-diary-empty">아직 작성된 다이어리 기록이 없어요.</section>
+  return (
+    <section className={`qna-diary-attachment ${mode}`}>
+      <header className="qna-diary-attachment-head">
+        <div className="qna-diary-pet-mark">{snapshot.petPhoto ? <img src={snapshot.petPhoto} alt="" /> : '🐾'}</div>
+        <div><strong>{snapshot.petName}의 전체 다이어리 기록</strong><span>{snapshot.startDate.replaceAll('-', '.')} ~ {snapshot.endDate.replaceAll('-', '.')} · 총 {snapshot.totalCount}개</span></div>
+        {mode === 'draft' && <button type="button" aria-label="기록 첨부 삭제" onClick={onRemove}>×</button>}
+      </header>
+      {mode === 'posted' && !expanded ? <button className="qna-diary-expand" type="button" onClick={() => setExpanded(true)}>전체 기록 흐름 보기</button> : (
+        <>
+          <div className="qna-diary-chart-wrap">
+            <div className="qna-diary-chart" role="img" aria-label={`${snapshot.petName} 전체 기록 타임라인`}>
+              {points.map((point) => <button className={`qna-diary-point ${point.key === selectedPoint?.key ? 'active' : ''}`} type="button" key={point.key} onClick={() => setSelectedKey(point.key)} aria-label={`${point.label} 기록 ${point.records.length}개`}>
+                <span className="qna-diary-bar" style={{ height: `${Math.max(18, (point.records.length / maxCount) * 100)}%` }}><b>{point.records.length}</b></span>
+                <span className="qna-diary-point-icons">{[...new Set(point.records.map(diaryTimelineKind))].slice(0, 3).map((kind) => <i key={kind}>{diaryTimelineMeta[kind].icon}</i>)}</span>
+                <small>{point.label}</small>
+              </button>)}
+            </div>
+            <span className="qna-diary-chart-caption">{granularity === 'day' ? '날짜별' : granularity === 'week' ? '주별' : '월별'} 기록량</span>
+          </div>
+          <div className="qna-diary-legend">{Object.entries(diaryTimelineMeta).map(([kind, meta]) => <span key={kind}><i>{meta.icon}</i>{meta.label}</span>)}</div>
+          {selectedPoint && <section className="qna-diary-details"><h4>{selectedPoint.label} 기록</h4>{[...selectedPoint.records].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map((record) => <article key={record.id}>
+            <div className="qna-diary-detail-meta"><time>{formatTimelineDateTime(record)}</time><span>{diaryTimelineMeta[diaryTimelineKind(record)].icon} {recordTypeLabels[record.type]}</span></div>
+            <strong>{diaryRecordSummary(record)}</strong>
+            {record.photoUrl && <img src={record.photoUrl} alt="첨부 사진" />}
+          </article>)}</section>}
+        </>
+      )}
+    </section>
+  )
+}
+
+function formatTimelineDateTime(record: PetRecord) {
+  const date = new Date(record.createdAt)
+  return `${formatRecordDate(record.date)} · ${new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' }).format(date)}`
+}
+
+void DiaryTimelineSkeleton
+void DiaryTimelineAttachment
+void RecordPicker
+void toAttachedRecordSnapshot
+// 나눔 프론트엔드 진입점은 보류 중이다. 재활성화 시 다시 연결한다.
+void ShareScreen
+void ShareCreateFlow
+
 function StepShell({ title, children, onBack, currentStep, stepCount, stepLabels, onStepChange }: { title: string; children: ReactNode; onBack: () => void; currentStep?: number; stepCount?: number; stepLabels?: string[]; onStepChange?: (step: number) => void }) {
   const progress = currentStep !== undefined && stepCount ? (currentStep + 1) / stepCount : undefined
+  const keyword = title.includes('QNA') ? '질문' : title.includes('나눔') ? '나눔' : title.includes('펫') ? '펫' : '작성'
   return (
     <main className="step-screen">
       <header className="step-header">
         <button className="back" type="button" aria-label="뒤로가기" onClick={onBack}>←</button>
         <strong>{title}</strong>
       </header>
+      <p className="step-keyword" aria-label="작성 키워드">{keyword}</p>
       {progress !== undefined && stepCount && <div className="step-progress step-progress-selectable" role="tablist" aria-label="작성 단계">
         <span className="step-progress-fill" style={{ width: `${progress * 100}%` }} />
         {Array.from({ length: stepCount }, (_, index) => <button key={index} className={index === currentStep ? 'active' : ''} type="button" role="tab" aria-selected={index === currentStep} aria-label={`${index + 1}단계`} onClick={() => onStepChange?.(index)}><span>{index + 1}</span></button>)}
@@ -2437,32 +3093,8 @@ function readBrowserLocation() {
 }
 
 async function searchHospitals(query: string, category: AnimalCategory, location: Coordinates | null) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-  if (supabaseUrl && publishableKey && supabaseUrl.startsWith('http')) {
-    const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/functions/v1/search-hospitals`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: publishableKey,
-        Authorization: `Bearer ${publishableKey}`,
-      },
-      body: JSON.stringify({ query, display: 100, start: 1, sort: 'random' }),
-    })
-    const data = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      if (response.status === 429 || data.error === 'rate_limited' || data.errorCode === '012') {
-        throw new Error('검색 요청이 너무 많아요. 잠시 후 다시 시도해주세요.')
-      }
-      throw new Error(data.message || data.error || '병원 검색 API 호출에 실패했습니다.')
-    }
-    const hospitals = transformHospitalItems(data.items ?? data.hospitals ?? [], query, category)
-    return sortHospitalsByDistance(hospitals, location)
-  }
-
-  const fallback = await loadCollectedHospitals(query, category)
-  return sortHospitalsByDistance(fallback, location)
+  const hospitals = await loadCollectedHospitals(query, category)
+  return sortHospitalsByDistance(hospitals, location)
 }
 
 async function loadCollectedHospitals(query: string, category: AnimalCategory) {
@@ -2477,6 +3109,7 @@ function transformHospitalItems(items: Array<Record<string, unknown>>, query: st
     .filter((item) => isHospitalSearchResult(item, query, category))
     .map((item, index) => transformHospitalItem(item, index, query, category))
     .filter((hospital): hospital is Hospital => Boolean(hospital)))
+    .filter((hospital) => hospitalMatchesQuery(hospital, query))
 }
 
 function toHospitalSnapshot(hospital: Hospital): HospitalSnapshot {
@@ -2522,10 +3155,12 @@ function transformHospitalItem(item: Record<string, unknown>, index: number, que
   if (!coords) return null
 
   const text = `${query} ${name} ${item.category ?? ''} ${item.description ?? ''} ${address}`
-  const supportedAnimals = Array.isArray(item.supportedAnimals) ? item.supportedAnimals : []
+  const rawSupportedAnimals = item.supportedAnimals
+  const hasCollectedAnimals = Array.isArray(rawSupportedAnimals)
+  const supportedAnimals = hasCollectedAnimals ? rawSupportedAnimals.map(String) : []
   const categories = supportedAnimals
     .filter((value): value is Exclude<AnimalCategory, 'all'> => value === 'reptile' || value === 'bird' || value === 'rodent' || value === 'amphibian' || value === 'other')
-  const guessed = categories.length > 0 ? categories : guessAnimalCategories(text, category)
+  const guessed: Exclude<AnimalCategory, 'all'>[] = categories.length > 0 ? categories : hasCollectedAnimals ? ['other'] : guessAnimalCategories(text, category)
 
   return {
     id: String(item.id ?? `${name}-${coords.lat}-${coords.lng}-${index}`),
@@ -2579,6 +3214,7 @@ function buildHospitalSearchQuery(query: string, category: AnimalCategory) {
 
 function isHospitalSearchResult(item: Record<string, unknown>, query: string, category: AnimalCategory) {
   void query
+  if (Array.isArray(item.sources) && item.sources.includes('naver-local-search')) return true
   const text = normalizeText(`${item.title ?? item.name ?? ''} ${item.category ?? ''} ${item.description ?? ''} ${item.address ?? ''} ${item.roadAddress ?? ''}`)
   const hasAnimalHospitalSignal = hospitalPositiveKeywords.some((keyword) => text.includes(normalizeText(keyword)))
   const hasCategoryHospitalSignal = text.includes(normalizeText('동물병원')) || text.includes(normalizeText('동물 병원'))
@@ -2590,6 +3226,17 @@ function isHospitalSearchResult(item: Record<string, unknown>, query: string, ca
   }
 
   return hasAnimalHospitalSignal && (!hasNegativeSignal || hasCategoryHospitalSignal)
+}
+
+function hospitalMatchesQuery(hospital: Hospital, query: string) {
+  if (!query.trim()) return true
+
+  const queryWithoutGenericTerms = exoticHospitalSearchTerms.reduce((value, term) => value.replaceAll(term, ' '), query)
+  const normalizedWords = queryWithoutGenericTerms.split(/[,\s]+/).map(normalizeText).filter(Boolean)
+  if (normalizedWords.length === 0) return true
+
+  const target = normalizeText(`${hospital.name} ${hospital.address} ${hospital.roadAddress ?? ''} ${(hospital.matchedQueries ?? []).join(' ')}`)
+  return normalizedWords.every((word) => target.includes(word))
 }
 
 function sortHospitalsByDistance(hospitals: Hospital[], location: Coordinates | null) {
@@ -2645,6 +3292,41 @@ function readStoredReviews() {
   } catch {
     return {}
   }
+}
+
+function readSavedHospitalIds() {
+  try {
+    const stored = localStorage.getItem(savedHospitalStorageKey)
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed.map(String) : []
+  } catch {
+    return []
+  }
+}
+
+function getReviewSummary(reviews: HospitalReview[]) {
+  const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  const tagCounts = new Map<string, number>()
+  const animalCounts = new Map<Exclude<AnimalCategory, 'all'>, number>()
+  let total = 0
+
+  reviews.forEach((review) => {
+    const rating = Math.min(5, Math.max(1, Math.round(review.rating || 0)))
+    distribution[rating] += 1
+    total += rating
+    review.tags?.forEach((tag) => tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1))
+    if (review.animalCategory) animalCounts.set(review.animalCategory, (animalCounts.get(review.animalCategory) ?? 0) + 1)
+  })
+
+  const count = reviews.length
+  const topTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([tag]) => tag)
+  const topAnimal = Array.from(animalCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+  return { count, average: count ? total / count : 0, distribution, topTags, topAnimal }
+}
+
+function getRecentSpecies(reviews: HospitalReview[]) {
+  return reviews.find((review) => review.species || review.animalCategory)?.species ?? ''
 }
 
 function normalizePet(pet: Pet & { category?: string }): Pet {
