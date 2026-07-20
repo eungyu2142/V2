@@ -17,3 +17,4 @@
 - Verified with `npm run build`.
 - Made daily-plan checkbox completion idempotent so repeated clicks do not create duplicate records; completion remains inline in the diary view.
 - Updated diary visualization so the third chart option is a pie chart using date-based record frequency.
+- Applied the navy design rule across the remaining legacy CSS accents in App, diary, and global styles; green/mint component states now use the shared blue palette.

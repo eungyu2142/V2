@@ -1508,7 +1508,7 @@ textarea {
   padding: 14px;
   border: 1px solid rgba(7, 157, 150, 0.16);
   border-radius: 12px;
-  background: #f4fffb;
+  background: #f8fbfe;
 }
 
 .record-picker-chart-head {
@@ -1519,12 +1519,12 @@ textarea {
 }
 
 .record-picker-chart-head strong {
-  color: #14302e;
+  color: #0f2742;
   font-size: 0.94rem;
 }
 
 .record-picker-chart-head span {
-  color: #7a8e89;
+  color: #52708d;
   font-size: 0.72rem;
 }
 
@@ -1538,7 +1538,7 @@ textarea {
   grid-template-columns: 58px minmax(0, 1fr) 22px;
   align-items: center;
   gap: 8px;
-  color: #5f7872;
+  color: #52708d;
   font-size: 0.72rem;
 }
 
@@ -1546,18 +1546,18 @@ textarea {
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: #dceee9;
+  background: #dbeafe;
 }
 
 .record-picker-bar-row i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #0aa6a0;
+  background: #1d4ed8;
 }
 
 .record-picker-bar-row strong {
-  color: #087f83;
+  color: #1d4ed8;
   text-align: right;
 }
 
@@ -2081,13 +2081,13 @@ textarea {
 }
 
 .record-picker-record span {
-  color: #5f7872;
+  color: #52708d;
   font-size: 0.75rem;
 }
 
 .record-picker-record strong {
   overflow: hidden;
-  color: #14302e;
+  color: #0f2742;
   font-size: 0.86rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2241,20 +2241,20 @@ textarea {
   font-weight: 900;
 }
 
-.qna-diary-attachment{display:grid;gap:14px;margin-top:12px;padding:16px 0;border-top:1px solid rgba(20,48,46,.12);border-bottom:1px solid rgba(20,48,46,.12);color:#14302e}
+.qna-diary-attachment{display:grid;gap:14px;margin-top:12px;padding:16px 0;border-top:1px solid rgba(20,48,46,.12);border-bottom:1px solid rgba(20,48,46,.12);color:#0f2742}
 .qna-diary-attachment-head{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px}
-.qna-diary-pet-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#d9f2e9;color:#0a8f84;font-size:1.35rem;overflow:hidden}
+.qna-diary-pet-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:1.35rem;overflow:hidden}
 .qna-diary-pet-mark img{width:100%;height:100%;object-fit:cover}
 .qna-diary-attachment-head div:nth-child(2){display:grid;gap:3px;min-width:0}
-.qna-diary-attachment-head strong{font-size:.96rem;color:#0f403b}
+.qna-diary-attachment-head strong{font-size:.96rem;color:#0f2742}
 .qna-diary-attachment-head span{color:#52708d;font-size:.78rem}
 .qna-diary-attachment-head>button{width:30px;height:30px;border:0;background:transparent;color:#52708d;font-size:1.3rem;cursor:pointer}
 .qna-diary-chart-wrap{display:grid;gap:5px}
-.qna-diary-chart{height:148px;display:grid;grid-template-columns:repeat(auto-fit,minmax(28px,1fr));align-items:end;gap:5px;padding:10px 4px 0;border-bottom:1px solid #cbded8}
+.qna-diary-chart{height:148px;display:grid;grid-template-columns:repeat(auto-fit,minmax(28px,1fr));align-items:end;gap:5px;padding:10px 4px 0;border-bottom:1px solid #cbdbea}
 .qna-diary-point{display:grid;grid-template-rows:1fr auto auto;align-items:end;gap:4px;min-width:0;height:100%;padding:0;border:0;background:transparent;color:#52708d;cursor:pointer}
-.qna-diary-point.active .qna-diary-bar{background:#0a9f91}
-.qna-diary-point.active small{color:#0a8f84;font-weight:800}
-.qna-diary-bar{display:flex;align-items:flex-start;justify-content:center;min-height:18px;width:100%;border-radius:5px 5px 1px 1px;background:#b7ddd0;color:#0f403b;font-size:.65rem}
+.qna-diary-point.active .qna-diary-bar{background:#1d4ed8}
+.qna-diary-point.active small{color:#1d4ed8;font-weight:800}
+.qna-diary-bar{display:flex;align-items:flex-start;justify-content:center;min-height:18px;width:100%;border-radius:5px 5px 1px 1px;background:#b8cde2;color:#0f2742;font-size:.65rem}
 .qna-diary-bar b{padding-top:3px}
 .qna-diary-point-icons{display:flex;justify-content:center;min-height:15px;overflow:hidden;font-size:.68rem;white-space:nowrap}
 .qna-diary-point-icons i{font-style:normal}
@@ -2262,12 +2262,12 @@ textarea {
 .qna-diary-chart-caption{color:#52708d;font-size:.72rem}
 .qna-diary-legend{display:flex;flex-wrap:wrap;gap:7px 12px;color:#52708d;font-size:.72rem}
 .qna-diary-legend span{display:inline-flex;align-items:center;gap:3px}.qna-diary-legend i{font-style:normal}
-.qna-diary-details{display:grid;gap:8px}.qna-diary-details h4{margin:0;color:#0f403b;font-size:.9rem}
-.qna-diary-details article{display:grid;gap:4px;padding:9px 0;border-bottom:1px solid #e3eee9}
+.qna-diary-details{display:grid;gap:8px}.qna-diary-details h4{margin:0;color:#0f2742;font-size:.9rem}
+.qna-diary-details article{display:grid;gap:4px;padding:9px 0;border-bottom:1px solid #e5edf6}
 .qna-diary-detail-meta{display:flex;flex-wrap:wrap;gap:8px;color:#52708d;font-size:.72rem}.qna-diary-details article strong{font-size:.82rem;font-weight:700}.qna-diary-details img{width:72px;height:72px;object-fit:cover;border-radius:7px}
-.qna-diary-expand,.qna-diary-source{justify-self:start;min-height:34px;padding:0 12px;border:1px solid #b7ddd0;border-radius:999px;background:#eefaf5;color:#087f75;font-size:.78rem;font-weight:800;cursor:pointer}
+.qna-diary-expand,.qna-diary-source{justify-self:start;min-height:34px;padding:0 12px;border:1px solid #b8cde2;border-radius:999px;background:#f8fbfe;color:#1d4ed8;font-size:.78rem;font-weight:800;cursor:pointer}
 .qna-diary-source{justify-self:end}.qna-diary-empty{color:#52708d;font-size:.86rem}
-.qna-diary-skeleton{grid-template-columns:repeat(4,1fr);height:110px;align-items:end}.qna-diary-skeleton i{display:block;height:40%;border-radius:5px 5px 0 0;background:#e3f1ec;animation:qna-diary-pulse 1.1s ease-in-out infinite}.qna-diary-skeleton i:nth-child(2){height:75%;animation-delay:.15s}.qna-diary-skeleton i:nth-child(3){height:52%;animation-delay:.3s}.qna-diary-skeleton i:nth-child(4){height:88%;animation-delay:.45s}
+.qna-diary-skeleton{grid-template-columns:repeat(4,1fr);height:110px;align-items:end}.qna-diary-skeleton i{display:block;height:40%;border-radius:5px 5px 0 0;background:#e5edf6;animation:qna-diary-pulse 1.1s ease-in-out infinite}.qna-diary-skeleton i:nth-child(2){height:75%;animation-delay:.15s}.qna-diary-skeleton i:nth-child(3){height:52%;animation-delay:.3s}.qna-diary-skeleton i:nth-child(4){height:88%;animation-delay:.45s}
 @keyframes qna-diary-pulse{50%{opacity:.45}}
 @media(min-width:900px){.qna-diary-attachment.draft,.qna-diary-attachment.posted{grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);column-gap:24px}.qna-diary-attachment-head,.qna-diary-expand{grid-column:1 / -1}.qna-diary-chart-wrap,.qna-diary-legend{grid-column:1}.qna-diary-details,.qna-diary-source{grid-column:2}.qna-diary-source{align-self:start}}
 @media(max-width:600px){.qna-diary-attachment{padding:13px 0}.qna-diary-chart{height:132px;gap:3px}.qna-diary-point-icons{font-size:.58rem}.qna-diary-point small{font-size:.59rem}.qna-diary-attachment-head span{font-size:.7rem}}
@@ -3643,8 +3643,8 @@ textarea {
   padding: 0 10px;
   border: 1px solid rgba(7, 157, 150, 0.18);
   border-radius: 8px;
-  background: #f7fffb;
-  color: #079d96;
+  background: #f8fbfe;
+  color: #1d4ed8;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 900;
@@ -3783,8 +3783,8 @@ textarea {
 }
 
 .review-pet-select{display:grid;gap:6px;color:#52708d;font-size:.78rem;font-weight:800}
-.medicine-bag-section{border-color:rgba(7,157,150,.2);background:#f4fbf8}
-.medicine-bag-picker{display:flex;min-height:42px;align-items:center;justify-content:center;border:1px dashed #8fcfc0;border-radius:8px;background:#fff;color:#087f75;font-size:.8rem;font-weight:900;cursor:pointer}
+.medicine-bag-section{border-color:rgba(7,157,150,.2);background:#f8fbfe}
+.medicine-bag-picker{display:flex;min-height:42px;align-items:center;justify-content:center;border:1px dashed #93b4d1;border-radius:8px;background:#fff;color:#1d4ed8;font-size:.8rem;font-weight:900;cursor:pointer}
 .medicine-bag-picker input{position:absolute;width:1px;height:1px;opacity:0}
 .medicine-bag-section>img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;background:#fff}
 .medicine-bag-section .review-form-row label{display:grid;gap:5px;color:#52708d;font-size:.72rem;font-weight:800}
@@ -5630,7 +5630,7 @@ textarea {
   padding: 7px 10px;
   border: 0;
   border-radius: 10px;
-  background: #f0f4f2;
+  background: #f3f7fb;
   color: #52708d;
   font-size: 0.76rem;
 }
@@ -8541,7 +8541,7 @@ textarea {
   padding: 7px 10px;
   border: 0;
   border-radius: 10px;
-  background: #f0f4f2;
+  background: #f3f7fb;
   color: #52708d;
   font-size: 0.76rem;
 }
@@ -8840,7 +8840,7 @@ button:active:not(:disabled),
 .qna-feed-delete,
 .qna-help-card .qna-feed-delete {
   border-color: #93b4d1 !important;
-  background: #eef5fb !important;
+  background: #f3f7fb !important;
   color: #1e4d73 !important;
 }
 
@@ -9048,11 +9048,11 @@ button[aria-pressed="true"],
 
 .review-empty {
   padding: 12px 0 !important;
-  color: #5f7872 !important;
+  color: #52708d !important;
 }
 
 .review-summary-empty {
-  color: #5f7872 !important;
+  color: #52708d !important;
 }
 
 @media (max-width: 760px) {
