@@ -477,7 +477,7 @@ export default function DiaryPage({
           void Promise.resolve(onSaveDraft?.({
             id: initialDraft?.draftType === 'reminder' ? initialDraft.id : crypto.randomUUID(),
             draftType: 'reminder',
-            title: reminder.title || '관리 계획 초안',
+            title: reminder.title || '관리 루틴 초안',
             body: formatReminderSchedule(reminder),
             updatedAt: new Date().toISOString(),
             step,
@@ -530,7 +530,7 @@ export default function DiaryPage({
             records={petRecords}
             tasks={dailyTasks}
             onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))}
-            onSelect={(date) => { setSelectedDate(date); setDateDetailsOpen(true) }}
+            onSelect={(date) => { if (date === selectedDate) setDateDetailsOpen(true); else setSelectedDate(date) }}
           />
           <SelectedDateStatus date={selectedDate} tasks={dailyTasks} records={petRecords} />
         </main>
@@ -644,19 +644,26 @@ function DailyPlan({
     const { reminder, overdue, dailyTask } = task
     const checked = dailyTask?.status === 'completed' || reminder.completedAt?.slice(0, 10) === selectedDate
     return <div className={`daily-plan-task-row ${overdue ? 'overdue' : ''}`} key={`${reminder.id}-${dailyTask?.id ?? selectedDate}`}>
-      <label className="daily-plan-task">
-        <span><strong>{planLabel(reminder)}</strong><small>{overdue ? `${dailyTask?.scheduledDate ?? '지난 일정'} · 밀린 할 일` : reminder.reminderType === 'medicine' ? `${dailyTask?.scheduledDate ?? selectedDate} · ${dailyTask?.occurrenceNo ?? 1}회차` : formatPlanDays(reminder)}</small></span>
-        <span className={`daily-plan-check ${checked ? 'checked' : ''}`} aria-hidden="true">{checked ? '✓' : ''}</span>
-        <input className="daily-plan-check-input" type="checkbox" checked={checked} disabled={isFuture} onChange={() => checked ? onUndo(task) : onComplete(task)} aria-label={`${planLabel(reminder)} ${checked ? '완료됨' : '완료'}`} />
-      </label>
-      {reminder.reminderType !== 'medicine' && <details className="daily-task-menu">
-        <summary aria-label={`${planLabel(reminder)} 메뉴`} title="할 일 메뉴">⋮</summary>
-        <div>
-          <button type="button" onClick={() => onEditPlan(reminder)}>수정</button>
-          <button type="button" onClick={() => onDeletePlan(reminder.id)}>삭제</button>
-        </div>
-      </details>}
-      {overdue && <div className="daily-plan-task-actions"><button type="button" onClick={() => checked ? onUndo(task) : onComplete(task)}>완료</button><button type="button" onClick={() => onSkip(task)}>건너뛰기</button></div>}
+      <div className="daily-plan-task">
+        <span className="daily-plan-task-content">
+          <span className="daily-plan-title-line">
+            <strong>{planLabel(reminder)}</strong>
+            {reminder.reminderType !== 'medicine' && <details className="daily-task-menu">
+              <summary aria-label={`${planLabel(reminder)} ??`} title="? ? ??">?</summary>
+              <div>
+                <button type="button" onClick={() => onEditPlan(reminder)}>??</button>
+                <button type="button" onClick={() => onDeletePlan(reminder.id)}>??</button>
+              </div>
+            </details>}
+          </span>
+          <small>{overdue ? `${dailyTask?.scheduledDate ?? '?? ??'} ? ?? ? ?` : reminder.reminderType === 'medicine' ? `${dailyTask?.scheduledDate ?? selectedDate} ? ${dailyTask?.occurrenceNo ?? 1}??` : formatPlanDays(reminder)}</small>
+        </span>
+        <label className="daily-plan-check-wrap">
+          <span className={`daily-plan-check ${checked ? 'checked' : ''}`} aria-hidden="true">{checked ? '?' : ''}</span>
+          <input className="daily-plan-check-input" type="checkbox" checked={checked} disabled={isFuture} onChange={() => checked ? onUndo(task) : onComplete(task)} aria-label={`${planLabel(reminder)} ${checked ? '???' : '??'}`} />
+        </label>
+      </div>
+      {overdue && <div className="daily-plan-task-actions"><button type="button" onClick={() => checked ? onUndo(task) : onComplete(task)}>??</button><button type="button" onClick={() => onSkip(task)}>????</button></div>}
     </div>
   }
 
@@ -666,8 +673,8 @@ function DailyPlan({
         <header><div><h2>오늘 할 일</h2><p>{formatDate(selectedDate)}</p></div></header>
         <div className="daily-plan-first-empty">
           <strong>아직 반복 일정이 없어요.</strong>
-          <span>이 동물에게 필요한 먹이, 물 교체, 청소 계획을 먼저 만들어주세요.</span>
-          <button type="button" onClick={onAddPlan}>첫 계획 만들기</button>
+          <span>이 동물에게 필요한 먹이, 물 교체, 청소 루틴을 먼저 만들어주세요.</span>
+          <button type="button" onClick={onAddPlan}>첫 루틴 만들기</button>
         </div>
       </section>
     )
@@ -700,7 +707,7 @@ function CarePlanPanel({
   const petPlans = plans.filter((plan) => plan.petId === selectedPetId && ['feed', 'water', 'cleaning'].includes(plan.reminderType))
   return (
     <section className="care-plan-panel">
-      <header><div><h2>반복 일정</h2><p>요일을 정해두면 오늘 할 일로 보여요.</p></div>{petPlans.length > 0 && <button type="button" onClick={onAdd}>계획 추가</button>}</header>
+      <header><div><h2>반복 일정</h2><p>요일을 정해두면 오늘 할 일로 보여요.</p></div>{petPlans.length > 0 && <button type="button" onClick={onAdd}>루틴 추가</button>}</header>
       {petPlans.length ? <div className="care-plan-list">{petPlans.map((plan) => (
         <article className={!plan.isActive ? 'inactive' : ''} key={plan.id}>
           <div><strong>{planLabel(plan)}</strong><span>{formatPlanDays(plan)}</span></div>
@@ -713,7 +720,7 @@ function CarePlanPanel({
             </div>
           </details>
         </article>
-      ))}</div> : <div className="care-plan-empty"><strong>아직 등록한 계획이 없어요.</strong><span>먹이, 물 교체, 청소 요일을 먼저 정해보세요.</span><button type="button" onClick={onAdd}>첫 계획 만들기</button></div>}
+      ))}</div> : <div className="care-plan-empty"><strong>아직 등록한 루틴이 없어요.</strong><span>먹이, 물 교체, 청소 요일을 먼저 정해보세요.</span><button type="button" onClick={onAdd}>첫 루틴 만들기</button></div>}
     </section>
   )
 }
@@ -867,6 +874,10 @@ function Calendar({
           const dayTasks = tasks.filter((task) => task.scheduledDate === key)
           const hasPending = dayTasks.some((task) => task.status === 'pending')
           const allComplete = dayTasks.length > 0 && dayTasks.every((task) => task.status === 'completed')
+          const calendarItems = [
+            ...dayTasks.map((task) => ({ id: task.id, label: calendarTaskLabel(task), className: task.status })),
+            ...dayRecords.map((record) => ({ id: record.id, label: recordMeta[record.type].label, className: record.type })),
+          ].filter((item, index, items) => index === items.findIndex((value) => value.label === item.label))
           return (
             <button
               key={key}
@@ -876,11 +887,11 @@ function Calendar({
               <span className="day-head">
                 <span className="day-number">{day.getDate()}</span>
               </span>
-              <span className="calendar-dots" aria-label={`${dayTasks.length + dayRecords.length} items`}>
-                {hasPending ? <em className="calendar-state pending" aria-label="미완료 일정">!</em> : allComplete ? <em className="calendar-state complete" aria-label="모든 일정 완료">✓</em> : dayRecords.slice(0, 3).map((record) => (
-                  <small className={`calendar-dot ${record.type}`} key={record.id} aria-label={recordMeta[record.type].label} />
+              <span className="calendar-tags" aria-label={`${dayTasks.length + dayRecords.length} items`}>
+                {calendarItems.slice(0, 3).map((item) => (
+                  <small className={`calendar-tag ${item.className}`} key={item.id}>{item.label}</small>
                 ))}
-                {!hasPending && !allComplete && dayRecords.length > 3 && <em>+{dayRecords.length - 3}</em>}
+                {calendarItems.length > 3 && <em>+{calendarItems.length - 3}</em>}
               </span>
             </button>
           )
@@ -1077,13 +1088,13 @@ function ReminderCreateScreen({
     <main className="diary-create-screen">
       <header>
         <button type="button" aria-label="뒤로가기" onClick={onBack}>←</button>
-        <strong>관리 계획</strong>
+        <strong>관리 루틴</strong>
         <span />
       </header>
       <form onSubmit={submit}>
-        <p className="create-keyword" aria-label="작성 키워드">계획</p>
+        <p className="create-keyword" aria-label="작성 키워드">루틴</p>
         <div className="create-title">
-          <h1>{initialReminder ? '계획 수정' : '계획 설정'}</h1>
+          <h1>{initialReminder ? '루틴 수정' : '루틴 설정'}</h1>
         </div>
         <div className="create-content">
           <p className="selected-pet-inline">대상 펫: <strong>{pets.find((pet) => pet.id === petId)?.name ?? '현재 펫'}</strong></p>
@@ -1323,6 +1334,14 @@ function recordSummary(record: PetRecord) {
   if (record.type === 'food' && record.foods?.length) return record.foods.join(', ')
   if (record.type === 'weight' && record.weight !== undefined) return `${formatWeightValue(record.weight)}g`
   return record.memo?.trim() || recordMeta[record.type].label
+}
+
+function calendarTaskLabel(task: DailyTask) {
+  if (task.taskType === 'feed') return '먹이'
+  if (task.taskType === 'water') return '물'
+  if (task.taskType === 'cleaning') return '청소'
+  if (task.taskType.startsWith('medicine|')) return '약'
+  return '할 일'
 }
 
 function getCalendarDays(month: Date) {

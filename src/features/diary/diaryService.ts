@@ -130,7 +130,7 @@ export type ReviewDiaryLinkInput = {
   treatment?: string
   medicine?: {
     name: string
-    dose: string
+    dose?: string
     startDate: string
     endDate?: string
     dailyCount: number
@@ -186,7 +186,8 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
     const { error: oldPlansError } = await supabase.from('medication_plans').delete().in('id', previousPlanIds).eq('user_id', input.userId)
     if (oldPlansError) throw oldPlansError
   }
-  if (!input.medicine?.name.trim() || !input.medicine.dose.trim()) return
+  if (!input.medicine?.name.trim()) return
+  const medicineDose = input.medicine.dose?.trim() ?? ''
   const planId = crypto.randomUUID()
   const { error: planError } = await supabase.from('medication_plans').insert({
     id: planId,
@@ -194,7 +195,7 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
     pet_id: input.petId,
     visit_record_id: visitId,
     name: input.medicine.name.trim(),
-    dose: input.medicine.dose.trim(),
+    dose: medicineDose,
     start_date: input.medicine.startDate,
     end_date: input.medicine.endDate || null,
     daily_count: Math.max(1, input.medicine.dailyCount),
@@ -209,7 +210,7 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
   for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
     const scheduledDate = date.toISOString().slice(0, 10)
     for (let occurrenceNo = 1; occurrenceNo <= Math.max(1, input.medicine.dailyCount); occurrenceNo += 1) {
-      tasks.push({ user_id: input.userId, medication_plan_id: planId, pet_id: input.petId, task_type: `medicine|${input.medicine.name.trim()}|${input.medicine.dose.trim()}`, scheduled_date: scheduledDate, occurrence_no: occurrenceNo, status: 'pending' })
+      tasks.push({ user_id: input.userId, medication_plan_id: planId, pet_id: input.petId, task_type: `medicine|${input.medicine.name.trim()}|${medicineDose}`, scheduled_date: scheduledDate, occurrence_no: occurrenceNo, status: 'pending' })
     }
   }
   const { error: tasksError } = await supabase.from('daily_tasks').insert(tasks)

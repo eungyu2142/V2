@@ -22,15 +22,21 @@
 .calendar-month-bar button{height:42px;border:0;background:transparent;color:#2563eb;font-size:2rem}
 .calendar-weekdays,.calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
 .calendar-weekdays span{padding:8px;text-align:center;color:#52708d;font-size:.78rem;font-weight:800}
-.calendar-day{display:grid;grid-template-rows:auto 1fr;align-content:start;gap:5px;min-width:0;min-height:0;aspect-ratio:1 / 1;overflow:hidden;padding:8px;border:0;border-top:1px solid #cbdbea;border-right:1px solid #cbdbea;background:#f8fbfe;color:#0f2742;text-align:left}
+.calendar-day{display:grid;grid-template-rows:auto 1fr;align-content:start;gap:5px;min-width:0;min-height:82px;aspect-ratio:1 / 1;overflow:hidden;padding:8px;border:0;border-top:1px solid #cbdbea;border-right:1px solid #cbdbea;background:#f8fbfe;color:#0f2742;text-align:left}
 .calendar-day:nth-child(7n+1){border-left:1px solid #cbdbea}
 .calendar-day:nth-last-child(-n+7){border-bottom:1px solid #cbdbea}
 .calendar-day.selected{box-shadow:inset 0 0 0 2px #2563eb;background:#dbeafe}
 .calendar-day.muted{opacity:.43}
 .day-head{display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0}
 .day-number{font-weight:900}
-.calendar-tags{display:grid;gap:3px;min-width:0}
-.calendar-tags small{display:flex;align-items:center;gap:3px;min-width:0;padding:3px 5px;border-radius:4px;background:#dbeafe;color:#1e4d73;font-size:.72rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calendar-tags{display:grid;align-content:start;gap:3px;min-width:0}
+.calendar-tags small{display:flex;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:18px;padding:2px 5px;border-radius:5px;background:#dbeafe;color:#1e4d73;font-size:.68rem;font-weight:900;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calendar-tags small.feed,.calendar-tags small.food{background:#dbeafe;color:#1d4ed8}
+.calendar-tags small.water,.calendar-tags small.other{background:#eef4fb;color:#1e4d73}
+.calendar-tags small.cleaning{background:#e5edf6;color:#0f2742}
+.calendar-tags small.poop{background:#f3e6d8;color:#8a5a33}
+.calendar-tags small.completed{background:#dbeafe;color:#1d4ed8}
+.calendar-tags small.pending{background:#fae0bf;color:#a95e32}
 .calendar-tags small i{font-style:normal;flex:0 0 auto}
 .calendar-tags em{color:#52708d;font-size:.68rem;font-style:normal}
 .calendar-dots{display:flex;align-items:center;justify-content:center;gap:4px;min-height:18px;padding-top:2px}
@@ -62,7 +68,7 @@
 .daily-plan-task strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
 .daily-plan-task small{color:#52708d;font-size:.75rem}
 .daily-plan-task.overdue strong,.daily-plan-task.overdue small{color:#bd704d}
-.daily-plan-task input{width:19px;height:19px;margin:0;accent-color:#2563eb;justify-self:end}.daily-plan-check-input{position:absolute!important;right:0;opacity:0;cursor:pointer}.daily-plan-check{display:grid;position:absolute;right:0;width:20px;height:20px;place-items:center;border:1.5px solid #8aa9c0;border-radius:5px;background:#fff;color:#fff;font-size:.82rem;font-weight:900;pointer-events:none}.daily-plan-check.checked{border-color:#1d4ed8;background:#1d4ed8}
+.daily-plan-task input{width:19px;height:19px;margin:0;accent-color:#2563eb;justify-self:end}.daily-plan-check-input{position:absolute!important;right:0;opacity:0;cursor:pointer}.daily-plan-check{display:grid;position:absolute;right:0;width:22px;height:22px;place-items:center;border:1.5px solid #8aa9c0;border-radius:5px;background:#fff;color:transparent;font-size:.82rem;font-weight:900;pointer-events:none}.daily-plan-check.checked{border-color:#0f2742;background:#0f2742;color:#fff}
 .daily-plan-empty{margin:0;color:#52708d;font-size:.82rem}
 .daily-plan-first-empty{display:grid;gap:8px;padding:16px 0;color:#52708d;font-size:.84rem}
 .daily-plan-first-empty strong{color:#0f2742;font-size:.95rem}
@@ -283,7 +289,7 @@
   .diary-page{min-height:calc(100svh - 130px)}
   .diary-workspace{grid-template-columns:1fr;gap:20px}
   .diary-detail-panel{border:0;padding:0}
-  .calendar-day{min-height:0;aspect-ratio:1 / 1;padding:5px}
+  .calendar-day{min-height:72px;aspect-ratio:auto;padding:6px}
   .calendar-tags small{padding:2px 3px}
   .diary-modal{border-radius:16px 16px 0 0}
   .diary-modal:has(.warning-dialog){right:0;bottom:0;left:0;width:100%;transform:none;border-radius:16px 16px 0 0}
@@ -304,7 +310,7 @@
 }
 
 @media(max-width:520px){
-  .calendar-day{min-height:0}
+  .calendar-day{min-height:70px}
   .calendar-tags small i{display:none}
   .calendar-tags small{font-size:.66rem}
   .calendar-weekdays span{padding:6px 0}
@@ -548,6 +554,138 @@
 }
 .daily-plan-menu button:hover { background: #0f2742; color: #fff; }
 
+/* 2026-07-22 diary layout system: one centered container, stable grid, aligned panels. */
+.diary-page {
+  display: grid !important;
+  width: 100% !important;
+  max-width: 1280px !important;
+  gap: 24px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+  background: transparent !important;
+}
+
+.diary-pet-bar,
+.diary-mobile-tabs,
+.diary-workspace {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.diary-pet-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+
+.diary-workspace {
+  display: grid !important;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr) !important;
+  gap: 24px !important;
+  align-items: start !important;
+}
+
+.diary-calendar-area,
+.diary-detail-panel,
+.daily-plan-panel,
+.incident-add-panel,
+.record-list-panel,
+.smart-add-panel,
+.selected-date-status {
+  min-width: 0 !important;
+}
+
+.diary-calendar-area,
+.diary-detail-panel {
+  display: grid !important;
+  gap: 24px !important;
+}
+
+.daily-plan-panel,
+.incident-add-panel,
+.record-list-panel,
+.smart-add-panel,
+.selected-date-status {
+  width: 100% !important;
+  border: 1px solid #cbdbea !important;
+  border-radius: 16px !important;
+  background: #f8fbfe !important;
+  padding: 18px !important;
+  box-shadow: 0 12px 32px rgba(15, 39, 66, 0.08) !important;
+}
+
+.daily-plan-list,
+.record-list,
+.selected-date-records,
+.smart-choice-list,
+.smart-unit-list {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.daily-plan-task-row,
+.record-list article,
+.selected-date-records article {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.daily-plan-task,
+.record-list article .record-open,
+.selected-date-records article > button:first-child {
+  width: 100% !important;
+  min-width: 0 !important;
+  border-radius: 12px !important;
+}
+
+.incident-add-actions,
+.smart-add-actions,
+.daily-plan-task-actions {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.incident-add-actions button,
+.smart-add-actions button,
+.daily-plan-task-actions button {
+  min-height: 42px !important;
+  border-radius: 12px !important;
+}
+
+@media (max-width: 980px) {
+  .diary-workspace {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .diary-detail-panel {
+    border-left: 0 !important;
+    padding-left: 0 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .diary-page {
+    gap: 16px !important;
+  }
+
+  .diary-pet-bar {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .daily-plan-panel,
+  .incident-add-panel,
+  .record-list-panel,
+  .smart-add-panel,
+  .selected-date-status {
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+}
+
 /* Keep diary accents blue even when legacy component rules are loaded later. */
 .diary-pet-avatar {
   background: #dbeafe !important;
@@ -582,4 +720,283 @@
   color: #0f2742 !important;
   font-size: 0.92rem;
   font-weight: 900;
+}
+
+/* Diary writing controls share the app-wide navy hierarchy. */
+.choice-field > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.choice-field button,
+.weekday-picker button,
+.smart-choice-list button,
+.smart-unit-list button,
+.record-type-grid button {
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+.choice-field button.selected,
+.weekday-picker button.selected,
+.smart-choice-list button.selected,
+.smart-unit-list button.selected {
+  border-color: #0f2742;
+  background: #0f2742;
+  color: #fff;
+}
+
+.step-actions .create-submit {
+  min-height: 48px;
+  border-radius: 10px;
+  background: #0f2742;
+}
+
+.step-actions .create-submit.secondary {
+  background: #dbeafe;
+  color: #0f2742;
+}
+
+/* Mobile plan view should focus only on plans and today's tasks. */
+@media (max-width: 900px) {
+  .diary-page {
+    gap: 14px !important;
+    align-content: start !important;
+    grid-auto-rows: max-content !important;
+  }
+
+  .diary-pet-bar {
+    min-height: 52px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-items: center !important;
+  }
+
+  .diary-pet-profile {
+    min-height: 52px !important;
+    align-items: center !important;
+  }
+
+  .diary-pet-avatar {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 1.35rem !important;
+  }
+
+  .diary-workspace.mobile-plan .diary-calendar-area,
+  .diary-workspace.mobile-plan .selected-date-status {
+    display: none !important;
+  }
+
+  .diary-workspace.mobile-plan .diary-detail-panel {
+    display: grid !important;
+  }
+
+  .diary-mobile-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .diary-mobile-tabs button {
+    appearance: none !important;
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    place-items: center !important;
+    padding: 0 10px !important;
+    border: 1px solid #cbdbea !important;
+    border-radius: 8px !important;
+    background: #f8fbfe !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+    font-size: 0.76rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    overflow: hidden !important;
+    transform: none !important;
+    white-space: nowrap !important;
+  }
+
+  .diary-mobile-tabs button.active {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    padding: 0 10px !important;
+    border-color: #0f2742 !important;
+    background: #0f2742 !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .diary-workspace {
+    padding-top: 0 !important;
+  }
+
+  .daily-plan-task {
+    padding-right: 68px !important;
+  }
+
+  .daily-plan-check {
+    right: 0 !important;
+  }
+
+  .daily-task-menu {
+    right: 32px !important;
+    top: 8px !important;
+    z-index: 6 !important;
+  }
+}
+
+.record-item-menu {
+  position: relative;
+  justify-self: end;
+}
+
+.record-item-menu summary {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 6px;
+  color: #52708d;
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  list-style: none;
+}
+
+.record-item-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.record-item-menu summary:hover,
+.record-item-menu[open] summary {
+  background: #dbeafe;
+  color: #0f2742;
+}
+
+.record-item-menu > div {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  z-index: 8;
+  display: grid;
+  min-width: 78px;
+  padding: 4px;
+  border: 1px solid #cbdbea;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 39, 66, .16);
+}
+
+.record-item-menu button {
+  min-height: 32px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: #fff;
+  color: #1d4ed8;
+  font-size: .76rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.record-item-menu button:hover {
+  background: #0f2742;
+  color: #fff;
+}
+
+/* Keep each task menu beside its task name, while the checkbox stays on the right. */
+.daily-plan-task {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 24px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding-right: 0 !important;
+}
+
+.daily-plan-task-content {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+}
+
+.daily-plan-title-line {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.daily-plan-title-line strong {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+}
+
+.daily-task-menu {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 6 !important;
+  flex: 0 0 auto !important;
+}
+
+.daily-task-menu summary {
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 1.05rem !important;
+}
+
+.daily-task-menu > div {
+  top: 28px !important;
+  right: auto !important;
+  left: 0 !important;
+}
+
+.daily-plan-check-wrap {
+  position: relative !important;
+  display: grid !important;
+  width: 22px !important;
+  height: 22px !important;
+  place-items: center !important;
+  justify-self: end !important;
+}
+
+.daily-plan-check {
+  position: static !important;
+  right: auto !important;
+}
+
+.daily-plan-check-input {
+  inset: 0 !important;
+  width: 22px !important;
+  height: 22px !important;
+}
+
+@media (max-width: 900px) {
+  .daily-plan-task {
+    padding-right: 0 !important;
+  }
+
+  .daily-task-menu {
+    top: auto !important;
+    right: auto !important;
+  }
 }
