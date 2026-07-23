@@ -957,6 +957,30 @@ function createRecordDraftInitialValue(type: PetRecordType, pet: DiaryPet): Reco
   }
 }
 
+function useWritingBrowserBack(step: number, onBack: () => void, onStepChange?: (step: number) => void) {
+  const stepRef = useRef(step)
+  const backRef = useRef(onBack)
+  const changeRef = useRef(onStepChange)
+  stepRef.current = step
+  backRef.current = onBack
+  changeRef.current = onStepChange
+  useEffect(() => {
+    window.history.pushState({ exoPetDiaryCreate: true }, '', window.location.href)
+    const handleBack = () => {
+      if (stepRef.current > 0) {
+        const previousStep = stepRef.current - 1
+        stepRef.current = previousStep
+        changeRef.current?.(previousStep)
+        window.history.pushState({ exoPetDiaryCreate: true, step: previousStep }, '', window.location.href)
+      } else {
+        backRef.current()
+      }
+    }
+    window.addEventListener('popstate', handleBack)
+    return () => window.removeEventListener('popstate', handleBack)
+  }, [])
+}
+
 function RecordCreateScreen({
   pet,
   type,
@@ -977,6 +1001,7 @@ function RecordCreateScreen({
   const steps = type === 'other' ? ['photo'] : ['detail', 'photo']
   const [step, setStep] = useState(initialDraft?.step ?? 0)
   const [draft, setDraft] = useState<RecordDraft>(initialDraft ?? createRecordDraftInitialValue(type, pet))
+  useWritingBrowserBack(step, onBack, setStep)
   const current = steps[step]
   const update = (patch: Partial<RecordDraft>) => setDraft((value) => ({ ...value, ...patch }))
   const submit = (event: FormEvent) => {
@@ -1003,7 +1028,8 @@ function RecordCreateScreen({
           {current === 'photo' && <PhotoPicker value={draft.photo} onChange={(photo) => update({ photo })} />}
         </div>
         <div className="step-actions">
-          <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(draft, step)}>임시저장</button>
+          <button type="button" className="create-submit secondary diary-draft-corner" onClick={() => onSaveDraft?.(draft, step)}>임시저장</button>
+          <button type="button" className="create-submit secondary diary-step-back" onClick={() => step ? setStep(step - 1) : onBack()} disabled={step === 0}>이전</button>
           <button className="create-submit" disabled={current === 'detail' && !validateDetail(draft)}>{step === steps.length - 1 ? '작성 완료' : '다음'}</button>
         </div>
       </form>
@@ -1060,6 +1086,7 @@ function ReminderCreateScreen({
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>(initialReminder?.weekdays ?? [])
   const [startDate, setStartDate] = useState(initialReminder?.startDate ?? initialReminder?.reminderDate ?? toDateKey(new Date()))
   const [endDate, setEndDate] = useState(initialReminder?.endDate ?? '')
+  useWritingBrowserBack(0, onBack)
   const valid = Boolean(petId && types.length && selectedWeekdays.length > 0 && startDate && (!endDate || endDate >= startDate))
   const buildReminder = (reminderType: ReminderType, index = 0): Reminder => ({
     id: initialReminder && index === 0 ? initialReminder.id : crypto.randomUUID(),
@@ -1110,7 +1137,8 @@ function ReminderCreateScreen({
           <label>종료일 (선택)<input type="date" value={endDate} min={startDate} onChange={(event) => setEndDate(event.target.value)} /></label>
         </div>
         <div className="step-actions">
-          <button type="button" className="create-submit secondary" onClick={() => onSaveDraft?.(buildReminder(types[0] ?? 'feed'), 0)}>임시저장</button>
+          <button type="button" className="create-submit secondary diary-draft-corner" onClick={() => onSaveDraft?.(buildReminder(types[0] ?? 'feed'), 0)}>임시저장</button>
+          <button type="button" className="create-submit secondary diary-step-back" onClick={onBack}>이전</button>
           <button className="create-submit" disabled={!valid}>저장</button>
         </div>
       </form>

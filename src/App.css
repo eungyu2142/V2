@@ -50,6 +50,154 @@ html {
   }
 }
 
+/* Final writing-flow layout override. */
+.step-screen { position: relative; }
+.step-screen .step-draft-corner {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  min-height: 28px !important;
+  height: 28px !important;
+  width: auto !important;
+  padding: 0 9px !important;
+  border: 1px solid #b8cde2 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #52708d !important;
+  font-size: .7rem !important;
+  font-weight: 800 !important;
+}
+.step-screen .step-actions .step-back { flex: 0 0 34% !important; width: auto !important; }
+.step-screen .choice-grid { gap: 5px !important; }
+.step-screen .choice-grid button {
+  flex: 0 1 132px !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 9px !important;
+  font-size: .78rem !important;
+}
+@media (max-width: 560px) {
+  .step-screen .choice-grid button,
+  .step-screen .pet-species-gender-step .choice-grid button {
+    flex: 0 1 calc(50% - 3px) !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 6px !important;
+    font-size: .74rem !important;
+  }
+}
+
+/* Writing flow controls: previous/next share one row; draft stays compact in the corner. */
+.step-screen {
+  position: relative;
+}
+
+.step-draft-corner {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 9px !important;
+  border: 1px solid #b8cde2 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #52708d !important;
+  font-size: .7rem !important;
+  font-weight: 800 !important;
+}
+
+.step-actions .step-back {
+  flex: 0 0 34% !important;
+  width: auto !important;
+}
+
+.step-actions .step-draft-corner + .step-back {
+  margin-left: 0;
+}
+
+.step-screen .choice-grid {
+  gap: 5px !important;
+}
+
+.step-screen .choice-grid button {
+  flex: 0 1 132px !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 9px !important;
+  font-size: .78rem !important;
+}
+
+@media (max-width: 560px) {
+  .step-screen .choice-grid button,
+  .pet-species-gender-step .step-field:first-child .choice-grid button {
+    flex: 0 1 calc(50% - 3px) !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 6px !important;
+    font-size: .74rem !important;
+  }
+}
+
+/* QNA service feed refresh: keep the question and its context easy to scan. */
+.qna-feed-page { width: min(100%, 1200px) !important; margin: 0 auto !important; padding: 24px 32px 96px !important; }
+.qna-feed-page .qna-feed-head { display: flex !important; align-items: flex-start !important; justify-content: space-between !important; gap: 20px !important; margin-bottom: 18px !important; }
+.qna-feed-page .qna-feed-head h2 { margin: 0 !important; color: #0f2742 !important; font-size: 28px !important; }
+.qna-feed-page .qna-feed-head p { margin: 6px 0 0 !important; color: #64748b !important; font-size: 14px !important; }
+.qna-create-button { min-height: 44px !important; padding: 0 18px !important; border: 1px solid #1d4ed8 !important; border-radius: 8px !important; background: #1d4ed8 !important; color: #fff !important; font-weight: 700 !important; }
+.qna-feed-page .qna-feed-search { min-height: 52px !important; margin-bottom: 14px !important; padding: 0 14px !important; border-color: #bfdbfe !important; background: #fff !important; color: #1d4ed8 !important; }
+.qna-feed-page .qna-feed-search input { color: #0f2742 !important; font-size: 15px !important; }
+.qna-feed-page .qna-feed-search input::placeholder { color: #64748b !important; }
+.qna-feed-page .qna-feed-search > button { width: 32px !important; height: 32px !important; border: 0 !important; background: transparent !important; color: #64748b !important; font-size: 20px !important; }
+.qna-filter-bar { display: flex !important; align-items: center !important; gap: 10px !important; margin-bottom: 20px !important; overflow-x: auto !important; scrollbar-width: none !important; }
+.qna-filter-bar::-webkit-scrollbar { display: none; }
+.qna-filter-row { display: flex !important; flex: 0 0 auto !important; gap: 6px !important; }
+.qna-filter-row + .qna-filter-row { padding-left: 10px !important; border-left: 1px solid #dbeafe !important; }
+.qna-filter-row button, .qna-feed-sort-trigger { min-height: 34px !important; padding: 0 11px !important; border: 1px solid transparent !important; border-radius: 17px !important; background: transparent !important; color: #475569 !important; white-space: nowrap !important; font-size: 13px !important; font-weight: 600 !important; }
+.qna-filter-row button[aria-pressed="true"], .qna-feed-sort-trigger { border-color: #93c5fd !important; background: #dbeafe !important; color: #0f2742 !important; }
+.qna-feed-sort-trigger { margin-left: auto !important; }
+.qna-feed-page .qna-feed-section { padding: 0 !important; }
+.qna-feed-page .qna-feed-list { display: grid !important; grid-template-columns: repeat(2, minmax(360px, 1fr)) !important; gap: 16px !important; }
+.qna-feed-page .qna-help-card { display: flex !important; min-width: 0 !important; min-height: 0 !important; padding: 18px !important; border: 1px solid #cbdbea !important; border-radius: 10px !important; background: #fff !important; box-shadow: none !important; cursor: pointer !important; }
+.qna-feed-page .qna-help-card:hover, .qna-feed-page .qna-help-card:focus-visible { border-color: #1d4ed8 !important; outline: none !important; }
+.qna-feed-page .qna-help-card-top { min-height: 28px !important; align-items: center !important; }
+.qna-feed-page .qna-help-card h3 { margin: 12px 0 6px !important; color: #0f2742 !important; font-size: 18px !important; font-weight: 700 !important; line-height: 1.4 !important; }
+.qna-feed-page .qna-help-card-preview { display: -webkit-box !important; margin: 0 !important; overflow: hidden !important; color: #475569 !important; line-height: 1.55 !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; }
+.qna-feed-page .qna-help-card-animal { margin: 14px 0 0 !important; color: #334155 !important; font-size: 13px !important; font-weight: 600 !important; }
+.qna-feed-page .qna-help-card footer { margin-top: 16px !important; color: #64748b !important; font-size: 12px !important; }
+.qna-feed-page .qna-help-card .post-author { color: #334155 !important; }
+.qna-feed-page .qna-status.waiting { background: #dbeafe !important; color: #1d4ed8 !important; }
+.qna-feed-page .qna-status.answered { background: #e0e7ff !important; color: #3730a3 !important; }
+.qna-feed-page .qna-status.resolved { background: #dcfce7 !important; color: #166534 !important; }
+.qna-card-menu { position: relative !important; margin-left: auto !important; }
+.qna-card-menu-trigger { width: 36px !important; height: 36px !important; border: 0 !important; border-radius: 18px !important; background: transparent !important; color: #64748b !important; font-size: 22px !important; line-height: 1 !important; }
+.qna-card-menu-popover { position: absolute !important; z-index: 3 !important; top: 34px !important; right: 0 !important; min-width: 76px !important; padding: 4px !important; border: 1px solid #cbdbea !important; border-radius: 8px !important; background: #fff !important; }
+.qna-card-menu-popover button { width: 100% !important; padding: 8px 10px !important; border: 0 !important; background: transparent !important; color: #b91c1c !important; text-align: left !important; }
+.qna-feed-page .qna-attachment-summary { margin-top: 14px !important; padding-top: 12px !important; border-top: 1px solid #e2e8f0 !important; color: #1d4ed8 !important; font-size: 12px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-attachment-summary span + span::before { content: ' · '; color: #94a3b8 !important; }
+.qna-feed-page .qna-empty-state { min-height: 320px !important; padding: 72px 16px !important; }
+.qna-feed-page .qna-empty-icon { color: #1d4ed8 !important; }
+.qna-feed-page .qna-empty-state strong { color: #334155 !important; }
+.qna-feed-page .qna-empty-state button { margin-top: 14px !important; border: 0 !important; background: transparent !important; color: #1d4ed8 !important; font-weight: 700 !important; }
+
+@media (max-width: 760px) {
+  .qna-feed-page { padding: 16px 16px 92px !important; }
+  .qna-feed-page .qna-feed-head { align-items: center !important; margin-bottom: 14px !important; }
+  .qna-feed-page .qna-feed-head h2 { font-size: 22px !important; }
+  .qna-feed-page .qna-feed-head p { display: none !important; }
+  .qna-create-button { width: 42px !important; min-width: 42px !important; padding: 0 !important; overflow: hidden !important; font-size: 0 !important; }
+  .qna-create-button::before { content: '+'; font-size: 25px; line-height: 1; }
+  .qna-filter-bar { align-items: flex-start !important; flex-wrap: wrap !important; gap: 8px !important; overflow: visible !important; }
+  .qna-filter-row { max-width: 100% !important; overflow-x: auto !important; }
+  .qna-filter-row + .qna-filter-row { padding-left: 0 !important; border-left: 0 !important; }
+  .qna-feed-sort-trigger { margin-left: auto !important; }
+  .qna-feed-page .qna-feed-list { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .qna-feed-page .qna-help-card { padding: 16px !important; }
+  .qna-feed-page .qna-help-card h3 { font-size: 17px !important; }
+}
+
 /* 2026-07-22 My Pet management summary cards. */
 .my-pet-dashboard .my-pet-section.my-pet-dashboard-panel {
   padding: 0 !important;
@@ -2134,7 +2282,7 @@ textarea {
   margin: 0 auto;
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(255, 253, 248, 0.94);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 10px 28px rgba(20, 48, 46, 0.14);
   backdrop-filter: blur(14px);
 }
@@ -2429,7 +2577,7 @@ textarea {
 .qna-detail {
   width: min(100%, 780px);
   margin: 0 auto;
-  background: #fffdfa;
+  background: #fff;
 }
 
 .qna-toolbar {
@@ -2753,7 +2901,7 @@ textarea {
   margin: 0 auto;
   padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
   border-radius: 18px 18px 0 0;
-  background: #fffdfa;
+  background: #fff;
 }
 
 .qna-sort-sheet h3 {
@@ -2820,7 +2968,7 @@ textarea {
   place-items: center;
   padding: 0 9px;
   border-radius: 999px;
-  background: #e5edf6;
+  background: #fff;
   color: #2563eb;
   font-size: 0.76rem;
   font-weight: 900;
@@ -2844,7 +2992,7 @@ textarea {
 }
 
 .qna-status.unresolved {
-  background: #fff7e8;
+  background: #fff;
   color: #9a6a10;
 }
 
@@ -3290,7 +3438,7 @@ textarea {
   padding: 10px 18px 20px;
   overflow-y: auto;
   border-radius: 18px 18px 0 0;
-  background: #fffdfa;
+  background: #fff;
   box-shadow: 0 -18px 40px rgba(20, 48, 46, 0.18);
 }
 
@@ -4039,7 +4187,7 @@ textarea {
   padding: 6px;
   border: 1px solid rgba(20, 48, 46, 0.1);
   border-radius: 14px;
-  background: rgba(255, 253, 248, 0.94);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 10px 32px rgba(20, 48, 46, 0.16);
   backdrop-filter: blur(16px);
 }
@@ -4075,7 +4223,7 @@ textarea {
   padding: 8px 0;
   border: 1px solid rgba(7, 157, 150, 0.18);
   border-radius: 999px 0 0 999px;
-  background: rgba(255, 253, 248, 0.96);
+  background: rgba(255, 255, 255, 0.96);
   color: #1d4ed8;
   box-shadow: -8px 10px 24px rgba(20, 48, 46, 0.12);
   font-size: 0.68rem;
@@ -4160,7 +4308,7 @@ textarea {
   pointer-events: auto;
   border: 2px solid rgba(7, 157, 150, 0.72);
   border-radius: 999px;
-  background: rgba(255, 253, 248, 0.9);
+  background: rgba(255, 255, 255, 0.9);
   color: #2563eb;
   box-shadow: 0 10px 30px rgba(11, 148, 139, 0.12);
   font-size: 0.88rem;
@@ -4215,7 +4363,7 @@ textarea {
   padding: 0 12px;
   border: 1px solid rgba(7, 157, 150, 0.18);
   border-radius: 999px;
-  background: rgba(255, 253, 248, 0.92);
+  background: rgba(255, 255, 255, 0.92);
   color: #52708d;
   font-size: 0.78rem;
   font-weight: 900;
@@ -4237,7 +4385,7 @@ textarea {
   padding: 14px;
   border: 1px solid rgba(7, 157, 150, 0.14);
   border-radius: 18px;
-  background: rgba(255, 253, 248, 0.95);
+  background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 16px 44px rgba(20, 48, 46, 0.14);
   backdrop-filter: blur(16px);
 }
@@ -4541,7 +4689,7 @@ textarea {
   overflow-y: auto;
   overscroll-behavior: contain;
   border-radius: 20px;
-  background: rgba(255, 253, 248, 0.97);
+  background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 18px 48px rgba(20, 48, 46, 0.16);
   backdrop-filter: blur(16px);
 }
@@ -4562,7 +4710,7 @@ textarea {
   max-width: none;
   margin: 0;
   border-radius: 18px;
-  background: rgba(255, 253, 248, 0.96);
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 16px 44px rgba(20, 48, 46, 0.14);
   backdrop-filter: blur(16px);
 }
@@ -4754,7 +4902,7 @@ textarea {
   width: 14px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 253, 248, 0.55);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .map-hospital-panel strong {
@@ -7574,7 +7722,7 @@ textarea {
 .my-pet-dashboard .my-pet-search input {
   min-height: 42px;
   padding-left: 38px;
-  background: #fffdfa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371827b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") no-repeat 14px center;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371827b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") no-repeat 14px center;
 }
 
 .my-pet-dashboard .filter-tags {
@@ -7968,7 +8116,7 @@ textarea {
   padding: 8px;
   border: 1px solid rgba(7, 157, 150, 0.14);
   border-radius: 18px;
-  background: rgba(255, 253, 248, 0.96);
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 14px 38px rgba(20, 48, 46, 0.13);
   backdrop-filter: blur(16px);
 }
@@ -8300,7 +8448,7 @@ textarea {
     padding: 7px 18px 9px;
     border: 1px solid rgba(7, 157, 150, 0.16);
     border-radius: 999px 999px 0 0;
-    background: rgba(255, 253, 248, 0.96);
+    background: rgba(255, 255, 255, 0.96);
     color: #1d4ed8;
     box-shadow: 0 -10px 26px rgba(20, 48, 46, 0.12);
     font-size: 0.82rem;
@@ -8468,7 +8616,7 @@ textarea {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: #f7f5ed;
+  background: #fff;
   color: #163b63;
 }
 
@@ -8664,7 +8812,7 @@ textarea {
   padding: 28px;
   border: 1px solid #dbeafe;
   border-radius: 8px;
-  background: #fffef9;
+  background: #fff;
   box-shadow: 0 18px 50px rgb(31 70 59 / 10%);
 }
 
@@ -10584,7 +10732,7 @@ button[aria-pressed="true"],
 .map-side-panel.collapsed .map-side-collapse-toggle:hover:not(:disabled),
 .map-side-panel.collapsed .map-side-collapse-toggle:focus-visible {
   border-color: rgba(7, 157, 150, 0.18) !important;
-  background: rgba(255, 253, 248, 0.96) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
   color: #1d4ed8 !important;
   box-shadow: -8px 10px 24px rgba(20, 48, 46, 0.12) !important;
   transform: translateY(-50%) !important;
