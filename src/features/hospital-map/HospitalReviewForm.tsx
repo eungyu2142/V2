@@ -26,6 +26,7 @@ type HospitalReviewFormProps = {
   medicineRecognitionStatus: string
   selectedTags: string[]
   canSubmit: boolean
+  submitLabel?: string
   onRatingChange: (value: number) => void
   onBodyChange: (value: string) => void
   onVisitDateChange: (value: string) => void
@@ -123,6 +124,7 @@ export default function HospitalReviewForm({
   medicineRecognitionStatus,
   selectedTags,
   canSubmit,
+  submitLabel,
   onRatingChange,
   onBodyChange,
   onVisitDateChange,
@@ -258,7 +260,7 @@ export default function HospitalReviewForm({
 
       <div className="step-actions review-form-actions">
         <button type="button" className="step-secondary" onClick={onSaveDraft}>{text.saveDraft}</button>
-        <button type="submit" className="step-primary" disabled={!canSubmit}>{text.submit}</button>
+        <button type="submit" className="step-primary" disabled={!canSubmit}>{submitLabel ?? text.submit}</button>
       </div>
     </form>
   )

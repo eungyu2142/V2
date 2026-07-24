@@ -1,4 +1,4 @@
-# Special Animal Care PWA Requirements
+﻿# Special Animal Care PWA Requirements
 
 이 문서는 사용자가 제시한 전체 기능 개요를 이 프로젝트의 기준 요구사항으로 정리한 것이다. 이후 구현, 리팩터링, UI 수정 시 이 문서를 우선 참고한다.
 
@@ -106,106 +106,6 @@
 - 병원 분위기가 차분해요
 - 재방문하고 싶어요
 - 태그 직접 작성 가능
-
-## 2. 나눔
-
-### 목록
-
-- 나눔 글 목록은 최신순이다.
-- 목록에서는 머리글만 보인다.
-- 사진 첨부 시 사진도 보인다.
-- 펼쳐서 더보기가 가능하다.
-- 화면 상단에 검색창이 있다.
-
-### 카테고리
-
-카테고리 선택은 추후 확장 가능하도록 설계한다.
-
-대분류:
-- 보류
-- 파충류
-- 조류
-- 설치류
-- 양서류
-- 먹이
-- 용품
-
-파충류:
-- 개코
-- 크레스티드게코
-- 레오파드게코
-- 펫테일게코
-- 가고일게코
-- 차화게코
-- 리키에너스
-- 토케이게코
-- 데이게코
-- 납테일게코
-- 기타
-- 비어디드래곤
-- 이구아나
-- 카멜레온
-- 왕도마뱀
-- 스킨크
-- 육지 거북
-- 수생 습지 거북
-- 콘스네이크
-- 킹스네이크
-- 볼파이톤
-- 보아-파이톤
-- 호그노즈
-- 기타 도마뱀
-- 기타 뱀
-
-조류:
-- 앵무새
-- 닭
-- 기타
-
-설치류:
-- 슈가글라이더
-- 고슴도치
-- 햄스터
-- 기타
-
-양서류:
-- 팩맨
-- 트리프록
-- 두꺼비, 토드
-- 뉴트
-- 살라만다
-- 아홀로틀
-- 기타
-
-먹이:
-- 영양제
-- 귀뚜라미
-- 밀웜
-- 누에
-- 마우스
-- 사료
-- 기타
-
-용품:
-- 사육장
-- 식급수기
-- 은신처
-- 바닥재
-- 온습도계
-- 난방용품
-- 기타
-
-### 글쓰기
-
-- `+` 버튼으로 분양/나눔 글을 작성한다.
-- 작성 필드:
-  - 머리글
-  - 분류
-  - 먹이
-  - 용품
-  - 직접 작성
-  - 사진 첨부 최대 3장
-  - 동영상 최대 1개
 
 ## 3. 질문 QNA
 
@@ -317,7 +217,6 @@
 
 - 좋아요한 병원
 - 좋아요한 리뷰
-- 좋아요한 분양/나눔글
 - 좋아요한 질문
 - 임시 저장
   - 리뷰
@@ -344,3 +243,5 @@
 - supportedAnimals stores specific matched animal categories. If no specific category is found, the app shows the hospital as 기타.
 - classification is confirmed when a hospital is found through specific animal keywords, multiple queries, or has supported animals; otherwise it is candidate.
 - Reviews, likes, recent treated species, and user activity remain app DB/user-data features and update immediately without waiting for weekly collection.
+
+

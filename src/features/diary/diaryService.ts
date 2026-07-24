@@ -110,6 +110,14 @@ export async function completeDailyTask(taskId: string) {
   return data as PetRecord
 }
 
+export async function markDailyTaskCompleted(taskId: string) {
+  const { error } = await supabase
+    .from('daily_tasks')
+    .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', taskId)
+  if (error) throw error
+}
+
 export async function undoDailyTask(taskId: string) {
   const { error } = await supabase.rpc('undo_daily_task', { p_task_id: taskId })
   if (error) throw error

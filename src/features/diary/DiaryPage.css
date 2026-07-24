@@ -6,6 +6,8 @@
 .diary-pet-profile small{color:#52708d}
 .diary-pet-avatar{display:grid;width:52px;height:52px;place-items:center;flex:0 0 auto;border-radius:50%;background:#dbeafe;font-size:1.7rem}
 .diary-pet-bar select{min-height:42px;padding:0 34px 0 12px;border:1px solid #cbdbea;border-radius:8px;background:#fff}
+.diary-pet-qna-button{min-height:38px;padding:0 14px;border:1px solid #cbdbea;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:900;cursor:pointer}
+.diary-pet-qna-button:hover{border-color:#2563eb;background:#bfdbfe}
 
 .diary-segment{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:min(360px,100%);margin:12px 0 4px;padding:4px;border:1px solid #cbdbea;border-radius:8px;background:#dbeafe}
 .diary-segment button{min-height:40px;border:0;border-radius:6px;background:transparent;color:#52708d;font-weight:900}
@@ -745,6 +747,129 @@
   border-color: #0f2742;
   background: #0f2742;
   color: #fff;
+}
+
+.routine-recommendation-field {
+  display: grid;
+  gap: 10px;
+}
+
+.routine-recommendation-field > label {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #0f2742;
+}
+
+.routine-recommendation-field > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.routine-recommendation-field button:not(.routine-more-button) {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #cbdbea;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f2742;
+  font-weight: 900;
+  text-align: left;
+}
+
+.routine-recommendation-field button.selected {
+  border-color: #0f2742;
+  background: #0f2742;
+  color: #fff;
+}
+
+.routine-recommendation-field button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  background: #eef3f8;
+}
+
+.routine-recommendation-field button em {
+  margin-left: auto;
+  color: #52708d;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.routine-more-button {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font-weight: 900;
+}
+
+.routine-recommendation-field small {
+  color: #52708d;
+  font-weight: 700;
+}
+
+.custom-routine-name-field,
+.date-memo-composer label {
+  display: grid;
+  gap: 8px;
+  color: #0f2742;
+  font-weight: 900;
+}
+
+.custom-routine-name-field input,
+.date-memo-composer textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #cbdbea;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f2742;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.date-memo-composer {
+  display: grid;
+  gap: 10px;
+  max-width: 760px;
+  margin: 14px auto 0;
+  padding-top: 14px;
+  border-top: 1px solid #cbdbea;
+}
+
+.date-memo-composer textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.date-memo-composer button {
+  justify-self: end;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #0f2742;
+  color: #fff;
+  font-weight: 900;
+}
+
+.date-memo-composer button:disabled {
+  opacity: 0.45;
+}
+
+.routine-field-error {
+  margin: 0;
+  color: #b45309;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .step-actions .create-submit {

@@ -47,7 +47,32 @@ export type PetRecord = {
   status?: 'completed' | 'manual'
 }
 
-export type CareTaskType = 'feed' | 'water' | 'cleaning'
+export type CareTaskType =
+  | 'feed'
+  | 'water'
+  | 'mist'
+  | 'temperature'
+  | 'humidity'
+  | 'light'
+  | 'cleaning'
+  | 'partial_cleaning'
+  | 'full_cleaning'
+  | 'substrate_change'
+  | 'bedding_tidy'
+  | 'bedding_change'
+  | 'chew_check'
+  | 'wheel_check'
+  | 'water_temperature'
+  | 'water_quality'
+  | 'cage_floor_cleaning'
+  | 'cage_full_cleaning'
+  | 'food_bowl_cleaning'
+  | 'water_bowl_cleaning'
+  | 'perch_cleaning'
+  | 'play_interaction'
+  | 'weight'
+  | 'status_check'
+  | 'custom'
 
 export type CarePlan = {
   id: string

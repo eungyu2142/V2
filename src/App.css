@@ -40,6 +40,23 @@ html {
   }
 }
 
+/* Q&A attachment preview: show media or record visualization beside the question. */
+.qna-feed-page .qna-card-main { display: grid !important; grid-template-columns: minmax(0, 1fr) 92px !important; gap: 14px !important; align-items: start !important; }
+.qna-feed-page .qna-card-media { width: 92px !important; height: 92px !important; overflow: hidden !important; border-radius: 10px !important; background: #f2f4f7 !important; }
+.qna-feed-page .qna-card-media > img { display: block !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.qna-card-visualization { position: relative !important; display: flex !important; align-items: end !important; justify-content: center !important; gap: 5px !important; width: 100% !important; height: 92px !important; padding: 20px 12px 14px !important; background: #eff6ff !important; }
+.qna-card-visualization span { position: absolute !important; top: 9px !important; left: 10px !important; color: #475467 !important; font-size: 11px !important; font-weight: 700 !important; }
+.qna-card-visualization i { display: block !important; width: 10px !important; min-height: 12px !important; border-radius: 4px 4px 2px 2px !important; background: #93c5fd !important; }
+
+@media (max-width: 360px) {
+  .qna-feed-page .qna-card-main { grid-template-columns: minmax(0, 1fr) 76px !important; gap: 10px !important; }
+  .qna-feed-page .qna-card-media { width: 76px !important; height: 76px !important; }
+}
+
+.qna-card-media .qna-card-visualization { min-height: 76px !important; height: 92px !important; align-items: end !important; }
+.qna-card-visualization i { flex: 0 0 10px !important; max-height: 58px !important; }
+.record-picker-bars, .qna-diary-chart { visibility: visible !important; opacity: 1 !important; }
+
 /* Final mobile navigation visibility and selected-state guarantee. */
 @media (max-width: 760px) {
   .map-shell .bottom-nav {
@@ -47,6 +64,773 @@ html {
     display: grid !important;
     visibility: visible !important;
     opacity: 1 !important;
+  }
+}
+
+/* Final My Pet navy cleanup: keep registration and cards away from green accents. */
+.my-pet-dashboard .my-pet-search,
+.my-pet-dashboard .filter-tags button,
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card,
+.pet-add-inline,
+.pet-photo-picker,
+.pet-confirm-card {
+  border-color: var(--ui-border) !important;
+}
+
+.my-pet-dashboard .my-pet-search span,
+.my-pet-dashboard .pet-list-toolbar .section-title span,
+.pet-add-inline,
+.my-pet-dashboard .pet-card-click-hint,
+.my-pet-dashboard .pet-management-card .pet-card-icon .category-tag-icon,
+.pet-photo-picker,
+.pet-photo-picker .category-tag-icon,
+.pet-complete-summary .category-tag-icon {
+  color: var(--ui-primary) !important;
+}
+
+.my-pet-dashboard-heading h2,
+.my-pet-dashboard .pet-list-toolbar h2,
+.my-pet-dashboard .my-pet-search input,
+.pet-confirm-card strong,
+.pet-basic-step h2,
+.pet-confirm-step h2 {
+  color: var(--ui-primary-strong) !important;
+}
+
+.my-pet-dashboard .filter-tags button {
+  border-color: var(--ui-border) !important;
+  background: #fff !important;
+  color: var(--ui-text) !important;
+}
+
+.my-pet-dashboard .filter-tags button.active,
+.my-pet-dashboard .filter-tags button[aria-pressed="true"] {
+  border-color: var(--ui-primary-strong) !important;
+  background: var(--ui-primary-strong) !important;
+  color: #fff !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card {
+  border-color: var(--ui-border) !important;
+  box-shadow: 0 4px 14px rgba(15, 39, 66, 0.05) !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:hover,
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:focus-visible {
+  border-color: var(--ui-primary) !important;
+  box-shadow: 0 6px 18px rgba(15, 39, 66, 0.08) !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-icon,
+.pet-photo-picker,
+.pet-complete-summary .pet-card-icon {
+  background: var(--ui-primary-soft) !important;
+}
+
+.pet-photo-picker {
+  min-height: 104px !important;
+  border-style: dashed !important;
+  border-radius: 14px !important;
+}
+
+.step-text-field .step-label {
+  position: static !important;
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  color: var(--ui-primary-strong) !important;
+  font-size: 0.9rem !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+}
+
+/* Final step field alignment: labels must never sit inside inputs. */
+.step-field {
+  position: static !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 8px !important;
+  align-items: start !important;
+}
+
+.step-field > span:first-child {
+  position: static !important;
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  color: var(--ui-primary-strong) !important;
+  font-size: 0.9rem !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+}
+
+.step-field input:not([type="file"]),
+.step-field textarea,
+.step-field select {
+  display: block !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: var(--ui-text) !important;
+  line-height: 1.35 !important;
+}
+
+/* Q&A mobile list refresh: compact controls, clear cards, separated metadata. */
+.qna-feed-page {
+  width: min(100%, 900px) !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  padding: 24px 16px 150px !important;
+  background: #f7f8fa !important;
+}
+.qna-feed-page .qna-feed-head { margin-bottom: 12px !important; }
+.qna-feed-page .qna-feed-head h2 { font-size: 24px !important; line-height: 1.25 !important; }
+.qna-feed-page .qna-feed-head p { margin-top: 4px !important; font-size: 13px !important; }
+.qna-feed-page .qna-feed-search { min-height: 46px !important; margin-bottom: 12px !important; border: 1px solid #e4e7ec !important; border-radius: 11px !important; }
+.qna-feed-page .qna-feed-search:focus-within { border-color: #1d4ed8 !important; }
+.qna-feed-page .qna-filter-bar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  grid-template-areas: "status status" "category sort" !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 18px !important;
+  overflow: visible !important;
+}
+.qna-feed-page .qna-filter-row { min-width: 0 !important; gap: 6px !important; overflow-x: auto !important; scrollbar-width: none !important; }
+.qna-feed-page .qna-filter-row::-webkit-scrollbar { display: none !important; }
+.qna-feed-page .qna-filter-row:first-child { grid-area: status !important; }
+.qna-feed-page .qna-filter-row:nth-child(2) { grid-area: category !important; padding-left: 0 !important; border-left: 0 !important; }
+.qna-feed-page .qna-filter-row button { min-height: 32px !important; height: 32px !important; padding: 0 12px !important; border: 1px solid #e4e7ec !important; border-radius: 8px !important; background: #fff !important; color: #344054 !important; font-size: 12px !important; font-weight: 600 !important; flex: 0 0 auto !important; }
+.qna-feed-page .qna-filter-row button[aria-pressed="true"] { border-color: #1d4ed8 !important; background: #1d4ed8 !important; color: #fff !important; }
+.qna-feed-page .qna-feed-sort-trigger { grid-area: sort !important; min-width: 72px !important; min-height: 32px !important; height: 32px !important; margin-left: 0 !important; padding: 0 10px !important; border: 1px solid #d0d5dd !important; border-radius: 8px !important; background: #fff !important; color: #475467 !important; font-size: 12px !important; font-weight: 600 !important; white-space: nowrap !important; }
+.qna-feed-page .qna-feed-section { margin-top: 0 !important; }
+.qna-feed-page .qna-feed-list { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+.qna-feed-page .qna-help-card { display: block !important; padding: 16px !important; border: 1px solid #e4e7ec !important; border-radius: 13px !important; background: #fff !important; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03) !important; }
+.qna-feed-page .qna-help-card-top { min-height: 28px !important; }
+.qna-feed-page .qna-status { min-height: 25px !important; padding: 0 8px !important; border-radius: 7px !important; font-size: 11px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-category { padding: 0 !important; background: transparent !important; color: #667085 !important; font-size: 12px !important; font-weight: 500 !important; }
+.qna-feed-page .qna-help-card h3 { margin: 10px 0 0 !important; color: #172033 !important; font-size: 17px !important; font-weight: 700 !important; line-height: 1.4 !important; }
+.qna-feed-page .qna-help-card-preview { margin-top: 8px !important; color: #475467 !important; font-size: 14px !important; line-height: 1.5 !important; }
+.qna-feed-page .qna-help-card-animal { margin: 13px 0 0 !important; color: #475467 !important; font-size: 13px !important; font-weight: 600 !important; }
+.qna-feed-page .qna-help-card footer { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 5px !important; margin-top: 14px !important; color: #667085 !important; font-size: 12px !important; }
+.qna-card-author-meta, .qna-card-stats { display: flex !important; align-items: center !important; gap: 5px !important; min-height: 28px !important; }
+.qna-card-author-meta .post-author { display: inline-flex !important; align-items: center !important; gap: 7px !important; color: #475467 !important; }
+.qna-card-author-meta .user-avatar { width: 28px !important; height: 28px !important; }
+.qna-card-stats { color: #667085 !important; }
+.qna-card-stats span + span::before { content: ' · '; color: #98a2b3 !important; margin-right: 5px !important; }
+.qna-feed-page .qna-attachment-summary { display: flex !important; flex-wrap: wrap !important; gap: 5px !important; margin-top: 12px !important; padding-top: 0 !important; border-top: 0 !important; color: #667085 !important; font-size: 13px !important; font-weight: 500 !important; }
+.qna-feed-page .qna-attachment-summary span + span::before { content: ' · '; color: #98a2b3 !important; margin-right: 5px !important; }
+.qna-feed-page .qna-card-menu-trigger { width: 44px !important; height: 44px !important; color: #667085 !important; }
+.qna-feed-page .qna-card-menu-popover { top: 40px !important; }
+.qna-feed-page .qna-empty-state { min-height: 260px !important; padding: 48px 16px !important; }
+.qna-feed-page .qna-mobile-fab { right: 16px !important; bottom: calc(88px + env(safe-area-inset-bottom)) !important; width: 54px !important; height: 54px !important; box-shadow: 0 6px 16px rgba(16, 24, 40, 0.16) !important; }
+
+@media (min-width: 761px) {
+  .qna-feed-page { padding: 24px 0 96px !important; }
+  .qna-feed-page .qna-filter-bar { grid-template-columns: auto minmax(0, 1fr) auto !important; grid-template-areas: "status category sort" !important; }
+  .qna-feed-page .qna-filter-row:first-child { grid-area: status !important; }
+  .qna-feed-page .qna-filter-row:nth-child(2) { grid-area: category !important; }
+  .qna-feed-page .qna-help-card footer { flex-direction: row !important; align-items: center !important; justify-content: space-between !important; }
+  .qna-feed-page .qna-card-stats { margin-left: auto !important; }
+  .qna-feed-page .qna-mobile-fab { display: none !important; }
+}
+
+/* Final registration progress labels: four steps must stay on one row. */
+.step-progress-labels,
+.step-progress-labels-4 {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: start !important;
+  gap: 0 !important;
+  width: 100% !important;
+  margin-top: 8px !important;
+  white-space: nowrap !important;
+}
+
+.step-progress-labels span {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-align: center !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 560px) {
+  .step-progress-labels,
+  .step-progress-labels-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    row-gap: 0 !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* 2026-07-23 My Pet registration photo step and navy accent cleanup. */
+.my-pet-dashboard .my-pet-search,
+.my-pet-dashboard .filter-tags button,
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card,
+.pet-add-inline,
+.pet-photo-picker,
+.pet-confirm-card {
+  border-color: var(--ui-border) !important;
+}
+
+.my-pet-dashboard .my-pet-search span,
+.my-pet-dashboard .pet-list-toolbar .section-title span,
+.pet-add-inline,
+.my-pet-dashboard .pet-card-click-hint,
+.my-pet-dashboard .pet-management-card .pet-card-icon .category-tag-icon,
+.pet-photo-picker,
+.pet-photo-picker .category-tag-icon,
+.pet-complete-summary .category-tag-icon {
+  color: var(--ui-primary) !important;
+}
+
+.my-pet-dashboard-heading h2,
+.my-pet-dashboard .pet-list-toolbar h2,
+.my-pet-dashboard .my-pet-search input,
+.pet-confirm-card strong,
+.pet-basic-step h2 {
+  color: var(--ui-primary-strong) !important;
+}
+
+.my-pet-dashboard .filter-tags button {
+  border-color: var(--ui-border) !important;
+  background: #fff !important;
+  color: var(--ui-text) !important;
+}
+
+.my-pet-dashboard .filter-tags button.active,
+.my-pet-dashboard .filter-tags button[aria-pressed="true"] {
+  border-color: var(--ui-primary-strong) !important;
+  background: var(--ui-primary-strong) !important;
+  color: #fff !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card {
+  border-color: var(--ui-border) !important;
+  box-shadow: 0 4px 14px rgba(15, 39, 66, 0.05) !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:hover,
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:focus-visible {
+  border-color: var(--ui-primary) !important;
+  box-shadow: 0 6px 18px rgba(15, 39, 66, 0.08) !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-icon,
+.pet-photo-picker,
+.pet-complete-summary .pet-card-icon {
+  background: var(--ui-primary-soft) !important;
+}
+
+.pet-photo-picker {
+  min-height: 104px !important;
+  border-style: dashed !important;
+  border-radius: 14px !important;
+}
+
+.pet-confirm-step .pet-photo-picker {
+  order: 2;
+}
+
+/* 2026-07-23 My Pet selectable home and four-step registration flow. */
+.my-pet-dashboard {
+  width: min(100%, 980px) !important;
+  margin: 0 auto !important;
+  gap: 18px !important;
+}
+
+.my-pet-dashboard .my-pet-tools.my-pet-dashboard-panel,
+.my-pet-dashboard .my-pet-section.my-pet-dashboard-panel {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.my-pet-dashboard-heading {
+  margin: 0 0 14px !important;
+}
+
+.my-pet-dashboard-heading h2 {
+  font-size: 1.42rem !important;
+  line-height: 1.2 !important;
+}
+
+.my-pet-dashboard-heading p {
+  margin-top: 5px !important;
+  color: #5f716d !important;
+  font-size: 0.88rem !important;
+}
+
+.my-pet-dashboard .my-pet-search {
+  display: grid !important;
+  grid-template-columns: 26px minmax(0, 1fr) !important;
+  align-items: center !important;
+  height: 44px !important;
+  margin-bottom: 12px !important;
+  padding: 0 13px !important;
+  border: 1px solid rgba(20, 140, 130, 0.2) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+.my-pet-dashboard .my-pet-search span {
+  color: #148c82 !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+}
+
+.my-pet-dashboard .my-pet-search input {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #102b2a !important;
+  font-size: 0.92rem !important;
+}
+
+.my-pet-dashboard .filter-tags {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 18px 4px 2px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-inline: contain !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.my-pet-dashboard .filter-tags::-webkit-scrollbar {
+  display: none !important;
+}
+
+.my-pet-dashboard .filter-tags button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: max-content !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 14px !important;
+  border: 1px solid rgba(20, 140, 130, 0.28) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.74) !important;
+  color: #315653 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  white-space: nowrap !important;
+}
+
+.my-pet-dashboard .filter-tags button.active,
+.my-pet-dashboard .filter-tags button[aria-pressed="true"] {
+  border-color: #0f2742 !important;
+  background: #0f2742 !important;
+  color: #fff !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14) !important;
+}
+
+.my-pet-dashboard .filter-tags .category-tag-icon {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.my-pet-dashboard .pet-list-toolbar {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin: 4px 0 12px !important;
+}
+
+.my-pet-dashboard .pet-list-toolbar .section-title {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: baseline !important;
+  gap: 9px !important;
+}
+
+.my-pet-dashboard .pet-list-toolbar h2 {
+  margin: 0 !important;
+  color: #102b2a !important;
+  font-size: 1.05rem !important;
+}
+
+.my-pet-dashboard .pet-list-toolbar .section-title span {
+  color: #148c82 !important;
+  font-size: 0.9rem !important;
+  font-weight: 900 !important;
+}
+
+.pet-add-inline {
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  border: 1px solid rgba(20, 140, 130, 0.28) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #148c82 !important;
+  font-weight: 900 !important;
+}
+
+.my-pet-dashboard .pet-list.card-view {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+  gap: 14px !important;
+  max-width: 760px !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 72px minmax(0, 1fr) 44px !important;
+  grid-template-areas:
+    "image body chevron"
+    "image summary menu"
+    "image record menu" !important;
+  gap: 9px 13px !important;
+  min-height: 136px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(20, 140, 130, 0.16) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 4px 14px rgba(16, 43, 42, 0.05) !important;
+  cursor: pointer !important;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease, transform 120ms ease !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:hover,
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:focus-visible {
+  border-color: rgba(20, 140, 130, 0.36) !important;
+  background: #fff !important;
+  box-shadow: 0 6px 18px rgba(16, 43, 42, 0.08) !important;
+  outline: none !important;
+  transform: none !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:active {
+  transform: scale(.99) !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-topline {
+  display: contents !important;
+}
+
+.my-pet-dashboard .pet-card-click-hint {
+  grid-area: chevron !important;
+  justify-self: end !important;
+  align-self: start !important;
+  color: #148c82 !important;
+  font-size: 1.7rem !important;
+  line-height: 1 !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-actions {
+  grid-area: menu !important;
+  position: relative !important;
+  align-self: end !important;
+  justify-self: end !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-more-button {
+  display: grid !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #607875 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-main {
+  display: contents !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-visual {
+  grid-area: image !important;
+  align-self: start !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-icon {
+  display: grid !important;
+  width: 72px !important;
+  height: 72px !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+  background: #dff5f1 !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-icon img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-icon .category-tag-icon {
+  width: 46px !important;
+  height: 46px !important;
+  color: #148c82 !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-body {
+  grid-area: body !important;
+  min-width: 0 !important;
+  align-self: start !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-identity {
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-identity strong {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  color: #102b2a !important;
+  font-size: 1.08rem !important;
+  font-weight: 950 !important;
+  line-height: 1.22 !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-identity small,
+.my-pet-dashboard .pet-card-meta {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  color: #526966 !important;
+  font-size: 0.8rem !important;
+  line-height: 1.3 !important;
+  white-space: normal !important;
+}
+
+.my-pet-dashboard .pet-card-meta span:not(:last-child)::after {
+  content: " · ";
+}
+
+.my-pet-dashboard .pet-description {
+  display: none !important;
+}
+
+.my-pet-dashboard .pet-today-summary {
+  grid-area: summary !important;
+  display: grid !important;
+  gap: 5px !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+.my-pet-dashboard .pet-summary-head {
+  display: block !important;
+  color: #102b2a !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+}
+
+.my-pet-dashboard .pet-summary-head:empty {
+  display: none !important;
+}
+
+.my-pet-dashboard .pet-today-summary p,
+.my-pet-dashboard .pet-latest-record {
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: #526966 !important;
+  font-size: 0.78rem !important;
+  line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.my-pet-dashboard .pet-plan-progress {
+  width: min(100%, 210px) !important;
+  height: 6px !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  background: #e4efec !important;
+}
+
+.my-pet-dashboard .pet-plan-progress span {
+  display: block !important;
+  height: 100% !important;
+  border-radius: inherit !important;
+  background: #148c82 !important;
+}
+
+.my-pet-dashboard .pet-latest-record {
+  grid-area: record !important;
+}
+
+.my-pet-dashboard .pet-latest-record b {
+  margin-right: 7px !important;
+  color: #148c82 !important;
+}
+
+.my-pet-dashboard .pet-card-footer {
+  display: none !important;
+}
+
+.pet-empty-state {
+  min-height: 260px !important;
+  padding: 28px 18px !important;
+  border: 1px dashed rgba(20, 140, 130, 0.26) !important;
+  border-radius: 16px !important;
+  background: rgba(255,255,255,.58) !important;
+}
+
+.pet-empty-icon {
+  display: grid !important;
+  width: 64px !important;
+  height: 64px !important;
+  place-items: center !important;
+  margin-bottom: 10px !important;
+  border-radius: 16px !important;
+  background: #dff5f1 !important;
+  color: #148c82 !important;
+}
+
+.pet-empty-icon .category-tag-icon {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.pet-basic-step,
+.pet-species-step,
+.pet-confirm-step {
+  display: grid !important;
+  gap: 16px !important;
+}
+
+.pet-basic-step h2 {
+  margin: 0 !important;
+  color: #102b2a !important;
+  font-size: 1.22rem !important;
+}
+
+.pet-photo-picker {
+  display: grid !important;
+  place-items: center !important;
+  gap: 8px !important;
+  min-height: 118px !important;
+  border: 1px dashed rgba(20, 140, 130, 0.32) !important;
+  border-radius: 16px !important;
+  background: #f8fffd !important;
+  color: #148c82 !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+.pet-photo-picker input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+}
+
+.pet-photo-picker img {
+  width: 84px !important;
+  height: 84px !important;
+  border-radius: 16px !important;
+  object-fit: cover !important;
+}
+
+.pet-photo-picker .category-tag-icon {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+.species-custom-toggle {
+  min-height: 42px !important;
+  border: 1px solid rgba(20, 140, 130, 0.28) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #148c82 !important;
+  font-weight: 900 !important;
+}
+
+.pet-confirm-card {
+  display: grid !important;
+  justify-items: center !important;
+  gap: 6px !important;
+  padding: 18px !important;
+  border: 1px solid rgba(20, 140, 130, 0.18) !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  text-align: center !important;
+}
+
+.pet-confirm-card strong {
+  color: #102b2a !important;
+  font-size: 1.2rem !important;
+}
+
+.pet-confirm-card span,
+.pet-confirm-card small {
+  color: #526966 !important;
+}
+
+.pet-complete-summary {
+  display: grid !important;
+  justify-items: center !important;
+  gap: 6px !important;
+  margin: 18px 0 !important;
+}
+
+@media (max-width: 520px) {
+  .my-pet-dashboard {
+    width: 100% !important;
+    gap: 16px !important;
+  }
+
+  .my-pet-dashboard .pet-list.card-view {
+    grid-template-columns: minmax(0, 1fr) !important;
+    max-width: none !important;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card {
+    grid-template-columns: 68px minmax(0, 1fr) 40px !important;
+    min-height: 132px !important;
+    padding: 14px !important;
+    gap: 8px 12px !important;
+  }
+
+  .my-pet-dashboard .pet-management-card .pet-card-icon {
+    width: 68px !important;
+    height: 68px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card,
+  .my-pet-dashboard .filter-tags button {
+    scroll-behavior: auto !important;
+    transition: none !important;
   }
 }
 
@@ -175,6 +959,17 @@ html {
 .qna-card-menu-trigger { width: 36px !important; height: 36px !important; border: 0 !important; border-radius: 18px !important; background: transparent !important; color: #64748b !important; font-size: 22px !important; line-height: 1 !important; }
 .qna-card-menu-popover { position: absolute !important; z-index: 3 !important; top: 34px !important; right: 0 !important; min-width: 76px !important; padding: 4px !important; border: 1px solid #cbdbea !important; border-radius: 8px !important; background: #fff !important; }
 .qna-card-menu-popover button { width: 100% !important; padding: 8px 10px !important; border: 0 !important; background: transparent !important; color: #b91c1c !important; text-align: left !important; }
+.qna-card-menu-popover button:not(.danger) { color: #344054 !important; }
+.qna-comment-head { display: flex !important; align-items: center !important; justify-content: space-between !important; }
+.qna-comment-menu { position: relative !important; }
+.qna-comment-menu > button { width: 44px !important; height: 44px !important; border: 0 !important; background: transparent !important; color: #667085 !important; font-size: 20px !important; }
+.qna-comment-menu > div { position: absolute !important; z-index: 4 !important; top: 38px !important; right: 0 !important; min-width: 92px !important; padding: 4px !important; border: 1px solid #e4e7ec !important; border-radius: 8px !important; background: #fff !important; }
+.qna-comment-menu > div button { width: 100% !important; padding: 8px !important; border: 0 !important; background: transparent !important; color: #b42318 !important; text-align: left !important; }
+.qna-owner-menu { position: relative !important; margin-left: auto !important; }
+.qna-owner-menu > button { width: 44px !important; height: 44px !important; border: 0 !important; border-radius: 22px !important; background: transparent !important; color: #667085 !important; font-size: 22px !important; }
+.qna-owner-menu > div { position: absolute !important; z-index: 5 !important; top: 42px !important; right: 0 !important; min-width: 118px !important; padding: 4px !important; border: 1px solid #e4e7ec !important; border-radius: 8px !important; background: #fff !important; }
+.qna-owner-menu > div button { display: block !important; width: 100% !important; padding: 9px 10px !important; border: 0 !important; background: transparent !important; color: #344054 !important; text-align: left !important; }
+.qna-owner-menu > div button.danger { color: #b42318 !important; }
 .qna-feed-page .qna-attachment-summary { margin-top: 14px !important; padding-top: 12px !important; border-top: 1px solid #e2e8f0 !important; color: #1d4ed8 !important; font-size: 12px !important; font-weight: 700 !important; }
 .qna-feed-page .qna-attachment-summary span + span::before { content: ' · '; color: #94a3b8 !important; }
 .qna-feed-page .qna-empty-state { min-height: 320px !important; padding: 72px 16px !important; }
@@ -187,8 +982,7 @@ html {
   .qna-feed-page .qna-feed-head { align-items: center !important; margin-bottom: 14px !important; }
   .qna-feed-page .qna-feed-head h2 { font-size: 22px !important; }
   .qna-feed-page .qna-feed-head p { display: none !important; }
-  .qna-create-button { width: 42px !important; min-width: 42px !important; padding: 0 !important; overflow: hidden !important; font-size: 0 !important; }
-  .qna-create-button::before { content: '+'; font-size: 25px; line-height: 1; }
+  .qna-create-button { display: none !important; }
   .qna-filter-bar { align-items: flex-start !important; flex-wrap: wrap !important; gap: 8px !important; overflow: visible !important; }
   .qna-filter-row { max-width: 100% !important; overflow-x: auto !important; }
   .qna-filter-row + .qna-filter-row { padding-left: 0 !important; border-left: 0 !important; }
@@ -196,6 +990,41 @@ html {
   .qna-feed-page .qna-feed-list { grid-template-columns: 1fr !important; gap: 12px !important; }
   .qna-feed-page .qna-help-card { padding: 16px !important; }
   .qna-feed-page .qna-help-card h3 { font-size: 17px !important; }
+}
+
+/* QNA final flow rules: one readable feed, one mobile writing action. */
+.app-shell:not(.map-shell) { background: #f7f8fa !important; }
+.qna-feed-page { max-width: 900px !important; background: #f7f8fa !important; color: #172033 !important; }
+.qna-feed-page .qna-feed-list { grid-template-columns: minmax(0, 1fr) !important; max-width: 900px !important; }
+.qna-feed-page .qna-help-card { border-color: #e4e7ec !important; }
+.qna-feed-page .qna-help-card h3 { color: #172033 !important; }
+.qna-feed-page .qna-help-card-preview { color: #475467 !important; }
+.qna-feed-page .qna-help-card footer { color: #667085 !important; }
+.qna-feed-page .qna-category { background: #f2f4f7 !important; color: #475467 !important; }
+.qna-feed-page .qna-filter-bar { margin-bottom: 20px !important; }
+.qna-feed-page .qna-filter-row button[aria-pressed="true"], .qna-feed-page .qna-feed-sort-trigger { background: #1d4ed8 !important; border-color: #1d4ed8 !important; color: #fff !important; }
+.qna-feed-page .qna-feed-sort-trigger { border-radius: 8px !important; }
+.qna-mobile-fab { display: none !important; }
+
+@media (max-width: 760px) {
+  .qna-feed-page { max-width: none !important; padding-bottom: 112px !important; }
+  .qna-feed-page .qna-feed-head h2 { color: #172033 !important; }
+  .qna-mobile-fab {
+    position: fixed !important;
+    z-index: 40 !important;
+    right: 16px !important;
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+    display: grid !important;
+    width: 56px !important;
+    height: 56px !important;
+    place-items: center !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #1d4ed8 !important;
+    color: #fff !important;
+    font-size: 30px !important;
+    box-shadow: 0 8px 20px rgba(29, 78, 216, 0.24) !important;
+  }
 }
 
 /* 2026-07-22 My Pet management summary cards. */
@@ -728,6 +1557,36 @@ html {
     bottom: calc(70px + env(safe-area-inset-bottom)) !important;
     width: auto !important;
     max-height: min(72vh, 620px) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .mobile-profile-button {
+    position: fixed !important;
+    top: calc(12px + env(safe-area-inset-top)) !important;
+    right: 14px !important;
+    z-index: 64 !important;
+    display: grid !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    place-items: center !important;
+    padding: 3px !important;
+    border: 1px solid rgba(15, 39, 66, 0.14) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    box-shadow: 0 10px 24px rgba(15, 39, 66, 0.14) !important;
+  }
+
+  .mobile-profile-button.active {
+    border-color: #0f2742 !important;
+    background: #dbeafe !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .mobile-profile-button {
+    display: none !important;
   }
 }
 
@@ -1865,6 +2724,31 @@ textarea {
 
 .menu-trigger span + span {
   margin-top: 4px;
+}
+
+.mobile-profile-button {
+  display: none;
+}
+
+.mobile-profile-button img,
+.mobile-profile-button span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.mobile-profile-button img {
+  object-fit: cover;
+}
+
+.mobile-profile-button span {
+  display: grid;
+  place-items: center;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 900;
 }
 
 .side-nav {
@@ -3810,6 +4694,31 @@ textarea {
 .qna-diary-attachment-head strong{font-size:.96rem;color:#0f2742}
 .qna-diary-attachment-head span{color:#52708d;font-size:.78rem}
 .qna-diary-attachment-head>button{width:30px;height:30px;border:0;background:transparent;color:#52708d;font-size:1.3rem;cursor:pointer}
+.qna-record-attach-sheet{display:grid;gap:14px;max-height:min(78vh,720px)}
+.qna-record-range-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.qna-record-range-tabs button{min-height:38px;border:1px solid #cbdbea;border-radius:8px;background:#f8fbff;color:#52708d;font-weight:800}
+.qna-record-range-tabs button.active{border-color:#2563eb;background:#dbeafe;color:#1d4ed8}
+.qna-record-selected-summary{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid rgba(15,39,66,.12);border-bottom:1px solid rgba(15,39,66,.12);font-size:.9rem}
+.qna-record-selected-summary span{color:#52708d}
+.qna-record-group-list{display:grid;gap:16px;overflow:auto;padding-right:4px}
+.qna-record-date-group{display:grid;gap:8px}
+.qna-record-date-group header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.qna-record-date-group header button{border:0;background:transparent;color:#1d4ed8;font-weight:800}
+.qna-record-check-row{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:10px 0;border-top:1px solid rgba(15,39,66,.1);cursor:pointer}
+.qna-record-check-row input{width:18px;height:18px;margin-top:2px;accent-color:#1d4ed8}
+.qna-record-check-row span{display:grid;gap:3px}
+.qna-record-check-row small{color:#52708d}
+.qna-record-attach-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid rgba(15,39,66,.12)}
+.qna-record-attach-actions button{min-height:40px;padding:0 14px;border:1px solid #cbdbea;border-radius:8px;background:#fff;color:#0f2742;font-weight:900}
+.qna-record-attach-actions button:last-child{border-color:#2563eb;background:#1d4ed8;color:#fff}
+.qna-record-attach-actions button:disabled{opacity:.45;cursor:not-allowed}
+.qna-diary-list-attachment{gap:12px}
+.qna-diary-record-groups{display:grid;gap:16px}
+.qna-diary-record-group{display:grid;gap:8px}
+.qna-diary-record-group h4{margin:0;color:#0f2742;font-size:.95rem}
+.qna-diary-record-group article{display:grid;gap:5px;padding:10px 0;border-top:1px solid rgba(15,39,66,.1)}
+.qna-diary-record-group article strong{font-size:.95rem;color:#0f2742}
+.qna-diary-record-group article img{max-width:160px;border-radius:8px}
 .qna-diary-chart-wrap{display:grid;gap:5px}
 .qna-diary-chart{height:148px;display:grid;grid-template-columns:repeat(auto-fit,minmax(28px,1fr));align-items:end;gap:5px;padding:10px 4px 0;border-bottom:1px solid #cbdbea}
 .qna-diary-point{display:grid;grid-template-rows:1fr auto auto;align-items:end;gap:4px;min-width:0;height:100%;padding:0;border:0;background:transparent;color:#52708d;cursor:pointer}
@@ -3832,6 +4741,8 @@ textarea {
 @keyframes qna-diary-pulse{50%{opacity:.45}}
 @media(min-width:900px){.qna-diary-attachment.draft,.qna-diary-attachment.posted{grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);column-gap:24px}.qna-diary-attachment-head,.qna-diary-expand{grid-column:1 / -1}.qna-diary-chart-wrap,.qna-diary-legend{grid-column:1}.qna-diary-details,.qna-diary-source{grid-column:2}.qna-diary-source{align-self:start}}
 @media(max-width:600px){.qna-diary-attachment{padding:13px 0}.qna-diary-chart{height:132px;gap:3px}.qna-diary-point-icons{font-size:.58rem}.qna-diary-point small{font-size:.59rem}.qna-diary-attachment-head span{font-size:.7rem}}
+.qna-diary-list-attachment.draft,.qna-diary-list-attachment.posted{grid-template-columns:1fr}
+.qna-diary-list-attachment .qna-diary-attachment-head,.qna-diary-list-attachment .qna-diary-expand,.qna-diary-list-attachment .qna-diary-record-groups{grid-column:1}
 
 .qna-compose-tools span {
   color: #52708d;
@@ -5215,6 +6126,30 @@ textarea {
   border-color: rgba(226, 87, 100, 0.28);
   background: #fff1f3;
   color: #e25764;
+}
+
+.review-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.review-manage-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(29, 78, 216, .2);
+  border-radius: 8px;
+  background: #fff;
+  color: #1d4ed8;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.review-manage-button.danger {
+  border-color: rgba(226, 87, 100, .26);
+  color: #d33f4f;
 }
 
 .review-summary,
@@ -11744,5 +12679,188 @@ button.selected,
     display: grid !important;
     visibility: visible !important;
     opacity: 1 !important;
+  }
+}
+/* Final My Pet navy cleanup: keep registration and cards away from green accents. */
+.my-pet-dashboard .my-pet-search,
+.my-pet-dashboard .filter-tags button,
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card,
+.pet-add-inline,
+.pet-photo-picker,
+.pet-confirm-card {
+  border-color: var(--ui-border) !important;
+}
+
+.my-pet-dashboard .my-pet-search span,
+.my-pet-dashboard .pet-list-toolbar .section-title span,
+.pet-add-inline,
+.my-pet-dashboard .pet-card-click-hint,
+.my-pet-dashboard .pet-management-card .pet-card-icon .category-tag-icon,
+.pet-photo-picker,
+.pet-photo-picker .category-tag-icon,
+.pet-complete-summary .category-tag-icon {
+  color: var(--ui-primary) !important;
+}
+
+.my-pet-dashboard-heading h2,
+.my-pet-dashboard .pet-list-toolbar h2,
+.my-pet-dashboard .my-pet-search input,
+.pet-confirm-card strong,
+.pet-basic-step h2,
+.pet-confirm-step h2 {
+  color: var(--ui-primary-strong) !important;
+}
+
+.my-pet-dashboard .filter-tags button {
+  border-color: var(--ui-border) !important;
+  background: #fff !important;
+  color: var(--ui-text) !important;
+}
+
+.my-pet-dashboard .filter-tags button.active,
+.my-pet-dashboard .filter-tags button[aria-pressed="true"] {
+  border-color: var(--ui-primary-strong) !important;
+  background: var(--ui-primary-strong) !important;
+  color: #fff !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card {
+  border-color: var(--ui-border) !important;
+  box-shadow: 0 4px 14px rgba(15, 39, 66, 0.05) !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:hover,
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card:focus-visible {
+  border-color: var(--ui-primary) !important;
+  box-shadow: 0 6px 18px rgba(15, 39, 66, 0.08) !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-icon,
+.pet-photo-picker,
+.pet-complete-summary .pet-card-icon {
+  background: var(--ui-primary-soft) !important;
+}
+
+.pet-photo-picker {
+  min-height: 104px !important;
+  border-style: dashed !important;
+  border-radius: 14px !important;
+}
+
+/* 2026-07-24 My Pet mobile card repair. */
+.my-pet-dashboard .pet-list.card-view {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+  gap: 14px !important;
+  max-width: 760px !important;
+}
+
+.my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card {
+  display: grid !important;
+  grid-template-columns: 72px minmax(0, 1fr) 32px !important;
+  grid-template-areas:
+    "image body chevron"
+    "image summary menu"
+    "image record menu" !important;
+  gap: 8px 12px !important;
+  min-height: 132px !important;
+  padding: 14px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  box-shadow: 0 4px 14px rgba(15, 39, 66, 0.05) !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-main,
+.my-pet-dashboard .pet-management-card .pet-card-visual,
+.my-pet-dashboard .pet-management-card .pet-card-body,
+.my-pet-dashboard .pet-management-card .pet-card-identity,
+.my-pet-dashboard .pet-management-card .pet-today-summary,
+.my-pet-dashboard .pet-management-card .pet-latest-record {
+  min-width: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-main {
+  display: contents !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-visual {
+  grid-area: image !important;
+  align-self: center !important;
+  justify-self: start !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-body {
+  grid-area: body !important;
+  align-self: center !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-today-summary {
+  grid-area: summary !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-latest-record {
+  grid-area: record !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-actions {
+  grid-area: menu !important;
+  align-self: end !important;
+  justify-self: end !important;
+}
+
+.my-pet-dashboard .pet-card-click-hint {
+  grid-area: chevron !important;
+  justify-self: end !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-icon {
+  width: 72px !important;
+  height: 72px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--ui-primary-soft) !important;
+}
+
+.my-pet-dashboard .pet-management-card .pet-card-identity strong {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  color: var(--ui-primary-strong) !important;
+  font-size: 1.05rem !important;
+  line-height: 1.25 !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 1 !important;
+}
+
+.my-pet-dashboard .pet-card-meta,
+.my-pet-dashboard .pet-management-card .pet-card-identity small {
+  display: block !important;
+  overflow: hidden !important;
+  color: var(--ui-muted) !important;
+  font-size: 0.78rem !important;
+  line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 760px) {
+  .my-pet-dashboard .pet-list.card-view {
+    grid-template-columns: 1fr !important;
+    max-width: none !important;
+    gap: 12px !important;
+  }
+
+  .my-pet-dashboard .pet-list.card-view .pet-card.pet-management-card {
+    grid-template-columns: 68px minmax(0, 1fr) 28px !important;
+    min-height: 124px !important;
+    padding: 14px !important;
+  }
+
+  .my-pet-dashboard .pet-management-card .pet-card-icon {
+    width: 68px !important;
+    height: 68px !important;
   }
 }

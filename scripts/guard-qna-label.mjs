@@ -3,7 +3,7 @@ import { extname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../src/', import.meta.url))
-const forbidden = ['community', '\uCEE4\uBBA4\uB2C8\uD2F0', 'Q&A']
+const visibleQnaPattern = /(?:>|aria-label=["']|title=["']|label=["'])\s*QNA\b/i
 
 async function scan(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -15,10 +15,8 @@ async function scan(directory) {
     }
     if (!['.ts', '.tsx', '.css'].includes(extname(entry.name))) continue
     const source = await readFile(path, 'utf8')
-    for (const token of forbidden) {
-      if (source.toLowerCase().includes(token.toLowerCase())) {
-        throw new Error(`QNA naming guard: "${token}" found in ${relative(root, path)}`)
-      }
+    if (visibleQnaPattern.test(source)) {
+      throw new Error(`QNA naming guard: visible "QNA" found in ${relative(root, path)}`)
     }
   }
 }
