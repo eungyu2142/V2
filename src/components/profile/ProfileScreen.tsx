@@ -1,5 +1,5 @@
 ﻿import { type ChangeEvent, useState } from 'react'
-import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaPost } from '../../App'
+import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaPost } from '../../types/app'
 
 function formatReviewDate(value: string) {
   return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value))
@@ -87,7 +87,6 @@ function ProfileScreen({
           <>
             <button type="button" onClick={() => setView('profile')}>&#45236; &#51221;&#48372; &#49688;&#51221;</button>
             <button type="button" onClick={() => setView('posts')}>&#45236;&#44032; &#50420; &#44544;</button>
-            <button type="button" onClick={() => setView('drafts')}>{'\uC784\uC2DC\uC800\uC7A5'}<span>{visibleDrafts.length}</span></button>
             <button type="button" onClick={() => setView('liked')}>좋아요한<span>{likedCount}</span></button>
             <button type="button" onClick={() => setView('logout')}>&#47196;&#44536;&#50500;&#50883;</button>
             <button className="danger" type="button" onClick={() => setView('delete-account')}>계정 삭제</button>

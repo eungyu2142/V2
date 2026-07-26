@@ -19,7 +19,7 @@ type NaverLocalItem = {
   mapy: string
 }
 
-const DEFAULT_QUERY = '특수동물병원'
+const DEFAULT_QUERY = '파충류 동물 병원'
 const NAVER_LOCAL_LIMIT = 20
 const HOSPITAL_NEGATIVE_KEYWORDS = ['애견카페', '카페', '펫샵', '애견샵', '용품', '미용', '호텔', '분양', '수족관', '아쿠아리움', '사료', '간식', '훈련소', '보호소']
 

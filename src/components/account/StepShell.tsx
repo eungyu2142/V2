@@ -25,7 +25,7 @@ export default function StepShell({ title, children, onBack, currentStep, stepCo
     return () => window.removeEventListener('popstate', handleBrowserBack)
   }, [])
   const progress = currentStep !== undefined && stepCount ? (currentStep + 1) / stepCount : undefined
-  const keyword = title.includes('QNA') ? '질문' : title.includes('펫') ? '펫' : '작성'
+  const keyword = stepLabels?.[currentStep ?? 0] ?? (title.includes('QNA') ? '질문' : title.includes('펫') ? '펫' : '작성')
   return (
     <main className="step-screen">
       <header className="step-header">
@@ -33,9 +33,9 @@ export default function StepShell({ title, children, onBack, currentStep, stepCo
         <strong>{title}</strong>
       </header>
       <p className="step-keyword" aria-label="작성 키워드">{keyword}</p>
-      {!hideProgress && progress !== undefined && stepCount && <div className="step-progress step-progress-selectable" role="tablist" aria-label="작성 단계">
+      {!hideProgress && progress !== undefined && stepCount && <div className="step-progress step-progress-selectable" role="tablist" aria-label="작성 단계" style={{ '--step-count': stepCount } as React.CSSProperties}>
         <span className="step-progress-fill" style={{ width: `${progress * 100}%` }} />
-        {Array.from({ length: stepCount }, (_, index) => <button key={index} className={index === currentStep ? 'active' : ''} type="button" role="tab" aria-selected={index === currentStep} aria-label={`${index + 1}단계`} onClick={() => onStepChange?.(index)}><span>{index + 1}</span></button>)}
+        {Array.from({ length: stepCount }, (_, index) => <button key={index} className={index === currentStep ? 'is-current' : ''} type="button" role="tab" aria-selected={index === currentStep} aria-label={`${index + 1}단계`} onClick={() => onStepChange?.(index)}><span>{index + 1}</span></button>)}
       </div>}
       {!hideProgress && stepLabels && <div className={`step-progress-labels step-progress-labels-${stepLabels.length}`} style={{ gridTemplateColumns: `repeat(${stepLabels.length}, minmax(0, 1fr))`, whiteSpace: 'nowrap' }}>{stepLabels.map((label, index) => <span className={index === currentStep ? 'active' : ''} key={label}>{index + 1}. {label}</span>)}</div>}
       <section className="step-card">{children}</section>

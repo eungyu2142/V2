@@ -1,0 +1,833 @@
+﻿import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { linkReviewToDiary } from '../../features/diary/diaryService'
+import HospitalReviewForm from './MapAndReview'
+import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
+import { animalCategoryLabels, buildHospitalSearchQuery, CategoryTagIcon, formatReviewDate, getRecentSpecies, getReviewSummary, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadCollectedHospitals, loadNaverMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory, writeSavedHospitalSnapshots } from './mapDependencies'
+import type { NaverMapApi } from '../../types/map'
+const HOSPITAL_LIST_PAGE_SIZE = 10
+function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
+  const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
+  const [query, setQuery] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<Array<Exclude<AnimalCategory, 'all'>>>([])
+  const [selectedSort, setSelectedSort] = useState<HospitalSort>('distance')
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
+  const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null)
+  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'error')
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'idle')
+  const [isLoading, setIsLoading] = useState(false)
+  const [, setMessage] = useState(naverMapClientId ? '' : '.env.local의 VITE_NAVER_MAP_CLIENT_ID를 확인해주세요.')
+  const [isReviewFormOpen, setIsReviewFormOpen] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewBody, setReviewBody] = useState('')
+  const [reviewVisitDate, setReviewVisitDate] = useState(new Date().toISOString().slice(0, 10))
+  const [reviewCost, setReviewCost] = useState('')
+  const [reviewDiagnosis, setReviewDiagnosis] = useState('')
+  const [reviewTreatment, setReviewTreatment] = useState('')
+  const [reviewMedicine, setReviewMedicine] = useState('')
+  const [reviewPetId, setReviewPetId] = useState(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
+  const [reviewMedicineStartDate, setReviewMedicineStartDate] = useState(new Date().toISOString().slice(0, 10))
+  const [reviewMedicineEndDate, setReviewMedicineEndDate] = useState('')
+  const [reviewMedicineDailyCount, setReviewMedicineDailyCount] = useState('1')
+  const [reviewMedicineBagImage, setReviewMedicineBagImage] = useState('')
+  const [reviewMedicineOcrRaw, setReviewMedicineOcrRaw] = useState<unknown>(null)
+  const [reviewTags, setReviewTags] = useState<string[]>([])
+  const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false)
+  const [sheetDismissed, setSheetDismissed] = useState(false)
+  const [mobileSheetState, setMobileSheetState] = useState<MobileMapSheetState>('middle')
+  void mobileSheetState
+  void setMobileSheetState
+  const [sheetDragY, setSheetDragY] = useState(0)
+  const [isSheetDragging, setIsSheetDragging] = useState(false)
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
+  const [visibleHospitalCount, setVisibleHospitalCount] = useState(HOSPITAL_LIST_PAGE_SIZE)
+  const mapElementRef = useRef<HTMLDivElement | null>(null)
+  const mapInstanceRef = useRef<InstanceType<NaverMapApi['maps']['Map']> | null>(null)
+  const markersRef = useRef<Array<InstanceType<NaverMapApi['maps']['Marker']>>>([])
+  const currentLocationMarkerRef = useRef<InstanceType<NaverMapApi['maps']['Marker']> | null>(null)
+  const lastHospitalSearchKeyRef = useRef('')
+  const sheetDragStartRef = useRef<number | null>(null)
+
+  function moveMapSmoothly(position: unknown, zoom: number) {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    try {
+      if (typeof map.morph === 'function') {
+        map.morph(position, zoom, { duration: 520 })
+        return
+      }
+
+      if (typeof map.panTo === 'function') {
+        map.panTo(position, { duration: 520 })
+        window.setTimeout(() => map.setZoom(zoom), 220)
+        return
+      }
+    } catch (error) {
+      console.error('Naver map smooth move error:', error)
+    }
+
+    map.setCenter(position)
+    map.setZoom(zoom)
+  }
+
+  const sortedHospitals = useMemo(() => sortHospitalsByDistance(hospitals, currentLocation), [hospitals, currentLocation])
+  const filteredHospitals = useMemo(() => {
+    return sortedHospitals
+      .filter((hospital) => hospitalMatchesQuery(hospital, query))
+      .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
+      .sort((a, b) => {
+        if (selectedSort === 'reviews') return getReviewSummary(reviews[b.id] ?? []).count - getReviewSummary(reviews[a.id] ?? []).count
+        if (selectedSort === 'rating') return getReviewSummary(reviews[b.id] ?? []).average - getReviewSummary(reviews[a.id] ?? []).average
+        return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
+      })
+  }, [query, reviews, selectedCategories, selectedSort, sortedHospitals])
+  const visibleHospitals = filteredHospitals.slice(0, visibleHospitalCount)
+  const hasMoreHospitals = visibleHospitalCount < filteredHospitals.length
+  const selectedHospital = filteredHospitals.find((hospital) => hospital.id === selectedHospitalId) ?? null
+  const selectedHospitalReviews = selectedHospital ? (reviews[selectedHospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory)) : []
+  const selectedHospitalSummary = getReviewSummary(selectedHospitalReviews)
+  const selectedHospitalRecentSpecies = getRecentSpecies(selectedHospitalReviews)
+  const reviewDraftPayload = reviewDraft?.draftType === 'hospital_review' ? reviewDraft.payload as HospitalReviewDraftPayload : null
+  const profileReviewAuthor = profile.nickname.trim() || profile.username.trim() || '사용자'
+  const selectedReviewPet = pets.find((pet) => pet.id === reviewPetId)
+  const selectedReviewAnimalCategory = toReviewAnimalCategory(selectedReviewPet?.group)
+  const selectedReviewSpecies = selectedReviewPet?.species ?? ''
+  const reviewablePets = pets.filter((pet) => isHospitalCareCategory(pet.group))
+  const canSubmitHospitalReview = Boolean(reviewPetId && isHospitalCareCategory(selectedReviewPet?.group) && reviewBody.trim().length > 0 && reviewVisitDate.trim().length > 0 && reviewRating >= 1)
+  const selectedHospitalIsLiked = selectedHospital ? likedHospitals.some((hospital) => isSameHospitalIdentity(hospital, selectedHospital)) : false
+  const selectedCategoryReviewLabel = selectedCategories.length > 0 ? selectedCategories.map((category) => animalCategoryLabels[category]).join('/') : ''
+  const selectedHospitalRecentReviewText = selectedHospitalRecentSpecies
+    ? `최근 진료종 ${selectedHospitalRecentSpecies}`
+    : selectedCategoryReviewLabel
+      ? `이 병원의 ${selectedCategoryReviewLabel} 진료 리뷰가 아직 없어요`
+      : '최근 진료 리뷰가 아직 없어요'
+
+  useEffect(() => {
+    let cancelled = false
+    loadCollectedHospitals('', 'all')
+      .then((items) => {
+        if (cancelled) return
+        setHospitals(items)
+        setMessage('')
+      })
+      .catch((error) => {
+        console.error('Collected hospital data load error:', error)
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!focusHospital) return
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      const hospital = hospitalFromSnapshot(focusHospital)
+      setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
+      setSelectedHospitalId(hospital.id)
+      setSheetDismissed(false)
+      setMobileSheetState('expanded')
+      setQuery(hospital.name)
+      setSelectedCategories(hospital.categories.filter(isHospitalCareCategory))
+    })
+    return () => { cancelled = true }
+  }, [focusHospital])
+
+  useEffect(() => {
+    if (!reviewDraftPayload) return
+    const hospital = hospitalFromSnapshot(reviewDraftPayload.hospital)
+    // This effect restores a draft opened from another screen.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
+    setSelectedHospitalId(hospital.id)
+    setSheetDismissed(false)
+    setMobileSheetState('expanded')
+    setIsReviewFormOpen(true)
+    setReviewRating(reviewDraftPayload.review.rating)
+    setReviewBody(reviewDraftPayload.review.body)
+    setReviewVisitDate(reviewDraftPayload.review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewCost(reviewDraftPayload.review.cost ? reviewDraftPayload.review.cost.toLocaleString('ko-KR') : '')
+    setReviewDiagnosis(reviewDraftPayload.review.diagnosis ?? '')
+    setReviewTreatment(reviewDraftPayload.review.treatment ?? '')
+    setReviewMedicine(reviewDraftPayload.review.medicine ?? '')
+    setReviewPetId(reviewDraftPayload.review.petId && pets.some((pet) => pet.id === reviewDraftPayload.review.petId && isHospitalCareCategory(pet.group)) ? reviewDraftPayload.review.petId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
+    setReviewMedicineStartDate(reviewDraftPayload.review.medicineStartDate ?? reviewDraftPayload.review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewMedicineEndDate(reviewDraftPayload.review.medicineEndDate ?? '')
+    setReviewMedicineDailyCount(String(reviewDraftPayload.review.medicineDailyCount ?? 1))
+    setReviewMedicineBagImage(reviewDraftPayload.review.medicineBagImage ?? '')
+    setReviewMedicineOcrRaw(reviewDraftPayload.review.medicineOcrRaw ?? null)
+    setReviewTags(reviewDraftPayload.review.tags ?? [])
+    setQuery(hospital.name)
+    setSelectedCategories(hospital.categories.filter(isHospitalCareCategory))
+  }, [pets, reviewDraftPayload])
+
+  useEffect(() => {
+    if (!naverMapClientId) return
+
+    let mounted = true
+
+    Promise.allSettled([loadNaverMaps(naverMapClientId), readBrowserLocation()])
+      .then(([naverResult, locationResult]) => {
+        if (!mounted || !mapElementRef.current) return
+
+        if (naverResult.status === 'rejected') {
+          throw naverResult.reason
+        }
+
+        try {
+          const naver = naverResult.value
+          const firstLocation = locationResult.status === 'fulfilled' ? locationResult.value : null
+          const centerLocation = firstLocation ?? { lat: 37.5665, lng: 126.978 }
+          const center = new naver.maps.LatLng(centerLocation.lat, centerLocation.lng)
+          mapInstanceRef.current = new naver.maps.Map(mapElementRef.current, { center, zoom: 12 })
+          setMapStatus('ready')
+
+          if (firstLocation) {
+            setCurrentLocation(firstLocation)
+            setLocationStatus('ready')
+            setMessage('')
+          } else {
+            console.error('Initial geolocation error:', locationResult.status === 'rejected' ? locationResult.reason : null)
+            setLocationStatus('error')
+            setMessage('')
+          }
+        } catch (error) {
+          console.error('Naver map initialization error:', error)
+          setMapStatus('error')
+          setMessage(`지도를 초기화하지 못했습니다. ${window.location.origin}을 네이버 콘솔 Web 서비스 URL에 등록해주세요.`)
+        }
+      })
+      .catch((error) => {
+        console.error('Naver map load error:', error)
+        if (!mounted) return
+        setMapStatus('error')
+        setMessage(`지도를 불러오지 못했습니다. 네이버 콘솔의 Web 서비스 URL에 ${window.location.origin}을 등록했는지 확인해주세요.`)
+      })
+
+    return () => {
+      mounted = false
+      markersRef.current.forEach((marker) => marker.setMap(null))
+      currentLocationMarkerRef.current?.setMap(null)
+    }
+  }, [naverMapClientId])
+
+  useEffect(() => {
+    const naver = window.naver
+    const map = mapInstanceRef.current
+    if (!naver || !map || !currentLocation) return
+
+    const position = new naver.maps.LatLng(currentLocation.lat, currentLocation.lng)
+    currentLocationMarkerRef.current?.setMap(null)
+    currentLocationMarkerRef.current = new naver.maps.Marker({
+      position,
+      map,
+      title: '내 위치',
+      icon: { content: '<div class="current-location-marker" aria-label="내 위치"><span></span></div>' },
+    })
+    ;(currentLocationMarkerRef.current as unknown as { setZIndex?: (zIndex: number) => void }).setZIndex?.(180)
+    moveMapSmoothly(position, 14)
+  }, [currentLocation])
+
+  useEffect(() => {
+    const naver = window.naver
+    const map = mapInstanceRef.current
+    const hospital = selectedHospital
+    if (!naver || !map || !hospital) return
+    const position = new naver.maps.LatLng(hospital.lat, hospital.lng)
+    moveMapSmoothly(position, 16)
+  }, [selectedHospital])
+
+  useEffect(() => {
+    const naver = window.naver
+    const map = mapInstanceRef.current
+    if (!naver || !map) return
+
+    markersRef.current.forEach((marker) => marker.setMap(null))
+    markersRef.current = []
+
+    filteredHospitals.forEach((hospital) => {
+      const position = new naver.maps.LatLng(hospital.lat, hospital.lng)
+      const marker = new naver.maps.Marker({
+        position,
+        map,
+        title: hospital.name,
+        icon: { content: hospitalMarkerContent(hospital, hospital.id === selectedHospitalId, selectedHospitalReviews.length >= 5) },
+      })
+      ;(marker as unknown as { setZIndex?: (zIndex: number) => void }).setZIndex?.(hospital.id === selectedHospitalId ? 260 : 210)
+      naver.maps.Event.addListener(marker, 'click', () => {
+        setSelectedHospitalId(hospital.id)
+        setSheetDismissed(false)
+        setMobileSheetState('expanded')
+      })
+      markersRef.current.push(marker)
+    })
+  }, [filteredHospitals, selectedHospitalId, selectedHospitalReviews.length])
+
+  const getCurrentLocation = () => {
+    setLocationStatus('loading')
+    return readBrowserLocation()
+      .then((location) => {
+        setCurrentLocation(location)
+        setLocationStatus('ready')
+        return location
+      })
+      .catch((error) => {
+        console.error('Geolocation error:', error)
+        setLocationStatus('error')
+        throw error
+      })
+  }
+
+  const requestCurrentLocation = async () => {
+    await getCurrentLocation().catch(() => {
+      setMessage('현재 위치를 가져올 수 없어요. 브라우저 위치 권한을 확인해주세요.')
+    })
+  }
+
+  const toggleSavedHospital = (hospital: Hospital) => {
+    const snapshot = toHospitalSnapshot(hospital)
+    const isLiked = likedHospitals.some((item) => isSameHospitalIdentity(item, hospital))
+    const next = isLiked
+      ? likedHospitals.filter((item) => !isSameHospitalIdentity(item, hospital))
+      : [snapshot, ...likedHospitals.filter((item) => !isSameHospitalIdentity(item, hospital))]
+    writeSavedHospitalSnapshots(next)
+    onLikedHospitalsChange(next)
+  }
+
+  async function runHospitalSearch(searchQuery: string, category: AnimalCategory, location: Coordinates | null) {
+    const resolvedQuery = buildHospitalSearchQuery(searchQuery, category)
+    const cacheKey = `${resolvedQuery}:${category}:${location ? `${Math.round(location.lat * 100)}:${Math.round(location.lng * 100)}` : 'no-location'}`
+    if (lastHospitalSearchKeyRef.current === cacheKey || isLoading) return
+
+    lastHospitalSearchKeyRef.current = cacheKey
+    setIsLoading(true)
+
+    try {
+      const results = await searchHospitals(resolvedQuery, category, location)
+      setHospitals(results)
+      setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
+    } catch (error) {
+      console.error('Hospital search error:', error)
+      lastHospitalSearchKeyRef.current = ''
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (isLoading) return
+
+    setSelectedHospitalId(null)
+    setSheetDismissed(false)
+
+    const location = currentLocation ?? await getCurrentLocation().catch(() => null)
+    lastHospitalSearchKeyRef.current = ''
+    await runHospitalSearch(query, selectedCategories[0] ?? 'all', location)
+  }
+
+  const resetReviewForm = () => {
+    setEditingReviewId(null)
+    setReviewRating(5)
+    setReviewBody('')
+    setReviewVisitDate(new Date().toISOString().slice(0, 10))
+    setReviewCost('')
+    setReviewDiagnosis('')
+    setReviewTreatment('')
+    setReviewMedicine('')
+    setReviewMedicineStartDate(new Date().toISOString().slice(0, 10))
+    setReviewMedicineEndDate('')
+    setReviewMedicineDailyCount('1')
+    setReviewMedicineBagImage('')
+    setReviewMedicineOcrRaw(null)
+    setReviewTags([])
+    setReviewPetId(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
+  }
+
+  const beginReviewEdit = (review: HospitalReview) => {
+    if (!review.mine) return
+    setEditingReviewId(review.id)
+    setReviewRating(review.rating)
+    setReviewBody(review.body || review.content || '')
+    setReviewVisitDate(review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewCost(review.cost ? review.cost.toLocaleString('ko-KR') : '')
+    setReviewDiagnosis(review.diagnosis ?? '')
+    setReviewTreatment(review.treatment ?? '')
+    setReviewMedicine(review.medicine ?? '')
+    setReviewMedicineStartDate(review.medicineStartDate ?? review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewMedicineEndDate(review.medicineEndDate ?? '')
+    setReviewMedicineDailyCount(String(review.medicineDailyCount ?? 1))
+    setReviewMedicineBagImage(review.medicineBagImage ?? '')
+    setReviewMedicineOcrRaw(review.medicineOcrRaw ?? null)
+    setReviewTags(review.tags ?? [])
+    setReviewPetId(review.petId && pets.some((pet) => pet.id === review.petId && isHospitalCareCategory(pet.group)) ? review.petId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
+    setIsReviewFormOpen(true)
+  }
+
+  const submitReview = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedHospital || !canSubmitHospitalReview) return
+
+    const reviewPet = pets.find((pet) => pet.id === reviewPetId)
+    const existingReview = editingReviewId ? selectedHospitalReviews.find((item) => item.id === editingReviewId) : null
+
+    const review: HospitalReview = {
+      id: editingReviewId ?? reviewDraftPayload?.review.id ?? crypto.randomUUID(),
+      hospitalId: selectedHospital.id,
+      petId: reviewPetId,
+      petName: reviewPet?.name,
+      author: profileReviewAuthor,
+      animalCategory: selectedReviewAnimalCategory,
+      species: selectedReviewSpecies,
+      rating: reviewRating,
+      visitDate: reviewVisitDate,
+      cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
+      diagnosis: reviewDiagnosis.trim(),
+      treatment: reviewTreatment.trim(),
+      medicine: reviewMedicine.trim(),
+      medicineStartDate: reviewMedicineStartDate,
+      medicineEndDate: reviewMedicineEndDate,
+      medicineDailyCount: Math.max(1, Number(reviewMedicineDailyCount) || 1),
+      medicineBagImage: reviewMedicineBagImage || undefined,
+      medicineOcrRaw: reviewMedicineOcrRaw ?? undefined,
+      tags: reviewTags,
+      body: reviewBody.trim(),
+      content: reviewBody.trim(),
+      mine: true,
+      liked: existingReview?.liked ?? reviewDraftPayload?.review.liked ?? false,
+      likes: existingReview?.likes ?? reviewDraftPayload?.review.likes ?? 0,
+      hospitalName: selectedHospital.name,
+      hospitalSnapshot: toHospitalSnapshot(selectedHospital),
+      createdAt: existingReview?.createdAt ?? reviewDraftPayload?.review.createdAt ?? new Date().toISOString(),
+    }
+
+    const nextReviews = { ...reviews, [selectedHospital.id]: [review, ...(reviews[selectedHospital.id] ?? []).filter((item) => item.id !== review.id)] }
+    localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
+    onReviewsChange(nextReviews)
+    try {
+      await linkReviewToDiary({
+        userId,
+        reviewId: review.id,
+        petId: reviewPetId,
+        hospitalName: selectedHospital.name,
+        visitDate: reviewVisitDate,
+        diagnosis: reviewDiagnosis.trim(),
+        treatment: reviewTreatment.trim(),
+        medicine: reviewMedicine.trim() ? {
+          name: reviewMedicine.trim(),
+          startDate: reviewMedicineStartDate || reviewVisitDate,
+          endDate: reviewMedicineEndDate || undefined,
+          dailyCount: Math.max(1, Number(reviewMedicineDailyCount) || 1),
+          ocrRaw: reviewMedicineOcrRaw,
+        } : undefined,
+      })
+    } catch (error) {
+      console.error('Review diary link failed.', error)
+      setMessage('리뷰는 저장됐지만 다이어리 연결에 실패했어요.')
+    }
+    resetReviewForm()
+    setIsReviewFormOpen(false)
+    if (reviewDraft) void onDeleteDraft(reviewDraft.id)
+  }
+
+  const toggleReviewTag = (tag: string) => {
+    setReviewTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : current.length >= 5 ? current : [...current, tag])
+  }
+
+  const toggleReviewLike = (hospitalId: string, reviewId: string) => {
+    const nextReviews = {
+      ...reviews,
+      [hospitalId]: (reviews[hospitalId] ?? []).map((review) => {
+        if (review.id !== reviewId) return review
+        const liked = !review.liked
+        const likes = Math.max(0, (review.likes ?? 0) + (liked ? 1 : -1))
+        return { ...review, liked, likes }
+      }),
+    }
+    localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
+    onReviewsChange(nextReviews)
+  }
+
+  const deleteReview = (hospitalId: string, reviewId: string) => {
+    const targetReview = (reviews[hospitalId] ?? []).find((review) => review.id === reviewId)
+    if (!targetReview?.mine) return
+    if (!window.confirm('내가 쓴 리뷰를 삭제할까요?')) return
+
+    const nextHospitalReviews = (reviews[hospitalId] ?? []).filter((review) => review.id !== reviewId)
+    const nextReviews = { ...reviews, [hospitalId]: nextHospitalReviews }
+    localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
+    onReviewsChange(nextReviews)
+
+    if (editingReviewId === reviewId) {
+      resetReviewForm()
+      setIsReviewFormOpen(false)
+    }
+  }
+
+  const beginSheetDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number; stopPropagation: () => void }) => {
+    sheetDragStartRef.current = event.clientY
+    setIsSheetDragging(true)
+    setSheetDragY(0)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.stopPropagation()
+  }
+
+  const moveSheetDrag = (event: { clientY: number; preventDefault: () => void }) => {
+    if (sheetDragStartRef.current === null) return
+    const nextDragY = Math.max(0, event.clientY - sheetDragStartRef.current)
+    setSheetDragY(nextDragY)
+    if (nextDragY > 0) event.preventDefault()
+  }
+
+  const finishSheetDrag = () => {
+    const shouldClose = sheetDragY > 72
+    sheetDragStartRef.current = null
+    setIsSheetDragging(false)
+    setSheetDragY(0)
+    if (!shouldClose) return
+    if (mobileSheetState === 'expanded') {
+      setMobileSheetState('middle')
+      return
+    }
+    if (selectedHospital) {
+      setSelectedHospitalId(null)
+      setIsReviewFormOpen(false)
+      setMobileSheetState('middle')
+      return
+    }
+    setMobileSheetState('collapsed')
+    setSheetDismissed(true)
+  }
+
+  const sheetDragHandlers = {
+    onPointerDown: beginSheetDrag,
+    onPointerMove: moveSheetDrag,
+    onPointerUp: finishSheetDrag,
+    onPointerCancel: finishSheetDrag,
+  }
+
+  const beginReopenDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number; stopPropagation: () => void }) => {
+    sheetDragStartRef.current = event.clientY
+    setIsSheetDragging(true)
+    setSheetDragY(0)
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.stopPropagation()
+  }
+
+  const moveReopenDrag = (event: { clientY: number; preventDefault: () => void }) => {
+    if (sheetDragStartRef.current === null) return
+    const nextDragY = Math.min(0, event.clientY - sheetDragStartRef.current)
+    setSheetDragY(nextDragY)
+    if (nextDragY < 0) event.preventDefault()
+  }
+
+  const finishReopenDrag = () => {
+    const shouldOpen = sheetDragY < -34
+    sheetDragStartRef.current = null
+    setIsSheetDragging(false)
+    setSheetDragY(0)
+    if (shouldOpen) {
+      setSheetDismissed(false)
+      setMobileSheetState('expanded')
+    }
+  }
+
+  const reopenDragHandlers = {
+    onPointerDown: beginReopenDrag,
+    onPointerMove: moveReopenDrag,
+    onPointerUp: finishReopenDrag,
+    onPointerCancel: finishReopenDrag,
+  }
+
+  useEffect(() => {
+    document.documentElement.classList.add('map-overscroll-lock')
+    document.body.classList.add('map-overscroll-lock')
+    return () => {
+      document.documentElement.classList.remove('map-overscroll-lock')
+      document.body.classList.remove('map-overscroll-lock')
+    }
+  }, [])
+
+  useEffect(() => {
+    const openFromBottomNav = () => {
+      setIsReviewFormOpen(false)
+      setSheetDismissed(false)
+      setMobileSheetState((state) => state === 'expanded' ? 'expanded' : 'expanded')
+    }
+    window.addEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
+    return () => window.removeEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
+  }, [])
+
+  return (
+    <section className={`map-page ${selectedHospital ? 'has-selected-hospital' : ''}`}>
+      <section className="map-area">
+        <div className="map-canvas" ref={mapElementRef}>
+          {mapStatus !== 'ready' && (
+            <div className="map-load-state">
+              <strong>{mapStatus === 'error' ? '지도를 불러오지 못했습니다' : '네이버 지도를 불러오는 중입니다'}</strong>
+              {mapStatus === 'error' && <small>네이버 콘솔 Web 서비스 URL에 {window.location.origin} 을 등록해 주세요.</small>}
+            </div>
+          )}
+        </div>
+        <button className="map-mobile-location-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation} aria-label="내 위치로 이동">
+          <span className="location-button-icon" aria-hidden="true" />
+          <span>{locationStatus === 'loading' ? '확인중' : '내 위치'}</span>
+        </button>
+      </section>
+      <aside className={`map-side-panel ${isSidePanelCollapsed ? 'collapsed' : ''}`} aria-label="병원 검색과 정보">
+        <button className="map-side-collapse-toggle" type="button" onClick={() => setIsSidePanelCollapsed((value) => !value)} aria-label={isSidePanelCollapsed ? '병원 목록 열기' : '병원 목록 닫기'}>
+          <span aria-hidden="true" />
+          <b>{isSidePanelCollapsed ? '열기' : '닫기'}</b>
+        </button>
+        {!isSidePanelCollapsed && (
+          <button className="map-panel-close-button" type="button" onClick={() => setIsSidePanelCollapsed(true)} aria-label="병원 찾기 닫기">
+            <span aria-hidden="true" />
+          </button>
+        )}
+        <form className="map-search-panel" onSubmit={submit}>
+          <label>
+            병원 검색
+            <input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE); setSheetDismissed(false) }} placeholder="지역명, 병원명, 특수동물 병원" />
+          </label>
+          <button className="map-search-icon-button" type="submit" disabled={isLoading} aria-label="검색">
+            <span aria-hidden="true" />
+          </button>
+          <button className="secondary-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation}>
+            <span className="location-button-icon" aria-hidden="true" />
+            <span>{locationStatus === 'loading' ? '확인중' : '내 위치'}</span>
+          </button>
+        </form>
+
+        <div className="map-sort-tabs" aria-label="병원 정렬">
+          {([
+            ['distance', '가까운 순'],
+            ['reviews', '리뷰 많은 순'],
+            ['rating', '평점 높은 순'],
+          ] as Array<[HospitalSort, string]>).map(([sort, label]) => (
+            <button className={selectedSort === sort ? 'active' : ''} type="button" key={sort} onClick={() => { setSelectedSort(sort); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {!sheetDismissed && (
+          <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
+            <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
+            <div className="map-side-head">
+              <strong>{isLoading ? '병원을 찾는 중' : `병원 ${filteredHospitals.length}곳`}</strong>
+              <span>{currentLocation ? '내 위치 기준 가까운 순' : '위치 권한 허용 시 거리순'}</span>
+            </div>
+            {filteredHospitals.length === 0 ? (
+              <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
+            ) : (
+              <>
+                {visibleHospitals.map((hospital) => (
+                  <HospitalListRow
+                    hospital={hospital}
+                    key={hospital.id}
+                    reviews={reviews[hospital.id] ?? []}
+                    active={hospital.id === selectedHospitalId}
+                    onSelect={() => { setSelectedHospitalId(hospital.id); setSheetDismissed(false); setMobileSheetState('expanded') }}
+                  />
+                ))}
+                {hasMoreHospitals && (
+                  <button className="map-hospital-more-button" type="button" onClick={() => setVisibleHospitalCount((count) => count + HOSPITAL_LIST_PAGE_SIZE)}>
+                    더보기
+                  </button>
+                )}
+              </>
+            )}
+          </section>
+        )}
+
+        {!selectedHospital && sheetDismissed && filteredHospitals.length > 0 && (
+          <button
+            className={`map-sheet-reopen ${isSheetDragging ? 'is-dragging' : ''}`}
+            type="button"
+            aria-label="병원 목록을 위로 끌어올려 열기"
+            style={{ transform: `translateX(50%)${sheetDragY ? ` translateY(${sheetDragY}px)` : ''}` }}
+            {...reopenDragHandlers}
+          >
+            <span aria-hidden="true" />
+            병원 {filteredHospitals.length}곳
+          </button>
+        )}
+
+      </aside>
+
+      {selectedHospital && (
+        <article className={`map-hospital-panel map-detail-dock mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
+            <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
+            <button className="panel-close" type="button" aria-label="닫기" onClick={() => setSelectedHospitalId(null)} />
+            <div className="hospital-card-main">
+              <CategoryTagIcon category={selectedHospital.categories[0] ?? 'all'} />
+              <div>
+                <strong>{selectedHospital.name}</strong>
+                <p><span className="meta-icon location" aria-hidden="true" />{selectedHospital.address || '주소 정보 없음'}</p>
+                <small><span className="meta-icon distance" aria-hidden="true" />{selectedHospital.distanceKm === undefined ? '내 위치 기준 거리 계산 전' : `내 위치에서 ${selectedHospital.distanceKm.toFixed(1)}km`}</small>
+                <small><span className="meta-icon species" aria-hidden="true" />{selectedHospitalRecentReviewText}</small>
+                <small><span className="meta-icon review" aria-hidden="true" />리뷰 {selectedHospitalSummary.count}개</small>
+              </div>
+            </div>
+            <div className="hospital-tags">
+              {selectedHospital.categories.filter(isHospitalCareCategory).map((category) => <span key={category}>{animalCategoryLabels[category]}</span>)}
+            </div>
+            <div className="hospital-actions">
+              <button className={`hospital-like-action ${selectedHospitalIsLiked ? 'active' : ''}`} type="button" aria-pressed={selectedHospitalIsLiked} onClick={() => toggleSavedHospital(selectedHospital)}>
+                {selectedHospitalIsLiked ? '좋아요 취소' : '좋아요'}
+              </button>
+              <button className="hospital-review-write-action" type="button" onClick={() => { if (editingReviewId || isReviewFormOpen) { resetReviewForm(); setIsReviewFormOpen(false); return } resetReviewForm(); setIsReviewFormOpen(true) }}>
+                {editingReviewId ? '수정 취소' : '리뷰 작성'}
+              </button>
+              {selectedHospital.phone && <a href={`tel:${selectedHospital.phone}`}>전화하기</a>}
+            </div>
+            <section className="hospital-review-panel">
+              <div className="review-panel-head">
+                <div><strong>리뷰</strong><span>{selectedHospitalSummary.count === 0 ? '아직 리뷰가 없습니다' : `${selectedHospitalSummary.average.toFixed(1)}점 · ${selectedHospitalSummary.count}개`}</span></div>
+              </div>
+              <HospitalReviewSummary reviews={selectedHospitalReviews} onWriteReview={() => { resetReviewForm(); setIsReviewFormOpen(true) }} />
+              {isReviewFormOpen && (
+                <HospitalReviewForm
+                  rating={reviewRating}
+                  body={reviewBody}
+                  visitDate={reviewVisitDate}
+                  cost={reviewCost}
+                  diagnosis={reviewDiagnosis}
+                  treatment={reviewTreatment}
+                  medicine={reviewMedicine}
+                  pets={reviewablePets.map((pet) => ({ id: pet.id, name: pet.name, group: pet.group, species: pet.species }))}
+                  selectedPetId={reviewPetId}
+                  medicineStartDate={reviewMedicineStartDate}
+                  medicineEndDate={reviewMedicineEndDate}
+                  medicineDailyCount={reviewMedicineDailyCount}
+                  selectedTags={reviewTags}
+                  canSubmit={canSubmitHospitalReview}
+                  submitLabel={editingReviewId ? '수정 완료' : '등록'}
+                  onRatingChange={setReviewRating}
+                  onBodyChange={setReviewBody}
+                  onVisitDateChange={setReviewVisitDate}
+                  onCostChange={setReviewCost}
+                  onDiagnosisChange={setReviewDiagnosis}
+                  onTreatmentChange={setReviewTreatment}
+                  onMedicineChange={setReviewMedicine}
+                  onPetChange={setReviewPetId}
+                  onMedicineStartDateChange={setReviewMedicineStartDate}
+                  onMedicineEndDateChange={setReviewMedicineEndDate}
+                  onMedicineDailyCountChange={setReviewMedicineDailyCount}
+                  onToggleTag={toggleReviewTag}
+                  onSubmit={submitReview}
+                />
+              )}
+              {selectedHospitalReviews.length > 0 && (
+                <div className="review-list">
+                  {selectedHospitalReviews.map((review) => (
+                    <HospitalReviewItem
+                      review={review}
+                      fallbackAuthor={profileReviewAuthor}
+                      key={review.id}
+                      onDelete={() => deleteReview(selectedHospital.id, review.id)}
+                      onEdit={() => beginReviewEdit(review)}
+                      onToggleLike={() => toggleReviewLike(selectedHospital.id, review.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </article>
+        )}
+    </section>
+  )
+}
+
+function HospitalListRow({ hospital, reviews, active, onSelect }: { hospital: Hospital; reviews: HospitalReview[]; active: boolean; onSelect: () => void }) {
+  const summary = getReviewSummary(reviews)
+  const recentSpecies = getRecentSpecies(reviews)
+
+  return (
+    <article className={`map-hospital-row ${active ? 'active' : ''}`}>
+      <button className="map-hospital-row-main" type="button" onClick={onSelect}>
+        <CategoryTagIcon category={hospital.categories[0] ?? 'all'} />
+        <span>
+          <strong>{hospital.name}</strong>
+          <small>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`} · {hospital.address || '주소 정보 없음'}</small>
+          {summary.count > 0 && <small>{`${summary.average.toFixed(1)}점 · 리뷰 ${summary.count}개`}{recentSpecies ? ` · 최근 ${recentSpecies}` : ''}</small>}
+        </span>
+      </button>
+    </article>
+  )
+}
+
+function HospitalReviewSummary({ reviews, onWriteReview }: { reviews: HospitalReview[]; onWriteReview: () => void }) {
+  const summary = getReviewSummary(reviews)
+  if (summary.count === 0) {
+    return (
+      <div className="review-summary-empty review-summary-invite">
+        <strong>리뷰가 아직 많지 않아요</strong>
+        <span>첫 리뷰를 남겨보세요</span>
+        <button className="review-summary-cta" type="button" onClick={onWriteReview}>리뷰 작성</button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="review-summary">
+      <div className="review-summary-score">
+        <strong>{summary.average.toFixed(1)}</strong>
+        <span>리뷰 {summary.count}개</span>
+      </div>
+      {summary.count >= 3 ? (
+        <div className="review-score-bars">
+          {[5, 4, 3, 2, 1].map((rating) => (
+            <div key={rating}>
+              <span>{rating}점</span>
+              <i><b style={{ width: `${summary.count ? (summary.distribution[rating] / summary.count) * 100 : 0}%` }} /></i>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="review-summary-invite compact">
+          <span>리뷰가 아직 많지 않아요 · 첫 리뷰를 남겨보세요</span>
+          <button className="review-summary-cta" type="button" onClick={onWriteReview}>리뷰 작성</button>
+        </div>
+      )}
+      {summary.topTags.length > 0 && <div className="review-summary-tags">{summary.topTags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+      {summary.topAnimal && <p>가장 많이 방문한 분류: {animalCategoryLabels[summary.topAnimal]}</p>}
+    </div>
+  )
+}
+
+function HospitalReviewItem({ review, fallbackAuthor, onDelete, onEdit, onToggleLike }: { review: HospitalReview; fallbackAuthor: string; onDelete: () => void; onEdit: () => void; onToggleLike: () => void }) {
+  const authorName = review.author && review.author !== '익명' ? review.author : fallbackAuthor
+  const body = review.body || review.content || ''
+  const reviewMeta = [
+    review.petName || review.species || '반려동물 정보 없음',
+    review.visitDate ? formatReviewDate(review.visitDate) : '',
+    review.cost ? `${review.cost.toLocaleString('ko-KR')}원` : '',
+  ].filter(Boolean).join(' · ')
+
+  return (
+    <article className="review-item">
+      <div className="review-item-head">
+        <div>
+          <strong>{authorName}</strong>
+          <small>{reviewMeta}</small>
+        </div>
+        <span className="review-rating-badge" aria-label={`평점 ${review.rating}점`}>{review.rating.toFixed(1)}</span>
+      </div>
+      {body && <p className="review-item-body">{body}</p>}
+      {review.tags && review.tags.length > 0 && <div className="review-item-tags" aria-label="리뷰 태그">{review.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+      {review.images && review.images.length > 0 && <div className="review-image-row">{review.images.map((image) => <img src={image} alt="" key={image} />)}</div>}
+      <footer className="review-item-footer">
+        <time>{formatReviewDate(review.createdAt)}</time>
+        <div className="review-item-actions">
+          <button className={`review-like-button ${review.liked ? 'active' : ''}`} type="button" onClick={onToggleLike}>♥ {review.likes ?? 0}</button>
+          {review.mine && <><button type="button" onClick={onEdit}>수정</button><button type="button" onClick={onDelete}>삭제</button></>}
+        </div>
+      </footer>
+    </article>
+  )
+}
+
+export default MapScreen
+
+

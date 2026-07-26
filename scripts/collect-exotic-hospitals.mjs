@@ -8,14 +8,7 @@ const META_FILE = path.join(OUT_DIR, 'exotic-hospitals.meta.json')
 const API_URL = 'https://openapi.naver.com/v1/search/local.json'
 
 const SEARCH_PLANS = [
-  { suffix: '특수동물병원', animals: [] },
-  { suffix: '이국동물병원', animals: [] },
-  { suffix: '파충류 동물병원', animals: ['reptile'] },
-  { suffix: '조류 동물병원', animals: ['bird'] },
-  { suffix: '설치류 동물병원', animals: ['rodent'] },
-  { suffix: '토끼 동물병원', animals: ['rodent'] },
-  { suffix: '햄스터 동물병원', animals: ['rodent'] },
-  { suffix: '페럿 동물병원', animals: ['rodent'] },
+  { suffix: '파충류 동물 병원', animals: ['reptile'] },
 ]
 
 const REGIONS = [

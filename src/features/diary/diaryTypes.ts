@@ -28,6 +28,28 @@ export type PetRecordType =
   | 'hospital'
   | 'other'
 
+export type FeedingFoodItem = {
+  foodKey: string | null
+  foodName: string
+  isCustom: boolean
+}
+
+export type RiskLevel = 0 | 1 | 2 | 3 | 4 | 5
+
+export type EnvironmentRecord = {
+  profileKey: string
+  metricType: 'temperature' | 'humidity'
+  measurementType: 'air' | 'water' | 'humidity'
+  value: number
+  unit: 'celsius' | 'percent'
+  targetValue: number
+  minValue: number
+  maxValue: number
+  riskLevel: RiskLevel
+  riskDirection: 'low' | 'high' | 'normal'
+  riskMessage: string
+}
+
 export type PetRecord = {
   id: string
   userId: string
@@ -38,6 +60,8 @@ export type PetRecord = {
   photoUrl?: string
   weight?: number
   foods?: string[]
+  feedingFoods?: FeedingFoodItem[]
+  environmentRecord?: EnvironmentRecord
   hospitalId?: string
   reviewId?: string
   createdAt: string
@@ -53,25 +77,16 @@ export type CareTaskType =
   | 'mist'
   | 'temperature'
   | 'humidity'
-  | 'light'
   | 'cleaning'
   | 'partial_cleaning'
   | 'full_cleaning'
   | 'substrate_change'
-  | 'bedding_tidy'
-  | 'bedding_change'
-  | 'chew_check'
-  | 'wheel_check'
-  | 'water_temperature'
-  | 'water_quality'
-  | 'cage_floor_cleaning'
-  | 'cage_full_cleaning'
-  | 'food_bowl_cleaning'
-  | 'water_bowl_cleaning'
-  | 'perch_cleaning'
-  | 'play_interaction'
+  | 'structure_cleaning'
+  | 'wall_wipe'
+  | 'uvb_check'
   | 'weight'
-  | 'status_check'
+  | 'water_quality'
+  | 'filter_check'
   | 'custom'
 
 export type CarePlan = {

@@ -16,11 +16,10 @@
   - 내 위치 버튼
 - 내 위치 버튼을 누르면 지도 중심이 내 위치로 이동한다.
 - 화면 상단 분류 태그:
-  - 파충류
-  - 조류
-  - 설치류
-  - 양서류
   - 전체
+  - 파충류
+- 병원 지도와 병원 리뷰 탐색은 파충류 진료 병원을 우선 대상으로 한다.
+- 조류, 설치류, 양서류, 기타만 근거가 있는 병원은 지도 API 결과, 정적 병원 데이터, 지도 마커, 병원 목록에서 제외한다.
 
 ### 병원 마커
 
@@ -237,11 +236,13 @@
 
 - PWA frontend must not call the Naver Local Search API directly.
 - Naver Search Client ID/Secret stay only in server-side environments or GitHub Actions secrets.
-- Hospital base data is collected weekly from the Naver Local Search API and written to public/data/exotic-hospitals.json.
-- Collection uses nationwide si/gun/gu regions with special-animal search keywords and low-concurrency sequential requests.
+- Hospital base data is collected weekly from server-side search providers such as the Naver Local Search API and Google Places API (New), then written to public/data/exotic-hospitals.json or upserted to DB.
+- Collection uses the single base search keyword `파충류 동물 병원` with nationwide si/gun/gu regions and low-concurrency sequential requests.
 - Duplicate hospitals are merged by normalized hospital name and address.
-- supportedAnimals stores specific matched animal categories. If no specific category is found, the app shows the hospital as 기타.
-- classification is confirmed when a hospital is found through specific animal keywords, multiple queries, or has supported animals; otherwise it is candidate.
+- supportedAnimals stores `reptile` for the hospital map.
+- If a hospital has only amphibian, bird, rodent, other, or generic special-animal evidence, it is excluded from the hospital map dataset.
+- classification is confirmed when a hospital is found through the `파충류 동물 병원` keyword, a photo-map seed hydration, or Google Places API (New) reptile hospital search.
+- Google Places API (New) results are merged through Supabase Edge Functions only; the frontend never receives the Google API key.
 - Reviews, likes, recent treated species, and user activity remain app DB/user-data features and update immediately without waiting for weekly collection.
 
 

@@ -1,21 +1,21 @@
 {
   "source": "Naver Local Search API",
   "endpoint": "https://openapi.naver.com/v1/search/local.json",
-  "notice": "네이버 지역 검색 결과는 실제 특수동물 진료 가능 여부의 공식 보증이 아니라 검색 키워드 기반 추정입니다.",
-  "startedAt": "2026-07-19T03:28:35.405Z",
-  "finishedAt": "2026-07-19T03:34:59.261Z",
-  "lastCollectedAt": "2026-07-19T03:34:59.261Z",
-  "requestCount": 1182,
+  "notice": "파충류 동물 병원 단일 검색어와 사진 지도 시드 병원을 기준으로 앱 지도 데이터를 구성합니다.",
+  "startedAt": "2026-07-26T04:10:53.459Z",
+  "finishedAt": "2026-07-26T04:12:30.614Z",
+  "lastCollectedAt": "2026-07-26T04:12:30.614Z",
+  "requestCount": 229,
   "rateLimitRetryCount": 0,
-  "requestedMaxHospitals": 120,
-  "collectedCount": 120,
-  "lastQuery": "충남 천안시 토끼 동물병원",
+  "requestedMaxHospitals": null,
+  "collectedCount": 43,
+  "lastQuery": "제주 제주시 파충류 동물 병원",
   "regionCount": 229,
-  "keywordCount": 8,
+  "keywordCount": 1,
   "queryPolicy": {
     "schedule": "weekly",
     "concurrency": 1,
-    "delayMs": 250,
+    "delayMs": 350,
     "display": 5,
     "backoffMs": [
       1500,
@@ -23,5 +23,18 @@
       4500
     ]
   },
-  "errors": []
+  "errors": [],
+  "photoMapSeedCount": 44,
+  "photoMapHydratedCount": 39,
+  "photoMapAddedCount": 38,
+  "lastPhotoMapSeededAt": "2026-07-26T04:17:53.254Z",
+  "allowedAnimals": [
+    "reptile"
+  ],
+  "removedAnimals": [
+    "amphibian",
+    "bird",
+    "rodent",
+    "other"
+  ]
 }

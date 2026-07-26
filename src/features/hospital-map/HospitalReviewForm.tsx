@@ -22,8 +22,6 @@ type HospitalReviewFormProps = {
   medicineStartDate: string
   medicineEndDate: string
   medicineDailyCount: string
-  medicineBagImage: string
-  medicineRecognitionStatus: string
   selectedTags: string[]
   canSubmit: boolean
   submitLabel?: string
@@ -38,9 +36,7 @@ type HospitalReviewFormProps = {
   onMedicineStartDateChange: (value: string) => void
   onMedicineEndDateChange: (value: string) => void
   onMedicineDailyCountChange: (value: string) => void
-  onMedicineBagChange: (file: File) => void
   onToggleTag: (value: string) => void
-  onSaveDraft: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 const text = {
@@ -75,7 +71,6 @@ const text = {
   tagTitle: '\uC5B4\uB5A4 \uC810\uC774 \uC88B\uC558\uB098\uC694?',
   bodyTitle: '\uB9AC\uBDF0\uB97C \uB0A8\uACA8\uC8FC\uC138\uC694',
   bodyPlaceholder: '\uBC29\uBB38 \uACBD\uD5D8, \uC9C4\uB8CC \uACFC\uC815, \uB2E4\uC2DC \uBC29\uBB38\uD558\uACE0 \uC2F6\uC740 \uC774\uC720\uB97C \uC801\uC5B4\uC8FC\uC138\uC694.',
-  saveDraft: '\uC784\uC2DC\uC800\uC7A5',
   submit: '\uB4F1\uB85D',
   point: '\uC810',
 }
@@ -120,8 +115,6 @@ export default function HospitalReviewForm({
   medicineStartDate,
   medicineEndDate,
   medicineDailyCount,
-  medicineBagImage,
-  medicineRecognitionStatus,
   selectedTags,
   canSubmit,
   submitLabel,
@@ -136,9 +129,7 @@ export default function HospitalReviewForm({
   onMedicineStartDateChange,
   onMedicineEndDateChange,
   onMedicineDailyCountChange,
-  onMedicineBagChange,
   onToggleTag,
-  onSaveDraft,
   onSubmit,
 }: HospitalReviewFormProps) {
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
@@ -154,7 +145,7 @@ export default function HospitalReviewForm({
         <div className="review-rating-picker" aria-label={text.ratingLabel}>
           {[1, 2, 3, 4, 5].map((score) => (
             <button className={rating >= score ? 'active' : ''} type="button" key={score} onClick={() => onRatingChange(score)} aria-label={`${score}${text.point}`}>
-              <span />
+              ★
             </button>
           ))}
         </div>
@@ -193,32 +184,6 @@ export default function HospitalReviewForm({
         </div>
         <input value={diagnosis} onChange={(event) => onDiagnosisChange(event.target.value)} placeholder={text.diagnosisPlaceholder} />
         <input value={treatment} onChange={(event) => onTreatmentChange(event.target.value)} placeholder={text.treatmentPlaceholder} />
-      </section>
-
-      <section className="review-input-section medicine-bag-section">
-        <div className="review-input-head">
-          <strong>{text.medicinePhotoTitle}</strong>
-          <span>{text.optional}</span>
-        </div>
-        <p className="medicine-bag-help">{text.medicineHelp}</p>
-        <label className="medicine-bag-picker">
-          <span>{medicineBagImage ? text.medicineRepick : text.medicinePick}</span>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              if (file) onMedicineBagChange(file)
-            }}
-          />
-        </label>
-        {medicineBagImage && (
-          <figure className="medicine-bag-preview">
-            <img src={medicineBagImage} alt={text.medicineAlt} />
-          </figure>
-        )}
-        {medicineRecognitionStatus && <p className="medicine-bag-status">{medicineRecognitionStatus}</p>}
         <input value={medicine} onChange={(event) => onMedicineChange(event.target.value)} placeholder={text.medicinePlaceholder} />
         <div className="review-form-row">
           <label>
@@ -227,13 +192,13 @@ export default function HospitalReviewForm({
           </label>
           <label>
             {text.endDate}
-            <input type="date" min={medicineStartDate} value={medicineEndDate} onChange={(event) => onMedicineEndDateChange(event.target.value)} />
+            <input type="date" value={medicineEndDate} onChange={(event) => onMedicineEndDateChange(event.target.value)} />
+          </label>
+          <label>
+            {text.dailyCount}
+            <input inputMode="numeric" value={medicineDailyCount} onChange={(event) => onMedicineDailyCountChange(event.target.value.replace(/\D/g, '').slice(0, 2))} />
           </label>
         </div>
-        <label>
-          {text.dailyCount}
-          <input type="number" min="1" max="12" value={medicineDailyCount} onChange={(event) => onMedicineDailyCountChange(event.target.value)} />
-        </label>
       </section>
 
       <section className="review-input-section">
@@ -259,12 +224,12 @@ export default function HospitalReviewForm({
       </section>
 
       <div className="step-actions review-form-actions">
-        <button type="button" className="step-secondary" onClick={onSaveDraft}>{text.saveDraft}</button>
         <button type="submit" className="step-primary" disabled={!canSubmit}>{submitLabel ?? text.submit}</button>
       </div>
     </form>
   )
 }
+
 
 
 
