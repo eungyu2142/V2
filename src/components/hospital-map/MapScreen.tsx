@@ -170,14 +170,13 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       .then(([naverResult, locationResult]) => {
         if (!mounted || !mapElementRef.current) return
 
-        if (naverResult.status === 'rejected') {
-          throw naverResult.reason
-        }
+        if (naverResult.status === 'rejected') throw naverResult.reason
 
         try {
           const naver = naverResult.value
           const firstLocation = locationResult.status === 'fulfilled' ? locationResult.value : null
           const centerLocation = firstLocation ?? { lat: 37.5665, lng: 126.978 }
+          if (!naver.maps) throw new Error('Naver Maps API authentication failed.')
           const center = new naver.maps.LatLng(centerLocation.lat, centerLocation.lng)
           mapInstanceRef.current = new naver.maps.Map(mapElementRef.current, { center, zoom: 12 })
           setMapStatus('ready')

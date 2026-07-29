@@ -10,6 +10,7 @@ type CarePlanRow = {
   repeat_days: number[]
   start_date: string
   end_date: string | null
+  notification_time: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -40,6 +41,7 @@ const toCarePlan = (row: CarePlanRow): CarePlan => ({
   repeatDays: row.repeat_days ?? [],
   startDate: row.start_date,
   endDate: row.end_date ?? undefined,
+  notificationTime: row.notification_time?.slice(0, 5) ?? '09:00',
   isActive: row.is_active,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -94,6 +96,7 @@ export async function saveCarePlan(userId: string, plan: CarePlan) {
     repeat_days: plan.repeatDays,
     start_date: plan.startDate,
     end_date: plan.endDate ?? null,
+    notification_time: plan.notificationTime,
     is_active: plan.isActive,
   })
   if (error) throw error

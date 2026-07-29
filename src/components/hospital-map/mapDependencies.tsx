@@ -155,7 +155,7 @@ export function loadNaverMaps(clientId: string) {
   naverMapsLoader = new Promise<NaverMapApi>((resolve, reject) => {
     const existingScript = document.querySelector<HTMLScriptElement>('script[data-naver-map-sdk="true"]')
     if (existingScript) {
-      existingScript.addEventListener('load', () => window.naver ? resolve(window.naver) : reject(new Error('Naver Maps SDK is unavailable.')), { once: true })
+      existingScript.addEventListener('load', () => window.naver?.maps ? resolve(window.naver) : reject(new Error('Naver Maps SDK authentication failed or maps namespace is unavailable.')), { once: true })
       existingScript.addEventListener('error', () => reject(new Error('Naver Maps SDK failed to load.')), { once: true })
       return
     }
@@ -164,7 +164,7 @@ export function loadNaverMaps(clientId: string) {
     script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}&submodules=geocoder`
     script.async = true
     script.dataset.naverMapSdk = 'true'
-    script.addEventListener('load', () => window.naver ? resolve(window.naver) : reject(new Error('Naver Maps SDK is unavailable.')), { once: true })
+    script.addEventListener('load', () => window.naver?.maps ? resolve(window.naver) : reject(new Error('Naver Maps SDK authentication failed or maps namespace is unavailable.')), { once: true })
     script.addEventListener('error', () => reject(new Error('Naver Maps SDK failed to load.')), { once: true })
     document.head.appendChild(script)
   })

@@ -9,6 +9,7 @@ type Pet = {
   species: string
   gender: 'male' | 'female' | 'unknown'
   photo?: string
+  photoPosition?: { x: number; y: number }
   registeredAt?: string
 }
 
@@ -78,11 +79,8 @@ export default function PetsScreen({
   return (
     <section className="page-stack my-pet-dashboard">
       <section className="section-block my-pet-tools my-pet-dashboard-panel">
-        <div className="my-pet-dashboard-heading">
-          <h2>마이 펫</h2>
-        </div>
         <label className="my-pet-search">
-          <input aria-label="펫 검색" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름 또는 종으로 검색" />
+          <input aria-label="펫 검색" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="예시) 크레스티드 게코" />
         </label>
         <div className="my-pet-filter-row">
           <div className="filter-tags" aria-label="동물 분류 필터">
@@ -121,7 +119,7 @@ export default function PetsScreen({
                   <button className="pet-card-main pet-pick-card-main" type="button" aria-label={`${pet.name} 다이어리 열기`} onClick={() => onOpenDiary(pet.id)}>
                     <div className="pet-card-visual">
                       <div className="pet-card-icon">
-                        {pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} /> : <span className="pet-photo-initial" aria-label="사진 없음">{pet.name.trim().slice(0, 1) || '?'}</span>}
+                        {pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} style={{ objectPosition: `${pet.photoPosition?.x ?? 50}% ${pet.photoPosition?.y ?? 50}%` }} /> : <span className="pet-photo-initial" aria-label="사진 없음">{pet.name.trim().slice(0, 1) || '?'}</span>}
                       </div>
                     </div>
                     <div className="pet-card-body">

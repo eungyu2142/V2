@@ -13,6 +13,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   const qnaUrl = new URLSearchParams(window.location.search)
   const [sort, setSort] = useState<QnaSort>(() => parseQnaSort(qnaUrl.get('sort')))
   const [sortSheetOpen, setSortSheetOpen] = useState(false)
+  const [filterSheet, setFilterSheet] = useState<'all' | 'status' | 'category' | null>(null)
   const [statusFilter, setStatusFilter] = useState<QnaListStatus>(() => parseQnaStatus(qnaUrl.get('status')))
   const [categoryFilter, setCategoryFilter] = useState<QnaCategory | 'all'>(() => parseQnaCategory(qnaUrl.get('category')))
   const [visibleCount, setVisibleCount] = useState(6)
@@ -174,6 +175,12 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
         <button className="qna-create-button" type="button" onClick={() => onCreate()}>질문 작성</button>
       </header>
       <label className="qna-feed-search"><span aria-hidden="true">⌕</span><input aria-label="Q&A 검색" value={searchInput} onChange={(event) => { setSearchInput(event.target.value); setVisibleCount(6) }} placeholder="질문이나 동물 종으로 검색" />{searchInput && <button type="button" aria-label="검색어 지우기" onClick={() => { setSearchInput(''); setQuery(''); setVisibleCount(6) }}>×</button>}</label>
+      <div className="qna-filter-compact" aria-label="Q&A 필터">
+        <button className="qna-filter-icon-button" type="button" aria-label="전체 필터 열기" onClick={() => setFilterSheet('all')}><span className="qna-filter-glyph" aria-hidden="true" /></button>
+        <button className="qna-filter-summary" type="button" onClick={() => setFilterSheet('status')}>질문 상태<span className="qna-sort-chevron" aria-hidden="true" /></button>
+        <button className="qna-filter-summary" type="button" onClick={() => setFilterSheet('category')}>주제<span className="qna-sort-chevron" aria-hidden="true" /></button>
+        <button className="qna-feed-sort-trigger" type="button" aria-label="정렬 선택" onClick={() => setSortSheetOpen(true)}>{qnaSortLabel(sort)}<span className="qna-sort-chevron" aria-hidden="true" /></button>
+      </div>
       <div className="qna-filter-bar" aria-label="Q&A 필터">
         <div className="qna-filter-row" aria-label="답변 상태">
           {([['all', '전체'], ['waiting', '답변 대기'], ['resolved', '해결 완료']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={statusFilter === value} className={statusFilter === value ? 'active' : ''} onClick={() => { setStatusFilter(value); setVisibleCount(6) }}>{label}</button>)}
@@ -196,6 +203,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
           {visiblePosts.length < feedPosts.length && <button className="qna-load-more" type="button" onClick={() => setVisibleCount((count) => count + 6)}>더보기</button>}
         </section>
       )}
+      {filterSheet && <QnaFilterChoiceSheet scope={filterSheet} status={statusFilter} category={categoryFilter} onStatusChange={(value) => { setStatusFilter(value); setVisibleCount(6); setFilterSheet(null) }} onCategoryChange={(value) => { setCategoryFilter(value); setVisibleCount(6); setFilterSheet(null) }} onClose={() => setFilterSheet(null)} />}
       {sortSheetOpen && <QnaSortSheet value={sort} onChange={(value) => { setSort(value); setVisibleCount(6); setSortSheetOpen(false) }} onClose={() => setSortSheetOpen(false)} />}
       <button className="qna-mobile-fab" type="button" aria-label="글쓰기" onClick={() => onCreate()}><span className="qna-write-icon" aria-hidden="true" /></button>
     </section>
@@ -271,6 +279,7 @@ function UserAvatar({ url, name }: { url?: string; name: string }) {
 
 export function QnaCreateFlow({ userId, pets, author, initialPetId, initialDraft, onClose, onSave }: { userId: string; pets: Pet[]; author: string; initialPetId?: string; initialDraft?: DraftItem | null; onClose: () => void; onSave: (post: QnaPost) => void | Promise<void> }) {
   const initialPost = initialDraft?.draftType === 'question' ? initialDraft.payload as QnaPost : null
+  const startedFromDiary = Boolean(initialPetId && pets.some((pet) => pet.id === initialPetId) && !initialDraft && !initialPost)
   const [step, setStep] = useState(initialDraft?.step ?? 0)
   const [petId, setPetId] = useState(initialPost?.petId || (initialPetId && pets.some((pet) => pet.id === initialPetId) ? initialPetId : ''))
   const [category, setCategory] = useState<QnaCategory | ''>(initialPost ? normalizeQnaCategory(initialPost.category) : '')
@@ -281,7 +290,6 @@ export function QnaCreateFlow({ userId, pets, author, initialPetId, initialDraft
   const [attachedDiary, setAttachedDiary] = useState<AttachedDiarySnapshot | null>(initialPost?.attachedDiarySnapshot ?? null)
   const [diaryLoading, setDiaryLoading] = useState(false)
   const [recordAttachOpen, setRecordAttachOpen] = useState(false)
-  const [recordAttachRange, setRecordAttachRange] = useState<3 | 7 | 30>(30)
   const [recordCandidates, setRecordCandidates] = useState<PetRecord[]>([])
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([])
   const autoAttachedRef = useRef(false)
@@ -289,6 +297,12 @@ export function QnaCreateFlow({ userId, pets, author, initialPetId, initialDraft
   const hasNoAnimal = petId === 'none'
   const canSubmit = title.trim().length > 0 && body.trim().length > 0
   const canNext = step === 0 ? Boolean(category) : step === 1 ? Boolean(petId) : canSubmit
+  const goNextStep = () => setStep((value) => startedFromDiary && value === 0 ? 2 : value + 1)
+  const goPreviousStep = () => setStep((value) => startedFromDiary && value === 2 ? 0 : value - 1)
+  const changeStep = (nextStep: number) => setStep(startedFromDiary && nextStep === 1 ? 2 : nextStep)
+  const displayStep = startedFromDiary ? step === 2 ? 1 : 0 : step
+  const displayStepCount = startedFromDiary ? 2 : 3
+  const displayStepLabels = startedFromDiary ? ['질문 유형', '질문 내용'] : ['질문 유형', '질문 대상', '질문 내용']
   const selectedGroup = hasNoAnimal ? '동물 X' : pet ? animalCategoryLabels[pet.group] : ''
   const selectedSpecies = hasNoAnimal ? '' : pet?.species || ''
   const buildPost = (): QnaPost => ({
@@ -400,26 +414,26 @@ export function QnaCreateFlow({ userId, pets, author, initialPetId, initialDraft
   }
 
   return (
-    <StepShell title="질문 작성" onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={3} stepLabels={['질문 유형', '관련 펫', '질문 내용']} onStepChange={setStep}>
-      {step === 0 && <StepSelect label="질문 유형" value={category} options={['건강/증상', '사육/관리']} onChange={(value) => setCategory(value as QnaCategory)} />}
-      {step === 1 && <QnaPetSelect pets={pets} value={petId} onChange={changePet} />}
+    <StepShell title="질문 작성" onBack={step === 0 ? onClose : goPreviousStep} currentStep={displayStep} stepCount={displayStepCount} stepLabels={displayStepLabels} onStepChange={changeStep}>
+      {step === 0 && <StepSelect label="질문 유형" value={category} options={['건강/증상', '사육/관리']} onChange={(value) => { setCategory(value as QnaCategory); if (startedFromDiary) setStep(2) }} />}
+      {step === 1 && !startedFromDiary && <QnaPetSelect pets={pets} value={petId} onChange={changePet} />}
       {step === 2 && <div className="qna-compose-fields">
         <StepText label="제목" value={title} onChange={setTitle} placeholder="질문 제목을 입력하세요" />
         <StepTextarea label="내용" value={body} onChange={setBody} placeholder="궁금한 내용을 자세히 적어 주세요" />
         <label className="step-field attach-file-field"><span>사진 첨부 (선택)</span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" onChange={attachImage} /><small>{image ? '사진이 선택되었습니다' : '선택된 사진 없음'}</small></label>
         {image && <img className="qna-compose-preview" src={image} alt="첨부 사진 미리보기" />}
         {attachedRecord && <RecordAttachCard record={attachedRecord} mode="draft" onRemove={() => setAttachedRecord(null)} />}
-        {!hasNoAnimal && petId && <div className="qna-compose-tools">
+        {!startedFromDiary && !hasNoAnimal && petId && <div className="qna-compose-tools">
           <button type="button" onClick={openRecordAttach}>{attachedDiary ? '기록 첨부됨' : diaryLoading ? '기록 불러오는 중' : '기록 첨부'}</button>
         </div>}
         <div>
           {diaryLoading && <DiaryTimelineSkeleton />}
           {attachedDiary && !diaryLoading && <DiaryTimelineAttachment snapshot={attachedDiary} mode="draft" onRemove={() => setAttachedDiary(null)} />}
         </div>
-        {recordAttachOpen && pet && <QnaRecordAttachSheet pet={pet} records={recordCandidates} range={recordAttachRange} selectedIds={selectedRecordIds} onRangeChange={setRecordAttachRange} onToggle={(recordId) => setSelectedRecordIds((ids) => ids.includes(recordId) ? ids.filter((id) => id !== recordId) : [...ids, recordId])} onSelectDate={(_date, ids) => setSelectedRecordIds((current) => ids.every((id) => current.includes(id)) ? current.filter((id) => !ids.includes(id)) : [...new Set([...current, ...ids])])} onClose={() => setRecordAttachOpen(false)} onSave={saveRecordAttachment} />}
+        {recordAttachOpen && pet && <QnaRecordAttachSheet pet={pet} records={recordCandidates} selectedIds={selectedRecordIds} onToggle={(recordId) => setSelectedRecordIds((ids) => ids.includes(recordId) ? ids.filter((id) => id !== recordId) : [...ids, recordId])} onSelectDate={(_date, ids) => setSelectedRecordIds((current) => ids.every((id) => current.includes(id)) ? current.filter((id) => !ids.includes(id)) : [...new Set([...current, ...ids])])} onClose={() => setRecordAttachOpen(false)} onSave={saveRecordAttachment} />}
       </div>}
-      {step === 2 && <div className="step-actions"><button className="step-secondary step-back" type="button" onClick={() => setStep((value) => value - 1)}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={finish}>등록</button></div>}
-      {step !== 2 && <div className="step-actions"><button className="step-secondary step-back" type="button" onClick={() => setStep((value) => value - 1)} disabled={step === 0}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={() => setStep((value) => value + 1)}>다음</button></div>}
+      {step === 2 && <div className="step-actions"><button className="step-secondary step-back" type="button" onClick={goPreviousStep}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={finish}>등록</button></div>}
+      {step !== 2 && !startedFromDiary && <div className="step-actions"><button className="step-secondary step-back" type="button" onClick={() => setStep((value) => value - 1)} disabled={step === 0}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={goNextStep}>다음</button></div>}
     </StepShell>
   )
 }
@@ -435,9 +449,7 @@ function QnaOwnerMenu({ post, onEdit, onToggleResolve, onDelete }: { post: QnaPo
 function QnaRecordAttachSheet({
   pet,
   records,
-  range,
   selectedIds,
-  onRangeChange,
   onToggle,
   onSelectDate,
   onClose,
@@ -445,18 +457,13 @@ function QnaRecordAttachSheet({
 }: {
   pet: Pet
   records: PetRecord[]
-  range: 3 | 7 | 30
   selectedIds: string[]
-  onRangeChange: (range: 3 | 7 | 30) => void
   onToggle: (recordId: string) => void
   onSelectDate: (date: string, ids: string[]) => void
   onClose: () => void
   onSave: (records: PetRecord[]) => void
 }) {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - (range - 1))
-  const cutoffKey = cutoff.toISOString().slice(0, 10)
-  const visibleRecords = records.filter((record) => record.date >= cutoffKey)
+  const visibleRecords = records
   const grouped = visibleRecords.reduce<Record<string, PetRecord[]>>((groups, record) => {
     groups[record.date] = [...(groups[record.date] ?? []), record]
     return groups
@@ -474,9 +481,6 @@ function QnaRecordAttachSheet({
           <div><strong>{pet.name} 기록 첨부</strong><p>질문에 필요한 기록만 선택하세요.</p></div>
           <button type="button" aria-label="닫기" onClick={onClose}>×</button>
         </header>
-        <div className="qna-record-range-tabs" aria-label="기록 범위">
-          {([3, 7, 30] as const).map((value) => <button className={range === value ? 'active' : ''} type="button" key={value} onClick={() => onRangeChange(value)}>최근 {value}일</button>)}
-        </div>
         <div className="qna-record-selected-summary"><strong>기록 {selectedRecords.length}개 선택</strong><span>{rangeLabel}</span></div>
         {visibleRecords.length === 0 ? <p className="record-picker-empty">첨부할 기록이 없습니다. 다이어리에서 루틴을 완료한 뒤 다시 확인해 주세요.</p> : (
           <div className="qna-record-group-list">
@@ -668,5 +672,3 @@ function StepSelect({ label, value, options, labels, onChange }: { label: string
     </div>
   )
 }
-
-

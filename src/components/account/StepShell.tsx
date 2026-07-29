@@ -27,12 +27,12 @@ export default function StepShell({ title, children, onBack, currentStep, stepCo
   const progress = currentStep !== undefined && stepCount ? (currentStep + 1) / stepCount : undefined
   const keyword = stepLabels?.[currentStep ?? 0] ?? (title.includes('QNA') ? '질문' : title.includes('펫') ? '펫' : '작성')
   return (
-    <main className="step-screen">
+    <main className={`step-screen ${title.includes('질문') ? 'qna-create-screen' : ''}`}>
       <header className="step-header">
         <button className="back" type="button" aria-label="뒤로가기" onClick={onBack}>←</button>
         <strong>{title}</strong>
       </header>
-      <p className="step-keyword" aria-label="작성 키워드">{keyword}</p>
+      {!stepLabels && <p className="step-keyword" aria-label="작성 키워드">{keyword}</p>}
       {!hideProgress && progress !== undefined && stepCount && <div className="step-progress step-progress-selectable" role="tablist" aria-label="작성 단계" style={{ '--step-count': stepCount } as React.CSSProperties}>
         <span className="step-progress-fill" style={{ width: `${progress * 100}%` }} />
         {Array.from({ length: stepCount }, (_, index) => <button key={index} className={index === currentStep ? 'is-current' : ''} type="button" role="tab" aria-selected={index === currentStep} aria-label={`${index + 1}단계`} onClick={() => onStepChange?.(index)}><span>{index + 1}</span></button>)}

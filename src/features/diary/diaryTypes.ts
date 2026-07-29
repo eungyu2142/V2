@@ -76,6 +76,7 @@ export type CareTaskType =
   | 'water'
   | 'mist'
   | 'temperature'
+  | 'water_temperature'
   | 'humidity'
   | 'cleaning'
   | 'partial_cleaning'
@@ -98,6 +99,7 @@ export type CarePlan = {
   repeatDays: number[]
   startDate: string
   endDate?: string
+  notificationTime: string
   isActive: boolean
   createdAt: string
   updatedAt: string
