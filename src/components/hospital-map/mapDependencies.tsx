@@ -440,8 +440,10 @@ function dedupeHospitals(hospitals: Hospital[]) {
   return Array.from(unique.values())
 }
 
-export function hospitalMarkerContent(hospital: Hospital, active: boolean, trusted: boolean) {
-  return `<button class="hospital-map-marker reptile-hospital-marker${active ? ' active' : ''}${trusted ? ' trusted' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}"><span class="marker-face" aria-hidden="true"><i class="marker-lizard"></i><b>H</b><em>+</em></span></button>`
+export function hospitalMarkerContent(hospital: Hospital, active: boolean, reviewCount: number, liked: boolean) {
+  const trusted = reviewCount >= 5
+  const reviewLabel = reviewCount > 99 ? '99+' : String(reviewCount)
+  return `<button class="exo-hospital-marker${active ? ' is-selected' : ''}${trusted ? ' is-reviewed' : ''}${liked ? ' is-liked' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}, 리뷰 ${reviewCount}개"><span class="exo-marker-pin" aria-hidden="true"><b>H</b></span><span class="exo-marker-review" aria-hidden="true">${reviewLabel}</span>${liked ? '<span class="exo-marker-like" aria-hidden="true"></span>' : ''}</button>`
 }
 
 export function readStoredReviews() {

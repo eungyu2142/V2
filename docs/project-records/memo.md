@@ -1,5 +1,136 @@
 # 개발 메모
 
+## 2026-07-29 send-routine-notifications Edge Function
+
+### 요청 요약
+
+- `routine_notification_jobs`의 due 작업을 선점하고 사용자 활성 기기에 단계별 Web Push를 보내는 Edge Function을 구현했다.
+
+### 분석·판단 이유
+
+- 단순 조회 후 갱신하면 Cron 중첩 시 중복 발송될 수 있어 `FOR UPDATE SKIP LOCKED` 기반 RPC로 작업을 원자적으로 선점한다.
+- 같은 작업의 같은 예정 시각은 `processing` 상태와 payload `tag`로 서버 중복 처리와 브라우저 중복 표시를 함께 줄인다.
+- 다음 날 알림은 24시간 밀리초 덧셈이 아니라 `Asia/Seoul` 달력 날짜를 증가시킨다.
+
+### 수정 파일
+
+- `supabase/functions/send-routine-notifications/index.ts`
+- `supabase/functions/send-routine-notifications/README.md`
+- `supabase/migrations/202607290003_claim_routine_notification_jobs.sql`
+- `supabase/config.toml`
+
+### 핵심 변경 내용
+
+- `CRON_SECRET` 헤더 인증과 Service Role 기반 DB 접근을 구현했다.
+- 활성 구독 전체에 발송하고 404·410 구독을 비활성화한다.
+- 최소 한 기기 성공 시에만 알림 단계를 진행하고, 구독 없음 또는 전체 실패 시 `pending`으로 복구한다.
+- 완료 상태가 선점 후 변경되는 경우를 줄이기 위해 발송 직전 작업 상태와 예정 시각을 다시 확인한다.
+- 함수의 JWT 게이트웨이 검증은 끄고 함수 내부 Cron secret 검증을 사용한다.
+
+### 검증 결과
+
+- `any` 미사용과 SQL 원자 선점 구문을 확인했다.
+- 앱 ESLint와 Vite 빌드를 통과했다.
+- Docker Desktop이 없어 `supabase functions serve` 로컬 실행은 불가능했다.
+- 원격 Secrets 목록에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`가 있고 VAPID 3종과 `CRON_SECRET`은 아직 없음을 확인했다.
+
+### 남은 작업
+
+- 원격 마이그레이션 적용
+- VAPID 및 Cron Secrets 등록
+- Edge Function 배포
+- Cron 호출 등록과 실제 기기 발송 검증
+
+## 2026-07-29 진료 기록과 병원 리뷰 연결
+
+### 요청 요약
+
+- 데스크톱 기록 모아보기 버튼을 우측 상단으로 복귀하고 진료 기록에서 작성한 병원 리뷰를 불러오게 했다.
+
+### 분석·판단 이유
+
+- `linkReviewToDiary`가 리뷰 저장 시 `visit_records`, `care_records`, 다음 진료 루틴과 약 일정을 이미 생성한다.
+- 다이어리 진료 버튼이 별도 루틴 작성 폼을 열던 동작을 리뷰 선택 및 기존 연동 기록 확인으로 변경했다.
+
+### 수정 파일
+
+- `src/App.tsx`
+- `src/features/diary/DiaryPage.tsx`
+- `src/features/diary/DiaryPage.css`
+
+### 핵심 변경 내용
+
+- 앱의 병원 리뷰 상태를 다이어리에 전달한다.
+- 현재 펫과 현재 사용자가 작성한 리뷰만 목록에 표시한다.
+- 이미 연동된 리뷰는 중복 저장하지 않고 해당 날짜 상세를 연다.
+- 누락된 리뷰는 병원명, 진단, 처치, 진료비와 리뷰 내용을 진료 기록으로 저장한다.
+
+### 검증 결과
+
+- ESLint와 Vite 프로덕션 빌드를 통과했다.
+
+### 남은 작업
+
+- 실제 Supabase 계정의 리뷰로 선택·중복 방지 흐름을 확인한다.
+
+## 2026-07-29 기존 Service Worker 푸시 수신 통합
+
+### 요청 요약
+
+- 기존 Service Worker의 캐시와 오프라인 기능을 유지하면서 웹 푸시 수신 및 알림 클릭 이동을 추가했다.
+
+### 분석·판단 이유
+
+- 프로젝트는 `vite-plugin-pwa`를 사용하지 않고 `public/sw.js`를 `/sw.js`로 직접 등록한다.
+- Vite는 `public` 파일을 빌드 결과에 그대로 복사하므로 동일 파일을 확장하는 방식이 현재 구조에 맞다.
+
+### 수정 파일
+
+- `public/sw.js`
+
+### 핵심 변경 내용
+
+- JSON 푸시 데이터와 기본 알림값을 모두 지원한다.
+- 제공된 `tag`를 우선 사용하고 없으면 루틴 ID와 예정 시각 또는 날짜로 중복 방지 태그를 만든다.
+- 알림 클릭 시 내부 다이어리 URL로 기존 창을 이동·포커스하거나 새 창을 연다.
+- 기존 install, activate, fetch 캐시 처리는 유지했다.
+
+### 검증 결과
+
+- ESLint, Vite 빌드 및 `dist/sw.js` 내용을 확인한다.
+
+### 남은 작업
+
+- 실제 푸시 발송 Edge Function과 예약 실행은 아직 연결되지 않았다.
+
+## 2026-07-29 기록 모아보기 화면별 배치
+
+### 요청 요약
+
+- 웹 배치는 유지하고 모바일에서는 기록 모아보기 버튼을 하단으로 옮겼다.
+
+### 분석·판단 이유
+
+- 모바일 상단의 펫 정보, NOTICE, 플랜·캘린더 전환과 기록 모아보기 버튼이 경쟁하지 않도록 보조 동작을 본문 아래로 분리했다.
+
+### 수정 파일
+
+- `src/features/diary/DiaryPage.tsx`
+- `src/features/diary/DiaryPage.css`
+
+### 핵심 변경 내용
+
+- 데스크톱 전용 버튼은 기존 보기 전환 옆에 유지했다.
+- 모바일 전용 버튼은 다이어리 본문 아래에 배치하고 최대 너비를 108px로 제한했다.
+
+### 검증 결과
+
+- ESLint와 Vite 빌드로 검증한다.
+
+### 남은 작업
+
+- 없음.
+
 ## 데이터와 인증
 
 - 인증은 Supabase Auth를 사용한다.
@@ -1486,5 +1617,174 @@ CSS 하단에 레이아웃 오버라이드가 여러 번 누적되어 있었고,
 - 분석·판단: 상황별 기록은 이미 SmartAddSheet로 열리지만 공통 diary-modal CSS 때문에 하단 전체 바텀시트처럼 보였다. Q&A 기록 첨부는 range 상태와 최근 n일 탭이 남아 있어 직접 선택 방식과 충돌했다.
 - 수정 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css, src/components/qna/QnaScreen.tsx, src/App.css
 - 핵심 변경: 상황별 기록 패널을 중앙의 작은 모달형 선택창으로 바꾸고, 다이어리에서 Q&A 진입 시 질문 유형 선택 후 바로 작성 단계로 이동하도록 했다. Q&A 기록 첨부의 최근 3/7/30일 탭을 제거하고 전체 후보 기록에서 직접 선택하게 했다. Q&A 진행 표시 글자 칸 수를 실제 스텝 수와 맞췄다.
-- 검증 결과: TypeScript, lint, build 재검증 예정.
+- 검증 결과: `cmd /c npx.cmd tsc -b`, `cmd /c npm.cmd run lint`, `cmd /c npm.cmd run build` 통과. build는 기존 번들 크기 경고만 표시됨.
 - 남은 작업: 진료 기록 후 다음 방문 루틴 생성, 약 기록을 루틴형 일정으로 확장하는 세부 DB 흐름은 추가 검토가 필요하다.
+## 2026-07-29 캘린더 월 이동과 빠른 연월 선택 개선
+- 요청 요약: 캘린더에 물음표가 보이는 문제를 없애고, 좌우 화살표로 다음/이전 달 이동 및 `2026년 7월` 제목 클릭으로 빠르게 다른 연도와 월로 이동할 수 있게 요청했다.
+- 분석·판단: 캘린더 월 이동 버튼과 일부 기록 아이콘 fallback에 `?` 문자가 직접 들어가 화면에 노출되고 있었다. 월 제목은 텍스트만 렌더링되어 빠른 이동 동작을 추가할 수 없었다.
+- 수정 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
+- 핵심 변경: 캘린더 좌우 버튼을 명확한 화살표로 교체하고, 월 제목 클릭 시 연도/월 빠른 선택 패널이 열리도록 했다. 기록 태그는 아이콘 이미지가 없고 fallback 아이콘도 없으면 라벨만 표시해 물음표가 나오지 않게 했다.
+- 검증 결과: `cmd /c npx.cmd tsc -b`, `cmd /c npm.cmd run lint`, `cmd /c npm.cmd run build` 통과. build는 기존 번들 크기 경고만 표시됨.
+- 남은 작업: 실제 모바일 화면에서 빠른 선택 패널 위치와 터치 영역을 눈으로 확인하면 더 좋다.
+## 2026-07-29 캘린더 네이티브 월 선택과 할 일 메뉴 정리
+- 요청 요약: 할 일 메뉴의 물음표를 점 3개로 바꾸고, 할 일 아래 반복 문구를 제거하며, 햄버거 메뉴 줄 두께와 간격을 균일하게 맞추고, 캘린더 월 선택은 앱 내부 커스텀이 아니라 실제 캘린더 선택 방식으로 바꾸도록 요청했다.
+- 분석·판단: 할 일 메뉴 summary와 체크 표시 fallback에 깨진 문자가 남아 있었다. 월 빠른 이동은 직접 만든 패널이라 사용자가 말한 네이티브 선택 흐름과 달랐다.
+- 수정 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css
+- 핵심 변경: 할 일/루틴 메뉴를 실제 점 3개 컴포넌트로 교체하고, 일반 할 일 아래 `매일` 같은 반복 설명은 숨겼다. 햄버거 버튼은 3개의 선이 같은 두께와 일정한 간격을 갖도록 고정했다. 캘린더 제목은 검은색과 크기를 유지하면서 브라우저 기본 `type=month` 선택기를 열도록 바꿨다.
+- 검증 결과: `cmd /c npx.cmd tsc -b`, `cmd /c npm.cmd run lint`, `cmd /c npm.cmd run build` 통과. build는 기존 번들 크기 경고만 표시됨.
+- 남은 작업: 브라우저/모바일 환경별 네이티브 month picker 표시 방식은 기기별로 다를 수 있어 실제 기기 확인이 필요하다.
+## 2026-07-29 루틴 즉시 표시와 Q&A 기록 첨부 카드 정리
+- 요청 요약: 루틴을 만들어도 오늘 할 일에 바로 뜨지 않는 문제를 고치고, Q&A 기록 첨부 카드의 `기록 n개` 문구와 큰 제거 버튼을 정리하며, 상황별 기록 패널은 다시 누르거나 빈 화면/X로 닫히게 요청했다.
+- 분석·판단: 오늘 할 일은 Supabase daily_tasks가 생성된 경우에만 우선 표시되어 새 루틴이 materialize 되기 전 빠질 수 있었다. Q&A 첨부 카드는 별도 QnaParts 컴포넌트에서 기록 개수를 제목에 직접 표시하고 있었다.
+- 수정 파일: src/features/diary/DiaryPage.tsx, src/features/diary/DiaryPage.css, src/components/qna/QnaParts.tsx, src/App.css
+- 핵심 변경: daily_tasks와 저장된 루틴 계산을 합쳐 새 루틴이 오늘 요일에 해당하면 즉시 오늘 할 일에 보이게 했다. Q&A 다이어리 첨부 제목을 `기록`으로 단순화하고 제거 버튼을 작고 중립적인 스타일로 바꿨다. 상황별 기록 모달에 X 닫기 버튼을 추가하고 같은 상황 버튼 호출 시 닫히도록 했다.
+- 검증 결과: `cmd /c npx.cmd tsc -b`, `cmd /c npm.cmd run lint`, `cmd /c npm.cmd run build` 통과. build는 기존 번들 크기 경고만 표시됨.
+- 남은 작업: 실제 Supabase materialize_daily_tasks RPC가 새 루틴을 서버에서도 즉시 생성하는지 배포 DB에서 확인하면 더 좋다.
+
+## 2026-07-29 웹 푸시 알림 구독 연결
+
+- 요청 요약: 기존 직접 작성 Service Worker와 Supabase 인증을 재사용해 PushSubscription 생성·저장·비활성화 기능만 구현하고, 실제 발송 기능은 제외했다.
+- 분석·판단: 프로젝트는 `vite-plugin-pwa`를 사용하지 않고 `src/main.tsx`에서 `public/sw.js`를 등록한다. 로그인 사용자는 `App.tsx`의 `session.user.id`이며 문자열 UUID다. 기존 알림 권한 요청 코드는 없었다.
+- 수정 파일: `.env.example`, `public/manifest.webmanifest`, `public/sw.js`, `src/lib/pushNotifications.ts`, `src/components/notifications/NotificationPermissionCard.tsx`, `src/components/profile/ProfileScreen.tsx`, `src/App.tsx`, `src/App.css`
+- 핵심 변경: HTTPS/localhost 및 API 지원 검사, VAPID 공개키 변환, Service Worker 준비, 기존 구독 재사용, endpoint·p256dh·auth 검증, `push_subscriptions` endpoint 기준 upsert를 구현했다. 해제 시 구독을 취소하고 DB를 비활성화하며, 로그아웃 시에는 브라우저 구독을 유지한 채 DB 행만 비활성화한다.
+- 검증 결과: `cmd /c npx.cmd tsc -b`, `cmd /c npm.cmd run lint`, `cmd /c npm.cmd run build` 통과. 빌드는 기존 500kB 초과 청크 경고만 표시했다.
+- 남은 작업: `.env.local` 또는 배포 환경에 실제 `VITE_VAPID_PUBLIC_KEY`를 설정한 뒤 로그인 사용자로 권한 승인·DB upsert·해제를 확인해야 한다. 푸시 전송, Edge Function, Cron, Service Worker push 표시 이벤트는 미구현 상태다.
+## 2026-07-29 약·진료 루틴 데이터 연결
+
+### 요청 요약
+
+- 약은 별도 상황 기록이 아니라 일반 루틴과 같은 구조로 작성한다.
+- 약은 다른 루틴과 달리 종료일이 필수다.
+- 진료도 루틴이며, 병원 리뷰에서 다음 예정일이 있을 때 진료 루틴과 알림을 만든다.
+
+### 분석·판단 이유
+
+- 이미 수행한 진료는 리뷰와 `visit_records`, `care_records`에 방문 이력으로 보존한다.
+- 미래의 다음 진료는 `care_plans`의 시작일과 종료일을 같은 날짜로 둔 1회 루틴으로 분리한다.
+- 리뷰 ID를 진료 루틴 ID로 재사용해 리뷰 수정 시 같은 루틴을 갱신하고 중복 생성을 막는다.
+- 알림 작업 실패가 리뷰·루틴 저장을 되돌리지 않도록 `routine_notification_jobs` 동기화 오류를 별도로 처리한다.
+
+### 수정 파일
+
+- `src/features/diary/DiaryPage.tsx`
+- `src/features/diary/diaryTypes.ts`
+- `src/features/diary/diaryService.ts`
+- `src/features/hospital-map/HospitalReviewForm.tsx`
+- `src/components/hospital-map/MapScreen.tsx`
+- `src/types/app.ts`
+- `src/App.css`
+- `supabase/migrations/202607290002_medicine_hospital_routines.sql`
+
+### 핵심 변경 내용
+
+- `CareTaskType`에 `medicine`, `hospital`을 추가했다.
+- 상황별 기록의 약·진료 버튼은 즉시 기록을 만들지 않고 루틴 작성 화면을 연다.
+- 약 루틴은 약 이름, 반복 요일, 알림 시간, 필수 종료일을 저장한다.
+- 진료 루틴은 일정 이름, 다음 진료일, 알림 시간을 저장하며 시작일과 종료일이 같은 1회 일정으로 만든다.
+- 병원 리뷰의 다음 예정일을 `HospitalReview`에 보존하고, 리뷰 저장 시 진료 루틴과 알림 작업을 upsert한다.
+- 리뷰에서 처방약을 입력하면 복용 종료일을 필수로 검증하며 기존 `medication_plans`와 `daily_tasks` 흐름을 유지한다.
+- DB 마이그레이션은 `care_plans.task_type`에 약·진료를 허용하고 완료 RPC가 약·진료 이름 스냅샷을 기록하도록 확장한다.
+
+### 검증 결과
+
+- `cmd /c .\node_modules\.bin\tsc.cmd -b` 통과.
+- `cmd /c npm.cmd run lint` 통과.
+- `cmd /c npm.cmd run build` 통과.
+- Vite 번들 크기 경고만 남았으며 빌드는 성공했다.
+
+### 남은 작업
+
+- `202607290002_medicine_hospital_routines.sql`을 실제 Supabase에 적용해야 한다.
+- 실제 계정으로 리뷰 저장, 다음 진료일 수정·해제, 약 종료일 검증, 알림 작업 상태 변경을 확인해야 한다.
+- 실제 푸시 발송은 Edge Function·Cron 단계가 아직 구현되지 않아 현재는 알림 작업 레코드 생성까지만 동작한다.
+## 2026-07-29 Q&A 첨부 기록 날짜 제거와 다시 보기
+
+### 요청 요약
+
+- Q&A 첨부 기록 요약에서 날짜 범위를 제거한다.
+- 기록을 첨부한 뒤 작성 화면과 게시글 상세에서 다시 볼 수 있게 한다.
+
+### 분석·판단 이유
+
+- 첨부 카드의 날짜 범위는 제거하되 실제 첨부 데이터의 날짜는 삭제하지 않았다.
+- `AttachedDiarySnapshot.records`를 그대로 사용해 Q&A 화면 안에서 첨부 당시 기록을 펼치도록 했다.
+
+### 수정 파일
+
+- `src/components/qna/QnaParts.tsx`
+- `src/App.css`
+
+### 핵심 변경 내용
+
+- 첨부 카드에서 `startDate - endDate` 표시를 제거했다.
+- `다시 보기`와 `접기` 토글을 추가했다.
+- 펼친 목록에는 기록 종류, 날짜, 먹이 또는 메모 내용을 표시한다.
+- 작성 중인 첨부에는 기존 `제거` 버튼을 유지했다.
+
+### 검증 결과
+
+- TypeScript, ESLint, Vite 빌드로 검증한다.
+
+### 남은 작업
+
+- 실제 모바일에서 기록이 많은 경우 펼친 목록의 스크롤 길이를 확인한다.
+## 2026-07-29 펫 표시에서 상위 분류 제거
+
+### 요청 요약
+
+- `파충류-데이게코` 대신 `데이게코`처럼 종 이름만 표시한다.
+
+### 분석·판단 이유
+
+- `group` 데이터는 종별 루틴 추천, 환경 프로필, 필터에 필요하므로 삭제하지 않는다.
+- 사용자 화면의 펫 식별 문구에서만 파충류·양서류 라벨을 제거한다.
+
+### 수정 파일
+
+- `src/features/diary/DiaryPage.tsx`
+- `src/components/my-pet/PetCreateFlow.tsx`
+- `src/features/hospital-map/HospitalReviewForm.tsx`
+- `src/components/qna/QnaScreen.tsx`
+
+### 핵심 변경 내용
+
+- 다이어리 헤더와 펫 전환 메뉴에 종만 표시한다.
+- 펫 등록 완료, 병원 리뷰, Q&A 펫 선택과 게시글 펫 정보에도 종만 표시한다.
+- 종별 기능 계산에 사용하는 상위 분류 데이터는 그대로 유지한다.
+
+### 검증 결과
+
+- TypeScript, ESLint, Vite 빌드로 검증한다.
+
+### 남은 작업
+
+- 없음.
+## 2026-07-29 기록 모아보기 버튼 재배치
+
+### 요청 요약
+
+- 펫 정보 아래에 홀로 떨어져 있던 기록 모아보기 버튼을 자연스러운 위치로 이동한다.
+
+### 분석·판단 이유
+
+- 기록 모아보기는 펫 전환 기능이 아니라 플랜·캘린더와 같은 다이어리 보기 기능이다.
+- 따라서 펫 헤더가 아니라 보기 전환 도구 모음에 배치했다.
+
+### 수정 파일
+
+- `src/features/diary/DiaryPage.tsx`
+- `src/features/diary/DiaryPage.css`
+
+### 핵심 변경 내용
+
+- 펫 헤더에서 기록 모아보기 버튼을 제거했다.
+- 플랜·캘린더 탭 오른쪽에 작고 고정된 보조 버튼으로 배치했다.
+- 모바일에서 버튼이 다음 줄로 떨어지거나 NOTICE를 덮지 않도록 그리드 열을 고정했다.
+
+### 검증 결과
+
+- TypeScript, ESLint, Vite 빌드로 검증한다.
+
+### 남은 작업
+
+- 없음.

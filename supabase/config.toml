@@ -6,3 +6,6 @@ enable_confirmations = false
 
 [functions.search-hospitals]
 verify_jwt = true
+
+[functions.send-routine-notifications]
+verify_jwt = false

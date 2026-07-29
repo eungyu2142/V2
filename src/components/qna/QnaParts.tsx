@@ -1,27 +1,97 @@
 import { useState } from 'react'
 import type { AttachedDiarySnapshot, AttachedRecordSnapshot, HospitalSnapshot, QnaPost, QnaSort } from '../../types/app'
+import type { PetRecord } from '../../features/diary/diaryTypes'
 
-export function DiaryTimelineSkeleton() { return <div className="qna-diary-skeleton" aria-label="기록 불러오는 중" /> }
+const text = {
+  loadingRecords: '\uAE30\uB85D \uBD88\uB7EC\uC624\uB294 \uC911',
+  record: '\uAE30\uB85D',
+  dot: '\u00B7',
+  remove: '\uC81C\uAC70',
+  review: '\uB2E4\uC2DC \uBCF4\uAE30',
+  collapse: '\uC811\uAE30',
+  viewRecord: '\uAE30\uB85D \uBCF4\uAE30',
+  viewHospital: '\uBCD1\uC6D0 \uBCF4\uAE30',
+  hospitalSelect: '\uBCD1\uC6D0 \uC120\uD0DD',
+  hospitalHelp: '\uC9C0\uB3C4\uC5D0\uC11C \uBCD1\uC6D0\uC744 \uC120\uD0DD\uD558\uBA74 \uCCA8\uBD80\uD560 \uC218 \uC788\uC5B4\uC694.',
+  close: '\uB2EB\uAE30',
+  sort: '\uC815\uB82C',
+  closeSort: '\uC815\uB82C \uB2EB\uAE30',
+  qnaSort: 'Q&A \uC815\uB82C',
+  manageQuestion: '\uC9C8\uBB38 \uAD00\uB9AC \uBA54\uB274',
+  editQuestion: '\uC9C8\uBB38 \uC218\uC815',
+  unresolved: '\uD574\uACB0 \uCDE8\uC18C',
+  resolved: '\uD574\uACB0 \uC644\uB8CC',
+  deleteQuestion: '\uC9C8\uBB38 \uC0AD\uC81C',
+} as const
+
+const diaryRecordLabels = {
+  food: '먹이',
+  weight: '무게',
+  shed: '탈피',
+  poop: '배변',
+  cleaning: '청소',
+  hospital: '진료',
+  other: '기록',
+} as const
+
+export function DiaryTimelineSkeleton() {
+  return <div className="qna-diary-skeleton" aria-label={text.loadingRecords} />
+}
 
 export function DiaryTimelineAttachment({ snapshot, mode, onRemove }: { snapshot: AttachedDiarySnapshot; mode: 'draft' | 'posted'; onRemove?: () => void }) {
-  return <section className="qna-diary-attachment"><strong>{snapshot.petName} 기록 {snapshot.totalCount}개</strong><span>{snapshot.startDate} - {snapshot.endDate}</span>{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>제거</button>}</section>
+  const [reviewOpen, setReviewOpen] = useState(false)
+  return (
+    <section className={`qna-diary-attachment ${mode}`}>
+      <strong>{snapshot.petName} {text.record}</strong>
+      <div className="qna-diary-attachment-actions">
+        <button type="button" aria-expanded={reviewOpen} onClick={() => setReviewOpen((open) => !open)}>
+          {reviewOpen ? text.collapse : text.review}
+        </button>
+        {mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>{text.remove}</button>}
+      </div>
+      {reviewOpen && (
+        <div className="qna-diary-attachment-records">
+          {snapshot.records.map((record) => {
+            const detail = record.foods?.join(' · ') || record.memo || '완료'
+            return (
+              <article key={record.id}>
+                <div>
+                  <strong>{diaryRecordLabels[record.type]}</strong>
+                  <time dateTime={record.date}>{record.date}</time>
+                </div>
+                <p>{detail}</p>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function DiaryVisualizationAttachment({ snapshot }: { snapshot: AttachedDiarySnapshot }) {
+  const [metric, setMetric] = useState<'all' | 'poop' | 'environment'>('all')
+  const records = snapshot.records.filter((record) => metric === 'all' || (metric === 'poop' ? record.type === 'poop' : Boolean(record.environmentRecord)))
+  const maxCount = Math.max(1, records.length)
+  const labelFor = (record: PetRecord) => record.environmentRecord ? '온습도' : record.type === 'poop' ? '배변' : record.type === 'food' ? '먹이' : '기록'
+  return <section className="qna-diary-visualization"><strong>{snapshot.petName}의 기록</strong><div className="qna-diary-visualization-tabs"><button className={metric === 'all' ? 'active' : ''} type="button" onClick={() => setMetric('all')}>전체</button><button className={metric === 'poop' ? 'active' : ''} type="button" onClick={() => setMetric('poop')}>배변</button><button className={metric === 'environment' ? 'active' : ''} type="button" onClick={() => setMetric('environment')}>온습도</button></div><div className="qna-diary-visualization-chart">{records.map((record) => <div className="qna-diary-visualization-item" key={record.id}><span>{labelFor(record)}</span><i style={{ height: `${Math.max(18, (1 / maxCount) * 100)}%` }} /><time>{record.date}</time></div>)}</div></section>
 }
 
 export function RecordAttachCard({ record, mode, onRemove, onOpen }: { record: AttachedRecordSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
-  return <article className="qna-record-attachment"><strong>{record.recordTypeLabel}</strong><span>{record.petName} · {record.recordDate}</span><p>{record.summary}</p>{onOpen && <button type="button" onClick={onOpen}>기록 보기</button>}{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>제거</button>}</article>
+  return <article className="qna-record-attachment"><strong>{record.recordTypeLabel}</strong><span>{record.petName} · {record.recordDate}</span><p>{record.summary}</p>{onOpen && <button type="button" onClick={onOpen}>{text.viewRecord}</button>}{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>{text.remove}</button>}</article>
 }
 
 export function HospitalAttachCard({ hospital, mode, onRemove, onOpen }: { hospital: HospitalSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
-  return <article className="qna-hospital-attachment"><strong>{hospital.name}</strong><span>{hospital.address}</span>{onOpen && <button type="button" onClick={onOpen}>병원 보기</button>}{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>제거</button>}</article>
+  return <article className="qna-hospital-attachment"><strong>{hospital.name}</strong><span>{hospital.address}</span>{onOpen && <button type="button" onClick={onOpen}>{text.viewHospital}</button>}{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>{text.remove}</button>}</article>
 }
 
-export function HospitalPicker({ onClose }: { onClose: () => void }) {
-  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true"><strong>병원 선택</strong><p>지도에서 병원을 선택한 뒤 첨부할 수 있어요.</p><button type="button" onClick={onClose}>닫기</button></section></div>
+export function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalSnapshot[]; onSelect: (hospital: HospitalSnapshot) => void; onClose: () => void }) {
+  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true"><strong>{text.hospitalSelect}</strong>{hospitals.length > 0 ? <div className="qna-hospital-picker-list">{hospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? hospital.name} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.address}</span><small>{hospital.phone}</small></button>)}</div> : <p>{text.hospitalHelp}</p>}<button type="button" onClick={onClose}>{text.close}</button></section></div>
 }
 
 export function QnaSortSheet({ value, onChange, onClose, label }: { value: QnaSort; onChange: (value: QnaSort) => void; onClose: () => void; label: (value: QnaSort) => string }) {
   const options: QnaSort[] = ['latest', 'popular', 'views', 'comments']
-  return <div className="qna-sort-sheet-overlay"><button className="qna-sort-sheet-dim" type="button" aria-label="정렬 닫기" onClick={onClose} /><section className="qna-sort-sheet" role="dialog" aria-modal="true" aria-label="Q&A 정렬"><span className="hospital-picker-handle" aria-hidden="true" /><h3>정렬</h3>{options.map((option) => <button className={value === option ? 'active' : ''} type="button" key={option} onClick={() => onChange(option)}>{label(option)}</button>)}</section></div>
+  return <div className="qna-sort-sheet-overlay"><button className="qna-sort-sheet-dim" type="button" aria-label={text.closeSort} onClick={onClose} /><section className="qna-sort-sheet" role="dialog" aria-modal="true" aria-label={text.qnaSort}><span className="hospital-picker-handle" aria-hidden="true" /><h3>{text.sort}</h3>{options.map((option) => <button className={value === option ? 'active' : ''} type="button" key={option} onClick={() => onChange(option)}>{label(option)}</button>)}</section></div>
 }
 
 export function UserAvatar({ url, name }: { url?: string; name: string }) {
@@ -31,5 +101,5 @@ export function UserAvatar({ url, name }: { url?: string; name: string }) {
 
 export function QnaOwnerMenu({ post, onEdit, onToggleResolve, onDelete }: { post: QnaPost; onEdit: () => void; onToggleResolve: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false)
-  return <div className="qna-owner-menu"><button type="button" aria-label="질문 관리 메뉴" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋮</button>{open && <div><button type="button" onClick={onEdit}>질문 수정</button><button type="button" onClick={onToggleResolve}>{post.status === 'resolved' ? '해결 취소' : '해결 완료'}</button><button className="danger" type="button" onClick={onDelete}>질문 삭제</button></div>}</div>
+  return <div className="qna-owner-menu"><button type="button" aria-label={text.manageQuestion} aria-expanded={open} onClick={() => setOpen((value) => !value)}>...</button>{open && <div><button type="button" onClick={onEdit}>{text.editQuestion}</button><button type="button" onClick={onToggleResolve}>{post.status === 'resolved' ? text.unresolved : text.resolved}</button><button className="danger" type="button" onClick={onDelete}>{text.deleteQuestion}</button></div>}</div>
 }

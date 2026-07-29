@@ -228,3 +228,35 @@
 - 핵심 변경: 인증 확인 중 안내 문구를 정상적인 한국어 문장으로 교체.
 - 검증 결과: TypeScript 검사와 린트, 프로덕션 빌드를 실행한다.
 - 남은 작업: 다른 화면에서 동일한 인코딩 문제가 발견되면 원문 기준으로 계속 정리.
+## 2026-07-29 팝업 배경 덮임 제거
+
+- 요청 요약: 팝업과 바텀시트가 열릴 때 배경 화면을 덮는 오버레이를 제거.
+- 분석·판단: Q&A, 기록 첨부, 병원 선택, 다이어리, 프로필 모달이 공통 dim 레이어를 사용하고 있어 실제 팝업 외 영역까지 가려지고 있었다.
+- 수정 파일: `src/App.css`, `docs/project-records/all.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경: dim 레이어를 숨기고 오버레이 컨테이너가 배경 클릭을 가로막지 않도록 수정했으며, 팝업 본체만 클릭 가능하게 유지.
+- 검증 결과: TypeScript 검사, 린트, 프로덕션 빌드 실행 예정.
+- 남은 작업: 모바일과 데스크톱에서 각 팝업의 닫기 버튼과 본체 입력을 확인.
+## 2026-07-29 팝업 포커스와 닫기 동작 보완
+
+- 요청 요약: 팝업을 열었을 때 배경은 흐리게 유지하고, 같은 버튼 재클릭·빈 배경 클릭·닫기 버튼으로 팝업을 닫도록 수정.
+- 분석·판단: 이전 오버레이 제거 과정에서 배경 딤과 바깥 클릭 닫기까지 함께 사라졌고 일부 열기 버튼은 항상 열기만 수행하고 있었다.
+- 수정 파일: `src/App.css`, `src/features/diary/DiaryPage.tsx`, `src/components/qna/QnaScreen.tsx`, `docs/project-records/all.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경: 팝업 뒤 배경을 약하게 어둡게 복원하고 오버레이 클릭을 닫기 동작으로 연결했으며, 다이어리 기록 팝업과 Q&A 필터·정렬·병원 첨부 버튼을 토글 방식으로 변경.
+- 검증 결과: TypeScript 검사와 린트, 프로덕션 빌드를 실행한다.
+- 남은 작업: 실제 모바일 터치 환경에서 팝업 내부 클릭과 바깥 클릭을 최종 확인.
+## 2026-07-29 ExoPet 로고 교체
+
+- 요청 요약: 제공된 양서류 로고 이미지로 앱 로고를 교체.
+- 분석·판단: 기존 로고는 PWA 매니페스트의 SVG 아이콘과 브라우저 파비콘에 분리되어 있어 새 이미지 자산으로 공통 연결.
+- 수정 파일: `public/exopet-logo.png`, `public/manifest.webmanifest`, `index.html`, `docs/project-records/all.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경: 제공된 PNG를 PWA 설치 아이콘, 브라우저 탭 아이콘, Apple 홈 화면 아이콘으로 적용.
+- 검증 결과: TypeScript 검사, 린트, 프로덕션 빌드 실행 예정.
+- 남은 작업: 이미 설치된 PWA는 기존 아이콘 캐시를 사용할 수 있으므로 삭제 후 다시 설치해야 새 아이콘이 반영될 수 있음.
+## 2026-07-29 팝업 배경 hover 색상 고정
+
+- 요청 요약: 팝업 바깥 영역에 마우스나 터치를 올렸을 때 흰색으로 변하지 않고, 팝업에 집중되는 회색 딤 상태를 유지하도록 수정.
+- 분석·판단: 전체 화면 닫기 영역이 `button` 요소라 공통 버튼 hover 스타일이 오버레이 배경보다 높은 우선순위로 적용되고 있었다.
+- 수정 파일: `src/App.css`, `docs/project-records/all.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경: 모든 팝업·바텀시트 닫기 레이어의 기본, hover, active, focus 상태에 동일한 딤 배경을 강제로 적용.
+- 검증 결과: TypeScript 검사, 린트, 프로덕션 빌드 실행 예정.
+- 남은 작업: 데스크톱 hover와 모바일 touch 상태에서 배경색 유지 여부 확인.

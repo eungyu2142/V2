@@ -1,5 +1,6 @@
 ﻿import { type ChangeEvent, useState } from 'react'
 import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaPost } from '../../types/app'
+import NotificationPermissionCard from '../notifications/NotificationPermissionCard'
 
 function formatReviewDate(value: string) {
   return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value))
@@ -14,6 +15,7 @@ function draftTypeLabel(type: DraftItem['draftType']) {
 }
 
 function ProfileScreen({
+  userId,
   profile,
   qnaPosts,
   hospitalReviews,
@@ -29,6 +31,7 @@ function ProfileScreen({
   onEditWrittenPost,
   onDeleteWrittenPost,
 }: {
+  userId: string
   profile: AppProfile
   qnaPosts: QnaPost[]
   hospitalReviews: Record<string, HospitalReview[]>
@@ -85,6 +88,7 @@ function ProfileScreen({
         </div>
         {view === 'menu' && (
           <>
+            <NotificationPermissionCard userId={userId} />
             <button type="button" onClick={() => setView('profile')}>&#45236; &#51221;&#48372; &#49688;&#51221;</button>
             <button type="button" onClick={() => setView('posts')}>&#45236;&#44032; &#50420; &#44544;</button>
             <button type="button" onClick={() => setView('liked')}>좋아요한<span>{likedCount}</span></button>

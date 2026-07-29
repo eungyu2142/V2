@@ -1,7 +1,7 @@
 {
-  "name": "ExoCare 특수동물 케어",
-  "short_name": "ExoCare",
-  "description": "특수동물의 펫 정보, 케어 기록, 병원 검색, 커뮤니티, 무료 나눔을 관리하는 PWA 웹앱",
+  "name": "이은규님의 웹앱",
+  "short_name": "이은규님의 웹앱",
+  "description": "특수동물의 돌봄 루틴과 기록을 관리하는 웹앱",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,9 +10,9 @@
   "theme_color": "#0f6d5a",
   "icons": [
     {
-      "src": "/app-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/exopet-logo.png",
+      "sizes": "1258x1254",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],

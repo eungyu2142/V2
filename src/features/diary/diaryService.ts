@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import type { CarePlan, DailyTask, PetRecord } from './diaryTypes'
+import { cancelRoutineNotificationJobs, upsertRoutineNotificationJob } from './routineNotificationJobs'
 
 type CarePlanRow = {
   id: string
@@ -139,6 +140,10 @@ export type ReviewDiaryLinkInput = {
   visitDate: string
   diagnosis?: string
   treatment?: string
+  nextVisit?: {
+    date: string
+    time: string
+  }
   medicine?: {
     name: string
     dose?: string
@@ -148,6 +153,11 @@ export type ReviewDiaryLinkInput = {
     instructions?: string
     ocrRaw?: unknown
   }
+}
+
+function weekdayFromDateKey(dateKey: string) {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
 }
 
 export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
@@ -188,10 +198,71 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
   })
   if (recordError) throw recordError
 
+  const clinicRoutineId = input.reviewId
+  const clinicRoutineTime = input.nextVisit?.time || '09:00'
+  const { error: staleClinicTasksError } = await supabase
+    .from('daily_tasks')
+    .delete()
+    .eq('care_plan_id', clinicRoutineId)
+    .eq('user_id', input.userId)
+    .eq('status', 'pending')
+  if (staleClinicTasksError) throw staleClinicTasksError
+
+  if (input.nextVisit) {
+    const { error: clinicPlanError } = await supabase.from('care_plans').upsert({
+      id: clinicRoutineId,
+      user_id: input.userId,
+      pet_id: input.petId,
+      task_type: 'hospital',
+      title: `진료 · ${input.hospitalName}`,
+      repeat_days: [weekdayFromDateKey(input.nextVisit.date)],
+      start_date: input.nextVisit.date,
+      end_date: input.nextVisit.date,
+      notification_time: clinicRoutineTime,
+      is_active: true,
+      updated_at: createdAt,
+    })
+    if (clinicPlanError) throw clinicPlanError
+
+    try {
+      await cancelRoutineNotificationJobs(input.userId, clinicRoutineId)
+      await upsertRoutineNotificationJob({
+        userId: input.userId,
+        petId: input.petId,
+        routineId: clinicRoutineId,
+        routineDate: input.nextVisit.date,
+        notificationTime: clinicRoutineTime,
+      })
+    } catch (notificationError: unknown) {
+      console.error('Clinic routine notification job sync failed.', notificationError)
+    }
+  } else {
+    const { error: clinicPlanError } = await supabase
+      .from('care_plans')
+      .update({ is_active: false, updated_at: createdAt })
+      .eq('id', clinicRoutineId)
+      .eq('user_id', input.userId)
+      .eq('task_type', 'hospital')
+    if (clinicPlanError) throw clinicPlanError
+
+    try {
+      await cancelRoutineNotificationJobs(input.userId, clinicRoutineId)
+    } catch (notificationError: unknown) {
+      console.error('Clinic routine notification job cancellation failed.', notificationError)
+    }
+  }
+
   const { data: previousPlans, error: previousPlansError } = await supabase.from('medication_plans').select('id').eq('user_id', input.userId).eq('visit_record_id', visitId)
   if (previousPlansError) throw previousPlansError
   const previousPlanIds = (previousPlans ?? []).map((plan) => String(plan.id))
   if (previousPlanIds.length) {
+    await Promise.all(previousPlanIds.map(async (planId) => {
+      try {
+        await cancelRoutineNotificationJobs(input.userId, planId)
+      } catch (notificationError: unknown) {
+        console.error('Medication notification job cancellation failed.', notificationError)
+      }
+    }))
     const { error: oldTasksError } = await supabase.from('daily_tasks').delete().in('medication_plan_id', previousPlanIds).eq('user_id', input.userId)
     if (oldTasksError) throw oldTasksError
     const { error: oldPlansError } = await supabase.from('medication_plans').delete().in('id', previousPlanIds).eq('user_id', input.userId)
@@ -226,4 +297,16 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
   }
   const { error: tasksError } = await supabase.from('daily_tasks').insert(tasks)
   if (tasksError) throw tasksError
+
+  try {
+    await upsertRoutineNotificationJob({
+      userId: input.userId,
+      petId: input.petId,
+      routineId: planId,
+      routineDate: input.medicine.startDate,
+      notificationTime: '09:00',
+    })
+  } catch (notificationError: unknown) {
+    console.error('Medication notification job sync failed.', notificationError)
+  }
 }

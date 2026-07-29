@@ -13,6 +13,9 @@ type HospitalReviewFormProps = {
   rating: number
   body: string
   visitDate: string
+  hasNextVisit: boolean
+  nextVisitDate: string
+  nextVisitTime: string
   cost: string
   diagnosis: string
   treatment: string
@@ -28,6 +31,9 @@ type HospitalReviewFormProps = {
   onRatingChange: (value: number) => void
   onBodyChange: (value: string) => void
   onVisitDateChange: (value: string) => void
+  onHasNextVisitChange: (value: boolean) => void
+  onNextVisitDateChange: (value: string) => void
+  onNextVisitTimeChange: (value: string) => void
   onCostChange: (value: string) => void
   onDiagnosisChange: (value: string) => void
   onTreatmentChange: (value: string) => void
@@ -55,6 +61,9 @@ const text = {
   petSelectPlaceholder: '\uBC18\uB824\uB3D9\uBB3C \uC120\uD0DD',
   treatmentTitle: '\uC9C4\uB8CC \uC815\uBCF4',
   visitDate: '\uBC29\uBB38 \uB0A0\uC9DC',
+  nextVisitQuestion: '\uB2E4\uC74C \uC608\uC815\uC77C\uC774 \uC788\uB098\uC694?',
+  nextVisitDate: '\uB2E4\uC74C \uC9C4\uB8CC\uC77C',
+  reminderTime: '\uC54C\uB9BC \uC2DC\uAC04',
   cost: '\uC9C4\uB8CC\uBE44',
   costPlaceholder: '\uC608: 35,000',
   diagnosisPlaceholder: '\uC9C4\uB2E8 \uB610\uB294 \uBC29\uBB38 \uC0AC\uC720',
@@ -73,15 +82,6 @@ const text = {
   bodyPlaceholder: '\uBC29\uBB38 \uACBD\uD5D8, \uC9C4\uB8CC \uACFC\uC815, \uB2E4\uC2DC \uBC29\uBB38\uD558\uACE0 \uC2F6\uC740 \uC774\uC720\uB97C \uC801\uC5B4\uC8FC\uC138\uC694.',
   submit: '\uB4F1\uB85D',
   point: '\uC810',
-}
-
-const categoryLabels: Record<string, string> = {
-  all: text.all,
-  reptile: text.reptile,
-  bird: text.bird,
-  rodent: text.rodent,
-  amphibian: text.amphibian,
-  other: text.other,
 }
 
 const reviewTags = [
@@ -106,6 +106,9 @@ export default function HospitalReviewForm({
   rating,
   body,
   visitDate,
+  hasNextVisit,
+  nextVisitDate,
+  nextVisitTime,
   cost,
   diagnosis,
   treatment,
@@ -121,6 +124,9 @@ export default function HospitalReviewForm({
   onRatingChange,
   onBodyChange,
   onVisitDateChange,
+  onHasNextVisitChange,
+  onNextVisitDateChange,
+  onNextVisitTimeChange,
   onCostChange,
   onDiagnosisChange,
   onTreatmentChange,
@@ -133,7 +139,7 @@ export default function HospitalReviewForm({
   onSubmit,
 }: HospitalReviewFormProps) {
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
-  const selectedPetMeta = [selectedPet?.species, selectedPet?.group ? categoryLabels[selectedPet.group] ?? selectedPet.group : ''].filter(Boolean).join(' / ')
+  const selectedPetMeta = selectedPet?.species || ''
 
   return (
     <form className="review-form review-composer" onSubmit={onSubmit}>
@@ -184,21 +190,42 @@ export default function HospitalReviewForm({
         </div>
         <input value={diagnosis} onChange={(event) => onDiagnosisChange(event.target.value)} placeholder={text.diagnosisPlaceholder} />
         <input value={treatment} onChange={(event) => onTreatmentChange(event.target.value)} placeholder={text.treatmentPlaceholder} />
-        <input value={medicine} onChange={(event) => onMedicineChange(event.target.value)} placeholder={text.medicinePlaceholder} />
-        <div className="review-form-row">
-          <label>
-            {text.startDate}
-            <input type="date" value={medicineStartDate} onChange={(event) => onMedicineStartDateChange(event.target.value)} />
-          </label>
-          <label>
-            {text.endDate}
-            <input type="date" value={medicineEndDate} onChange={(event) => onMedicineEndDateChange(event.target.value)} />
-          </label>
-          <label>
-            {text.dailyCount}
-            <input inputMode="numeric" value={medicineDailyCount} onChange={(event) => onMedicineDailyCountChange(event.target.value.replace(/\D/g, '').slice(0, 2))} />
-          </label>
+        <div className="review-next-visit">
+          <strong>{text.nextVisitQuestion}</strong>
+          <div className="review-next-visit-choice" role="group" aria-label={text.nextVisitQuestion}>
+            <button type="button" className={hasNextVisit ? 'active' : ''} aria-pressed={hasNextVisit} onClick={() => onHasNextVisitChange(true)}>예</button>
+            <button type="button" className={!hasNextVisit ? 'active' : ''} aria-pressed={!hasNextVisit} onClick={() => onHasNextVisitChange(false)}>아니요</button>
+          </div>
+          {hasNextVisit && (
+            <div className="review-form-row">
+              <label>
+                {text.nextVisitDate}
+                <input type="date" min={new Date().toISOString().slice(0, 10)} value={nextVisitDate} onChange={(event) => onNextVisitDateChange(event.target.value)} required />
+              </label>
+              <label>
+                {text.reminderTime}
+                <input type="time" value={nextVisitTime} onChange={(event) => onNextVisitTimeChange(event.target.value)} />
+              </label>
+            </div>
+          )}
         </div>
+        <input value={medicine} onChange={(event) => onMedicineChange(event.target.value)} placeholder={text.medicinePlaceholder} />
+        {medicine.trim() && (
+          <div className="review-form-row review-medication-schedule">
+            <label>
+              {text.startDate}
+              <input type="date" value={medicineStartDate} onChange={(event) => onMedicineStartDateChange(event.target.value)} />
+            </label>
+            <label>
+              {text.endDate} <span className="review-required-star" aria-label={text.required}>*</span>
+              <input type="date" min={medicineStartDate} value={medicineEndDate} onChange={(event) => onMedicineEndDateChange(event.target.value)} required />
+            </label>
+            <label>
+              {text.dailyCount}
+              <input inputMode="numeric" value={medicineDailyCount} onChange={(event) => onMedicineDailyCountChange(event.target.value.replace(/\D/g, '').slice(0, 2))} />
+            </label>
+          </div>
+        )}
       </section>
 
       <section className="review-input-section">

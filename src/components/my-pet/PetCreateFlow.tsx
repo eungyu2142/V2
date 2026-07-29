@@ -149,7 +149,7 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
   }
 
   if (completedPet) {
-    return <main className="pet-complete-screen"><section className="pet-complete-card"><div className="pet-complete-mark">✓</div><h1>{completedPet.name}가 등록되었어요.</h1><div className="pet-complete-summary"><div className="pet-card-icon"><img src={completedPet.photo} alt={`${completedPet.name} 사진`} style={{ objectPosition: `${completedPet.photoPosition?.x ?? 50}% ${completedPet.photoPosition?.y ?? 50}%` }} /></div><strong>{completedPet.name}</strong><span>{completedPet.species} · {categoryLabels[completedPet.group]}</span></div><div className="pet-complete-actions single"><button className="step-primary" type="button" onClick={onClose}>완료</button></div></section></main>
+    return <main className="pet-complete-screen"><section className="pet-complete-card"><div className="pet-complete-mark">✓</div><h1>{completedPet.name}가 등록되었어요.</h1><div className="pet-complete-summary"><div className="pet-card-icon"><img src={completedPet.photo} alt={`${completedPet.name} 사진`} style={{ objectPosition: `${completedPet.photoPosition?.x ?? 50}% ${completedPet.photoPosition?.y ?? 50}%` }} /></div><strong>{completedPet.name}</strong><span>{completedPet.species || '종 미등록'}</span></div><div className="pet-complete-actions single"><button className="step-primary" type="button" onClick={onClose}>완료</button></div></section></main>
   }
 
   const finishEdit = async () => { if (!group || !resolvedSpecies || !normalizedName || !photo) return; await onSave(buildPet()); onClose() }

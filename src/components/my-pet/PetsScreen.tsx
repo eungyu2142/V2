@@ -69,7 +69,11 @@ export default function PetsScreen({
       return
     }
     if (!isVisiblePetCategory(item)) return
-    setSelectedCategories((current) => current.includes(item) ? current.filter((category) => category !== item) : [...current, item])
+    setSelectedCategories((current) => {
+      if (current.includes(item)) return current.filter((category) => category !== item)
+      if (current.length > 0) return []
+      return [item]
+    })
   }
 
   const requestDelete = (pet: Pet) => {

@@ -568,3 +568,45 @@
 ### 남은 작업
 
 - 실제 화면에서 프로필 본문과 사이드바 사이 여백이 너무 넓거나 좁지 않은지 확인하면 된다.
+
+## 2026-07-29 프로필 사진 전역 반영
+
+### 요청 요약
+
+- 프로필에서 사진 선택을 하면 모든 화면에 내 프로필 사진이 들어가야 한다고 지적했다.
+
+### 판단 이유
+
+- 기존 Q&A 목록과 상세는 일부 fallback으로 현재 프로필 사진을 쓰고 있었지만, 과거 글에 `authorAvatarUrl`이 저장되어 있으면 새 프로필 사진보다 옛 사진이 우선될 수 있었다.
+- Q&A 댓글과 병원 리뷰에는 작성자 프로필 사진 저장/표시 흐름이 부족했다.
+- 사용자가 프로필 사진을 바꾸면 내가 작성자로 표시되는 화면은 저장된 옛 URL보다 현재 로그인 사용자의 최신 프로필 사진을 우선해야 한다.
+
+### 수정 파일
+
+- `src/types/app.ts`
+- `src/App.tsx`
+- `src/components/qna/QnaScreen.tsx`
+- `src/components/hospital-map/MapScreen.tsx`
+- `src/App.css`
+- `docs/project-records/profile.md`
+- `docs/project-records/UI.md`
+
+### 핵심 변경 내용
+
+- `QnaComment`와 `HospitalReview` 타입에 `authorAvatarUrl`을 추가했다.
+- Q&A 새 글 작성 시 현재 프로필 사진 URL을 `authorAvatarUrl`로 저장하도록 했다.
+- Q&A 목록과 상세에서 내 글은 저장된 옛 사진보다 현재 `profile.avatarUrl`을 우선 표시하도록 했다.
+- Q&A 댓글도 작성자 아바타를 표시하고, 내 댓글은 현재 프로필 사진을 우선 표시하도록 했다.
+- 댓글 저장 payload에 `authorAvatarUrl`을 포함했다.
+- 병원 리뷰 작성 시 현재 프로필 사진 URL을 리뷰 데이터에 저장하도록 했다.
+- 병원 리뷰 카드에 작성자 아바타를 추가했고, 내 리뷰는 현재 프로필 사진을 우선 표시하도록 했다.
+- 프로필 저장 시 로컬에 떠 있는 내 Q&A 글과 병원 리뷰의 작성자 이름/프로필 사진도 최신 값으로 갱신했다.
+
+### 검증 결과
+
+- `cmd /c npm.cmd run build` 통과.
+- Vite가 chunk 크기 경고를 냈지만 빌드 실패는 아니었다.
+
+### 남은 작업
+
+- 이미 DB에 저장된 과거 댓글의 프로필 사진까지 영구 갱신하려면 `post_comments` payload 일괄 업데이트 흐름을 추가로 만들 수 있다.

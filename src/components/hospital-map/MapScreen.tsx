@@ -2,7 +2,7 @@
 import { linkReviewToDiary } from '../../features/diary/diaryService'
 import HospitalReviewForm from './MapAndReview'
 import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
-import { animalCategoryLabels, buildHospitalSearchQuery, CategoryTagIcon, formatReviewDate, getRecentSpecies, getReviewSummary, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadCollectedHospitals, loadNaverMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory, writeSavedHospitalSnapshots } from './mapDependencies'
+import { animalCategoryLabels, buildHospitalSearchQuery, formatReviewDate, getRecentSpecies, getReviewSummary, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadCollectedHospitals, loadNaverMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory, writeSavedHospitalSnapshots } from './mapDependencies'
 import type { NaverMapApi } from '../../types/map'
 const HOSPITAL_LIST_PAGE_SIZE = 10
 function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
@@ -18,9 +18,13 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [isLoading, setIsLoading] = useState(false)
   const [, setMessage] = useState(naverMapClientId ? '' : '.env.local의 VITE_NAVER_MAP_CLIENT_ID를 확인해주세요.')
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false)
+  const [copiedAddressHospitalId, setCopiedAddressHospitalId] = useState<string | null>(null)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewBody, setReviewBody] = useState('')
   const [reviewVisitDate, setReviewVisitDate] = useState(new Date().toISOString().slice(0, 10))
+  const [reviewHasNextVisit, setReviewHasNextVisit] = useState(false)
+  const [reviewNextVisitDate, setReviewNextVisitDate] = useState('')
+  const [reviewNextVisitTime, setReviewNextVisitTime] = useState('09:00')
   const [reviewCost, setReviewCost] = useState('')
   const [reviewDiagnosis, setReviewDiagnosis] = useState('')
   const [reviewTreatment, setReviewTreatment] = useState('')
@@ -33,10 +37,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [reviewMedicineOcrRaw, setReviewMedicineOcrRaw] = useState<unknown>(null)
   const [reviewTags, setReviewTags] = useState<string[]>([])
   const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false)
-  const [sheetDismissed, setSheetDismissed] = useState(false)
   const [mobileSheetState, setMobileSheetState] = useState<MobileMapSheetState>('middle')
-  void mobileSheetState
-  void setMobileSheetState
   const [sheetDragY, setSheetDragY] = useState(0)
   const [isSheetDragging, setIsSheetDragging] = useState(false)
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
@@ -94,7 +95,15 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const selectedReviewAnimalCategory = toReviewAnimalCategory(selectedReviewPet?.group)
   const selectedReviewSpecies = selectedReviewPet?.species ?? ''
   const reviewablePets = pets.filter((pet) => isHospitalCareCategory(pet.group))
-  const canSubmitHospitalReview = Boolean(reviewPetId && isHospitalCareCategory(selectedReviewPet?.group) && reviewBody.trim().length > 0 && reviewVisitDate.trim().length > 0 && reviewRating >= 1)
+  const canSubmitHospitalReview = Boolean(
+    reviewPetId
+    && isHospitalCareCategory(selectedReviewPet?.group)
+    && reviewBody.trim().length > 0
+    && reviewVisitDate.trim().length > 0
+    && reviewRating >= 1
+    && (!reviewHasNextVisit || reviewNextVisitDate)
+    && (!reviewMedicine.trim() || reviewMedicineEndDate)
+  )
   const selectedHospitalIsLiked = selectedHospital ? likedHospitals.some((hospital) => isSameHospitalIdentity(hospital, selectedHospital)) : false
   const selectedCategoryReviewLabel = selectedCategories.length > 0 ? selectedCategories.map((category) => animalCategoryLabels[category]).join('/') : ''
   const selectedHospitalRecentReviewText = selectedHospitalRecentSpecies
@@ -125,7 +134,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       const hospital = hospitalFromSnapshot(focusHospital)
       setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
       setSelectedHospitalId(hospital.id)
-      setSheetDismissed(false)
       setMobileSheetState('expanded')
       setQuery(hospital.name)
       setSelectedCategories(hospital.categories.filter(isHospitalCareCategory))
@@ -140,12 +148,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
     setSelectedHospitalId(hospital.id)
-    setSheetDismissed(false)
     setMobileSheetState('expanded')
     setIsReviewFormOpen(true)
     setReviewRating(reviewDraftPayload.review.rating)
     setReviewBody(reviewDraftPayload.review.body)
     setReviewVisitDate(reviewDraftPayload.review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewHasNextVisit(Boolean(reviewDraftPayload.review.nextVisitDate))
+    setReviewNextVisitDate(reviewDraftPayload.review.nextVisitDate ?? '')
+    setReviewNextVisitTime(reviewDraftPayload.review.nextVisitTime ?? '09:00')
     setReviewCost(reviewDraftPayload.review.cost ? reviewDraftPayload.review.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(reviewDraftPayload.review.diagnosis ?? '')
     setReviewTreatment(reviewDraftPayload.review.treatment ?? '')
@@ -179,6 +189,11 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           if (!naver.maps) throw new Error('Naver Maps API authentication failed.')
           const center = new naver.maps.LatLng(centerLocation.lat, centerLocation.lng)
           mapInstanceRef.current = new naver.maps.Map(mapElementRef.current, { center, zoom: 12 })
+          naver.maps.Event.addListener(mapInstanceRef.current, 'click', () => {
+            setSelectedHospitalId(null)
+            setIsReviewFormOpen(false)
+            setMobileSheetState('collapsed')
+          })
           setMapStatus('ready')
 
           if (firstLocation) {
@@ -213,7 +228,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   useEffect(() => {
     const naver = window.naver
     const map = mapInstanceRef.current
-    if (!naver || !map || !currentLocation) return
+    if (!naver?.maps?.LatLng || !map || !currentLocation) return
 
     const position = new naver.maps.LatLng(currentLocation.lat, currentLocation.lng)
     currentLocationMarkerRef.current?.setMap(null)
@@ -231,7 +246,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     const naver = window.naver
     const map = mapInstanceRef.current
     const hospital = selectedHospital
-    if (!naver || !map || !hospital) return
+    if (!naver?.maps?.LatLng || !map || !hospital) return
     const position = new naver.maps.LatLng(hospital.lat, hospital.lng)
     moveMapSmoothly(position, 16)
   }, [selectedHospital])
@@ -239,28 +254,31 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   useEffect(() => {
     const naver = window.naver
     const map = mapInstanceRef.current
-    if (!naver || !map) return
+    if (!naver?.maps?.LatLng || !naver.maps.Marker || !naver.maps.Event || !map) return
 
     markersRef.current.forEach((marker) => marker.setMap(null))
     markersRef.current = []
 
     filteredHospitals.forEach((hospital) => {
       const position = new naver.maps.LatLng(hospital.lat, hospital.lng)
+      const hospitalReviewCount = getReviewSummary(
+        (reviews[hospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory)),
+      ).count
+      const hospitalIsLiked = likedHospitals.some((likedHospital) => isSameHospitalIdentity(likedHospital, hospital))
       const marker = new naver.maps.Marker({
         position,
         map,
         title: hospital.name,
-        icon: { content: hospitalMarkerContent(hospital, hospital.id === selectedHospitalId, selectedHospitalReviews.length >= 5) },
+        icon: { content: hospitalMarkerContent(hospital, hospital.id === selectedHospitalId, hospitalReviewCount, hospitalIsLiked) },
       })
       ;(marker as unknown as { setZIndex?: (zIndex: number) => void }).setZIndex?.(hospital.id === selectedHospitalId ? 260 : 210)
       naver.maps.Event.addListener(marker, 'click', () => {
         setSelectedHospitalId(hospital.id)
-        setSheetDismissed(false)
-        setMobileSheetState('expanded')
+        setMobileSheetState('middle')
       })
       markersRef.current.push(marker)
     })
-  }, [filteredHospitals, selectedHospitalId, selectedHospitalReviews.length])
+  }, [filteredHospitals, likedHospitals, reviews, selectedHospitalId])
 
   const getCurrentLocation = () => {
     setLocationStatus('loading')
@@ -318,8 +336,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     if (isLoading) return
 
     setSelectedHospitalId(null)
-    setSheetDismissed(false)
-
     const location = currentLocation ?? await getCurrentLocation().catch(() => null)
     lastHospitalSearchKeyRef.current = ''
     await runHospitalSearch(query, selectedCategories[0] ?? 'all', location)
@@ -330,6 +346,9 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     setReviewRating(5)
     setReviewBody('')
     setReviewVisitDate(new Date().toISOString().slice(0, 10))
+    setReviewHasNextVisit(false)
+    setReviewNextVisitDate('')
+    setReviewNextVisitTime('09:00')
     setReviewCost('')
     setReviewDiagnosis('')
     setReviewTreatment('')
@@ -343,12 +362,20 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     setReviewPetId(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
   }
 
+  const closeReviewForm = () => {
+    resetReviewForm()
+    setIsReviewFormOpen(false)
+  }
+
   const beginReviewEdit = (review: HospitalReview) => {
     if (!review.mine) return
     setEditingReviewId(review.id)
     setReviewRating(review.rating)
     setReviewBody(review.body || review.content || '')
     setReviewVisitDate(review.visitDate ?? new Date().toISOString().slice(0, 10))
+    setReviewHasNextVisit(Boolean(review.nextVisitDate))
+    setReviewNextVisitDate(review.nextVisitDate ?? '')
+    setReviewNextVisitTime(review.nextVisitTime ?? '09:00')
     setReviewCost(review.cost ? review.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(review.diagnosis ?? '')
     setReviewTreatment(review.treatment ?? '')
@@ -376,10 +403,13 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       petId: reviewPetId,
       petName: reviewPet?.name,
       author: profileReviewAuthor,
+      authorAvatarUrl: profile.avatarUrl,
       animalCategory: selectedReviewAnimalCategory,
       species: selectedReviewSpecies,
       rating: reviewRating,
       visitDate: reviewVisitDate,
+      nextVisitDate: reviewHasNextVisit ? reviewNextVisitDate : undefined,
+      nextVisitTime: reviewHasNextVisit ? reviewNextVisitTime : undefined,
       cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
       diagnosis: reviewDiagnosis.trim(),
       treatment: reviewTreatment.trim(),
@@ -412,6 +442,10 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         visitDate: reviewVisitDate,
         diagnosis: reviewDiagnosis.trim(),
         treatment: reviewTreatment.trim(),
+        nextVisit: reviewHasNextVisit && reviewNextVisitDate ? {
+          date: reviewNextVisitDate,
+          time: reviewNextVisitTime || '09:00',
+        } : undefined,
         medicine: reviewMedicine.trim() ? {
           name: reviewMedicine.trim(),
           startDate: reviewMedicineStartDate || reviewVisitDate,
@@ -473,29 +507,37 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
 
   const moveSheetDrag = (event: { clientY: number; preventDefault: () => void }) => {
     if (sheetDragStartRef.current === null) return
-    const nextDragY = Math.max(0, event.clientY - sheetDragStartRef.current)
+    const nextDragY = event.clientY - sheetDragStartRef.current
     setSheetDragY(nextDragY)
-    if (nextDragY > 0) event.preventDefault()
+    if (Math.abs(nextDragY) > 0) event.preventDefault()
   }
 
   const finishSheetDrag = () => {
-    const shouldClose = sheetDragY > 72
+    const dragDistance = sheetDragY
     sheetDragStartRef.current = null
     setIsSheetDragging(false)
     setSheetDragY(0)
-    if (!shouldClose) return
+
+    if (dragDistance < -56) {
+      setMobileSheetState((state) => state === 'collapsed' ? 'middle' : 'expanded')
+      return
+    }
+
+    if (dragDistance <= 56) return
+
     if (mobileSheetState === 'expanded') {
       setMobileSheetState('middle')
       return
     }
+
     if (selectedHospital) {
       setSelectedHospitalId(null)
       setIsReviewFormOpen(false)
       setMobileSheetState('middle')
       return
     }
+
     setMobileSheetState('collapsed')
-    setSheetDismissed(true)
   }
 
   const sheetDragHandlers = {
@@ -503,39 +545,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     onPointerMove: moveSheetDrag,
     onPointerUp: finishSheetDrag,
     onPointerCancel: finishSheetDrag,
-  }
-
-  const beginReopenDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number; stopPropagation: () => void }) => {
-    sheetDragStartRef.current = event.clientY
-    setIsSheetDragging(true)
-    setSheetDragY(0)
-    event.currentTarget.setPointerCapture?.(event.pointerId)
-    event.stopPropagation()
-  }
-
-  const moveReopenDrag = (event: { clientY: number; preventDefault: () => void }) => {
-    if (sheetDragStartRef.current === null) return
-    const nextDragY = Math.min(0, event.clientY - sheetDragStartRef.current)
-    setSheetDragY(nextDragY)
-    if (nextDragY < 0) event.preventDefault()
-  }
-
-  const finishReopenDrag = () => {
-    const shouldOpen = sheetDragY < -34
-    sheetDragStartRef.current = null
-    setIsSheetDragging(false)
-    setSheetDragY(0)
-    if (shouldOpen) {
-      setSheetDismissed(false)
-      setMobileSheetState('expanded')
-    }
-  }
-
-  const reopenDragHandlers = {
-    onPointerDown: beginReopenDrag,
-    onPointerMove: moveReopenDrag,
-    onPointerUp: finishReopenDrag,
-    onPointerCancel: finishReopenDrag,
   }
 
   useEffect(() => {
@@ -550,15 +559,41 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   useEffect(() => {
     const openFromBottomNav = () => {
       setIsReviewFormOpen(false)
-      setSheetDismissed(false)
       setMobileSheetState((state) => state === 'expanded' ? 'expanded' : 'expanded')
     }
     window.addEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
     return () => window.removeEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
   }, [])
 
+  useEffect(() => {
+    if (!isReviewFormOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setIsReviewFormOpen(false)
+      setEditingReviewId(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [isReviewFormOpen])
+
+  useEffect(() => {
+    if (!copiedAddressHospitalId) return
+    const timeout = window.setTimeout(() => setCopiedAddressHospitalId(null), 1800)
+    return () => window.clearTimeout(timeout)
+  }, [copiedAddressHospitalId])
+
+  const copyHospitalAddress = async (hospital: Hospital) => {
+    if (!hospital.address) return
+    try {
+      await navigator.clipboard.writeText(hospital.address)
+      setCopiedAddressHospitalId(hospital.id)
+    } catch (error) {
+      console.error('Hospital address copy failed.', error)
+    }
+  }
+
   return (
-    <section className={`map-page ${selectedHospital ? 'has-selected-hospital' : ''}`}>
+    <section className={`map-page mobile-sheet-${mobileSheetState} ${selectedHospital ? 'has-selected-hospital' : ''}`}>
       <section className="map-area">
         <div className="map-canvas" ref={mapElementRef}>
           {mapStatus !== 'ready' && (
@@ -569,7 +604,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           )}
         </div>
         <button className="map-mobile-location-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation} aria-label="내 위치로 이동">
-          <span className="location-button-icon" aria-hidden="true" />
           <span>{locationStatus === 'loading' ? '확인중' : '내 위치'}</span>
         </button>
       </section>
@@ -586,13 +620,12 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         <form className="map-search-panel" onSubmit={submit}>
           <label>
             병원 검색
-            <input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE); setSheetDismissed(false) }} placeholder="지역명, 병원명, 특수동물 병원" />
+            <input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }} placeholder="지역명, 병원명" />
           </label>
           <button className="map-search-icon-button" type="submit" disabled={isLoading} aria-label="검색">
             <span aria-hidden="true" />
           </button>
           <button className="secondary-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation}>
-            <span className="location-button-icon" aria-hidden="true" />
             <span>{locationStatus === 'loading' ? '확인중' : '내 위치'}</span>
           </button>
         </form>
@@ -609,48 +642,28 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           ))}
         </div>
 
-        {!sheetDismissed && (
-          <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
-            <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
-            <div className="map-side-head">
-              <strong>{isLoading ? '병원을 찾는 중' : `병원 ${filteredHospitals.length}곳`}</strong>
-              <span>{currentLocation ? '내 위치 기준 가까운 순' : '위치 권한 허용 시 거리순'}</span>
-            </div>
-            {filteredHospitals.length === 0 ? (
-              <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
-            ) : (
-              <>
-                {visibleHospitals.map((hospital) => (
-                  <HospitalListRow
-                    hospital={hospital}
-                    key={hospital.id}
-                    reviews={reviews[hospital.id] ?? []}
-                    active={hospital.id === selectedHospitalId}
-                    onSelect={() => { setSelectedHospitalId(hospital.id); setSheetDismissed(false); setMobileSheetState('expanded') }}
-                  />
-                ))}
-                {hasMoreHospitals && (
-                  <button className="map-hospital-more-button" type="button" onClick={() => setVisibleHospitalCount((count) => count + HOSPITAL_LIST_PAGE_SIZE)}>
-                    더보기
-                  </button>
-                )}
-              </>
-            )}
-          </section>
-        )}
-
-        {!selectedHospital && sheetDismissed && filteredHospitals.length > 0 && (
-          <button
-            className={`map-sheet-reopen ${isSheetDragging ? 'is-dragging' : ''}`}
-            type="button"
-            aria-label="병원 목록을 위로 끌어올려 열기"
-            style={{ transform: `translateX(50%)${sheetDragY ? ` translateY(${sheetDragY}px)` : ''}` }}
-            {...reopenDragHandlers}
-          >
-            <span aria-hidden="true" />
-            병원 {filteredHospitals.length}곳
-          </button>
-        )}
+        <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
+          <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
+          {filteredHospitals.length === 0 ? (
+            <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
+          ) : (
+            <>
+              {visibleHospitals.map((hospital) => (
+                <HospitalListRow
+                  hospital={hospital}
+                  key={hospital.id}
+                  active={hospital.id === selectedHospitalId}
+                  onSelect={() => { setSelectedHospitalId(hospital.id); setMobileSheetState('middle') }}
+                />
+              ))}
+              {hasMoreHospitals && (
+                <button className="map-hospital-more-button" type="button" onClick={() => setVisibleHospitalCount((count) => count + HOSPITAL_LIST_PAGE_SIZE)}>
+                  더보기
+                </button>
+              )}
+            </>
+          )}
+        </section>
 
       </aside>
 
@@ -659,70 +672,41 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
             <button className="panel-close" type="button" aria-label="닫기" onClick={() => setSelectedHospitalId(null)} />
             <div className="hospital-card-main">
-              <CategoryTagIcon category={selectedHospital.categories[0] ?? 'all'} />
               <div>
                 <strong>{selectedHospital.name}</strong>
-                <p><span className="meta-icon location" aria-hidden="true" />{selectedHospital.address || '주소 정보 없음'}</p>
+                <div className="hospital-address-row">
+                  <p><span className="meta-icon location" aria-hidden="true" />{selectedHospital.address || '주소 정보 없음'}</p>
+                  {selectedHospital.address && (
+                    <button type="button" onClick={() => void copyHospitalAddress(selectedHospital)}>
+                      {copiedAddressHospitalId === selectedHospital.id ? '복사됨' : '복사'}
+                    </button>
+                  )}
+                </div>
                 <small><span className="meta-icon distance" aria-hidden="true" />{selectedHospital.distanceKm === undefined ? '내 위치 기준 거리 계산 전' : `내 위치에서 ${selectedHospital.distanceKm.toFixed(1)}km`}</small>
                 <small><span className="meta-icon species" aria-hidden="true" />{selectedHospitalRecentReviewText}</small>
                 <small><span className="meta-icon review" aria-hidden="true" />리뷰 {selectedHospitalSummary.count}개</small>
               </div>
             </div>
-            <div className="hospital-tags">
-              {selectedHospital.categories.filter(isHospitalCareCategory).map((category) => <span key={category}>{animalCategoryLabels[category]}</span>)}
-            </div>
             <div className="hospital-actions">
               <button className={`hospital-like-action ${selectedHospitalIsLiked ? 'active' : ''}`} type="button" aria-pressed={selectedHospitalIsLiked} onClick={() => toggleSavedHospital(selectedHospital)}>
                 {selectedHospitalIsLiked ? '좋아요 취소' : '좋아요'}
               </button>
-              <button className="hospital-review-write-action" type="button" onClick={() => { if (editingReviewId || isReviewFormOpen) { resetReviewForm(); setIsReviewFormOpen(false); return } resetReviewForm(); setIsReviewFormOpen(true) }}>
-                {editingReviewId ? '수정 취소' : '리뷰 작성'}
+              <button className="hospital-review-write-action" type="button" onClick={() => { resetReviewForm(); setIsReviewFormOpen(true) }}>
+                리뷰 작성
               </button>
-              {selectedHospital.phone && <a href={`tel:${selectedHospital.phone}`}>전화하기</a>}
             </div>
             <section className="hospital-review-panel">
               <div className="review-panel-head">
                 <div><strong>리뷰</strong><span>{selectedHospitalSummary.count === 0 ? '아직 리뷰가 없습니다' : `${selectedHospitalSummary.average.toFixed(1)}점 · ${selectedHospitalSummary.count}개`}</span></div>
               </div>
-              <HospitalReviewSummary reviews={selectedHospitalReviews} onWriteReview={() => { resetReviewForm(); setIsReviewFormOpen(true) }} />
-              {isReviewFormOpen && (
-                <HospitalReviewForm
-                  rating={reviewRating}
-                  body={reviewBody}
-                  visitDate={reviewVisitDate}
-                  cost={reviewCost}
-                  diagnosis={reviewDiagnosis}
-                  treatment={reviewTreatment}
-                  medicine={reviewMedicine}
-                  pets={reviewablePets.map((pet) => ({ id: pet.id, name: pet.name, group: pet.group, species: pet.species }))}
-                  selectedPetId={reviewPetId}
-                  medicineStartDate={reviewMedicineStartDate}
-                  medicineEndDate={reviewMedicineEndDate}
-                  medicineDailyCount={reviewMedicineDailyCount}
-                  selectedTags={reviewTags}
-                  canSubmit={canSubmitHospitalReview}
-                  submitLabel={editingReviewId ? '수정 완료' : '등록'}
-                  onRatingChange={setReviewRating}
-                  onBodyChange={setReviewBody}
-                  onVisitDateChange={setReviewVisitDate}
-                  onCostChange={setReviewCost}
-                  onDiagnosisChange={setReviewDiagnosis}
-                  onTreatmentChange={setReviewTreatment}
-                  onMedicineChange={setReviewMedicine}
-                  onPetChange={setReviewPetId}
-                  onMedicineStartDateChange={setReviewMedicineStartDate}
-                  onMedicineEndDateChange={setReviewMedicineEndDate}
-                  onMedicineDailyCountChange={setReviewMedicineDailyCount}
-                  onToggleTag={toggleReviewTag}
-                  onSubmit={submitReview}
-                />
-              )}
+              <HospitalReviewSummary reviews={selectedHospitalReviews} />
               {selectedHospitalReviews.length > 0 && (
                 <div className="review-list">
                   {selectedHospitalReviews.map((review) => (
                     <HospitalReviewItem
                       review={review}
                       fallbackAuthor={profileReviewAuthor}
+                      fallbackAvatarUrl={profile.avatarUrl}
                       key={review.id}
                       onDelete={() => deleteReview(selectedHospital.id, review.id)}
                       onEdit={() => beginReviewEdit(review)}
@@ -734,36 +718,85 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             </section>
           </article>
         )}
+      {selectedHospital && isReviewFormOpen && (
+        <div className="hospital-review-modal-layer">
+          <button className="hospital-review-modal-backdrop" type="button" aria-label="리뷰 작성 닫기" onClick={closeReviewForm} />
+          <section className="hospital-review-modal" role="dialog" aria-modal="true" aria-labelledby="hospital-review-modal-title">
+            <header className="hospital-review-modal-head">
+              <div>
+                <strong id="hospital-review-modal-title">{editingReviewId ? '리뷰 수정' : '리뷰 작성'}</strong>
+                <span>{selectedHospital.name}</span>
+              </div>
+              <button className="hospital-review-modal-close" type="button" aria-label="닫기" onClick={closeReviewForm} />
+            </header>
+            <div className="hospital-review-modal-body">
+              <HospitalReviewForm
+                rating={reviewRating}
+                body={reviewBody}
+                visitDate={reviewVisitDate}
+                hasNextVisit={reviewHasNextVisit}
+                nextVisitDate={reviewNextVisitDate}
+                nextVisitTime={reviewNextVisitTime}
+                cost={reviewCost}
+                diagnosis={reviewDiagnosis}
+                treatment={reviewTreatment}
+                medicine={reviewMedicine}
+                pets={reviewablePets.map((pet) => ({ id: pet.id, name: pet.name, group: pet.group, species: pet.species }))}
+                selectedPetId={reviewPetId}
+                medicineStartDate={reviewMedicineStartDate}
+                medicineEndDate={reviewMedicineEndDate}
+                medicineDailyCount={reviewMedicineDailyCount}
+                selectedTags={reviewTags}
+                canSubmit={canSubmitHospitalReview}
+                submitLabel={editingReviewId ? '수정 완료' : '등록'}
+                onRatingChange={setReviewRating}
+                onBodyChange={setReviewBody}
+                onVisitDateChange={setReviewVisitDate}
+                onHasNextVisitChange={(value) => {
+                  setReviewHasNextVisit(value)
+                  if (!value) setReviewNextVisitDate('')
+                }}
+                onNextVisitDateChange={setReviewNextVisitDate}
+                onNextVisitTimeChange={setReviewNextVisitTime}
+                onCostChange={setReviewCost}
+                onDiagnosisChange={setReviewDiagnosis}
+                onTreatmentChange={setReviewTreatment}
+                onMedicineChange={setReviewMedicine}
+                onPetChange={setReviewPetId}
+                onMedicineStartDateChange={setReviewMedicineStartDate}
+                onMedicineEndDateChange={setReviewMedicineEndDate}
+                onMedicineDailyCountChange={setReviewMedicineDailyCount}
+                onToggleTag={toggleReviewTag}
+                onSubmit={submitReview}
+              />
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   )
 }
 
-function HospitalListRow({ hospital, reviews, active, onSelect }: { hospital: Hospital; reviews: HospitalReview[]; active: boolean; onSelect: () => void }) {
-  const summary = getReviewSummary(reviews)
-  const recentSpecies = getRecentSpecies(reviews)
-
+function HospitalListRow({ hospital, active, onSelect }: { hospital: Hospital; active: boolean; onSelect: () => void }) {
   return (
     <article className={`map-hospital-row ${active ? 'active' : ''}`}>
       <button className="map-hospital-row-main" type="button" onClick={onSelect}>
-        <CategoryTagIcon category={hospital.categories[0] ?? 'all'} />
         <span>
           <strong>{hospital.name}</strong>
-          <small>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`} · {hospital.address || '주소 정보 없음'}</small>
-          {summary.count > 0 && <small>{`${summary.average.toFixed(1)}점 · 리뷰 ${summary.count}개`}{recentSpecies ? ` · 최근 ${recentSpecies}` : ''}</small>}
+          <small>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</small>
         </span>
       </button>
     </article>
   )
 }
 
-function HospitalReviewSummary({ reviews, onWriteReview }: { reviews: HospitalReview[]; onWriteReview: () => void }) {
+function HospitalReviewSummary({ reviews }: { reviews: HospitalReview[] }) {
   const summary = getReviewSummary(reviews)
   if (summary.count === 0) {
     return (
       <div className="review-summary-empty review-summary-invite">
         <strong>리뷰가 아직 많지 않아요</strong>
         <span>첫 리뷰를 남겨보세요</span>
-        <button className="review-summary-cta" type="button" onClick={onWriteReview}>리뷰 작성</button>
       </div>
     )
   }
@@ -786,7 +819,6 @@ function HospitalReviewSummary({ reviews, onWriteReview }: { reviews: HospitalRe
       ) : (
         <div className="review-summary-invite compact">
           <span>리뷰가 아직 많지 않아요 · 첫 리뷰를 남겨보세요</span>
-          <button className="review-summary-cta" type="button" onClick={onWriteReview}>리뷰 작성</button>
         </div>
       )}
       {summary.topTags.length > 0 && <div className="review-summary-tags">{summary.topTags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
@@ -795,8 +827,9 @@ function HospitalReviewSummary({ reviews, onWriteReview }: { reviews: HospitalRe
   )
 }
 
-function HospitalReviewItem({ review, fallbackAuthor, onDelete, onEdit, onToggleLike }: { review: HospitalReview; fallbackAuthor: string; onDelete: () => void; onEdit: () => void; onToggleLike: () => void }) {
+function HospitalReviewItem({ review, fallbackAuthor, fallbackAvatarUrl, onDelete, onEdit, onToggleLike }: { review: HospitalReview; fallbackAuthor: string; fallbackAvatarUrl: string; onDelete: () => void; onEdit: () => void; onToggleLike: () => void }) {
   const authorName = review.author && review.author !== '익명' ? review.author : fallbackAuthor
+  const avatarUrl = review.mine ? fallbackAvatarUrl : review.authorAvatarUrl
   const body = review.body || review.content || ''
   const reviewMeta = [
     review.petName || review.species || '반려동물 정보 없음',
@@ -807,6 +840,7 @@ function HospitalReviewItem({ review, fallbackAuthor, onDelete, onEdit, onToggle
   return (
     <article className="review-item">
       <div className="review-item-head">
+        <ReviewAuthorAvatar url={avatarUrl} name={authorName} />
         <div>
           <strong>{authorName}</strong>
           <small>{reviewMeta}</small>
@@ -825,6 +859,11 @@ function HospitalReviewItem({ review, fallbackAuthor, onDelete, onEdit, onToggle
       </footer>
     </article>
   )
+}
+
+function ReviewAuthorAvatar({ url, name }: { url?: string; name: string }) {
+  if (url) return <img className="user-avatar review-author-avatar" src={url} alt="" />
+  return <span className="user-avatar user-avatar-fallback review-author-avatar" aria-hidden="true">{name.trim().slice(0, 1) || '?'}</span>
 }
 
 export default MapScreen

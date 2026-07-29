@@ -88,6 +88,8 @@ export type CareTaskType =
   | 'weight'
   | 'water_quality'
   | 'filter_check'
+  | 'medicine'
+  | 'hospital'
   | 'custom'
 
 export type CarePlan = {
