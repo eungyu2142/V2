@@ -14,8 +14,53 @@
 }
 
 html {
-  overflow-y: scroll;
+  overflow-y: auto;
   overscroll-behavior-x: none;
+}
+
+/* Final Q&A feed layer: keep the discovery hierarchy after legacy overrides. */
+.qna-feed-page { position: relative !important; width: min(100%, 920px) !important; margin: 0 auto !important; padding: 20px 0 calc(112px + env(safe-area-inset-bottom)) !important; gap: 0 !important; }
+.qna-feed-page .qna-feed-head { display: flex !important; align-items: center !important; justify-content: space-between !important; min-height: 42px !important; margin: 0 0 12px !important; }
+.qna-feed-page .qna-feed-head > div { display: grid !important; gap: 3px !important; }
+.qna-feed-page .qna-feed-head h2 { margin: 0 !important; font-size: 24px !important; line-height: 1.2 !important; }
+.qna-feed-page .qna-feed-summary { display: block !important; margin: 0 !important; color: var(--color-text-secondary) !important; font-size: 13px !important; }
+.qna-feed-page .qna-feed-head .qna-create-button { display: none !important; }
+.qna-feed-page .qna-feed-search { display: grid !important; grid-template-columns: 24px minmax(0, 1fr) 32px !important; align-items: center !important; min-height: 50px !important; margin: 0 0 12px !important; padding: 0 12px !important; border: 1px solid var(--color-border) !important; border-radius: 11px !important; background: var(--color-surface) !important; }
+.qna-feed-page .qna-feed-search input { width: 100% !important; min-width: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; color: var(--color-text-primary) !important; font-size: 15px !important; }
+.qna-feed-page .qna-filter-compact { display: flex !important; align-items: center !important; gap: 8px !important; width: 100% !important; margin: 0 0 20px !important; overflow-x: auto !important; scrollbar-width: none !important; }
+.qna-feed-page .qna-filter-compact::-webkit-scrollbar { display: none !important; }
+.qna-feed-page .qna-filter-compact > button { flex: 0 0 auto !important; min-height: 40px !important; height: 40px !important; border-radius: 10px !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-icon-button { width: 44px !important; padding: 0 !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-summary,
+.qna-feed-page .qna-filter-compact .qna-feed-sort-trigger { padding: 0 13px !important; border: 1px solid var(--color-border) !important; background: var(--color-surface) !important; color: var(--color-text-secondary) !important; font-size: 13px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-summary.is-selected { border-color: var(--color-primary-600) !important; color: var(--color-primary-700) !important; }
+.qna-feed-page .qna-filter-compact .qna-feed-sort-trigger { margin-left: auto !important; }
+.qna-feed-page .qna-feed-list { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+.qna-feed-page .qna-help-card { display: grid !important; grid-template-rows: auto auto auto auto !important; min-height: 0 !important; padding: 17px !important; border: 1px solid var(--color-border) !important; border-radius: 14px !important; background: var(--color-surface) !important; box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary-900) 5%, transparent) !important; }
+.qna-feed-page .qna-help-card:hover, .qna-feed-page .qna-help-card:focus-visible { border-color: var(--color-primary-600) !important; outline: 0 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-top { order: 1 !important; display: flex !important; align-items: center !important; min-height: 25px !important; }
+.qna-feed-page .qna-help-card .qna-card-main { order: 2 !important; display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 14px !important; align-items: start !important; }
+.qna-feed-page .qna-help-card .qna-card-copy { min-width: 0 !important; }
+.qna-feed-page .qna-help-card h3 { margin: 10px 0 0 !important; color: var(--color-text-primary) !important; font-size: 18px !important; font-weight: 800 !important; line-height: 1.4 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-preview { display: -webkit-box !important; margin: 7px 0 0 !important; overflow: hidden !important; color: var(--color-text-secondary) !important; font-size: 14px !important; line-height: 1.5 !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-animal { display: block !important; margin: 12px 0 0 !important; color: var(--color-text-primary) !important; font-size: 13px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-help-card .qna-card-media { display: block !important; width: 88px !important; height: 88px !important; overflow: hidden !important; border-radius: 10px !important; background: var(--color-background) !important; }
+.qna-feed-page .qna-help-card .qna-card-media > img { display: block !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.qna-feed-page .qna-help-card footer { order: 3 !important; display: flex !important; flex-wrap: wrap !important; align-items: center !important; justify-content: space-between !important; gap: 8px !important; margin: 14px 0 0 !important; color: var(--color-text-secondary) !important; font-size: 12px !important; }
+.qna-feed-page .qna-help-card .qna-card-stats { display: flex !important; gap: 10px !important; margin-left: auto !important; }
+.qna-feed-page .qna-help-card .qna-attachment-summary { order: 4 !important; display: flex !important; flex-wrap: wrap !important; gap: 5px !important; margin: 12px 0 0 !important; padding-top: 10px !important; border-top: 1px solid var(--color-border) !important; color: var(--color-primary-700) !important; font-size: 12px !important; font-weight: 700 !important; }
+@media (min-width: 761px) { .qna-feed-page .qna-mobile-fab { top: 112px !important; right: 0 !important; bottom: auto !important; } }
+@media (max-width: 760px) {
+  .qna-feed-page { width: 100% !important; padding: 16px 0 calc(112px + env(safe-area-inset-bottom)) !important; }
+  .qna-feed-page .qna-feed-head { min-height: 34px !important; margin-bottom: 10px !important; }
+  .qna-feed-page .qna-feed-head h2 { font-size: 21px !important; }
+  .qna-feed-page .qna-feed-summary { font-size: 12px !important; }
+  .qna-feed-page .qna-help-card { padding: 15px !important; }
+  .qna-feed-page .qna-help-card .qna-card-main { gap: 10px !important; }
+  .qna-feed-page .qna-help-card .qna-card-media { width: 72px !important; height: 72px !important; }
+  .qna-feed-page .qna-help-card h3 { font-size: 17px !important; }
+  .qna-feed-page .qna-help-card footer { align-items: flex-start !important; }
+  .qna-feed-page .qna-help-card .qna-card-stats { width: 100% !important; margin-left: 0 !important; }
 }
 
 /* 2026-07-24 final Naver Map inspired map/review surface. Keep at EOF. */
@@ -410,6 +455,111 @@ html {
   }
 }
 
+/* Q&A feed composition: Aha-like discovery order with ExoCare's mint system. */
+.qna-feed-page {
+  position: relative !important;
+  width: min(100%, 920px) !important;
+  margin: 0 auto !important;
+  padding: 20px 0 calc(112px + env(safe-area-inset-bottom)) !important;
+  gap: 0 !important;
+}
+
+.qna-feed-page .qna-feed-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 42px !important;
+  margin: 0 0 12px !important;
+}
+
+.qna-feed-page .qna-feed-head > div { display: grid !important; gap: 3px !important; }
+.qna-feed-page .qna-feed-head h2 { margin: 0 !important; font-size: 24px !important; line-height: 1.2 !important; }
+.qna-feed-page .qna-feed-summary { margin: 0 !important; color: var(--color-text-secondary) !important; font-size: 13px !important; }
+.qna-feed-page .qna-feed-head .qna-create-button { display: none !important; }
+
+.qna-feed-page .qna-feed-search {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr) 32px !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  margin: 0 0 12px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 11px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-600) !important;
+}
+
+.qna-feed-page .qna-feed-search input { width: 100% !important; min-width: 0 !important; color: var(--color-text-primary) !important; font-size: 15px !important; }
+.qna-feed-page .qna-feed-search input::placeholder { color: var(--color-text-secondary) !important; }
+.qna-feed-page .qna-feed-search > button { width: 32px !important; height: 32px !important; border: 0 !important; background: transparent !important; color: var(--color-text-secondary) !important; }
+
+.qna-feed-page .qna-filter-compact {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin: 0 0 20px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+.qna-feed-page .qna-filter-compact::-webkit-scrollbar { display: none !important; }
+.qna-feed-page .qna-filter-compact > button { flex: 0 0 auto !important; min-height: 40px !important; height: 40px !important; border-radius: 10px !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-icon-button { width: 44px !important; padding: 0 !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-summary,
+.qna-feed-page .qna-filter-compact .qna-feed-sort-trigger { padding: 0 13px !important; border: 1px solid var(--color-border) !important; background: var(--color-surface) !important; color: var(--color-text-secondary) !important; font-size: 13px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-summary.is-selected { border-color: var(--color-primary-600) !important; color: var(--color-primary-700) !important; }
+.qna-feed-page .qna-filter-compact .qna-feed-sort-trigger { margin-left: auto !important; }
+
+.qna-feed-page .qna-feed-section { margin: 0 !important; padding: 0 !important; }
+.qna-feed-page .qna-feed-list { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+.qna-feed-page .qna-help-card {
+  display: grid !important;
+  grid-template-rows: auto auto auto auto !important;
+  min-height: 0 !important;
+  padding: 17px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 14px !important;
+  background: var(--color-surface) !important;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary-900) 5%, transparent) !important;
+}
+
+.qna-feed-page .qna-help-card:hover,
+.qna-feed-page .qna-help-card:focus-visible { border-color: var(--color-primary-600) !important; outline: 0 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-top { order: 1 !important; display: flex !important; align-items: center !important; min-height: 25px !important; }
+.qna-feed-page .qna-help-card .qna-card-main { order: 2 !important; display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 14px !important; align-items: start !important; }
+.qna-feed-page .qna-help-card .qna-card-copy { min-width: 0 !important; }
+.qna-feed-page .qna-help-card h3 { margin: 10px 0 0 !important; color: var(--color-text-primary) !important; font-size: 18px !important; font-weight: 800 !important; line-height: 1.4 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-preview { display: -webkit-box !important; margin: 7px 0 0 !important; overflow: hidden !important; color: var(--color-text-secondary) !important; font-size: 14px !important; line-height: 1.5 !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-animal { display: block !important; margin: 12px 0 0 !important; color: var(--color-text-primary) !important; font-size: 13px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-help-card .qna-card-media { display: block !important; width: 88px !important; height: 88px !important; overflow: hidden !important; border-radius: 10px !important; background: var(--color-background) !important; }
+.qna-feed-page .qna-help-card .qna-card-media > img { display: block !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.qna-feed-page .qna-help-card .qna-card-visualization { display: flex !important; align-items: flex-end !important; justify-content: center !important; gap: 5px !important; height: 100% !important; padding: 15px !important; }
+.qna-feed-page .qna-help-card .qna-card-visualization span { position: absolute !important; margin-top: -58px !important; color: var(--color-text-secondary) !important; font-size: 11px !important; }
+.qna-feed-page .qna-help-card .qna-card-visualization i { display: block !important; width: 8px !important; min-height: 12px !important; border-radius: 5px 5px 2px 2px !important; background: var(--color-primary-600) !important; }
+.qna-feed-page .qna-help-card footer { order: 3 !important; display: flex !important; flex-wrap: wrap !important; align-items: center !important; justify-content: space-between !important; gap: 8px !important; margin: 14px 0 0 !important; color: var(--color-text-secondary) !important; font-size: 12px !important; }
+.qna-feed-page .qna-help-card .qna-card-stats { display: flex !important; gap: 10px !important; margin-left: auto !important; }
+.qna-feed-page .qna-help-card .qna-attachment-summary { order: 4 !important; display: flex !important; flex-wrap: wrap !important; gap: 5px !important; margin: 12px 0 0 !important; padding-top: 10px !important; border-top: 1px solid var(--color-border) !important; color: var(--color-primary-700) !important; font-size: 12px !important; font-weight: 700 !important; }
+
+@media (min-width: 761px) {
+  .qna-feed-page .qna-mobile-fab { top: 112px !important; right: 0 !important; bottom: auto !important; }
+}
+
+@media (max-width: 760px) {
+  .qna-feed-page { width: 100% !important; padding: 16px 0 calc(112px + env(safe-area-inset-bottom)) !important; }
+  .qna-feed-page .qna-feed-head { display: flex !important; min-height: 34px !important; margin-bottom: 10px !important; }
+  .qna-feed-page .qna-feed-head h2 { font-size: 21px !important; }
+  .qna-feed-page .qna-feed-summary { font-size: 12px !important; }
+  .qna-feed-page .qna-help-card { padding: 15px !important; }
+  .qna-feed-page .qna-help-card .qna-card-main { gap: 10px !important; }
+  .qna-feed-page .qna-help-card .qna-card-media { width: 72px !important; height: 72px !important; }
+  .qna-feed-page .qna-help-card h3 { font-size: 17px !important; }
+  .qna-feed-page .qna-help-card footer { align-items: flex-start !important; }
+  .qna-feed-page .qna-help-card .qna-card-stats { width: 100% !important; margin-left: 0 !important; }
+}
+
 /* Absolute final map panel layout guard. Keep this at EOF so older overrides cannot reintroduce overlap. */
 @media (min-width: 761px) {
   .map-page.has-selected-hospital .map-side-panel {
@@ -430,6 +580,78 @@ html {
   .map-page.has-selected-hospital .map-hospital-list {
     max-height: calc(100vh - 330px) !important;
   }
+}
+
+/* Q&A UX authority: one discovery layout for desktop and mobile. */
+.qna-feed-page {
+  width: min(100%, 920px) !important;
+  margin: 0 auto !important;
+  padding: 20px 0 calc(120px + env(safe-area-inset-bottom)) !important;
+}
+
+.qna-feed-page .qna-feed-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin: 0 0 12px !important;
+}
+
+.qna-feed-page .qna-feed-head h2 { margin: 0 !important; font-size: 24px !important; line-height: 1.2 !important; }
+.qna-feed-page .qna-feed-head > div { display: grid !important; gap: 3px !important; }
+.qna-feed-page .qna-feed-head > div > p:not(.qna-feed-summary) { display: none !important; }
+.qna-feed-page .qna-feed-summary { margin: 0 !important; color: var(--color-text-secondary) !important; font-size: 13px !important; }
+.qna-feed-page .qna-feed-head .qna-create-button { display: none !important; }
+
+.qna-feed-page .qna-feed-search {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr) 32px !important;
+  align-items: center !important;
+  min-height: 50px !important;
+  margin: 0 0 12px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 11px !important;
+  background: var(--color-surface) !important;
+}
+
+.qna-feed-page .qna-feed-search input { min-width: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; color: var(--color-text-primary) !important; }
+.qna-feed-page .qna-filter-compact { display: flex !important; align-items: center !important; gap: 8px !important; margin: 0 0 20px !important; overflow-x: auto !important; scrollbar-width: none !important; }
+.qna-feed-page .qna-filter-compact::-webkit-scrollbar { display: none !important; }
+.qna-feed-page .qna-filter-compact > button { flex: 0 0 auto !important; min-height: 40px !important; height: 40px !important; border-radius: 10px !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-icon-button { width: 44px !important; padding: 0 !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-summary,
+.qna-feed-page .qna-filter-compact .qna-feed-sort-trigger { padding: 0 13px !important; border: 1px solid var(--color-border) !important; background: var(--color-surface) !important; color: var(--color-text-secondary) !important; font-size: 13px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-filter-compact .qna-filter-summary.is-selected { border-color: var(--color-primary-600) !important; color: var(--color-primary-700) !important; }
+.qna-feed-page .qna-filter-compact .qna-feed-sort-trigger { margin-left: auto !important; }
+
+.qna-feed-page .qna-filter-bar { display: none !important; }
+.qna-feed-page .qna-feed-list { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+.qna-feed-page .qna-help-card { display: grid !important; grid-template-rows: auto auto auto auto !important; min-height: 0 !important; padding: 17px !important; border: 1px solid var(--color-border) !important; border-radius: 14px !important; background: var(--color-surface) !important; box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary-900) 5%, transparent) !important; }
+.qna-feed-page .qna-help-card .qna-help-card-top { order: 1 !important; display: flex !important; align-items: center !important; min-height: 25px !important; }
+.qna-feed-page .qna-help-card .qna-card-main { order: 2 !important; display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 14px !important; align-items: start !important; }
+.qna-feed-page .qna-help-card h3 { margin: 10px 0 0 !important; color: var(--color-text-primary) !important; font-size: 18px !important; font-weight: 800 !important; line-height: 1.4 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-preview { display: -webkit-box !important; margin: 7px 0 0 !important; overflow: hidden !important; color: var(--color-text-secondary) !important; font-size: 14px !important; line-height: 1.5 !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-animal { display: block !important; margin: 12px 0 0 !important; color: var(--color-text-primary) !important; font-size: 13px !important; font-weight: 700 !important; }
+.qna-feed-page .qna-help-card .qna-card-media { display: block !important; width: 88px !important; height: 88px !important; overflow: hidden !important; border-radius: 10px !important; background: var(--color-background) !important; }
+.qna-feed-page .qna-help-card .qna-card-media > img { display: block !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.qna-feed-page .qna-help-card footer { order: 3 !important; display: flex !important; flex-wrap: wrap !important; justify-content: space-between !important; gap: 8px !important; margin: 14px 0 0 !important; color: var(--color-text-secondary) !important; font-size: 12px !important; }
+.qna-feed-page .qna-help-card .qna-card-stats { display: flex !important; gap: 10px !important; margin-left: auto !important; }
+.qna-feed-page .qna-help-card .qna-attachment-summary { order: 4 !important; display: flex !important; flex-wrap: wrap !important; gap: 5px !important; margin: 12px 0 0 !important; padding-top: 10px !important; border-top: 1px solid var(--color-border) !important; color: var(--color-primary-700) !important; font-size: 12px !important; font-weight: 700 !important; }
+
+@media (min-width: 761px) {
+  .qna-feed-page .qna-mobile-fab { top: 112px !important; right: 0 !important; bottom: auto !important; }
+}
+
+@media (max-width: 760px) {
+  .qna-feed-page { width: 100% !important; padding: 16px 0 calc(120px + env(safe-area-inset-bottom)) !important; }
+  .qna-feed-page .qna-feed-head h2 { font-size: 21px !important; }
+  .qna-feed-page .qna-feed-summary { font-size: 12px !important; }
+  .qna-feed-page .qna-help-card { padding: 15px !important; }
+  .qna-feed-page .qna-help-card .qna-card-main { gap: 10px !important; }
+  .qna-feed-page .qna-help-card .qna-card-media { width: 72px !important; height: 72px !important; }
+  .qna-feed-page .qna-help-card h3 { font-size: 17px !important; }
+  .qna-feed-page .qna-help-card footer { align-items: flex-start !important; }
+  .qna-feed-page .qna-help-card .qna-card-stats { width: 100% !important; margin-left: 0 !important; }
 }
 
 /* Q&A attachment preview: show media or record visualization beside the question. */
@@ -7401,6 +7623,45 @@ textarea {
   }
 }
 
+/* Keep the address line stable while the compact copy control changes state. */
+.map-detail-dock .hospital-address-row .hospital-address-copy,
+.map-detail-dock .hospital-address-row .hospital-address-copy:hover:not(:disabled),
+.map-detail-dock .hospital-address-row .hospital-address-copy:focus-visible,
+.map-detail-dock .hospital-address-row .hospital-address-copy:active:not(:disabled) {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  max-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+  flex: 0 0 2rem !important;
+  align-self: flex-start !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  line-height: 1 !important;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy:hover:not(:disabled),
+.map-detail-dock .hospital-address-row .hospital-address-copy:focus-visible {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+}
+
+.map-detail-dock .hospital-address-row > p {
+  align-self: flex-start !important;
+  margin: 0 !important;
+}
+
 .step-card {
   display: grid;
   gap: 18px;
@@ -13711,6 +13972,56 @@ body,
   box-shadow: 0 16px 42px rgba(62, 72, 37, 0.22) !important;
 }
 
+/* Crisp vector navigation icons based on the user's five reference marks. */
+.side-nav-icon::before,
+.side-nav-icon::after {
+  display: none !important;
+  content: none !important;
+}
+
+.nav-icon-vector {
+  display: block;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  shape-rendering: geometricPrecision;
+}
+
+.bottom-nav-icon.nav-icon-vector {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
+
+/* Desktop navigation sits flush against the left viewport edge. */
+@media (min-width: 761px) {
+  :root {
+    --side-nav-left-ratio: 0%;
+  }
+
+  .side-nav,
+  .map-shell .side-nav {
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    border-radius: 0 8px 8px 0 !important;
+  }
+
+  .app-shell:not(.map-shell) {
+    padding-left: calc(var(--side-nav-width-ratio) + var(--content-gap-ratio)) !important;
+  }
+
+  .map-shell {
+    --map-nav-left: 0%;
+  }
+}
+
 .side-nav button,
 .bottom-nav button {
   color: var(--color-primary-100) !important;
@@ -14138,6 +14449,104 @@ textarea::placeholder {
   color: var(--map-text) !important;
   text-align: left !important;
 }
+
+/* Detail author metadata follows one readable line; pet species stays independent. */
+.qna-detail-post > .qna-detail-author-meta {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  margin: 0 0 8px !important;
+}
+
+.qna-detail-post > .qna-author {
+  display: none !important;
+}
+
+.qna-detail-author-copy {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+}
+
+.qna-detail-author-copy strong,
+.qna-detail-meta-line {
+  display: block !important;
+  white-space: nowrap !important;
+}
+
+.qna-detail-meta-line {
+  color: var(--color-text-secondary) !important;
+  font-size: 0.82rem !important;
+  line-height: 1.4 !important;
+}
+
+.qna-detail-pet-meta {
+  width: 100% !important;
+  margin: 0 0 18px !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.84rem !important;
+  line-height: 1.4 !important;
+  text-align: left !important;
+}
+
+.qna-detail-post .qna-detail-actions .qna-like {
+  display: none !important;
+}
+
+/* Detail actions: like and resolve share the same row and width. */
+.qna-detail-post .qna-detail-actions:has(.qna-status-toggle) {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.qna-detail-post .qna-detail-actions:has(.qna-status-toggle) .qna-like,
+.qna-detail-post .qna-detail-actions:has(.qna-status-toggle) .qna-status-toggle {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  flex: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Attached hospitals are actionable cards, not loose text in the comment. */
+.qna-hospital-attachment {
+  display: block !important;
+  width: 100% !important;
+  margin: 12px 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  background: var(--color-surface) !important;
+  overflow: hidden !important;
+}
+
+.qna-hospital-attachment-main {
+  display: grid !important;
+  width: 100% !important;
+  gap: 5px !important;
+  min-height: 72px !important;
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  text-align: left !important;
+}
+
+button.qna-hospital-attachment-main { cursor: pointer !important; }
+button.qna-hospital-attachment-main:hover,
+button.qna-hospital-attachment-main:focus-visible { background: var(--color-primary-50) !important; }
+.qna-hospital-attachment-main strong { font-size: 15px !important; font-weight: 700 !important; }
+.qna-hospital-attachment-main span { color: var(--color-text-secondary) !important; font-size: 13px !important; }
+.qna-hospital-attachment-remove { margin: 0 12px 12px !important; }
 
 .map-side-panel .map-hospital-row-main {
   display: grid !important;
@@ -17803,6 +18212,127 @@ textarea::placeholder {
   }
 }
 
+/* 2026-07-30 My Pet thumbnails stay fully circular inside compact cards. */
+.my-pet-dashboard .pet-list.card-view .pet-pick-card .pet-card-icon,
+.my-pet-dashboard .pet-list.card-view .pet-pick-card .pet-card-icon img,
+.my-pet-dashboard .pet-list.card-view .pet-pick-card .pet-photo-initial {
+  border-radius: 50% !important;
+}
+
+@media (max-width: 430px) {
+  .my-pet-dashboard .pet-list.card-view .pet-pick-card .pet-card-main.pet-pick-card-main {
+    padding-left: 6px !important;
+  }
+}
+
+.my-pet-dashboard .pet-today-tasks {
+  display: none !important;
+}
+
+@media (min-width: 761px) {
+  .my-pet-dashboard .pet-list.card-view .pet-pick-card .pet-card-main.pet-pick-card-main.has-today-tasks {
+    grid-template-columns: 64px minmax(90px, 0.85fr) minmax(150px, 1.15fr) !important;
+    column-gap: 12px !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks {
+    display: grid !important;
+    min-width: 0 !important;
+    align-self: stretch !important;
+    align-content: center !important;
+    gap: 7px !important;
+    padding-left: 14px !important;
+    border-left: 1px solid var(--color-border) !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks-heading {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks-heading strong {
+    color: var(--color-text-primary) !important;
+    font-size: 0.82rem !important;
+    font-weight: 900 !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks-heading span,
+  .my-pet-dashboard .pet-today-tasks > small {
+    color: var(--color-text-secondary) !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+  }
+
+  .my-pet-dashboard .pet-today-progress {
+    width: 100% !important;
+    height: 5px !important;
+    overflow: hidden !important;
+    border-radius: 999px !important;
+    background: var(--color-primary-100) !important;
+  }
+
+  .my-pet-dashboard .pet-today-progress > span {
+    display: block !important;
+    height: 100% !important;
+    border-radius: inherit !important;
+    background: var(--color-primary-600) !important;
+  }
+
+  .my-pet-dashboard .pet-today-empty {
+    margin: 0 !important;
+    color: var(--color-text-secondary) !important;
+    font-size: 0.76rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks ul {
+    display: grid !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks li {
+    display: grid !important;
+    grid-template-columns: 12px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    color: var(--color-text-secondary) !important;
+    font-size: 0.76rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks li i {
+    display: block !important;
+    width: 9px !important;
+    height: 9px !important;
+    border: 1px solid var(--color-primary-300) !important;
+    border-radius: 50% !important;
+    background: var(--color-surface) !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks li span {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks li.completed {
+    color: var(--color-text-placeholder) !important;
+    text-decoration: line-through !important;
+  }
+
+  .my-pet-dashboard .pet-today-tasks li.completed i {
+    border-color: var(--color-primary-600) !important;
+    background: var(--color-primary-600) !important;
+    box-shadow: inset 0 0 0 2px var(--color-surface) !important;
+  }
+}
+
 /* 2026-07-28 Hospital Finder layout stability.
    Entering the map route or selecting a hospital must not resize navigation or the search panel. */
 @media (min-width: 761px) {
@@ -17952,6 +18482,35 @@ textarea::placeholder {
   pointer-events: auto !important;
 }
 
+/* Final desktop layout authority: keep navigation flush with the viewport. */
+@media (min-width: 761px) {
+  .side-nav,
+  .map-shell .side-nav {
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    border-radius: 0 8px 8px 0 !important;
+  }
+
+  .app-shell:not(.map-shell) {
+    padding-left: calc(var(--side-nav-width-ratio) + var(--content-gap-ratio)) !important;
+  }
+
+  .map-shell {
+    --map-nav-left: 0% !important;
+  }
+}
+
+/* 2026-07-30 Softer navigation surface; icon and label colors stay unchanged. */
+.side-nav,
+.bottom-nav,
+.map-shell .bottom-nav {
+  border-color: color-mix(in srgb, var(--color-navigation-background) 82%, var(--color-primary-900)) !important;
+  background: var(--color-navigation-background) !important;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--color-navigation-background) 22%, transparent) !important;
+}
+
 /* Final map search and hospital detail cleanup. */
 .map-page.has-selected-hospital .map-side-collapse-toggle {
   display: none !important;
@@ -18087,6 +18646,217 @@ textarea::placeholder {
 
 .map-side-panel .map-hospital-row-main > span {
   gap: 0.25rem !important;
+}
+
+/* Hospital markers never inherit the app-wide button hover surface. */
+.exo-hospital-marker,
+.exo-hospital-marker:hover:not(:disabled),
+.exo-hospital-marker:active:not(:disabled),
+.exo-hospital-marker:focus,
+.exo-hospital-marker:focus-visible,
+.exo-hospital-marker.is-selected,
+.exo-hospital-marker.is-selected:hover:not(:disabled) {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.exo-hospital-marker::before,
+.exo-hospital-marker::after {
+  display: none !important;
+  content: none !important;
+}
+
+.exo-hospital-marker:hover:not(:disabled) {
+  transform: translate(-50%, -100%) scale(1.05) !important;
+}
+
+.exo-hospital-marker.is-selected,
+.exo-hospital-marker.is-selected:hover:not(:disabled) {
+  transform: translate(-50%, -100%) scale(1.12) !important;
+}
+
+.exo-hospital-marker.is-selected .exo-marker-pin,
+.exo-hospital-marker:hover:not(:disabled) .exo-marker-pin,
+.exo-hospital-marker:focus-visible .exo-marker-pin {
+  outline: 0 !important;
+  box-shadow: 0 0.25rem 0.75rem color-mix(in srgb, var(--color-primary-900) 24%, transparent) !important;
+}
+
+.map-detail-dock .hospital-opening-hours {
+  display: grid;
+  gap: 0.625rem;
+  min-width: 0;
+  padding: 0.875rem 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-detail-dock .hospital-opening-current {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+
+.map-detail-dock .hospital-opening-current strong {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.map-detail-dock .hospital-opening-current strong.is-open {
+  color: var(--color-primary-700);
+}
+
+.map-detail-dock .hospital-opening-current strong.is-closed {
+  color: var(--color-text-primary);
+}
+
+.map-detail-dock .hospital-opening-current span,
+.map-detail-dock .hospital-opening-empty {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.map-detail-dock .hospital-opening-hours details {
+  min-width: 0;
+}
+
+.map-detail-dock .hospital-opening-hours summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-primary-700);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.map-detail-dock .hospital-opening-hours ul {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0.625rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-detail-dock .hospital-opening-hours li {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.map-detail-dock .hospital-google-facts {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-detail-dock .hospital-google-facts:empty {
+  display: none;
+}
+
+.map-detail-dock .hospital-detail-loading {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.map-detail-dock .hospital-google-facts > div {
+  display: grid;
+  grid-template-columns: minmax(5rem, 28%) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.map-detail-dock .hospital-google-facts span,
+.map-detail-dock .hospital-google-reviews > header span,
+.map-detail-dock .hospital-google-reviews > small,
+.map-detail-dock .hospital-google-review-meta span,
+.map-detail-dock .hospital-google-review-empty {
+  color: var(--color-text-secondary);
+}
+
+.map-detail-dock .hospital-google-facts a,
+.map-detail-dock .hospital-google-facts strong {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.map-detail-dock .hospital-google-reviews {
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.map-detail-dock .hospital-google-reviews > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.map-detail-dock .hospital-google-reviews ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-detail-dock .hospital-google-reviews li {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.map-detail-dock .hospital-google-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+
+.map-detail-dock .hospital-google-review-meta a,
+.map-detail-dock .hospital-google-review-meta strong {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.map-detail-dock .hospital-google-review-source {
+  display: inline-flex;
+  margin-top: 0.5rem;
+  color: var(--color-primary-700);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.map-detail-dock .hospital-google-reviews li p,
+.map-detail-dock .hospital-google-review-empty {
+  margin: 0.5rem 0 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.map-detail-dock .hospital-google-reviews > small {
+  display: block;
+  margin-top: 0.5rem;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .map-detail-dock .hospital-opening-current {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 }
 
 /* Final hospital discovery rail ownership.
@@ -18880,6 +19650,369 @@ textarea::placeholder {
   background: transparent !important;
 }
 
+/* Hospital details: one reading flow with actions before secondary information. */
+.map-detail-dock .hospital-detail-header {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  padding: 0.125rem 0 1rem !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.map-detail-dock .hospital-detail-header > strong {
+  min-width: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 1.25rem !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+.map-detail-dock .hospital-detail-tools {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+}
+
+.map-detail-dock .hospital-detail-like,
+.map-detail-dock .hospital-detail-header .panel-close {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  width: 2.625rem !important;
+  min-width: 2.625rem !important;
+  height: 2.625rem !important;
+  min-height: 2.625rem !important;
+  flex: 0 0 2.625rem !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: pointer !important;
+}
+
+.map-detail-dock .hospital-detail-like span {
+  color: inherit !important;
+}
+
+.map-detail-dock .hospital-detail-header .panel-close::before,
+.map-detail-dock .hospital-detail-header .panel-close::after {
+  top: 50% !important;
+  left: 50% !important;
+  width: 0.875rem !important;
+  height: 0.125rem !important;
+  margin: 0 !important;
+  transform-origin: center !important;
+}
+
+.map-detail-dock .hospital-detail-header .panel-close::before {
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+.map-detail-dock .hospital-detail-header .panel-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+
+.map-detail-dock .hospital-heart-icon {
+  display: block !important;
+  width: 1.125rem !important;
+  height: 1rem !important;
+  background: currentColor !important;
+  clip-path: polygon(50% 100%, 7% 60%, 0 37%, 4% 19%, 17% 5%, 33% 0, 50% 17%, 67% 0, 83% 5%, 96% 19%, 100% 37%, 93% 60%) !important;
+  opacity: 0.62 !important;
+}
+
+.map-detail-dock .hospital-detail-like.active .hospital-heart-icon {
+  opacity: 1 !important;
+}
+
+.map-detail-dock .hospital-detail-like:hover,
+.map-detail-dock .hospital-detail-like:focus-visible,
+.map-detail-dock .hospital-detail-like.active {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.map-detail-dock .hospital-basic-info,
+.map-detail-dock .hospital-contact-info,
+.map-detail-dock .hospital-review-panel,
+.map-detail-dock .hospital-google-rating {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 1rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .hospital-basic-info {
+  display: grid !important;
+  gap: 0.625rem !important;
+}
+
+.map-detail-dock .hospital-address-row {
+  align-items: center !important;
+}
+
+.map-detail-dock .hospital-address-row p,
+.map-detail-dock .hospital-distance {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.55 !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy {
+  display: grid !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.map-detail-dock .hospital-copy-icon {
+  position: relative !important;
+  display: block !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  border: 0 !important;
+}
+
+.map-detail-dock .hospital-copy-icon::before,
+.map-detail-dock .hospital-copy-icon::after {
+  content: "" !important;
+  position: absolute !important;
+  width: 0.625rem !important;
+  height: 0.625rem !important;
+  border: 1.5px solid currentColor !important;
+  border-radius: 0.125rem !important;
+}
+
+.map-detail-dock .hospital-copy-icon::before {
+  top: 0.0625rem !important;
+  left: 0.0625rem !important;
+  opacity: 0.65 !important;
+}
+
+.map-detail-dock .hospital-copy-icon::after {
+  right: 0.0625rem !important;
+  bottom: 0.0625rem !important;
+  background: var(--color-surface) !important;
+}
+
+.map-detail-dock .hospital-address-copy.copied .hospital-copy-icon::before,
+.map-detail-dock .hospital-address-copy.copied .hospital-copy-icon::after {
+  border-color: var(--color-primary-700) !important;
+}
+
+.map-detail-dock .hospital-basic-info .hospital-opening-hours {
+  gap: 0.5rem !important;
+  padding: 0.25rem 0 0 !important;
+  border: 0 !important;
+}
+
+.map-detail-dock .hospital-opening-current {
+  align-items: baseline !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+}
+
+.map-detail-dock .hospital-primary-actions {
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.625rem !important;
+  margin: 0 !important;
+  padding: 1rem 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.map-detail-dock .hospital-primary-actions a,
+.map-detail-dock .hospital-primary-actions button {
+  display: inline-flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 2.875rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 0.75rem !important;
+  border: 1px solid var(--color-primary-600) !important;
+  border-radius: 0.625rem !important;
+  background: var(--color-primary-600) !important;
+  color: var(--color-surface) !important;
+  box-shadow: none !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  transform: none !important;
+  cursor: pointer !important;
+}
+
+.map-detail-dock .hospital-primary-actions > :last-child {
+  background: var(--color-surface) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.map-detail-dock .hospital-primary-actions a:hover,
+.map-detail-dock .hospital-primary-actions a:focus-visible,
+.map-detail-dock .hospital-primary-actions button:hover:not(:disabled),
+.map-detail-dock .hospital-primary-actions button:focus-visible {
+  border-color: var(--color-primary-700) !important;
+  background: var(--color-primary-700) !important;
+  color: var(--color-surface) !important;
+}
+
+.map-detail-dock .hospital-primary-actions button:disabled {
+  border-color: var(--color-border) !important;
+  background: var(--color-background) !important;
+  color: var(--color-text-placeholder) !important;
+  cursor: not-allowed !important;
+}
+
+.map-detail-dock .hospital-contact-info h3,
+.map-detail-dock .hospital-section-header h3,
+.map-detail-dock .hospital-google-rating h3 {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+}
+
+.map-detail-dock .hospital-contact-info dl {
+  display: grid !important;
+  gap: 0.625rem !important;
+  margin: 0.875rem 0 0 !important;
+}
+
+.map-detail-dock .hospital-contact-info dl > div {
+  display: grid !important;
+  grid-template-columns: minmax(4.5rem, 28%) minmax(0, 1fr) !important;
+  gap: 0.75rem !important;
+}
+
+.map-detail-dock .hospital-contact-info dt,
+.map-detail-dock .hospital-contact-info dd {
+  min-width: 0 !important;
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+.map-detail-dock .hospital-contact-info dd,
+.map-detail-dock .hospital-contact-info a {
+  color: var(--color-text-primary) !important;
+  overflow-wrap: anywhere !important;
+}
+
+.map-detail-dock .hospital-section-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  margin-bottom: 0.875rem !important;
+}
+
+.map-detail-dock .hospital-section-header > div {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: baseline !important;
+  gap: 0.375rem !important;
+}
+
+.map-detail-dock .hospital-section-header span {
+  color: var(--color-text-secondary) !important;
+  font-size: 0.8125rem !important;
+}
+
+.map-detail-dock .hospital-section-header .hospital-review-write-action {
+  width: auto !important;
+  min-width: 5.5rem !important;
+  min-height: 2.5rem !important;
+  flex: 0 0 auto !important;
+  padding: 0 0.875rem !important;
+  border-radius: 0.5rem !important;
+}
+
+.map-detail-dock .hospital-review-empty {
+  display: grid !important;
+  gap: 0.375rem !important;
+  padding: 1rem 0 0 !important;
+}
+
+.map-detail-dock .hospital-review-empty strong {
+  color: var(--color-text-primary) !important;
+  font-size: 0.9rem !important;
+}
+
+.map-detail-dock .hospital-review-empty span,
+.map-detail-dock .hospital-google-rating p,
+.map-detail-dock .hospital-google-rating-row > span {
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.5 !important;
+}
+
+.map-detail-dock .hospital-google-rating-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: baseline !important;
+  gap: 0.375rem 0.75rem !important;
+  margin-top: 0.75rem !important;
+}
+
+.map-detail-dock .hospital-google-rating-row strong {
+  color: var(--color-text-primary) !important;
+  font-size: 1.125rem !important;
+}
+
+.map-detail-dock .hospital-google-rating-row strong span {
+  color: var(--color-accent-600) !important;
+}
+
+.map-detail-dock .hospital-google-rating-row a {
+  margin-left: auto !important;
+  color: var(--color-primary-700) !important;
+  font-size: 0.8125rem !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 420px) {
+  .map-detail-dock .hospital-detail-header > strong {
+    font-size: 1.125rem !important;
+  }
+
+  .map-detail-dock .hospital-google-rating-row a {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+}
+
 /* Hospital reviews open as one focused surface instead of expanding inside details. */
 .hospital-review-modal-layer {
   position: fixed !important;
@@ -19176,7 +20309,10 @@ button.diary-dim:focus-visible {
 
 /* Desktop keeps one writing action: move the existing pencil FAB to the upper right. */
 @media (min-width: 761px) {
-  .qna-feed-page { position: relative !important; }
+  .qna-feed-page {
+    position: relative !important;
+    margin-top: -160px !important;
+  }
 
   .qna-feed-page .qna-feed-head .qna-create-button { display: none !important; }
 
@@ -19191,6 +20327,81 @@ button.diary-dim:focus-visible {
     height: 56px !important;
     min-width: 56px !important;
     min-height: 56px !important;
+  }
+}
+
+/* 2026-08-02 My Pet search follows the Q&A search field dimensions and styling. */
+.my-pet-dashboard .my-pet-search {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0 !important;
+  width: 100% !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  margin: 0 0 12px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius) !important;
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+  color: var(--color-primary-600) !important;
+}
+
+.my-pet-dashboard .my-pet-search:focus-within {
+  border-color: var(--color-primary-600) !important;
+}
+
+.my-pet-dashboard .my-pet-search > span {
+  display: block !important;
+  color: var(--color-primary-600) !important;
+  font-size: 1.1rem !important;
+  line-height: 1 !important;
+}
+
+.my-pet-dashboard .my-pet-search input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-text-primary) !important;
+  font-size: 15px !important;
+  line-height: normal !important;
+}
+
+.my-pet-dashboard .my-pet-search input::placeholder {
+  color: var(--color-text-secondary) !important;
+}
+
+.my-pet-dashboard .my-pet-search > button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 20px !important;
+}
+
+.my-pet-dashboard .my-pet-search:has(> button) {
+  grid-template-columns: 24px minmax(0, 1fr) 32px !important;
+}
+
+@media (max-width: 760px) {
+  .my-pet-dashboard .my-pet-search {
+    width: calc(100% - 58px) !important;
+    max-width: calc(100% - 58px) !important;
   }
 }
 
@@ -19289,6 +20500,28 @@ button.diary-dim:focus-visible {
   margin: 16px 0 !important;
 }
 
+.qna-hospital-picker-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.qna-hospital-picker-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  width: 36px !important;
+  height: 36px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+  background: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
 .qna-hospital-picker-item {
   display: grid !important;
   gap: 4px !important;
@@ -19304,6 +20537,10 @@ button.diary-dim:focus-visible {
 .qna-hospital-picker-item span,
 .qna-hospital-picker-item small {
   color: var(--color-text-secondary) !important;
+  font-size: 12px !important;
+}
+
+.qna-hospital-picker-item span {
   font-size: 12px !important;
 }
 
@@ -19482,4 +20719,1949 @@ button.diary-dim:focus-visible {
 
 :where(.overlay > section, .qna-sort-sheet-overlay > section, .hospital-picker-overlay > section, .record-picker-overlay > section, .diary-overlay > section, .pet-detail-overlay > section, .pet-detail-modal, .delete-pet-modal, .profile-panel) {
   pointer-events: auto !important;
+}
+
+/* Final responsive navigation authority. */
+@media (max-width: 760px) {
+  .side-nav,
+  .side-nav.open,
+  .side-nav-dim,
+  .menu-trigger {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-shell.map-shell {
+    padding-left: 0 !important;
+  }
+
+  .bottom-nav,
+  .map-shell .bottom-nav {
+    display: grid !important;
+    position: fixed !important;
+    z-index: 220 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .bottom-nav,
+  .map-shell .bottom-nav {
+    display: none !important;
+  }
+
+  .side-nav,
+  .side-nav.open,
+  .map-shell .side-nav,
+  .map-shell .side-nav.open,
+  .app-shell.map-shell .side-nav,
+  .app-shell.map-shell .side-nav.open {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: 0 !important;
+    width: var(--side-nav-width-ratio) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 0 8px 8px 0 !important;
+    transform: none !important;
+  }
+}
+
+/* Q&A final responsive guard. */
+.qna-feed-page .qna-filter-bar { display: none !important; }
+.qna-feed-page .qna-feed-list { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+.qna-feed-page .qna-help-card { display: grid !important; grid-template-rows: auto auto auto auto !important; min-height: 0 !important; padding: 17px !important; border: 1px solid var(--color-border) !important; border-radius: 14px !important; background: var(--color-surface) !important; box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary-900) 5%, transparent) !important; }
+.qna-feed-page .qna-help-card .qna-help-card-preview,
+.qna-feed-page .qna-help-card .qna-help-card-animal,
+.qna-feed-page .qna-help-card .qna-card-media,
+.qna-feed-page .qna-help-card .qna-card-stats,
+.qna-feed-page .qna-help-card .qna-attachment-summary { display: revert !important; }
+.qna-feed-page .qna-help-card .qna-card-main { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 14px !important; }
+.qna-feed-page .qna-help-card h3 { margin: 10px 0 0 !important; color: var(--color-text-primary) !important; font-size: 18px !important; font-weight: 800 !important; line-height: 1.4 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-preview { display: -webkit-box !important; margin: 7px 0 0 !important; overflow: hidden !important; color: var(--color-text-secondary) !important; font-size: 14px !important; line-height: 1.5 !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; }
+.qna-feed-page .qna-help-card .qna-card-media { width: 88px !important; height: 88px !important; overflow: hidden !important; border-radius: 10px !important; }
+.qna-feed-page .qna-help-card .qna-card-media > img { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.qna-feed-page .qna-help-card footer { display: flex !important; flex-wrap: wrap !important; justify-content: space-between !important; gap: 8px !important; margin: 14px 0 0 !important; color: var(--color-text-secondary) !important; font-size: 12px !important; }
+.qna-feed-page .qna-help-card .qna-card-stats { gap: 10px !important; margin-left: auto !important; }
+.qna-feed-page .qna-help-card .qna-attachment-summary { flex-wrap: wrap !important; gap: 5px !important; margin: 12px 0 0 !important; padding-top: 10px !important; border-top: 1px solid var(--color-border) !important; color: var(--color-primary-700) !important; font-size: 12px !important; font-weight: 700 !important; }
+@media (min-width: 761px) { .qna-feed-page .qna-mobile-fab { top: 112px !important; right: 0 !important; bottom: auto !important; } }
+@media (max-width: 760px) {
+  .qna-feed-page { padding: 16px 0 calc(120px + env(safe-area-inset-bottom)) !important; }
+  .qna-feed-page { padding-top: 16px !important; }
+  .qna-feed-page .qna-feed-head { display: none !important; }
+  .qna-feed-page .qna-feed-search { width: calc(100% - 58px) !important; max-width: calc(100% - 58px) !important; }
+  .qna-feed-page .qna-feed-head h2 { font-size: 21px !important; }
+  .qna-feed-page .qna-help-card { padding: 15px !important; }
+  .qna-feed-page .qna-help-card .qna-card-main { gap: 10px !important; }
+  .qna-feed-page .qna-help-card .qna-card-media { width: 72px !important; height: 72px !important; }
+  .qna-feed-page .qna-help-card h3 { font-size: 17px !important; }
+  .qna-feed-page .qna-help-card .qna-card-stats { width: 100% !important; margin-left: 0 !important; }
+}
+
+@media (min-width: 761px) {
+  .qna-feed-page {
+    width: min(100%, 900px) !important;
+    padding-top: 24px !important;
+  }
+
+  .qna-feed-page .qna-feed-head { display: none !important; }
+
+  .qna-feed-page .qna-mobile-fab {
+    top: 72px !important;
+    right: 24px !important;
+    bottom: auto !important;
+  }
+}
+
+/* 2026-08-02 GitHub-inspired profile layout.
+   Use structure from GitHub profiles, but keep the app color tokens. */
+.profile-github-layout {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 24%) minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 4% !important;
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.profile-identity,
+.profile-activity,
+.profile-activity-section,
+.profile-readme-block {
+  min-width: 0 !important;
+}
+
+.profile-identity {
+  display: grid !important;
+  gap: 14px !important;
+  align-content: start !important;
+}
+
+.profile-identity-avatar {
+  width: min(100%, 240px) !important;
+  aspect-ratio: 1 / 1 !important;
+  overflow: hidden !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+  background: var(--color-primary-50) !important;
+}
+
+.profile-identity-avatar img,
+.profile-identity-avatar span {
+  display: grid !important;
+  width: 100% !important;
+  height: 100% !important;
+  place-items: center !important;
+}
+
+.profile-identity-avatar img {
+  object-fit: cover !important;
+}
+
+.profile-identity-avatar span {
+  color: var(--color-primary-700) !important;
+  font-size: clamp(3rem, 8vw, 5rem) !important;
+  font-weight: 900 !important;
+}
+
+.profile-identity h2 {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: clamp(1.5rem, 2.4vw, 2rem) !important;
+  line-height: 1.15 !important;
+}
+
+.profile-identity p {
+  margin: -8px 0 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+}
+
+.profile-edit-shortcut {
+  width: 100% !important;
+  min-height: 40px !important;
+  justify-content: center !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  font-weight: 800 !important;
+}
+
+.profile-stat-strip {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px 14px !important;
+  margin: 4px 0 0 !important;
+}
+
+.profile-stat-strip div {
+  display: grid !important;
+  gap: 2px !important;
+}
+
+.profile-stat-strip dt {
+  color: var(--color-text-secondary) !important;
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
+}
+
+.profile-stat-strip dd {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 1.12rem !important;
+  font-weight: 900 !important;
+}
+
+.profile-side-note .notification-permission-card {
+  padding: 14px 0 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.profile-activity {
+  display: grid !important;
+  gap: 22px !important;
+}
+
+.profile-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  overflow-x: auto !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  scrollbar-width: none !important;
+}
+
+.profile-tabs::-webkit-scrollbar {
+  display: none !important;
+}
+
+.profile-tabs button {
+  position: relative !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-height: 48px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  font-weight: 900 !important;
+}
+
+.profile-tabs button.active {
+  color: var(--color-text-primary) !important;
+}
+
+.profile-tabs button.active::after {
+  position: absolute !important;
+  right: 10px !important;
+  bottom: -1px !important;
+  left: 10px !important;
+  height: 3px !important;
+  content: "" !important;
+  border-radius: 999px 999px 0 0 !important;
+  background: var(--color-primary-600) !important;
+}
+
+.profile-activity-section {
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.profile-activity-section > header {
+  display: grid !important;
+  gap: 4px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.profile-activity-section h3,
+.profile-readme-block h4 {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 1.1rem !important;
+  font-weight: 900 !important;
+}
+
+.profile-activity-section p,
+.profile-readme-block p,
+.profile-empty {
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  line-height: 1.6 !important;
+}
+
+.profile-overview-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.profile-overview-grid button {
+  display: grid !important;
+  gap: 6px !important;
+  min-height: 86px !important;
+  justify-items: start !important;
+  padding: 14px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.profile-overview-grid strong {
+  font-size: 1.55rem !important;
+  line-height: 1 !important;
+}
+
+.profile-overview-grid span {
+  color: var(--color-text-secondary) !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+}
+
+.profile-readme-block {
+  display: grid !important;
+  gap: 8px !important;
+  padding: 18px 0 !important;
+  border-top: 1px solid var(--color-border) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.profile-list {
+  display: grid !important;
+  gap: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.profile-list article {
+  display: grid !important;
+  gap: 6px !important;
+  padding: 16px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.profile-list article:first-child {
+  padding-top: 0 !important;
+}
+
+.profile-list span {
+  color: var(--color-primary-700) !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+}
+
+.profile-list strong {
+  color: var(--color-text-primary) !important;
+  font-size: 1rem !important;
+}
+
+.profile-list p {
+  color: var(--color-text-secondary) !important;
+}
+
+.profile-row-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+}
+
+.profile-row-actions.three {
+  grid-template-columns: none !important;
+}
+
+.profile-row-actions button,
+.profile-settings-form button,
+.profile-account-actions button {
+  width: auto !important;
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  font-weight: 800 !important;
+}
+
+.profile-row-actions button:hover:not(:disabled),
+.profile-settings-form button:hover:not(:disabled),
+.profile-account-actions button:hover:not(:disabled),
+.profile-edit-shortcut:hover:not(:disabled) {
+  border-color: var(--color-primary-600) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.profile-settings-form,
+.profile-account-actions {
+  display: grid !important;
+  gap: 14px !important;
+  padding-bottom: 22px !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.profile-settings-form label,
+.profile-account-actions label {
+  display: grid !important;
+  gap: 6px !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+}
+
+.profile-settings-form input,
+.profile-account-actions input {
+  width: 100% !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  font: inherit !important;
+  font-weight: 800 !important;
+}
+
+.profile-settings-form input[type='file'] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.profile-file-button {
+  display: inline-grid !important;
+  width: fit-content !important;
+  min-height: 38px !important;
+  place-items: center !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  font-weight: 900 !important;
+}
+
+.profile-avatar-preview {
+  width: 96px !important;
+  height: 96px !important;
+  object-fit: cover !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+}
+
+.profile-account-actions .danger,
+.profile-account-actions button.danger {
+  border-color: var(--color-error-600) !important;
+  background: var(--color-error-100) !important;
+  color: var(--color-error-600) !important;
+}
+
+@media (max-width: 860px) {
+  .profile-github-layout {
+    grid-template-columns: 1fr !important;
+    gap: 22px !important;
+  }
+
+  .profile-identity {
+    grid-template-columns: 96px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 12px 16px !important;
+  }
+
+  .profile-identity-avatar {
+    width: 96px !important;
+    grid-row: span 3 !important;
+  }
+
+  .profile-identity h2,
+  .profile-identity p {
+    margin: 0 !important;
+  }
+
+  .profile-edit-shortcut,
+  .profile-stat-strip,
+  .profile-side-note {
+    grid-column: 1 / -1 !important;
+  }
+
+  .profile-stat-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .profile-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .profile-github-layout {
+    gap: 18px !important;
+  }
+
+  .profile-identity {
+    grid-template-columns: 78px minmax(0, 1fr) !important;
+  }
+
+  .profile-identity-avatar {
+    width: 78px !important;
+  }
+
+  .profile-stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .profile-tabs button {
+    min-height: 44px !important;
+    padding: 0 12px !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+/* Q&A cards use the full feed width and a stable reading rhythm. */
+.qna-feed-page .qna-feed-list,
+.qna-feed-page .qna-help-card {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+.qna-feed-page .qna-help-card {
+  min-height: 250px !important;
+  grid-template-rows: auto minmax(92px, 1fr) auto auto !important;
+  align-content: stretch !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-main,
+.qna-feed-page .qna-help-card .qna-card-copy {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-main {
+  grid-template-columns: minmax(0, 1fr) 104px !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-media {
+  width: 104px !important;
+  height: 104px !important;
+  justify-self: end !important;
+}
+
+@media (max-width: 760px) {
+  .qna-feed-page .qna-help-card {
+    min-height: 220px !important;
+  }
+
+  .qna-feed-page .qna-help-card .qna-card-main {
+    grid-template-columns: minmax(0, 1fr) 72px !important;
+  }
+
+  .qna-feed-page .qna-help-card .qna-card-media {
+    width: 72px !important;
+    height: 72px !important;
+  }
+}
+
+/* Q&A card polish: separate the write action, author row and media count. */
+.qna-feed-page .qna-mobile-fab,
+.qna-feed-page .qna-create-button {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--color-primary-900) 16%, transparent) !important;
+}
+
+.qna-feed-page .qna-help-card footer {
+  order: 1 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  min-height: 32px !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-main { order: 2 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-top { order: 3 !important; }
+.qna-feed-page .qna-help-card .qna-attachment-summary { display: none !important; }
+.qna-feed-page .qna-card-media { position: relative !important; }
+.qna-feed-page .qna-card-media-count { position: absolute !important; right: 8px !important; bottom: 8px !important; display: grid !important; min-width: 28px !important; height: 28px !important; place-items: center !important; border-radius: 999px !important; background: color-mix(in srgb, var(--color-text-primary) 78%, transparent) !important; color: var(--color-surface) !important; font-size: 12px !important; font-weight: 800 !important; }
+
+@media (min-width: 761px) {
+  .qna-feed-page .qna-mobile-fab { top: 104px !important; right: 24px !important; }
+}
+
+/* Q&A card reading order: author first, metadata second, topic tags last. */
+.qna-feed-page .qna-help-card {
+  display: grid !important;
+  grid-template-rows: auto auto minmax(118px, auto) auto !important;
+  gap: 0 !important;
+  min-height: 0 !important;
+  padding: 18px !important;
+  position: relative !important;
+}
+
+.qna-feed-page .qna-help-card footer {
+  order: 1 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  grid-template-rows: auto auto !important;
+  align-items: center !important;
+  gap: 4px 10px !important;
+  margin: 0 !important;
+}
+
+.qna-feed-page .qna-card-author-meta { display: contents !important; }
+.qna-feed-page .qna-card-author-meta .post-author { grid-column: 1 / -1 !important; grid-row: 1 !important; }
+.qna-feed-page .qna-card-author-meta > span:last-child { grid-column: 1 !important; grid-row: 2 !important; }
+.qna-feed-page .qna-card-stats { grid-column: 2 !important; grid-row: 2 !important; margin: 0 !important; white-space: nowrap !important; }
+.qna-feed-page .qna-card-likes { grid-column: 3 !important; grid-row: 2 !important; color: var(--color-text-secondary) !important; white-space: nowrap !important; }
+.qna-feed-page .qna-help-card .qna-card-main { order: 2 !important; min-height: 118px !important; margin-top: 14px !important; }
+.qna-feed-page .qna-help-card .qna-help-card-top { order: 3 !important; margin-top: 14px !important; }
+.qna-feed-page .qna-help-card .qna-card-menu { position: absolute !important; top: 14px !important; right: 14px !important; z-index: 2 !important; }
+.qna-feed-page .qna-help-card h3 { max-width: 100% !important; margin-top: 0 !important; display: -webkit-box !important; overflow: hidden !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-preview { display: -webkit-box !important; overflow: hidden !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; }
+.qna-feed-page .qna-help-card .qna-help-card-animal { margin-top: 10px !important; }
+.qna-feed-page .qna-help-card .qna-attachment-summary { display: none !important; }
+.qna-feed-page .qna-card-media:has(.qna-card-visualization) { display: none !important; }
+.qna-feed-page .qna-card-media-count { display: none !important; }
+
+@media (max-width: 760px) {
+  .qna-feed-page .qna-help-card { padding: 16px !important; grid-template-rows: auto auto minmax(104px, auto) auto !important; }
+  .qna-feed-page .qna-help-card .qna-card-main { min-height: 104px !important; }
+  .qna-feed-page .qna-card-stats { grid-column: 2 !important; }
+}
+
+/* Keep the representative photo at the far edge of the full card. */
+.qna-feed-page .qna-help-card .qna-card-main {
+  width: 100% !important;
+  max-width: none !important;
+  position: relative !important;
+  display: block !important;
+  min-height: 144px !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-copy {
+  width: auto !important;
+  max-width: none !important;
+  padding-right: 164px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-copy .qna-help-card-animal {
+  order: 1 !important;
+  margin: 0 0 8px !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-copy h3 { order: 2 !important; }
+.qna-feed-page .qna-help-card .qna-card-copy .qna-help-card-preview { order: 3 !important; }
+
+.qna-feed-page .qna-help-card .qna-card-media {
+  position: absolute !important;
+  top: 108px !important;
+  right: 18px !important;
+  width: 144px !important;
+  height: 144px !important;
+  justify-self: end !important;
+}
+
+/* Anchor the image to the card itself, never to the narrower text wrapper. */
+.qna-feed-page .qna-help-card .qna-card-main { position: static !important; }
+
+@media (max-width: 760px) {
+  .qna-feed-page .qna-help-card .qna-card-main { min-height: 96px !important; }
+  .qna-feed-page .qna-help-card .qna-card-copy { padding-right: 108px !important; }
+  .qna-feed-page .qna-help-card .qna-card-media { top: 92px !important; right: 16px !important; width: 96px !important; height: 96px !important; }
+}
+
+/* Q&A detail images stay compact, preserve their source ratio, and open on demand. */
+.qna-detail-post {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.qna-detail-post > h2 { order: 2 !important; }
+.qna-detail-post > .qna-detail-badges { order: 1 !important; }
+.qna-detail-post > .qna-author { order: 3 !important; }
+.qna-detail-post > p { order: 4 !important; }
+.qna-detail-post > .qna-detail-image-grid { order: 5 !important; }
+.qna-detail-post > .qna-diary-visualization,
+.qna-detail-post > .qna-record-attachment { order: 6 !important; }
+.qna-detail-post > .qna-detail-actions { order: 7 !important; }
+
+.qna-detail-image-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+  justify-content: start !important;
+  gap: 12px !important;
+  width: fit-content !important;
+  max-width: min(100%, 720px) !important;
+  margin: 16px 0 0 !important;
+}
+
+.qna-detail-image-button {
+  display: block !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+  text-align: left !important;
+  cursor: zoom-in !important;
+  overflow: hidden !important;
+}
+
+.qna-detail-image-button img {
+  display: block !important;
+  width: auto !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: 460px !important;
+  object-fit: contain !important;
+  border-radius: 11px !important;
+}
+
+.qna-detail-image-grid:has(> :only-child) { grid-template-columns: minmax(0, 1fr) !important; }
+
+.qna-lightbox {
+  position: fixed !important;
+  z-index: 1000 !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 32px !important;
+  background: color-mix(in srgb, var(--color-text-primary) 82%, transparent) !important;
+  cursor: zoom-out !important;
+}
+
+.qna-lightbox img {
+  display: block !important;
+  width: auto !important;
+  max-width: min(100%, 1100px) !important;
+  max-height: min(90vh, 820px) !important;
+  object-fit: contain !important;
+  border-radius: 10px !important;
+}
+
+.qna-lightbox-close {
+  position: absolute !important;
+  top: 18px !important;
+  right: 18px !important;
+  display: grid !important;
+  width: 44px !important;
+  height: 44px !important;
+  place-items: center !important;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 35%, transparent) !important;
+  border-radius: 50% !important;
+  background: color-mix(in srgb, var(--color-text-primary) 35%, transparent) !important;
+  color: var(--color-surface) !important;
+  font-size: 26px !important;
+}
+
+@media (max-width: 760px) {
+  .qna-detail-image-grid { grid-template-columns: minmax(0, 1fr) !important; width: 100% !important; }
+  .qna-detail-image-button, .qna-detail-image-button img { width: 100% !important; }
+  .qna-detail-image-button img { max-height: 360px !important; }
+  .qna-lightbox { padding: 16px !important; }
+}
+
+.qna-feed-page .qna-help-card footer {
+  width: 100% !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  grid-template-rows: 32px 26px !important;
+}
+
+.qna-feed-page .qna-card-author-meta .post-author { align-self: center !important; }
+.qna-feed-page .qna-card-author-meta > span:last-child,
+.qna-feed-page .qna-card-stats,
+.qna-feed-page .qna-card-likes { align-self: center !important; line-height: 1 !important; }
+.qna-feed-page .qna-card-stats { display: inline-flex !important; align-items: center !important; gap: 8px !important; }
+
+.qna-hospital-search {
+  display: grid !important;
+  grid-template-columns: 22px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 44px !important;
+  margin: 14px 0 10px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 10px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-600) !important;
+}
+
+.qna-hospital-search input {
+  width: 100% !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+}
+
+.qna-hospital-picker-item span { color: var(--color-text-secondary) !important; }
+
+/* Remove the legacy desktop lift that pushed the Q&A search above the viewport. */
+@media (min-width: 761px) {
+  .qna-feed-page {
+    margin-top: 0 !important;
+    padding-top: 24px !important;
+  }
+
+  .qna-feed-page .qna-feed-search {
+    position: relative !important;
+    z-index: 1 !important;
+    display: grid !important;
+  }
+}
+/* Profile page: isolated from the legacy shared card grid rules above. */
+.profile-page {
+  display: block;
+  width: 100%;
+  max-width: 1120px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 32px;
+  color: var(--color-text-primary);
+}
+
+.profile-page .profile-page-title {
+  margin: 0 0 24px;
+  color: var(--color-text-primary);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.profile-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 0 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-summary-main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  gap: 18px;
+}
+
+.profile-summary-avatar {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.profile-summary-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-summary-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.profile-summary-copy h2 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-summary-copy p,
+.profile-summary-copy span {
+  display: block;
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.profile-summary-copy span {
+  display: -webkit-box;
+  max-width: 680px;
+  overflow: hidden;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.profile-header-skeleton {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-header-skeleton > div {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-skeleton-avatar,
+.profile-skeleton-line {
+  display: block;
+  background: color-mix(in srgb, var(--color-border) 68%, var(--color-surface));
+  animation: profile-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.profile-skeleton-avatar {
+  width: 88px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.profile-skeleton-line {
+  width: min(32%, 150px);
+  height: 13px;
+  border-radius: 4px;
+}
+
+.profile-skeleton-line.wide {
+  width: min(48%, 240px);
+  height: 24px;
+}
+
+.profile-skeleton-line.intro {
+  width: min(72%, 420px);
+}
+
+@keyframes profile-skeleton-pulse {
+  50% { opacity: 0.48; }
+}
+
+.profile-primary-button,
+.profile-empty-state button,
+.profile-notification-controls button,
+.profile-account-actions button {
+  min-height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.profile-account-actions button:hover,
+.profile-account-actions button:focus-visible {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-700);
+}
+
+.profile-primary-button:active,
+.profile-empty-state button:active,
+.profile-notification-controls button:active,
+.profile-account-actions button:active,
+.profile-activity-summary button:active,
+.profile-detail-tabs button:active {
+  transform: translateY(1px);
+}
+
+.profile-activity-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0 14px;
+}
+
+.profile-activity-summary button {
+  display: flex;
+  min-width: 0;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  text-align: center;
+  cursor: pointer;
+}
+
+.profile-activity-summary button:hover,
+.profile-activity-summary button:focus-visible,
+.profile-activity-summary button.is-active {
+  border-color: var(--color-primary-600);
+  background: color-mix(in srgb, var(--color-primary-50) 52%, var(--color-surface));
+}
+
+.profile-summary-count {
+  color: var(--color-text-primary);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-summary-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-detail-area {
+  scroll-margin-top: 24px;
+}
+
+.profile-detail-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.profile-detail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.profile-detail-tabs button {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 2px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.profile-detail-tabs button::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  content: '';
+  background: transparent;
+}
+
+.profile-detail-tabs button:hover,
+.profile-detail-tabs button:focus-visible,
+.profile-detail-tabs button.is-active {
+  color: var(--color-primary-700);
+}
+
+.profile-detail-tabs button.is-active::after {
+  background: var(--color-primary-600);
+}
+
+.profile-tab-panel {
+  padding-top: 18px;
+}
+
+.profile-content-list {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.profile-list-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--color-border);
+  transition: background .16s ease;
+}
+
+.profile-list-row:hover {
+  background: color-mix(in srgb, var(--color-primary-50) 36%, transparent);
+}
+
+.profile-row-main {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-row-main.static,
+.profile-row-main:disabled {
+  cursor: default;
+}
+
+.profile-row-main:not(:disabled):hover strong,
+.profile-row-main:not(:disabled):focus-visible strong {
+  color: var(--color-primary-700);
+}
+
+.profile-row-kicker,
+.profile-row-meta {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.profile-row-main strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.profile-row-main p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.profile-row-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.profile-continue-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-primary-600);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-primary-700);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-continue-button:hover,
+.profile-continue-button:focus-visible {
+  background: var(--color-primary-50);
+}
+
+.profile-row-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.profile-row-menu summary {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.profile-row-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-row-menu summary:hover,
+.profile-row-menu summary:focus-visible {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-700);
+}
+
+.profile-row-menu div {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 8px);
+  display: grid;
+  min-width: 132px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+}
+
+.profile-row-menu button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-row-menu button:hover,
+.profile-row-menu button:focus-visible {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.profile-row-menu button.danger,
+.profile-account-actions button.danger {
+  color: var(--color-error-600);
+}
+
+.profile-row-menu button.danger:hover,
+.profile-row-menu button.danger:focus-visible,
+.profile-account-actions button.danger:hover,
+.profile-account-actions button.danger:focus-visible {
+  background: var(--color-error-100);
+  border-color: var(--color-error-500);
+  color: var(--color-error-600);
+}
+
+.profile-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 52px 16px;
+  text-align: center;
+}
+
+.profile-empty-state > span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.profile-empty-state h3 {
+  margin: 6px 0 0;
+  color: var(--color-text-primary);
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.profile-empty-state p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.profile-empty-state button,
+.profile-primary-button,
+.profile-notification-controls button {
+  margin-top: 8px;
+  padding: 0 16px;
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: var(--color-surface);
+}
+
+.profile-empty-state button:hover,
+.profile-empty-state button:focus-visible,
+.profile-primary-button:hover,
+.profile-primary-button:focus-visible,
+.profile-notification-controls button:hover,
+.profile-notification-controls button:focus-visible {
+  border-color: var(--color-primary-700);
+  background: var(--color-primary-700);
+}
+
+.profile-like-area,
+.profile-written-area {
+  display: grid;
+  gap: 18px;
+}
+
+.profile-category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-category-filters button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-category-filters button:hover,
+.profile-category-filters button:focus-visible,
+.profile-category-filters button.is-active {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-700);
+}
+
+.profile-category-filters span {
+  color: var(--color-text-primary);
+}
+
+.profile-like-section {
+  display: grid;
+  gap: 2px;
+}
+
+.profile-like-section header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 4px;
+}
+
+.profile-like-section h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.profile-like-section header span,
+.profile-inline-empty {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.profile-inline-empty {
+  margin: 0;
+  padding: 14px 0;
+}
+
+.profile-settings {
+  display: grid;
+  gap: 22px;
+}
+
+.profile-settings-section {
+  display: grid;
+  gap: 14px;
+  padding: 18px 0 22px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-settings-section h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.profile-settings-section p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.profile-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profile-settings-grid label,
+.profile-account-actions label {
+  display: grid;
+  gap: 7px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.profile-settings-grid input,
+.profile-account-actions input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  padding: 0 12px;
+}
+
+.profile-settings-grid input:hover,
+.profile-settings-grid input:focus,
+.profile-account-actions input:hover,
+.profile-account-actions input:focus {
+  border-color: var(--color-primary-600);
+}
+
+.profile-file-field input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.profile-file-button {
+  display: inline-grid;
+  width: fit-content;
+  min-height: 40px;
+  place-items: center;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.profile-file-field:hover .profile-file-button,
+.profile-file-field:focus-within .profile-file-button {
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-700);
+}
+
+.profile-avatar-preview {
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.profile-settings-actions p,
+.profile-settings-error {
+  color: var(--color-primary-700);
+  font-weight: 800;
+}
+
+.profile-notification-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.profile-notification-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.profile-notification-controls span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.profile-notification-controls button:disabled,
+.profile-account-actions button:disabled {
+  border-color: var(--color-border);
+  background: color-mix(in srgb, var(--color-border) 34%, var(--color-surface));
+  color: var(--color-text-placeholder);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.profile-account-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content)) minmax(220px, 1fr) max-content;
+  gap: 12px;
+  align-items: end;
+}
+
+.profile-account-actions button {
+  padding: 0 14px;
+}
+
+@media (max-width: 1024px) {
+  .profile-account-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .profile-page {
+    padding: 20px 16px 96px;
+  }
+
+  .profile-page .profile-page-title {
+    margin-bottom: 18px;
+    font-size: 26px;
+  }
+
+  .profile-summary-header {
+    align-items: flex-start;
+    gap: 16px;
+    flex-direction: column;
+    padding-bottom: 22px;
+  }
+
+  .profile-summary-main {
+    width: 100%;
+    gap: 14px;
+  }
+
+  .profile-summary-avatar {
+    width: 72px;
+    height: 72px;
+    flex-basis: 72px;
+    font-size: 24px;
+  }
+
+  .profile-summary-copy h2 {
+    font-size: 23px;
+  }
+
+  .profile-activity-summary {
+    gap: 6px;
+    margin: 16px 0 12px;
+  }
+
+  .profile-activity-summary button {
+    min-height: 48px;
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .profile-summary-count {
+    font-size: 20px;
+  }
+
+  .profile-summary-label {
+    font-size: 11px;
+  }
+
+  .profile-detail-tabs {
+    gap: 22px;
+  }
+
+  .profile-detail-tabs button {
+    font-size: 15px;
+  }
+
+  .profile-list-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 16px 0;
+  }
+
+  .profile-row-main strong {
+    font-size: 16px;
+    white-space: normal;
+  }
+
+  .profile-row-menu div {
+    right: 0;
+  }
+
+  .profile-settings-grid,
+  .profile-notification-row,
+  .profile-account-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-notification-controls {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 380px) {
+  .profile-page {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .profile-activity-summary button {
+    min-height: 46px;
+    padding: 4px;
+  }
+}
+
+/* Final Q&A card guard: legacy Q&A rules must not collapse the content area. */
+.qna-feed-page .qna-help-card {
+  display: grid !important;
+  grid-template-rows: auto auto auto !important;
+  align-content: start !important;
+  min-height: 224px !important;
+  overflow: visible !important;
+  position: relative !important;
+}
+
+.qna-feed-page .qna-help-card > footer {
+  order: 1 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  grid-template-rows: auto auto !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+}
+
+.qna-feed-page .qna-help-card > .qna-card-main {
+  order: 2 !important;
+  display: block !important;
+  visibility: visible !important;
+  min-height: 128px !important;
+  margin-top: 12px !important;
+  position: static !important;
+  overflow: visible !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-copy {
+  display: flex !important;
+  visibility: visible !important;
+  flex-direction: column !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding-right: 164px !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-copy h3,
+.qna-feed-page .qna-help-card .qna-card-copy .qna-help-card-preview,
+.qna-feed-page .qna-help-card .qna-card-copy .qna-help-card-animal {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-copy .qna-help-card-animal { order: 1 !important; margin: 0 0 7px !important; font-size: 12px !important; line-height: 1.35 !important; }
+.qna-feed-page .qna-help-card .qna-card-copy h3 { order: 2 !important; margin: 0 !important; font-size: 18px !important; line-height: 1.4 !important; }
+.qna-feed-page .qna-help-card .qna-card-copy .qna-help-card-preview { order: 3 !important; margin: 7px 0 0 !important; font-size: 14px !important; line-height: 1.5 !important; }
+
+.qna-feed-page .qna-help-card .qna-card-media {
+  display: block !important;
+  visibility: visible !important;
+  position: absolute !important;
+  top: 78px !important;
+  right: 18px !important;
+  width: 144px !important;
+  height: 144px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+.qna-feed-page .qna-help-card .qna-card-media > img { display: block !important; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.qna-feed-page .qna-help-card > .qna-help-card-top { order: 3 !important; display: flex !important; visibility: visible !important; min-height: 28px !important; margin-top: 12px !important; align-items: center !important; }
+
+@media (max-width: 760px) {
+  .qna-feed-page .qna-help-card { min-height: 196px !important; }
+  .qna-feed-page .qna-help-card > .qna-card-main { min-height: 104px !important; }
+  .qna-feed-page .qna-help-card .qna-card-copy { padding-right: 108px !important; }
+  .qna-feed-page .qna-help-card .qna-card-media { top: 76px !important; right: 16px !important; width: 96px !important; height: 96px !important; }
+}
+
+/* Final detail metadata order: author row, species row, then the question body. */
+.qna-detail-post > .qna-detail-author-meta { order: 3 !important; }
+.qna-detail-post > .qna-detail-pet-meta { order: 4 !important; }
+.qna-detail-post > .qna-author { order: 99 !important; display: none !important; }
+.qna-detail-post > p { order: 5 !important; }
+.qna-detail-post > .qna-detail-image-grid { order: 6 !important; }
+.qna-detail-post > .qna-diary-visualization,
+.qna-detail-post > .qna-record-attachment { order: 7 !important; }
+.qna-detail-post > .qna-detail-actions { order: 8 !important; }
+
+@media (max-width: 380px) {
+  .qna-detail-meta-line { font-size: 0.76rem !important; }
+}
+
+/* Final detail cleanup: render one author block and place status tags at the bottom. */
+.qna-detail-post > .qna-author {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+.qna-detail-post > .qna-detail-badges {
+  order: 9 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin: 18px 0 0 !important;
+}
+
+/* Keep status and category tags aligned as one compact row. */
+.qna-feed-page .qna-help-card-top .qna-status,
+.qna-feed-page .qna-help-card-top .qna-category {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-radius: 999px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* Q&A detail rows: keep each text block in its own predictable alignment. */
+.qna-detail-post {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  overflow: visible !important;
+}
+
+.qna-detail-post .qna-detail-badges {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin: 0 0 12px !important;
+}
+
+.qna-detail-post > h2 {
+  width: 100% !important;
+  margin: 0 0 14px !important;
+  text-align: left !important;
+}
+
+.qna-detail-post > .qna-author {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  gap: 10px !important;
+  margin: 0 0 18px !important;
+  text-align: left !important;
+}
+
+.qna-detail-post > .qna-author > div {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+  justify-items: start !important;
+}
+
+.qna-detail-post > .qna-author strong,
+.qna-detail-post > .qna-author span {
+  white-space: normal !important;
+}
+
+.qna-detail-post > p {
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 18px 0 !important;
+  text-align: left !important;
+}
+
+/* Q&A list card meta: author and supporting metrics use separate aligned rows. */
+.qna-feed-page .qna-help-card > footer {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  grid-template-rows: 32px 26px !important;
+  align-items: center !important;
+  column-gap: 12px !important;
+  row-gap: 3px !important;
+  width: 100% !important;
+  min-height: 61px !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-author-meta {
+  display: contents !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-author-meta .post-author {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+  align-self: center !important;
+  min-width: 0 !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-author-meta > span:last-child {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  justify-self: start !important;
+  align-self: center !important;
+  white-space: nowrap !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-stats {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  justify-self: end !important;
+  align-self: center !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-likes {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  justify-self: end !important;
+  align-self: center !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Treat the author block as one component; keep its date directly beneath the nickname. */
+.qna-feed-page .qna-help-card > footer .qna-card-author-meta {
+  display: grid !important;
+  grid-column: 1 !important;
+  grid-row: 1 / 3 !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: 32px 26px !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-author-meta .post-author {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-author-meta > span:last-child {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  justify-self: start !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-stats,
+.qna-feed-page .qna-help-card > footer .qna-card-likes {
+  align-self: end !important;
+  margin-bottom: 4px !important;
+}
+
+/* Compact card metadata: one readable line below the nickname. */
+.qna-feed-page .qna-help-card > footer {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: 32px auto !important;
+  min-height: 58px !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-meta-line {
+  display: block !important;
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  align-self: center !important;
+  justify-self: start !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  white-space: nowrap !important;
+}
+
+.qna-feed-page .qna-help-card > footer .qna-card-author-meta > span:last-child,
+.qna-feed-page .qna-help-card > footer .qna-card-stats,
+.qna-feed-page .qna-help-card > footer .qna-card-likes {
+  display: none !important;
+}
+
+@media (max-width: 380px) {
+  .qna-feed-page .qna-help-card > footer { column-gap: 7px !important; }
+  .qna-feed-page .qna-help-card > footer .qna-card-stats,
+  .qna-feed-page .qna-help-card > footer .qna-card-likes { font-size: 11px !important; }
+}
+
+/* Keep detail actions below the image instead of letting them touch its edge. */
+.qna-detail-post .qna-detail-image-grid {
+  position: relative !important;
+  z-index: 0 !important;
+  margin-bottom: 20px !important;
+}
+
+.qna-detail-post .qna-detail-actions {
+  position: relative !important;
+  z-index: 1 !important;
+  clear: both !important;
+  margin-top: 4px !important;
+  padding-top: 4px !important;
+}
+
+.qna-detail-post .qna-detail-image-button {
+  position: relative !important;
+  z-index: 0 !important;
 }

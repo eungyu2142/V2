@@ -1,12 +1,13 @@
 /* This module intentionally groups the map feature's pure helpers and its small map icon. */
 /* eslint-disable react-refresh/only-export-components */
-import type { AnimalCategory, Coordinates, Hospital, HospitalReview, HospitalSnapshot, Pet } from '../../types/app'
+import type { AnimalCategory, Coordinates, Hospital, HospitalGoogleReview, HospitalOpeningHours, HospitalReview, HospitalSnapshot, Pet } from '../../types/app'
 import type { NaverMapApi } from '../../types/map'
 import { supabase } from '../../lib/supabase'
 
 const savedHospitalStorageKey = 'exocare-saved-hospitals'
 const savedHospitalDetailsStorageKey = 'exocare-liked-hospitals'
 let naverMapsLoader: Promise<NaverMapApi> | null = null
+const googleHospitalDetailsCache = new Map<string, Promise<Hospital | null>>()
 const hospitalCareCategories = ['reptile'] as const
 
 export const animalCategoryOptions: AnimalCategory[] = ['all', 'reptile', 'amphibian', 'rodent', 'bird', 'other']
@@ -190,10 +191,44 @@ export function readBrowserLocation() {
 }
 
 export async function searchHospitals(query: string, category: AnimalCategory, location: Coordinates | null) {
-  const collectedHospitals = await loadCollectedHospitals(query, category)
-  const liveHospitals = await loadLiveReptileHospitals(query, category, location)
-  const hospitals = dedupeHospitals([...collectedHospitals, ...liveHospitals])
+  const storedHospitals = await loadStoredHospitals(query, category)
+  const hospitals = storedHospitals.length > 0 ? storedHospitals : await loadCollectedHospitals(query, category)
   return sortHospitalsByDistance(hospitals, location)
+}
+
+async function loadStoredHospitals(query: string, category: AnimalCategory) {
+  const { data, error } = await supabase
+    .from('hospitals')
+    .select('id, external_id, name, address, road_address, phone, link, google_place_id, lat, lng, categories, supported_animals, source, payload, last_collected_at')
+    .order('name', { ascending: true })
+  if (error) {
+    console.error('Stored hospital catalog load failed:', error)
+    return []
+  }
+
+  const items = (data ?? []).map((row) => {
+    const payload = row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+      ? row.payload as Record<string, unknown>
+      : {}
+    return {
+      ...payload,
+      id: row.external_id || row.id,
+      name: row.name,
+      address: row.address,
+      roadAddress: row.road_address,
+      phone: row.phone,
+      link: row.link,
+      googlePlaceId: row.google_place_id,
+      lat: row.lat,
+      lng: row.lng,
+      categories: row.categories,
+      supportedAnimals: row.supported_animals,
+      source: row.source,
+      lastCollectedAt: row.last_collected_at,
+      sources: Array.isArray(payload.sources) ? payload.sources : [row.source],
+    } satisfies Record<string, unknown>
+  })
+  return transformHospitalItems(items, query, category)
 }
 
 export async function loadCollectedHospitals(query: string, category: AnimalCategory) {
@@ -222,6 +257,14 @@ export function toHospitalSnapshot(hospital: Hospital): HospitalSnapshot {
     animalTags: hospital.categories.map((category) => animalCategoryLabels[category]),
     naverLink: hospital.link,
     source: hospital.link ? 'naver_local_search' : 'local_hospital_data',
+    rating: hospital.rating,
+    googleReviewCount: hospital.googleReviewCount,
+    googleReviews: hospital.googleReviews,
+    regularOpeningHours: hospital.regularOpeningHours,
+    currentOpeningHours: hospital.currentOpeningHours,
+    openingHours: hospital.openingHours,
+    isOpenNow: hospital.isOpenNow,
+    openingHoursUpdatedAt: hospital.openingHoursUpdatedAt,
   }
 }
 
@@ -240,61 +283,64 @@ export function hospitalFromSnapshot(snapshot: HospitalSnapshot): Hospital {
     lng: snapshot.lng,
     categories: categories.length ? categories : ['reptile'],
     matchedQueries: [snapshot.name],
+    rating: snapshot.rating,
+    googleReviewCount: snapshot.googleReviewCount,
+    googleReviews: snapshot.googleReviews,
+    regularOpeningHours: snapshot.regularOpeningHours,
+    currentOpeningHours: snapshot.currentOpeningHours,
+    openingHours: snapshot.openingHours,
+    isOpenNow: snapshot.isOpenNow,
+    openingHoursUpdatedAt: snapshot.openingHoursUpdatedAt,
   }
 }
 
-async function loadLiveReptileHospitals(query: string, category: AnimalCategory, location: Coordinates | null) {
-  const normalizedQuery = buildHospitalSearchQuery(query, category)
-  const locationKey = location ? `${Math.round(location.lat * 100)}:${Math.round(location.lng * 100)}` : 'no-location'
-  const cacheKey = `exocare-live-reptile-hospitals:${normalizeText(normalizedQuery)}:${locationKey}`
-  const cached = readHospitalCache(cacheKey)
-  if (cached) return transformHospitalItems(cached, normalizedQuery, 'reptile')
+export function loadGoogleHospitalDetails(hospital: Hospital) {
+  const cacheKey = `${normalizeText(hospital.name)}:${normalizeText(hospital.address)}`
+  const cached = googleHospitalDetailsCache.get(cacheKey)
+  if (cached) return cached
 
-  const merged: Array<Record<string, unknown>> = []
-
-  const naverResult = await supabase.functions.invoke('search-hospitals', {
+  const request = supabase.functions.invoke('search-reptile-amphibian-places', {
     body: {
-      query: normalizedQuery,
-      display: 100,
-      start: 1,
-      sort: 'random',
+      query: `${hospital.name} ${hospital.address}`.trim(),
+      pageSize: 5,
+      latitude: hospital.lat,
+      longitude: hospital.lng,
+      radiusMeters: 5_000,
+      includeDetails: true,
     },
-  })
-  if (naverResult.error) {
-    console.error('Naver reptile hospital search failed:', naverResult.error)
-  } else {
-    const items = (naverResult.data as { items?: Array<Record<string, unknown>> } | null)?.items ?? []
-    merged.push(...items.map((item) => ({
-      ...item,
-      supportedAnimals: ['reptile'],
-      matchedQueries: [normalizedQuery],
-      sources: ['naver-local-search'],
-    })))
-  }
-
-  const googleResult = await supabase.functions.invoke('search-reptile-amphibian-places', {
-    body: {
-      query: normalizedQuery,
-      pageSize: 20,
-      latitude: location?.lat,
-      longitude: location?.lng,
-      radiusMeters: 50_000,
-    },
-  })
-  if (googleResult.error) {
-    console.error('Google Places reptile hospital search failed:', googleResult.error)
-  } else {
-    const hospitals = (googleResult.data as { hospitals?: Array<Record<string, unknown>> } | null)?.hospitals ?? []
-    merged.push(...hospitals.map((hospital) => ({
+  }).then(({ data, error }) => {
+    if (error) throw error
+    const item = (data as { hospitals?: Array<Record<string, unknown>> } | null)?.hospitals?.[0]
+    if (!item) return null
+    const details = transformHospitalItem(item, 0, hospital.name, 'reptile')
+    if (!details) return null
+    return {
       ...hospital,
-      supportedAnimals: ['reptile'],
-      matchedQueries: [normalizedQuery],
-      sources: ['google-places-new'],
-    })))
-  }
-
-  writeHospitalCache(cacheKey, merged)
-  return transformHospitalItems(merged, normalizedQuery, 'reptile')
+      phone: details.phone || hospital.phone,
+      internationalPhone: details.internationalPhone,
+      shortAddress: details.shortAddress,
+      googlePlaceId: details.googlePlaceId,
+      googleMapsUri: details.googleMapsUri,
+      websiteUri: details.websiteUri,
+      rating: details.rating,
+      googleReviewCount: details.googleReviewCount,
+      googleReviews: details.googleReviews,
+      regularOpeningHours: details.regularOpeningHours,
+      currentOpeningHours: details.currentOpeningHours,
+      openingHours: details.openingHours,
+      isOpenNow: details.isOpenNow,
+      openingHoursUpdatedAt: details.openingHoursUpdatedAt,
+      businessStatus: details.businessStatus,
+      primaryTypeLabel: details.primaryTypeLabel,
+      googleDetailsLoaded: true,
+    }
+  }).catch((error) => {
+    googleHospitalDetailsCache.delete(cacheKey)
+    console.error('Google hospital details load failed:', error)
+    return { ...hospital, googleDetailsLoaded: true }
+  })
+  googleHospitalDetailsCache.set(cacheKey, request)
+  return request
 }
 
 function transformHospitalItem(item: Record<string, unknown>, index: number, query: string, category: AnimalCategory): Hospital | null {
@@ -315,6 +361,22 @@ function transformHospitalItem(item: Record<string, unknown>, index: number, que
     .filter(isHospitalCareCategory)
   const guessed = categories.length > 0 ? categories : guessAnimalCategories(text, category)
   if (guessed.length === 0) return null
+  const regularOpeningHours = toHospitalOpeningHours(item.regularOpeningHours ?? item.opening_hours)
+  const currentOpeningHours = toHospitalOpeningHours(item.currentOpeningHours ?? item.current_opening_hours)
+  const openingHoursSource = item.openingHours ??
+    currentOpeningHours?.weekdayDescriptions ??
+    regularOpeningHours?.weekdayDescriptions
+  const openingHours = Array.isArray(openingHoursSource)
+    ? openingHoursSource.filter((value): value is string => typeof value === 'string')
+    : []
+  const rawIsOpenNow = item.isOpenNow ?? item.is_open_now
+  const isOpenNow = typeof rawIsOpenNow === 'boolean'
+    ? rawIsOpenNow
+    : currentOpeningHours?.openNow ?? regularOpeningHours?.openNow ?? null
+  const rawOpeningHoursUpdatedAt = item.openingHoursUpdatedAt ?? item.opening_hours_updated_at
+  const rating = Number(item.rating)
+  const googleReviewCount = Number(item.userRatingCount ?? item.googleReviewCount ?? item.google_review_count)
+  const googleReviews = toHospitalGoogleReviews(item.googleReviews ?? item.google_reviews)
 
   return {
     id: String(item.id ?? `${name}-${coords.lat}-${coords.lng}-${index}`),
@@ -322,11 +384,67 @@ function transformHospitalItem(item: Record<string, unknown>, index: number, que
     address,
     roadAddress: String(item.roadAddress ?? ''),
     phone: String(item.telephone ?? item.phone ?? ''),
+    internationalPhone: typeof item.internationalPhone === 'string' ? item.internationalPhone : undefined,
+    shortAddress: typeof item.shortAddress === 'string' ? item.shortAddress : undefined,
     link: String(item.link ?? ''),
     lat: coords.lat,
     lng: coords.lng,
     categories: guessed,
     matchedQueries: Array.isArray(item.matchedQueries) ? item.matchedQueries.map(String) : [query],
+    googlePlaceId: typeof item.googlePlaceId === 'string' && item.googlePlaceId ? item.googlePlaceId : undefined,
+    googleMapsUri: typeof item.googleMapsUri === 'string' ? item.googleMapsUri : undefined,
+    websiteUri: typeof item.websiteUri === 'string' ? item.websiteUri : undefined,
+    businessStatus: typeof item.businessStatus === 'string' ? item.businessStatus : undefined,
+    primaryTypeLabel: typeof item.primaryTypeLabel === 'string' ? item.primaryTypeLabel : undefined,
+    rating: Number.isFinite(rating) ? rating : undefined,
+    googleReviewCount: Number.isFinite(googleReviewCount) ? googleReviewCount : undefined,
+    googleReviews,
+    regularOpeningHours,
+    currentOpeningHours,
+    openingHours,
+    isOpenNow,
+    openingHoursUpdatedAt: typeof rawOpeningHoursUpdatedAt === 'string' ? rawOpeningHoursUpdatedAt : null,
+  }
+}
+
+function toHospitalGoogleReviews(value: unknown): HospitalGoogleReview[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const source = item as Record<string, unknown>
+    const text = typeof source.text === 'string' ? source.text.trim() : ''
+    if (!text) return []
+    const rating = Number(source.rating)
+    return [{
+      id: String(source.id ?? `google-review-${index}`),
+      authorName: typeof source.authorName === 'string' && source.authorName.trim() ? source.authorName : 'Google 사용자',
+      authorUri: typeof source.authorUri === 'string' ? source.authorUri : undefined,
+      authorPhotoUri: typeof source.authorPhotoUri === 'string' ? source.authorPhotoUri : undefined,
+      rating: Number.isFinite(rating) ? rating : undefined,
+      text,
+      publishTime: typeof source.publishTime === 'string' ? source.publishTime : undefined,
+      relativePublishTimeDescription: typeof source.relativePublishTimeDescription === 'string' ? source.relativePublishTimeDescription : undefined,
+      googleMapsUri: typeof source.googleMapsUri === 'string' ? source.googleMapsUri : undefined,
+    }]
+  })
+}
+
+function toHospitalOpeningHours(value: unknown): HospitalOpeningHours | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const source = value as Record<string, unknown>
+  return {
+    openNow: typeof source.openNow === 'boolean' ? source.openNow : undefined,
+    weekdayDescriptions: Array.isArray(source.weekdayDescriptions)
+      ? source.weekdayDescriptions.filter((item): item is string => typeof item === 'string')
+      : undefined,
+    periods: Array.isArray(source.periods)
+      ? source.periods.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+      : undefined,
+    specialDays: Array.isArray(source.specialDays)
+      ? source.specialDays.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+      : undefined,
+    nextOpenTime: typeof source.nextOpenTime === 'string' ? source.nextOpenTime : undefined,
+    nextCloseTime: typeof source.nextCloseTime === 'string' ? source.nextCloseTime : undefined,
   }
 }
 
@@ -435,6 +553,14 @@ function dedupeHospitals(hospitals: Hospital[]) {
       categories: Array.from(new Set([...existing.categories, ...hospital.categories])),
       phone: existing.phone || hospital.phone,
       link: existing.link || hospital.link,
+      rating: hospital.rating ?? existing.rating,
+      googleReviewCount: hospital.googleReviewCount ?? existing.googleReviewCount,
+      googleReviews: hospital.googleReviews?.length ? hospital.googleReviews : existing.googleReviews,
+      regularOpeningHours: hospital.regularOpeningHours ?? existing.regularOpeningHours,
+      currentOpeningHours: hospital.currentOpeningHours ?? existing.currentOpeningHours,
+      openingHours: hospital.openingHours?.length ? hospital.openingHours : existing.openingHours,
+      isOpenNow: hospital.isOpenNow ?? existing.isOpenNow ?? null,
+      openingHoursUpdatedAt: hospital.openingHoursUpdatedAt ?? existing.openingHoursUpdatedAt,
     })
   })
   return Array.from(unique.values())
@@ -456,26 +582,6 @@ export function readStoredReviews() {
   }
 }
 
-function readHospitalCache(key: string) {
-  try {
-    const stored = sessionStorage.getItem(key)
-    if (!stored) return null
-    const parsed = JSON.parse(stored) as { savedAt?: number; items?: Array<Record<string, unknown>> }
-    if (!parsed.savedAt || Date.now() - parsed.savedAt > 1000 * 60 * 30) return null
-    return Array.isArray(parsed.items) ? parsed.items : null
-  } catch {
-    return null
-  }
-}
-
-function writeHospitalCache(key: string, items: Array<Record<string, unknown>>) {
-  try {
-    sessionStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), items }))
-  } catch {
-    // Session cache is an optimization only.
-  }
-}
-
 function readSavedHospitalIds() {
   try {
     const stored = localStorage.getItem(savedHospitalStorageKey)
@@ -494,6 +600,23 @@ export function isSameHospitalIdentity(saved: HospitalSnapshot, hospital: Pick<H
   const savedAddress = normalizeText(saved.address)
   const hospitalAddress = normalizeText(hospital.address)
   return Boolean(savedName && hospitalName && savedName === hospitalName && savedAddress && hospitalAddress && savedAddress === hospitalAddress)
+}
+
+export function getTodayOpeningHoursDescription(descriptions: string[], now = new Date()) {
+  const weekdayAliases = [
+    ['일요일', 'sunday', 'sun'],
+    ['월요일', 'monday', 'mon'],
+    ['화요일', 'tuesday', 'tue'],
+    ['수요일', 'wednesday', 'wed'],
+    ['목요일', 'thursday', 'thu'],
+    ['금요일', 'friday', 'fri'],
+    ['토요일', 'saturday', 'sat'],
+  ]
+  const aliases = weekdayAliases[now.getDay()]
+  return descriptions.find((description) => {
+    const normalized = description.trim().toLowerCase()
+    return aliases.some((alias) => normalized.startsWith(alias))
+  }) ?? null
 }
 
 export function getReviewSummary(reviews: HospitalReview[]) {

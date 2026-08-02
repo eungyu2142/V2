@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.send-routine-notifications]
 verify_jwt = false
+
+[functions.refresh-hospital-catalog]
+verify_jwt = false

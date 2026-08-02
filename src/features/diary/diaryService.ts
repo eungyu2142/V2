@@ -122,6 +122,38 @@ export async function markDailyTaskCompleted(taskId: string) {
   if (error) throw error
 }
 
+export async function saveDailyTaskCareRecord(userId: string, record: PetRecord) {
+  if (!record.dailyTaskId) throw new Error('Daily task ID is required.')
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('care_records')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('daily_task_id', record.dailyTaskId)
+    .maybeSingle()
+  if (lookupError) throw lookupError
+
+  const storedRecord = {
+    ...record,
+    id: existing?.id ?? record.id,
+  }
+  const { error } = await supabase.from('care_records').upsert({
+    id: storedRecord.id,
+    user_id: userId,
+    pet_id: storedRecord.petId,
+    record_date: storedRecord.date,
+    record_type: storedRecord.type,
+    memo: storedRecord.memo ?? '',
+    payload: storedRecord,
+    daily_task_id: storedRecord.dailyTaskId,
+    occurred_at: storedRecord.occurredAt,
+    scheduled_for: storedRecord.scheduledFor,
+    status: storedRecord.status ?? 'completed',
+  })
+  if (error) throw error
+  return storedRecord
+}
+
 export async function undoDailyTask(taskId: string) {
   const { error } = await supabase.rpc('undo_daily_task', { p_task_id: taskId })
   if (error) throw error
@@ -132,14 +164,17 @@ export async function skipDailyTask(taskId: string, reason?: string) {
   if (error) throw error
 }
 
-export type ReviewDiaryLinkInput = {
+export type ClinicDiaryInput = {
   userId: string
-  reviewId: string
+  clinicRecordId: string
+  reviewId?: string
   petId: string
   hospitalName: string
   visitDate: string
+  cost?: number
   diagnosis?: string
   treatment?: string
+  reviewBody?: string
   nextVisit?: {
     date: string
     time: string
@@ -155,13 +190,18 @@ export type ReviewDiaryLinkInput = {
   }
 }
 
+export type ReviewDiaryLinkInput = Omit<ClinicDiaryInput, 'clinicRecordId'> & {
+  reviewId: string
+  clinicRecordId?: string
+}
+
 function weekdayFromDateKey(dateKey: string) {
   const [year, month, day] = dateKey.split('-').map(Number)
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
 }
 
-export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
-  const visitId = input.reviewId
+export async function saveClinicToDiary(input: ClinicDiaryInput) {
+  const visitId = input.clinicRecordId
   const createdAt = new Date().toISOString()
   const { error: visitError } = await supabase.from('visit_records').upsert({
     id: visitId,
@@ -175,12 +215,29 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
   if (visitError) throw visitError
 
   const visitRecord: PetRecord = {
-    id: input.reviewId,
+    id: visitId,
     userId: input.userId,
     petId: input.petId,
     type: 'hospital',
     date: input.visitDate,
     memo: [input.hospitalName, input.diagnosis, input.treatment].filter(Boolean).join(' · '),
+    clinicDetails: {
+      hospitalName: input.hospitalName,
+      visitDate: input.visitDate,
+      cost: input.cost,
+      diagnosis: input.diagnosis,
+      treatment: input.treatment,
+      reviewBody: input.reviewBody,
+      nextVisit: input.nextVisit,
+      medicine: input.medicine ? {
+        name: input.medicine.name,
+        dose: input.medicine.dose,
+        startDate: input.medicine.startDate,
+        endDate: input.medicine.endDate,
+        dailyCount: input.medicine.dailyCount,
+        instructions: input.medicine.instructions,
+      } : undefined,
+    },
     hospitalId: input.hospitalName,
     reviewId: input.reviewId,
     status: 'manual',
@@ -198,7 +255,7 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
   })
   if (recordError) throw recordError
 
-  const clinicRoutineId = input.reviewId
+  const clinicRoutineId = visitId
   const clinicRoutineTime = input.nextVisit?.time || '09:00'
   const { error: staleClinicTasksError } = await supabase
     .from('daily_tasks')
@@ -309,4 +366,11 @@ export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
   } catch (notificationError: unknown) {
     console.error('Medication notification job sync failed.', notificationError)
   }
+}
+
+export async function linkReviewToDiary(input: ReviewDiaryLinkInput) {
+  return saveClinicToDiary({
+    ...input,
+    clinicRecordId: input.clinicRecordId ?? input.reviewId,
+  })
 }

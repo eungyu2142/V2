@@ -9,6 +9,13 @@ type ReviewPetOption = {
   species?: string
 }
 
+export type ReviewClinicRecordOption = {
+  id: string
+  hospitalName: string
+  visitDate: string
+  disabled: boolean
+}
+
 type HospitalReviewFormProps = {
   rating: number
   body: string
@@ -26,6 +33,8 @@ type HospitalReviewFormProps = {
   medicineEndDate: string
   medicineDailyCount: string
   selectedTags: string[]
+  clinicRecords: ReviewClinicRecordOption[]
+  selectedClinicRecordId: string
   canSubmit: boolean
   submitLabel?: string
   onRatingChange: (value: number) => void
@@ -43,6 +52,7 @@ type HospitalReviewFormProps = {
   onMedicineEndDateChange: (value: string) => void
   onMedicineDailyCountChange: (value: string) => void
   onToggleTag: (value: string) => void
+  onClinicRecordSelect: (value: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 const text = {
@@ -119,6 +129,8 @@ export default function HospitalReviewForm({
   medicineEndDate,
   medicineDailyCount,
   selectedTags,
+  clinicRecords,
+  selectedClinicRecordId,
   canSubmit,
   submitLabel,
   onRatingChange,
@@ -136,6 +148,7 @@ export default function HospitalReviewForm({
   onMedicineEndDateChange,
   onMedicineDailyCountChange,
   onToggleTag,
+  onClinicRecordSelect,
   onSubmit,
 }: HospitalReviewFormProps) {
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
@@ -173,6 +186,23 @@ export default function HospitalReviewForm({
         </label>
         {selectedPetMeta && <p className="review-pet-meta">{selectedPetMeta}</p>}
       </section>
+
+      {clinicRecords.length > 0 && (
+        <section className="review-input-section">
+          <div className="review-input-head">
+            <strong>진료 기록에서 불러오기</strong>
+            <span>{text.optional}</span>
+          </div>
+          <select value={selectedClinicRecordId} onChange={(event) => onClinicRecordSelect(event.target.value)}>
+            <option value="">직접 작성</option>
+            {clinicRecords.map((record) => (
+              <option key={record.id} value={record.id} disabled={record.disabled}>
+                {record.visitDate} · {record.hospitalName}{record.disabled ? ' · 이미 리뷰에 연결됨' : ''}
+              </option>
+            ))}
+          </select>
+        </section>
+      )}
 
       <section className="review-input-section">
         <div className="review-input-head">

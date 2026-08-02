@@ -11,7 +11,7 @@ import { QnaCreateFlow, QnaScreen } from './components/qna/QnaScreen'
 import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
 import { supabase } from './lib/supabase'
 import { deactivatePushSubscriptionForLogout } from './lib/pushNotifications'
-import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey } from './components/hospital-map/mapDependencies'
+import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
 import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost, Tab } from './types/app'
 export type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost } from './types/app'
 
@@ -41,26 +41,95 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: 'qna', label: 'Q&A' },
 ]
 
+function NavigationIcon({ tab, mobile = false }: { tab: Tab; mobile?: boolean }) {
+  const className = `${mobile ? 'bottom-nav-icon ' : ''}side-nav-icon nav-icon-vector ${tab}`
+
+  if (tab === 'pets') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+        <ellipse cx="6.4" cy="7.2" rx="2" ry="2.7" />
+        <ellipse cx="10.2" cy="4.6" rx="2" ry="2.7" />
+        <ellipse cx="14.3" cy="4.6" rx="2" ry="2.7" />
+        <ellipse cx="18" cy="7.3" rx="2" ry="2.7" />
+        <path d="M6.7 16.3c.2-3.9 2.3-6.5 5.3-6.5s5.1 2.6 5.3 6.5c.1 2.1-1.7 3.5-3.6 2.7a4.5 4.5 0 0 0-3.4 0c-1.9.8-3.7-.6-3.6-2.7Z" />
+      </svg>
+    )
+  }
+
+  if (tab === 'diary') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6.5 3.5h9a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" />
+        <path d="M2.8 7h3.4M2.8 11h3.4M2.8 15h3.4" />
+        <path d="m12.2 15.8.8-3.2 5.6-5.6 2.4 2.4-5.6 5.6-3.2.8Zm5.2-7.6 2.4 2.4" />
+      </svg>
+    )
+  }
+
+  if (tab === 'map') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19 10.2c0 5.2-7 11-7 11s-7-5.8-7-11a7 7 0 1 1 14 0Z" />
+        <path d="M12 6.8v6.4M8.8 10h6.4" />
+      </svg>
+    )
+  }
+
+  if (tab === 'qna') {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3.2 14.8 2.5 19l4-1.9a8.5 8.5 0 0 0 3.5.7c4.4 0 8-3 8-6.7s-3.6-6.6-8-6.6-8 3-8 6.6c0 1.4.4 2.6 1.2 3.7Z" />
+        <path d="M15.4 8.2c3.5.3 6.1 2.7 6.1 5.7 0 1.2-.4 2.3-1 3.2l.6 3.5-3.4-1.6a7.5 7.5 0 0 1-5.4.2" />
+        <circle cx="7.2" cy="11.1" r=".7" fill="currentColor" stroke="none" />
+        <circle cx="10" cy="11.1" r=".7" fill="currentColor" stroke="none" />
+        <circle cx="12.8" cy="11.1" r=".7" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="7" r="4" />
+      <path d="M4.5 20c.2-5 3-8 7.5-8s7.3 3 7.5 8c-2.2 1-4.7 1.5-7.5 1.5S6.7 21 4.5 20Z" />
+    </svg>
+  )
+}
+
 const qnaTable = ['comm', 'unity_posts'].join('')
 const qnaDatabaseCategory = ['Q', '&A'].join('')
 
 function readInitialUrlState() {
+  if (window.location.pathname === '/profile') {
+    return {
+      tab: 'profile' as Tab,
+      petId: null,
+    }
+  }
   const params = new URLSearchParams(window.location.search)
   const tab = params.get('tab') as Tab | null
   const petId = params.get('petId')
   const allowedTabs: Tab[] = ['pets', 'diary', 'map', 'qna', 'profile']
   return {
-    tab: tab && allowedTabs.includes(tab) ? tab : petId ? 'diary' as Tab : 'map' as Tab,
+    tab: tab && allowedTabs.includes(tab) ? tab : petId ? 'diary' as Tab : 'pets' as Tab,
     petId,
   }
 }
 
 function syncAppUrl(tab: Tab, petId?: string | null) {
+  if (tab === 'profile') {
+    const currentProfileTab = new URLSearchParams(window.location.search).get('tab')
+    const profileTabs = ['posts', 'drafts', 'likes', 'reviews', 'settings']
+    const nextProfileTab = currentProfileTab && profileTabs.includes(currentProfileTab) ? currentProfileTab : 'posts'
+    window.history.replaceState(window.history.state, '', `/profile?tab=${nextProfileTab}${window.location.hash}`)
+    return
+  }
+
   const params = new URLSearchParams(window.location.search)
   params.set('tab', tab)
   if (petId) params.set('petId', petId)
   else params.delete('petId')
-  const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`
+  const pathname = window.location.pathname === '/profile' ? '/' : window.location.pathname
+  const next = `${pathname}?${params.toString()}${window.location.hash}`
   window.history.replaceState(window.history.state, '', next)
 }
 
@@ -69,15 +138,33 @@ function App() {
   const [authReady, setAuthReady] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setAuthReady(true)
-    })
+    let active = true
+    const authTimeout = window.setTimeout(() => {
+      if (active) setAuthReady(true)
+    }, 4000)
+
+    void supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!active) return
+        setSession(data.session)
+        setAuthReady(true)
+      })
+      .catch(() => {
+        if (active) setAuthReady(true)
+      })
+      .finally(() => window.clearTimeout(authTimeout))
+
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return
       setSession(nextSession)
       setAuthReady(true)
     })
-    return () => data.subscription.unsubscribe()
+
+    return () => {
+      active = false
+      window.clearTimeout(authTimeout)
+      data.subscription.unsubscribe()
+    }
   }, [])
 
   if (!authReady) return <main className="auth-screen"><p className="auth-loading">로그인 상태를 확인하고 있습니다.</p></main>
@@ -103,6 +190,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [drafts, setDrafts] = useState<DraftItem[]>([])
   const [hospitalReviews, setHospitalReviews] = useState<Record<string, HospitalReview[]>>(() => readStoredReviews())
   const [likedHospitals, setLikedHospitals] = useState<HospitalSnapshot[]>(() => readSavedHospitalSnapshots())
+  const [allHospitals, setAllHospitals] = useState<HospitalSnapshot[]>([])
   const [profile, setProfile] = useState<AppProfile>({ username: '', nickname: '', avatarUrl: '' })
   const [dataError, setDataError] = useState('')
   const bottomNavDragStartRef = useRef<number | null>(null)
@@ -117,6 +205,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setDrafts([])
       setHospitalReviews(readStoredReviews())
       setLikedHospitals(readSavedHospitalSnapshots())
+      setAllHospitals([])
       setProfile({ username: '', nickname: '', avatarUrl: '' })
       setCreateMode(null)
       setEditingPet(null)
@@ -148,11 +237,16 @@ function AuthenticatedApp({ session }: { session: Session }) {
         writeLocalDrafts(session.user.id, merged)
         return merged
       }).catch(() => readLocalDrafts(session.user.id)),
-    ]).then(([nextPets, nextPosts, nextDrafts]) => {
+      loadCollectedHospitals('', 'all').then((items) => items.map(toHospitalSnapshot)).catch((error) => {
+        console.warn('Optional hospital data load failed:', error)
+        return [] as HospitalSnapshot[]
+      }),
+    ]).then(([nextPets, nextPosts, nextDrafts, nextHospitals]) => {
       if (!active) return
       setPets(nextPets.map(normalizePet))
       setQnaPosts(nextPosts)
       setDrafts(nextDrafts)
+      setAllHospitals(nextHospitals)
     }).catch((error) => {
       if (!active) return
       console.error('Initial data load failed:', error)
@@ -236,6 +330,20 @@ function AuthenticatedApp({ session }: { session: Session }) {
     moveTab('map')
   }
 
+  const openClinicReview = (hospital: HospitalSnapshot, review: HospitalReview) => {
+    setCurrentPetId(review.petId ?? currentPetId)
+    setEditingDraft({
+      id: `clinic-review-${review.clinicRecordId ?? review.id}`,
+      draftType: 'hospital_review',
+      title: hospital.name,
+      body: '',
+      updatedAt: new Date().toISOString(),
+      payload: { hospital, review },
+    } as DraftItem)
+    setMapFocusHospital(hospital)
+    moveTab('map')
+  }
+
   const savePet = async (pet: Pet) => {
     setPets((items) => [pet, ...items.filter((item) => item.id !== pet.id)])
     setCurrentPetId(pet.id)
@@ -251,14 +359,16 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   const deletePet = async (petId: string) => {
     try {
-      await deleteAppData('pets', petId)
+      await deleteAppData('pets', petId, session.user.id)
       setPets((items) => {
         const next = items.filter((item) => item.id !== petId)
         if (currentPetId === petId) setCurrentPetId(next[0]?.id ?? null)
         return next
       })
-    } catch {
-      setDataError('???뺣낫瑜???젣?섏? 紐삵뻽?듬땲??')
+      setDataError('')
+    } catch (error) {
+      console.error('Supabase pet delete failed.', error)
+      setDataError('동물을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.')
     }
   }
 
@@ -309,7 +419,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   const deleteQnaPost = async (postId: string) => {
     try {
-      await deleteAppData(qnaTable, postId)
+      await deleteAppData(qnaTable, postId, session.user.id)
       setQnaPosts((items) => items.filter((item) => item.id !== postId))
     } catch {
       setDataError('吏덈Ц????젣?섏? 紐삵뻽?듬땲??')
@@ -318,7 +428,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   const deleteDraft = async (draftId: string) => {
     try {
-      await deleteAppData('drafts', draftId)
+      await deleteAppData('drafts', draftId, session.user.id)
     } catch (error) {
       console.error('Supabase draft delete failed; deleting local draft.', error)
     }
@@ -374,6 +484,62 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   const deleteWrittenPost = (kind: 'question', id: string) => {
     if (kind === 'question') void deleteQnaPost(id)
+  }
+
+  const editHospitalReviewFromProfile = (review: HospitalReview & { hospitalId: string }) => {
+    const hospital = review.hospitalSnapshot ?? allHospitals.find((item) => item.id === review.hospitalId)
+    if (!hospital) return
+    setEditingDraft({
+      id: `profile-review-edit-${review.id}`,
+      draftType: 'hospital_review',
+      title: review.hospitalName || hospital.name || '병원 리뷰',
+      body: review.body || review.content || '',
+      updatedAt: new Date().toISOString(),
+      payload: {
+        hospital,
+        review: { ...review, hospitalSnapshot: hospital },
+      },
+    })
+    setMapFocusHospital(hospital)
+    moveTab('map')
+  }
+
+  const deleteHospitalReviewFromProfile = (hospitalId: string, reviewId: string) => {
+    setHospitalReviews((items) => {
+      const next = {
+        ...items,
+        [hospitalId]: (items[hospitalId] ?? []).filter((review) => review.id !== reviewId),
+      }
+      localStorage.setItem(reviewStorageKey, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const unlikePostFromProfile = (postId: string) => {
+    const next = qnaPosts.map((post) => post.id === postId
+      ? { ...post, liked: false, likes: Math.max(0, post.likes - 1) }
+      : post)
+    updateQnaPosts(next)
+  }
+
+  const unlikeHospitalFromProfile = (hospital: HospitalSnapshot) => {
+    const identity = { id: hospital.id ?? '', name: hospital.name, address: hospital.address }
+    const next = likedHospitals.filter((item) => !isSameHospitalIdentity(item, identity))
+    writeSavedHospitalSnapshots(next)
+    setLikedHospitals(next)
+  }
+
+  const unlikeReviewFromProfile = (hospitalId: string, reviewId: string) => {
+    setHospitalReviews((items) => {
+      const next = {
+        ...items,
+        [hospitalId]: (items[hospitalId] ?? []).map((review) => review.id === reviewId
+          ? { ...review, liked: false, likes: Math.max(0, (review.likes ?? 0) - 1) }
+          : review),
+      }
+      localStorage.setItem(reviewStorageKey, JSON.stringify(next))
+      return next
+    })
   }
 
   const saveProfile = async (nextProfile: AppProfile) => {
@@ -494,20 +660,20 @@ function AuthenticatedApp({ session }: { session: Session }) {
         <nav>
           {tabs.map((tab) => (
             <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={() => { moveTab(tab.id); setSideNavOpen(false) }}>
-              <span className={`side-nav-icon ${tab.id}`} aria-hidden="true" />
+              <NavigationIcon tab={tab.id} />
               {tab.label}
             </button>
           ))}
         </nav>
         <button className={`side-nav-profile ${activeTab === 'profile' ? 'active' : ''}`} type="button" onClick={() => { toggleProfileTab(); setSideNavOpen(false) }}>
-          <span className="side-nav-icon profile" aria-hidden="true" />
+          <NavigationIcon tab="profile" />
           <span>&#54532;&#47196;&#54596;</span>
         </button>
       </aside>
 
-      {activeTab !== 'pets' && activeTab !== 'qna' && activeTab !== 'diary' && <header className="top-bar">
+      {activeTab === 'map' && <header className="top-bar">
         <div>
-           <h1>{activeTab === 'profile' ? '\uD504\uB85C\uD544' : tabs.find((tab) => tab.id === activeTab)?.label}</h1>
+           <h1>{tabs.find((tab) => tab.id === activeTab)?.label}</h1>
         </div>
       </header>}
 
@@ -516,9 +682,35 @@ function AuthenticatedApp({ session }: { session: Session }) {
       {activeTab !== 'map' && (
         <main className="app-main">
           {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
-          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitalReviews={hospitalReviews} initialPetId={diaryPetId ?? currentPetId ?? undefined} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
-          {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={likedHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalOnMap} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
-          {activeTab === 'profile' && <ProfileScreen key={`${profile.username}-${profile.nickname}-${profile.avatarUrl}`} userId={session.user.id} profile={profile} qnaPosts={qnaPosts} hospitalReviews={hospitalReviews} likedHospitals={likedHospitals} drafts={drafts} onSignOut={signOut} onDeleteAccount={deleteAccount} onSaveProfile={saveProfile} onDeleteDraft={deleteDraft} onContinueDraft={continueDraft} onOpenWrittenPost={openWrittenPost} onOpenHospital={openHospitalOnMap} onEditWrittenPost={editWrittenPost} onDeleteWrittenPost={deleteWrittenPost} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitalReviews={hospitalReviews} hospitals={allHospitals} initialPetId={diaryPetId ?? currentPetId ?? undefined} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onCreateClinicReview={openClinicReview} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
+          {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={allHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalOnMap} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
+          {activeTab === 'profile' && (
+            <ProfileScreen
+              key={`${profile.username}-${profile.nickname}-${profile.avatarUrl}`}
+              userId={session.user.id}
+              profile={profile}
+              qnaPosts={qnaPosts}
+              hospitalReviews={hospitalReviews}
+              likedHospitals={likedHospitals}
+              drafts={drafts}
+              onSignOut={signOut}
+              onDeleteAccount={deleteAccount}
+              onSaveProfile={saveProfile}
+              onDeleteDraft={deleteDraft}
+              onContinueDraft={continueDraft}
+              onOpenWrittenPost={openWrittenPost}
+              onOpenHospital={openHospitalOnMap}
+              onEditWrittenPost={editWrittenPost}
+              onDeleteWrittenPost={deleteWrittenPost}
+              onEditReview={editHospitalReviewFromProfile}
+              onDeleteReview={deleteHospitalReviewFromProfile}
+              onUnlikePost={unlikePostFromProfile}
+              onUnlikeHospital={unlikeHospitalFromProfile}
+              onUnlikeReview={unlikeReviewFromProfile}
+              onCreateQuestion={() => openQnaCreate(null)}
+              onCreateReview={() => moveTab('map')}
+            />
+          )}
         </main>
       )}
 
@@ -531,7 +723,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       >
         {tabs.map((tab) => (
           <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={(event) => { if (suppressNextBottomNavClickRef.current) { event.preventDefault(); return } moveTab(tab.id) }}>
-            <span className={`bottom-nav-icon side-nav-icon ${tab.id}`} aria-hidden="true" />
+            <NavigationIcon tab={tab.id} mobile />
             <span className="bottom-nav-label">{tab.label}</span>
           </button>
         ))}

@@ -55,6 +55,17 @@
 - 분류 태그
 - 리뷰 영역
 
+병원 상세 패널은 다음 순서로 구성한다.
+
+- 상단: 병원명, 좋아요, 닫기
+- 기본 정보: 주소와 작은 복사 버튼, 내 위치에서의 거리, 현재 영업 상태, 오늘 운영시간, 요일별 운영시간
+- 주요 액션: 전화하기, 길찾기
+- 연락처: 전화번호, 홈페이지
+- ExoCare 리뷰: 리뷰 작성과 앱 사용자 리뷰 목록 또는 빈 상태
+- Google 평점: 별점, 평가 수, Google Maps 링크
+
+최근 진료 리뷰 안내, 상단 리뷰 수, 출처 문구, Google 리뷰 본문 미제공 안내와 중복 평점은 상세 패널에 표시하지 않는다.
+
 ### 리뷰 화면
 
 - 리뷰 보기는 외부 사이트로 이동하지 않고 앱 내부에서 열린다.
@@ -116,6 +127,15 @@
 - 병원 분위기가 차분해요
 - 재방문하고 싶어요
 - 태그 직접 작성 가능
+
+## 2. 마이 펫
+
+- 마이 펫 카드는 펫의 사진, 이름, 성별, 종을 기본 정보로 표시한다.
+- 웹 화면에서는 다이어리에 오늘 예정된 루틴이 있을 때 카드 오른쪽에 `오늘 할 일`을 표시한다.
+- 오늘 할 일에는 완료 개수와 루틴 이름을 간결하게 표시하며, 완료한 루틴은 완료 상태로 구분한다.
+- 활성 루틴은 있지만 오늘 예정된 항목이 없으면 카드 오른쪽에 `오늘 예정 없음`을 표시한다.
+- 모바일 화면에는 오늘 할 일 요약을 표시하지 않고 기존의 간결한 펫 선택 카드 구조를 유지한다.
+- 펫 카드를 누르면 해당 펫이 선택된 다이어리로 이동한다.
 
 ## 3. 질문 QNA
 
@@ -225,6 +245,9 @@
 
 ### 나의 활동
 
+- 작성한 글
+  - Q&A
+  - 병원 리뷰
 - 좋아요한 병원
 - 좋아요한 리뷰
 - 좋아요한 질문
@@ -243,17 +266,23 @@
 - 지도 병원 데이터와 리뷰 데이터는 서로 연결되어야 한다.
 
 
-## Hospital Data Collection Policy
+## 병원 데이터 수집 정책
 
-- PWA frontend must not call the Naver Local Search API directly.
-- Naver Search Client ID/Secret stay only in server-side environments or GitHub Actions secrets.
-- Hospital base data is collected weekly from server-side search providers such as the Naver Local Search API and Google Places API (New), then written to public/data/exotic-hospitals.json or upserted to DB.
-- Collection uses the single base search keyword `파충류 동물 병원` with nationwide si/gun/gu regions and low-concurrency sequential requests.
-- Duplicate hospitals are merged by normalized hospital name and address.
-- supportedAnimals stores `reptile` for the hospital map.
-- If a hospital has only amphibian, bird, rodent, other, or generic special-animal evidence, it is excluded from the hospital map dataset.
-- classification is confirmed when a hospital is found through the `파충류 동물 병원` keyword, a photo-map seed hydration, or Google Places API (New) reptile hospital search.
-- Google Places API (New) results are merged through Supabase Edge Functions only; the frontend never receives the Google API key.
-- Reviews, likes, recent treated species, and user activity remain app DB/user-data features and update immediately without waiting for weekly collection.
+- PWA 프론트엔드는 네이버 지역 검색 API와 Google Places API를 직접 호출하지 않는다.
+- 네이버 Search Client ID/Secret과 Google Places API 키는 서버 환경 또는 Supabase Secret에만 둔다.
+- 병원 기본 데이터는 네이버 지역 검색 API와 Google Places API (New) 같은 서버 검색 공급자에서 주기적으로 수집한 뒤 `public/data/exotic-hospitals.json` 또는 DB에 저장한다.
+- 수집은 전국 시/군/구와 단일 기본 검색어 `파충류 동물 병원`을 조합하고 낮은 동시성으로 순차 요청한다.
+- 병원명과 주소를 정규화해 중복 병원을 하나로 병합한다.
+- 지도용 `supportedAnimals`에는 `reptile`을 저장한다.
+- 양서류, 조류, 설치류, 기타 또는 일반 특수동물 근거만 있는 병원은 지도 데이터에서 제외한다.
+- `파충류 동물 병원` 검색, 사진 지도 기반 초기 데이터 또는 Google Places API (New)의 파충류 병원 검색으로 확인된 병원은 `confirmed`로 분류한다.
+- Google Places API (New) 결과는 Supabase Edge Function에서만 병합하며 프론트엔드에는 Google API 키를 전달하지 않는다.
+- 병원 기본 목록은 Supabase `hospitals` 테이블에서 읽고, 네이버 지역 검색 기반 서버 수집은 매월 1일 낮은 동시성으로 갱신한다. 지도 진입, 검색어 입력, 지도 이동으로 외부 검색 API를 반복 호출하지 않는다.
+- Google Places에서 장기 저장하는 값은 정책상 허용되는 `placeId`로 제한한다. 전화번호, 평점, 사용자 평점 수, 리뷰 본문, 정규 영업시간과 현재 영업시간은 사용자가 병원을 선택했을 때 Edge Function에서 조회하고 화면 메모리에서만 유지한다.
+- Google Text Search로 장소를 식별한 뒤 Place Details를 요청하며, Place Details가 리뷰 본문을 생략해도 평점과 리뷰 수는 별도로 표시한다.
+- `currentOpeningHours`가 있으면 휴일 또는 임시 변경을 반영한 현재 영업시간으로 우선 사용하고, 없으면 `regularOpeningHours`를 사용한다. 요일별 설명은 Google 원문 배열을 보존한다.
+- 과거 호환용 영업시간 컬럼은 유지하되 새 Google 상세 응답을 장기 저장하지 않는다. 시점에 따라 변하는 `is_open_now`는 병원 상세을 열 때 다시 확인한다.
+- Google 리뷰와 앱에서 작성한 병원 리뷰는 출처와 개수를 섞지 않고 별도 영역으로 표시한다.
+- 앱 리뷰, 좋아요, 최근 진료 종과 사용자 활동은 앱 DB/사용자 데이터로 즉시 갱신하며 주기 수집을 기다리지 않는다.
 
 

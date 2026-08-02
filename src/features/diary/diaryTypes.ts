@@ -50,6 +50,27 @@ export type EnvironmentRecord = {
   riskMessage: string
 }
 
+export type ClinicRecordDetails = {
+  hospitalName: string
+  visitDate: string
+  cost?: number
+  diagnosis?: string
+  treatment?: string
+  reviewBody?: string
+  nextVisit?: {
+    date: string
+    time: string
+  }
+  medicine?: {
+    name: string
+    dose?: string
+    startDate: string
+    endDate?: string
+    dailyCount: number
+    instructions?: string
+  }
+}
+
 export type PetRecord = {
   id: string
   userId: string
@@ -62,6 +83,7 @@ export type PetRecord = {
   foods?: string[]
   feedingFoods?: FeedingFoodItem[]
   environmentRecord?: EnvironmentRecord
+  clinicDetails?: ClinicRecordDetails
   hospitalId?: string
   reviewId?: string
   createdAt: string

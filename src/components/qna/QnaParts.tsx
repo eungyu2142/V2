@@ -82,15 +82,16 @@ export function RecordAttachCard({ record, mode, onRemove, onOpen }: { record: A
 }
 
 export function HospitalAttachCard({ hospital, mode, onRemove, onOpen }: { hospital: HospitalSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
-  return <article className="qna-hospital-attachment"><strong>{hospital.name}</strong><span>{hospital.address}</span>{onOpen && <button type="button" onClick={onOpen}>{text.viewHospital}</button>}{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>{text.remove}</button>}</article>
+  const content = <><strong>{hospital.name}</strong><span>{hospital.address}</span></>
+  return <article className={`qna-hospital-attachment ${mode}`}>{onOpen ? <button className="qna-hospital-attachment-main" type="button" onClick={onOpen}>{content}</button> : <div className="qna-hospital-attachment-main">{content}</div>}{mode === 'draft' && onRemove && <button className="qna-hospital-attachment-remove" type="button" onClick={onRemove}>{text.remove}</button>}</article>
 }
 
 export function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalSnapshot[]; onSelect: (hospital: HospitalSnapshot) => void; onClose: () => void }) {
-  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true"><strong>{text.hospitalSelect}</strong>{hospitals.length > 0 ? <div className="qna-hospital-picker-list">{hospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? hospital.name} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.address}</span><small>{hospital.phone}</small></button>)}</div> : <p>{text.hospitalHelp}</p>}<button type="button" onClick={onClose}>{text.close}</button></section></div>
+  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true" aria-label={text.hospitalSelect}><div className="qna-hospital-picker-heading"><strong>{text.hospitalSelect}</strong><button className="qna-hospital-picker-close" type="button" aria-label={text.close} onClick={onClose}>×</button></div>{hospitals.length > 0 ? <div className="qna-hospital-picker-list">{hospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? `${hospital.name}-${hospital.lat}-${hospital.lng}`} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.animalTags.join(' · ') || '특수동물 진료'}</span></button>)}</div> : <p>{text.hospitalHelp}</p>}</section></div>
 }
 
 export function QnaSortSheet({ value, onChange, onClose, label }: { value: QnaSort; onChange: (value: QnaSort) => void; onClose: () => void; label: (value: QnaSort) => string }) {
-  const options: QnaSort[] = ['latest', 'popular', 'views', 'comments']
+  const options: QnaSort[] = ['latest', 'popular', 'comments']
   return <div className="qna-sort-sheet-overlay"><button className="qna-sort-sheet-dim" type="button" aria-label={text.closeSort} onClick={onClose} /><section className="qna-sort-sheet" role="dialog" aria-modal="true" aria-label={text.qnaSort}><span className="hospital-picker-handle" aria-hidden="true" /><h3>{text.sort}</h3>{options.map((option) => <button className={value === option ? 'active' : ''} type="button" key={option} onClick={() => onChange(option)}>{label(option)}</button>)}</section></div>
 }
 

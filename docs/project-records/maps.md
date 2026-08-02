@@ -773,3 +773,117 @@
 - 핵심 변경: 목록 행은 병원명과 거리만 렌더링하며 높이와 내부 간격을 두 줄 기준으로 조정했다.
 - 검증 결과: TypeScript, ESLint, Vite 프로덕션 빌드를 모두 통과했다.
 - 남은 작업: 없음.
+
+## 2026-07-30 지도 병원 빈 리뷰 표시 간소화
+
+- 요청 요약: 병원 상세의 빈 리뷰 문구를 최소화했다.
+- 분석·판단: 리뷰 제목과 빈 상태만으로 충분해 추가 유도 문구는 제거했다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`
+- 핵심 변경: `리뷰` 제목 아래 `아직 리뷰가 없습니다.` 한 줄만 표시한다.
+- 검증 결과: TypeScript, ESLint, Vite 프로덕션 빌드를 모두 통과했다.
+- 남은 작업: 없음.
+## 2026-07-30 병원 마커 hover 원판 제거
+
+- 요청 요약: 병원 마커를 hover하거나 선택했을 때 뒤쪽에 보이던 흰 박스·원판을 제거했다.
+- 분석·판단 이유: 전역 `button:hover` 규칙과 선택 마커의 outline이 마커 요소에도 상속되어 지도 마커 바깥에 불필요한 면을 만들고 있었다.
+- 수정 파일: `src/App.css`
+- 핵심 변경 내용: `.exo-hospital-marker`의 hover, active, focus, selected 상태를 투명 배경으로 고정하고 가상 요소와 outline을 제거했다. 마커의 위치 기준점은 유지하면서 hover 및 선택 시에만 부드럽게 확대한다.
+- 검증 결과: TypeScript 검사, ESLint, Vite 프로덕션 빌드를 모두 통과했다. 기존 번들 크기 안내만 남아 있다.
+- 남은 작업: 실제 NAVER 지도 위에서 일반·hover·선택 상태를 시각 확인한다.
+## 2026-07-30 Google Places 병원 영업시간 연동
+
+- 요청 요약: 기존 Google Places 병원 검색 응답에 정규 영업시간, 현재 영업시간, 현재 영업 여부와 요일별 설명을 추가했다.
+- 분석·판단 이유: Text Search (New)는 `places.regularOpeningHours`, `places.currentOpeningHours`를 FieldMask에 명시해야 반환한다. 임시·휴일 변경이 있는 현재 시간을 정규 시간보다 우선해야 한다.
+- 수정 파일: `supabase/functions/search-reptile-amphibian-places/index.ts`, `src/types/app.ts`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `supabase/migrations/202607300001_hospital_opening_hours.sql`, `supabase/cleanup_public_schema_for_sql_editor.sql`, `docs/APP_REQUIREMENTS.md`
+- 핵심 변경 내용: Edge Function의 FieldMask·타입·응답을 확장하고, 프론트 병원 변환과 중복 병합에서 영업시간을 보존한다. DB에 `opening_hours`, `current_opening_hours`, `is_open_now`, `opening_hours_updated_at` 컬럼을 추가했다. 검색 캐시는 5분으로 제한했다.
+- 검증 결과: 원격 DB migration 적용과 `search-reptile-amphibian-places` 재배포를 완료했다. TypeScript, ESLint, Vite 빌드는 통과했다. 원격 함수 호출은 Google에서 403 `PERMISSION_DENIED`가 반환되어 실제 영업시간 응답 확인은 완료하지 못했다.
+- 남은 작업: Google Cloud Console에서 Places API (New)가 해당 키에 허용되어 있는지, 서버용 키에 HTTP 리퍼러 제한이 걸려 있지 않은지 확인한 뒤 원격 호출을 재검증한다.
+## 2026-07-30 병원 찾기 사이드바 위치 고정
+
+- 요청 요약: 지도 화면에서만 사이드바의 세로 위치가 달라지는 문제를 해결했다.
+- 분석·판단 이유: 과거 지도 레이아웃 규칙의 `96vh` 높이 제한이 뒤의 공통 높이 선언과 충돌했다.
+- 수정 파일: `src/App.css`
+- 핵심 변경 내용: 지도 shell에서도 공통 사이드바와 동일하게 `top: 0`, `bottom: 0`, `height/min-height/max-height: 100dvh`를 적용하고 변형과 여백을 제거했다.
+- 검증 결과: TypeScript 검사, ESLint, Vite 프로덕션 빌드를 모두 통과했다.
+- 남은 작업: 실제 지도 진입·이탈 시 높이 변화가 없는지 확인한다.
+## 2026-08-02 Google Places 상세정보 연결
+
+- 요청 요약: Supabase Secret에 등록한 Google Places API (New) 키를 사용해 병원의 전화번호, 영업 여부와 시간, 평점, 리뷰 수와 리뷰 본문을 지도 상세 화면에서 확인할 수 있게 했다.
+- 분석·판단 이유: 앱 리뷰와 Google 리뷰는 생성 주체와 신뢰 기준이 다르므로 하나의 리뷰 수로 합쳐 상세 화면에 표시하지 않고 별도 영역으로 구분했다. 마커와 정렬에서는 탐색 편의를 위해 두 출처의 리뷰 수를 함께 참고한다.
+- 수정 파일: `supabase/functions/search-reptile-amphibian-places/index.ts`, `src/types/app.ts`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/APP_REQUIREMENTS.md`
+- 핵심 변경 내용: Edge Function 응답에 Google 리뷰 작성자, 평점, 본문, 작성 시점과 출처 링크를 추가했다. 프론트 변환·중복 병합·좋아요 스냅샷에서도 Google 상세정보를 보존하고, 상세 패널에 전화, 평점, 리뷰 수, 현재 및 요일별 영업시간과 Google 리뷰를 구분선 구조로 표시한다.
+- 검증 결과: Supabase 프로젝트 `ckevydslbfxnspyfikeu`에 함수를 재배포했다. 실제 병원 검색에서 전화번호, 평점, 리뷰 수, 영업시간, 현재 영업 상태 응답을 확인했다. 해당 Text Search 결과는 리뷰 본문을 반환하지 않아 UI의 본문 미제공 상태도 함께 확인했다. TypeScript, ESLint, Vite 빌드를 통과했다.
+- 남은 작업: Google이 Text Search에서 리뷰 본문을 생략하는 병원까지 본문이 필요하면 병원 선택 시 Place Details를 별도로 요청하는 상세 조회 함수를 추가한다.
+## 2026-08-02 병원 DB 월간 수집과 선택형 상세 조회
+
+- 요청 요약: 병원 정보를 DB에서 읽고 외부 API를 화면 동작마다 새로 호출하지 않으며, 한 달 주기로 병원 목록을 갱신하고 네이버 지도형 상세 화면에 전화·영업·평점·리뷰 정보를 넣는다.
+- 분석·판단 이유: Google Places 정책상 평점·리뷰·영업시간 등 Places 콘텐츠를 월간 DB 복사본으로 장기 보관할 수 없으므로, 병원 기본 목록과 앱 데이터는 DB에 저장하고 Google 상세정보는 병원 선택 시에만 서버에서 조회하도록 분리했다. `placeId`는 장기 저장할 수 있다.
+- 수정 파일: `supabase/migrations/202608020001_monthly_hospital_catalog.sql`, `supabase/functions/refresh-hospital-catalog/index.ts`, `supabase/functions/search-reptile-amphibian-places/index.ts`, `supabase/config.toml`, `.github/workflows/collect-exotic-hospitals.yml`, `scripts/collect-exotic-hospitals.mjs`, `src/types/app.ts`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/APP_REQUIREMENTS.md`
+- 핵심 변경 내용: `hospitals` DB를 프론트의 우선 데이터 원본으로 변경했다. 매월 1일 전국 시·군·구를 한 지역씩 처리하는 Supabase Cron과 Edge Function을 추가했다. 병원 선택 시 Google Text Search와 Place Details를 한 번 호출해 전화, 홈페이지, 현재 및 요일별 영업시간, 평점, 리뷰 수와 제공된 리뷰 본문을 상세 패널에 채운다. 같은 화면 세션에서는 같은 병원의 상세 요청을 메모리에서 재사용한다.
+- 검증 결과: 원격 프로젝트 `ckevydslbfxnspyfikeu`에 migration과 두 Edge Function을 적용했다. 기존 병원 43곳을 DB에 최초 적재했고 실제 Place Details 응답에서 전화번호, 평점, 리뷰 수 42개, 요일별 영업시간 7개, 현재 영업 상태, 홈페이지와 Google Maps 링크를 확인했다. 해당 병원은 리뷰 본문을 반환하지 않았다. TypeScript, ESLint, Vite 빌드를 통과했다.
+- 남은 작업: 실제 로그인 화면에서 병원 선택 전에는 외부 상세 요청이 없고 선택 후 상세 정보가 채워지는지 최종 시각 확인한다.
+## 2026-08-02 Google Places 병원 상세정보 보강
+
+- 요청 요약: 병원 상세 화면에 Google Places API가 제공하는 유효한 병원 정보를 최대한 연결한다.
+- 분석·판단 이유: 모든 병원을 반복 호출하는 방식은 비용과 호출 제한 위험이 있으므로, 저장된 병원 목록은 그대로 사용하고 사용자가 선택한 병원 한 곳만 상세 조회하는 기존 구조를 유지했다. 첫 검색 결과를 무조건 사용하는 대신 병원명, 주소, 기존 좌표와의 거리를 함께 비교해 가장 적합한 Google 장소를 선택하도록 개선했다.
+- 수정 파일: `supabase/functions/search-reptile-amphibian-places/index.ts`, `src/types/app.ts`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/MapScreen.tsx`
+- 핵심 변경 내용: Google Place Details 응답에 국제 전화번호, 운영 상태, 짧은 주소, 장소 유형, 접근성, 주차, 결제 정보를 추가했다. 병원 상세에는 실제 응답이 존재하는 전화, 영업시간, 운영 상태, 장소 유형, 평점, 리뷰 수, 홈페이지, 편의 정보와 출처만 표시한다. 같은 병원 상세 요청은 현재 앱 세션의 메모리 캐시를 재사용한다.
+- 검증 결과: `npm run lint`, `npm run build` 통과. Edge Function 배포는 성공했지만 실제 Google Places 호출은 확장 필드와 핵심 필드 재시도 모두 403 `PERMISSION_DENIED`를 반환했다. 따라서 현재 등록된 키의 Google Cloud API 제한 또는 애플리케이션 제한을 확인해야 한다.
+- 남은 작업: Google Cloud에서 Places API (New)를 허용하고 서버용 키에 HTTP 리퍼러 제한이 걸려 있지 않은지 확인한 뒤 실제 응답을 재검증한다. Google Maps JavaScript API 지도 전환은 별도의 브라우저용 지도 키가 준비된 뒤 진행한다.
+
+## 2026-08-02 병원 상세 패널 핵심 정보 재구성
+
+### 요청 요약
+
+- 사용자가 병원 상세를 연 뒤 3초 안에 병원명, 위치, 영업 여부, 연락과 길찾기, 리뷰를 파악하도록 정보 구조를 단순화했다.
+- 최근 진료 문구, 상단 리뷰 수, 출처, Google 리뷰 본문 미제공 안내와 중복 평점을 제거하도록 요청받았다.
+
+### 분석·판단 이유
+
+- 기존 패널은 상단, Google 정보, Google 리뷰 영역에서 리뷰 수와 평점을 반복하고 좋아요·리뷰 작성이 전화·길찾기보다 앞서 있었다.
+- 앱 사용자 리뷰와 Google 평가가 같은 `리뷰` 단어 아래 연속 배치되어 출처와 역할을 구분하기 어려웠다.
+- 주요 행동을 기본 정보 직후에 두고 나머지는 구분선 기반 섹션으로 이어야 탐색 비용이 줄어든다고 판단했다.
+
+### 수정 파일
+
+- `src/components/hospital-map/MapScreen.tsx`
+- `src/App.css`
+- `docs/APP_REQUIREMENTS.md`
+- `docs/project-records/maps.md`
+- `docs/project-records/UI.md`
+- `docs/project-records/UX.md`
+
+### 핵심 변경 내용
+
+- 상단을 병원명, 아이콘형 좋아요, 닫기 버튼으로 재구성했다.
+- 주소 복사, 거리, 현재 영업 상태, 오늘 운영시간, 요일별 운영시간을 하나의 기본 정보 흐름으로 통합했다.
+- `전화하기`와 `길찾기`를 동일 너비의 핵심 액션으로 배치하고 길찾기는 Google Maps 링크가 없을 때 네이버 지도 검색으로 연결한다.
+- 전화번호와 홈페이지는 연락처 섹션에서만 표시해 주요 액션과 정보 표시의 역할을 분리했다.
+- ExoCare 리뷰는 섹션 제목, 리뷰 작성 버튼, 사용자 리뷰 목록 또는 작은 빈 상태만 표시한다.
+- Google 영역은 별점, 평가 수, Google Maps 링크만 표시하며 리뷰 본문과 출처 문구는 제거했다.
+
+### 검증 결과
+
+- `npm run lint`, `npm run build` 통과. 기존 Vite 번들 크기 안내만 남았다.
+- 360px에서 패널과 문서 가로 넘침 없음, 긴 병원명과 상단 도구 분리, 주요 액션 2열을 확인했다.
+- 1280px에서 400px 상세 패널 안의 전화·길찾기, 연락처, ExoCare 리뷰, Google 평점 순서를 확인했다.
+
+### 남은 작업
+
+- 실제 로그인 계정에서 전화 링크, 외부 길찾기, 좋아요 저장과 리뷰 작성 모달 진입을 최종 확인한다.
+## 2026-08-02 병원 주소 복사 버튼 hover 수정
+
+- 요청 요약: 병원 상세 주소 옆 복사 버튼 hover 시 주소 문구가 아래로 이동하는 문제를 해결한다.
+- 분석·판단 이유: 공통 버튼 hover 스타일과 상세 패널의 소형 아이콘 버튼 스타일이 충돌해 flex 행의 높이가 달라질 가능성이 있었다.
+- 수정 파일: `src/App.css`
+- 핵심 변경 내용: 복사 버튼의 모든 상태 크기를 2rem으로 고정하고 transform을 차단했으며 주소와 버튼을 행 상단에 정렬했다.
+- 검증 결과: production build와 lint로 확인한다.
+- 남은 작업: 없음.
+## 2026-08-02 병원 상세 액션과 아이콘 정리
+
+- 요청 요약: 상세 패널의 `전화번호 없음`, `길찾기` 버튼을 제거하고 닫기 및 주소 복사 아이콘의 형태를 바로잡는다.
+- 분석·판단 이유: 연락처 영역에서 전화번호를 이미 제공하므로 별도 액션 줄은 중복이었다. 닫기 X는 과거 30px 버튼의 절대 좌표를 사용해 현재 42px 원형 버튼에서 중앙이 어긋났다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`
+- 핵심 변경 내용: 주요 액션 줄과 사용하지 않는 길찾기 URL 생성 코드를 제거했다. 닫기 X는 50% 좌표를 기준으로 교차하도록 고정하고, 주소 복사는 두 개의 작은 사각형으로 다시 그렸다.
+- 검증 결과: production build와 lint로 확인한다.
+- 남은 작업: 없음.

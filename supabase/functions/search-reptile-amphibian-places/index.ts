@@ -6,6 +6,8 @@ type SearchRequest = {
   latitude?: number
   longitude?: number
   radiusMeters?: number
+  includeDetails?: boolean
+  placeId?: string
 }
 
 type GooglePlace = {
@@ -14,25 +16,48 @@ type GooglePlace = {
   formattedAddress?: string
   location?: { latitude?: number; longitude?: number }
   nationalPhoneNumber?: string
+  internationalPhoneNumber?: string
   googleMapsUri?: string
   websiteUri?: string
+  shortFormattedAddress?: string
+  businessStatus?: string
   rating?: number
   userRatingCount?: number
   primaryType?: string
+  primaryTypeDisplayName?: { text?: string; languageCode?: string }
   types?: string[]
   editorialSummary?: { text?: string; languageCode?: string }
+  regularOpeningHours?: GoogleOpeningHours
+  currentOpeningHours?: GoogleOpeningHours
   reviews?: Array<{
     name?: string
     rating?: number
     text?: { text?: string; languageCode?: string }
     originalText?: { text?: string; languageCode?: string }
     publishTime?: string
+    relativePublishTimeDescription?: string
+    googleMapsUri?: string
+    authorAttribution?: {
+      displayName?: string
+      uri?: string
+      photoUri?: string
+    }
   }>
 }
 
+type GoogleOpeningHours = {
+  openNow?: boolean
+  weekdayDescriptions?: string[]
+  periods?: Array<Record<string, unknown>>
+  specialDays?: Array<Record<string, unknown>>
+  nextOpenTime?: string
+  nextCloseTime?: string
+}
+
 const GOOGLE_PLACES_TEXT_SEARCH_URL = 'https://places.googleapis.com/v1/places:searchText'
+const GOOGLE_PLACES_DETAILS_URL = 'https://places.googleapis.com/v1/places'
 const DEFAULT_QUERY = '파충류 동물 병원'
-const FIELD_MASK = [
+const CORE_FIELD_MASK = [
   'places.id',
   'places.displayName',
   'places.formattedAddress',
@@ -45,8 +70,25 @@ const FIELD_MASK = [
   'places.primaryType',
   'places.types',
   'places.editorialSummary',
+  'places.regularOpeningHours',
+  'places.currentOpeningHours',
   'places.reviews',
 ].join(',')
+const FIELD_MASK = [
+  CORE_FIELD_MASK,
+  'places.internationalPhoneNumber',
+  'places.shortFormattedAddress',
+  'places.businessStatus',
+  'places.primaryTypeDisplayName',
+].join(',')
+const DETAILS_FIELD_MASK = FIELD_MASK
+  .split(',')
+  .map((field) => field.replace(/^places\./, ''))
+  .join(',')
+const CORE_DETAILS_FIELD_MASK = CORE_FIELD_MASK
+  .split(',')
+  .map((field) => field.replace(/^places\./, ''))
+  .join(',')
 
 const REPTILE_KEYWORDS = [
   '파충류', '도마뱀', '게코', '거북', '거북이', '뱀', '이구아나', '카멜레온', '크레스티드', '레오파드', '비어디', '비어디드래곤', '스킨크', '왕도마뱀',
@@ -60,7 +102,15 @@ Deno.serve(async (request) => {
     if (!apiKey) return json({ error: 'missing_google_places_api_key' }, 500)
 
     const body = await readRequest(request)
-    const places = await searchGooglePlaces(apiKey, body)
+    const places = body.placeId
+      ? [await fetchGooglePlaceDetails(apiKey, body.placeId)]
+      : await searchGooglePlaces(apiKey, body)
+    if (body.includeDetails && !body.placeId && places.length > 0) {
+      const bestMatch = selectBestPlace(places, body)
+      if (bestMatch?.id) {
+        places.splice(0, places.length, { ...bestMatch, ...await fetchGooglePlaceDetails(apiKey, bestMatch.id) })
+      }
+    }
     const hospitals = places
       .map(toHospitalCandidate)
       .filter((hospital): hospital is NonNullable<ReturnType<typeof toHospitalCandidate>> => Boolean(hospital))
@@ -97,20 +147,46 @@ async function searchGooglePlaces(apiKey: string, body: SearchRequest) {
     }
   }
 
-  const response = await fetch(GOOGLE_PLACES_TEXT_SEARCH_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': FIELD_MASK,
-    },
-    body: JSON.stringify(requestBody),
-  })
+  let response = await requestTextSearch(apiKey, requestBody, FIELD_MASK)
+  if (response.status === 403) response = await requestTextSearch(apiKey, requestBody, CORE_FIELD_MASK)
 
   const text = await response.text()
   if (!response.ok) throw new Error(text.slice(0, 300))
   const data = JSON.parse(text) as { places?: GooglePlace[] }
   return data.places ?? []
+}
+
+function requestTextSearch(apiKey: string, requestBody: Record<string, unknown>, fieldMask: string) {
+  return fetch(GOOGLE_PLACES_TEXT_SEARCH_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': fieldMask,
+    },
+    body: JSON.stringify(requestBody),
+  })
+}
+
+async function fetchGooglePlaceDetails(apiKey: string, placeId: string) {
+  const url = new URL(`${GOOGLE_PLACES_DETAILS_URL}/${encodeURIComponent(placeId)}`)
+  url.searchParams.set('languageCode', 'ko')
+  url.searchParams.set('regionCode', 'KR')
+  let response = await requestPlaceDetails(url, apiKey, DETAILS_FIELD_MASK)
+  if (response.status === 403) response = await requestPlaceDetails(url, apiKey, CORE_DETAILS_FIELD_MASK)
+  const text = await response.text()
+  if (!response.ok) throw new Error(`Google Place Details ${response.status}: ${text.slice(0, 300)}`)
+  return JSON.parse(text) as GooglePlace
+}
+
+function requestPlaceDetails(url: URL, apiKey: string, fieldMask: string) {
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': fieldMask,
+    },
+  })
 }
 
 function toHospitalCandidate(place: GooglePlace) {
@@ -127,12 +203,24 @@ function toHospitalCandidate(place: GooglePlace) {
 
   if (!looksLikeAnimalHospital(evidenceText)) return null
   const supportedAnimals = inferSupportedAnimals(evidenceText)
+  const regularOpeningHours = place.regularOpeningHours ?? null
+  const currentOpeningHours = place.currentOpeningHours ?? null
+  const isOpenNow =
+    currentOpeningHours?.openNow ??
+    regularOpeningHours?.openNow ??
+    null
+  const weekdayDescriptions =
+    currentOpeningHours?.weekdayDescriptions ??
+    regularOpeningHours?.weekdayDescriptions ??
+    []
 
   return {
     id: place.id || stableId(`${name}:${address}`),
+    googlePlaceId: place.id || '',
     name,
     address,
-    phone: place.nationalPhoneNumber || '',
+    phone: place.nationalPhoneNumber || place.internationalPhoneNumber || '',
+    internationalPhone: place.internationalPhoneNumber || '',
     lat: place.location?.latitude ?? null,
     lng: place.location?.longitude ?? null,
     supportedAnimals: supportedAnimals.length > 0 ? supportedAnimals : ['reptile'],
@@ -142,8 +230,59 @@ function toHospitalCandidate(place: GooglePlace) {
     sources: ['google-places-new'],
     rating: place.rating,
     userRatingCount: place.userRatingCount,
-    link: place.googleMapsUri || place.websiteUri || '',
+    googleReviews: (place.reviews ?? []).map((review) => ({
+      id: review.name || stableId(`${place.id || name}:${review.publishTime || ''}:${review.authorAttribution?.displayName || ''}`),
+      authorName: review.authorAttribution?.displayName || '',
+      authorUri: review.authorAttribution?.uri || '',
+      authorPhotoUri: review.authorAttribution?.photoUri || '',
+      rating: review.rating,
+      text: review.text?.text || review.originalText?.text || '',
+      publishTime: review.publishTime || '',
+      relativePublishTimeDescription: review.relativePublishTimeDescription || '',
+      googleMapsUri: review.googleMapsUri || place.googleMapsUri || '',
+    })),
+    regularOpeningHours,
+    currentOpeningHours,
+    openingHours: weekdayDescriptions,
+    isOpenNow,
+    openingHoursUpdatedAt: new Date().toISOString(),
+    googleMapsUri: place.googleMapsUri || '',
+    websiteUri: place.websiteUri || '',
+    shortAddress: place.shortFormattedAddress || '',
+    businessStatus: place.businessStatus || '',
+    primaryTypeLabel: place.primaryTypeDisplayName?.text || '',
+    link: place.websiteUri || place.googleMapsUri || '',
   }
+}
+
+function selectBestPlace(places: GooglePlace[], body: SearchRequest) {
+  const normalizedQuery = normalizeText(body.query || '')
+  return [...places].sort((left, right) => scorePlace(right, normalizedQuery, body) - scorePlace(left, normalizedQuery, body))[0]
+}
+
+function scorePlace(place: GooglePlace, normalizedQuery: string, body: SearchRequest) {
+  const name = normalizeText(place.displayName?.text || '')
+  const address = normalizeText(place.formattedAddress || '')
+  let score = 0
+  if (name && normalizedQuery.includes(name)) score += 80
+  if (address && normalizedQuery.includes(address)) score += 40
+  for (const token of normalizedQuery.split(/(?=[가-힣]{2,}|[a-z]{3,})/).filter((value) => value.length >= 2)) {
+    if (name.includes(token)) score += 8
+    if (address.includes(token)) score += 3
+  }
+  if (Number.isFinite(body.latitude) && Number.isFinite(body.longitude) && place.location?.latitude !== undefined && place.location.longitude !== undefined) {
+    const distanceKm = getDistanceKm(body.latitude as number, body.longitude as number, place.location.latitude, place.location.longitude)
+    score += Math.max(0, 30 - distanceKm * 6)
+  }
+  return score
+}
+
+function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRadians = (degree: number) => degree * Math.PI / 180
+  const dLat = toRadians(lat2 - lat1)
+  const dLng = toRadians(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 function inferSupportedAnimals(text: string) {
@@ -187,6 +326,8 @@ async function readRequest(request: Request): Promise<SearchRequest> {
       latitude: parseNumber(url.searchParams.get('latitude')),
       longitude: parseNumber(url.searchParams.get('longitude')),
       radiusMeters: parseNumber(url.searchParams.get('radiusMeters')),
+      includeDetails: url.searchParams.get('includeDetails') === 'true',
+      placeId: url.searchParams.get('placeId') ?? undefined,
     }
   }
 

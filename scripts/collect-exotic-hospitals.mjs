@@ -86,7 +86,7 @@ const meta = {
   regionCount: REGIONS.length,
   keywordCount: SEARCH_PLANS.length,
   queryPolicy: {
-    schedule: 'weekly',
+    schedule: 'monthly',
     concurrency: 1,
     delayMs,
     display,

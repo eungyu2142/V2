@@ -1,11 +1,11 @@
-import { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
-import { completeDailyTask, deleteCarePlan, listCarePlans, listDailyTasks, markDailyTaskCompleted, saveCarePlan, skipDailyTask, undoDailyTask } from './diaryService'
-import type { CarePlan, CareTaskType, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel } from './diaryTypes'
+import { completeDailyTask, deleteCarePlan, listCarePlans, listDailyTasks, markDailyTaskCompleted, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, skipDailyTask, undoDailyTask } from './diaryService'
+import type { CarePlan, CareTaskType, ClinicRecordDetails, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel } from './diaryTypes'
 import { cancelRoutineNotificationJobs, getFirstRoutineDate, markRoutineNotificationJobCompleted, markRoutineNotificationJobSkipped, upsertRoutineNotificationJob } from './routineNotificationJobs'
 import { customFoodOptionKey, fallbackSpeciesCareProfiles, findSpeciesCareProfile, listSpeciesCareProfiles, type CareEnvironmentProfile, type CareFoodOption, type SpeciesCareProfile } from './speciesCareProfiles'
 import { toDateKey } from './mockDiaryData'
-import type { HospitalReview } from '../../types/app'
+import type { HospitalReview, HospitalSnapshot } from '../../types/app'
 import './DiaryPage.css'
 
 export type DiaryPet = {
@@ -42,6 +42,18 @@ type DiaryInsight = {
 }
 type DisplayPetRecord = PetRecord & {
   sourceIds?: string[]
+}
+type CalendarRecordTag = {
+  icon: string
+  iconSrc?: string
+  iconIsRoutineCard?: boolean
+  label: string
+  className: string
+}
+type ClinicDraft = ClinicRecordDetails & {
+  id: string
+  reviewId?: string
+  hospitalSnapshot?: HospitalSnapshot
 }
 type MatingOption = {
   id: string
@@ -162,6 +174,31 @@ const reminderMeta: Record<ReminderType, { label: string; icon: string; recordTy
   filter_check: { label: '여과기 상태 확인', icon: '', recordType: 'other', inputType: 'check' },
   hospital: { label: '진료', icon: '', recordType: 'hospital', inputType: 'check' },
   custom: { label: '직접 입력', icon: '', recordType: 'other', inputType: 'check' },
+}
+
+const routinePhotoKeys: Partial<Record<ReminderType, string>> = {
+  feed: 'feed',
+  water: 'water',
+  mist: 'mist',
+  weight: 'weight',
+  temperature: 'temperature',
+  water_temperature: 'water-temperature',
+  humidity: 'humidity',
+  water_quality: 'water-quality',
+  filter_check: 'filter-check',
+  uvb_check: 'uvb-check',
+  cleaning: 'cleaning',
+  partial_cleaning: 'partial-cleaning',
+  full_cleaning: 'full-cleaning',
+  substrate_change: 'substrate-change',
+  structure_cleaning: 'structure-cleaning',
+  wall_wipe: 'wall-wipe',
+}
+
+function RoutinePhoto({ type, className = '' }: { type: ReminderType; className?: string }) {
+  const photoKey = routinePhotoKeys[type]
+  if (!photoKey) return null
+  return <img className={`routine-photo routine-photo-${photoKey} ${className}`.trim()} src={`/assets/routine-icons/cards/${photoKey}.png`} alt="" aria-hidden="true" />
 }
 
 const baseRoutineTypes: ReminderType[] = ['feed', 'mist', 'water', 'humidity', 'temperature', 'full_cleaning', 'partial_cleaning']
@@ -467,20 +504,24 @@ export default function DiaryPage({
   userId,
   pets,
   hospitalReviews = {},
+  hospitals = [],
   initialPetId,
   readOnly = false,
   onAddPet,
   onCreateQna,
+  onCreateClinicReview,
   initialDraft,
   onDeleteDraft,
 }: {
   userId: string
   pets: DiaryPet[]
   hospitalReviews?: Record<string, HospitalReview[]>
+  hospitals?: HospitalSnapshot[]
   initialPetId?: string
   readOnly?: boolean
   onAddPet: () => void
   onCreateQna?: (petId: string) => void
+  onCreateClinicReview?: (hospital: HospitalSnapshot, review: HospitalReview) => void
   initialDraft?: DiaryDraftItem | null
   onDeleteDraft?: (draftId: string) => void | Promise<void>
 }) {
@@ -512,6 +553,11 @@ export default function DiaryPage({
   const [completingReminder, setCompletingReminder] = useState<Reminder | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
   const [hospitalReviewPickerOpen, setHospitalReviewPickerOpen] = useState(false)
+  const [clinicEditorOpen, setClinicEditorOpen] = useState(false)
+  const [clinicDraft, setClinicDraft] = useState<ClinicDraft | null>(null)
+  const [clinicSaving, setClinicSaving] = useState(false)
+  const [clinicError, setClinicError] = useState('')
+  const [savedClinicDraft, setSavedClinicDraft] = useState<ClinicDraft | null>(null)
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null)
   const [routinePresetType, setRoutinePresetType] = useState<ReminderType | null>(null)
   const [petWarningOpen, setPetWarningOpen] = useState(false)
@@ -657,7 +703,7 @@ export default function DiaryPage({
     const removed = records.find((record) => !next.some((item) => item.id === record.id))
     const added = next.find((record) => !records.some((item) => item.id === record.id))
     setRecords(next)
-    if (removed) void deleteAppData('care_records', removed.id).catch((error) => console.error('Care record delete failed.', error))
+    if (removed) void deleteAppData('care_records', removed.id, userId).catch((error) => console.error('Care record delete failed.', error))
     if (added) {
       void saveAppData('care_records', userId, added, {
         pet_id: added.petId,
@@ -692,7 +738,7 @@ export default function DiaryPage({
         .catch((error) => console.error('Care plan update failed; kept local state.', error))
     } else {
       if (removed) void cancelNotificationJobsForReminder(removed)
-        .finally(() => deleteAppData('feeding_reminders', removed.id))
+        .finally(() => deleteAppData('feeding_reminders', removed.id, userId))
         .catch((error) => console.error('Reminder delete failed.', error))
       if (added) void saveAppData('feeding_reminders', userId, added, { pet_id: added.petId })
         .then(() => upsertNotificationJobForReminder(added))
@@ -823,31 +869,87 @@ export default function DiaryPage({
   const openHospitalReviewRecord = (review: HospitalReview) => {
     if (!selectedPet) return
     const visitDate = review.visitDate ?? review.createdAt.slice(0, 10)
-    const existingRecord = records.find((record) => record.id === review.id || record.reviewId === review.id)
-
     setHospitalReviewPickerOpen(false)
-    setSelectedDate(visitDate)
-    setVisibleMonth(new Date(`${visitDate}T00:00:00`))
-
-    if (existingRecord) {
-      setDateDetailsOpen(true)
-      return
-    }
-
-    const hospitalName = review.hospitalName || review.hospitalSnapshot?.name || '병원 진료'
-    const costText = review.cost ? `진료비 ${review.cost.toLocaleString('ko-KR')}원` : ''
-    saveSmartRecord({
-      id: review.id,
-      userId,
-      petId: selectedPet.id,
-      type: 'hospital',
-      date: visitDate,
-      memo: [hospitalName, review.diagnosis, review.treatment, costText, review.body].filter(Boolean).join(' · '),
-      hospitalId: review.hospitalId,
+    setClinicDraft({
+      id: crypto.randomUUID(),
       reviewId: review.id,
-      status: 'manual',
-      createdAt: review.createdAt,
-    }, '리뷰의 진료 기록을 불러왔어요.')
+      hospitalName: review.hospitalName || review.hospitalSnapshot?.name || '병원 진료',
+      hospitalSnapshot: review.hospitalSnapshot,
+      visitDate,
+      cost: review.cost,
+      diagnosis: review.diagnosis,
+      treatment: review.treatment,
+      nextVisit: review.nextVisitDate ? {
+        date: review.nextVisitDate,
+        time: review.nextVisitTime || '09:00',
+      } : undefined,
+    })
+    setClinicError('')
+    setClinicEditorOpen(true)
+  }
+
+  const openNewClinicRecord = () => {
+    setHospitalReviewPickerOpen(false)
+    setSavedClinicDraft(null)
+    setClinicDraft({
+      id: crypto.randomUUID(),
+      hospitalName: '',
+      visitDate: selectedDate <= today ? selectedDate : today,
+    })
+    setClinicError('')
+    setClinicEditorOpen(true)
+  }
+
+  const saveClinicRecord = async (draft: ClinicDraft) => {
+    if (!selectedPet || !draft.hospitalName.trim() || !draft.visitDate) return
+    setClinicSaving(true)
+    setClinicError('')
+    try {
+      await saveClinicToDiary({
+        userId,
+        clinicRecordId: draft.id,
+        reviewId: draft.reviewId,
+        petId: selectedPet.id,
+        hospitalName: draft.hospitalName.trim(),
+        visitDate: draft.visitDate,
+        cost: draft.cost,
+        diagnosis: draft.diagnosis?.trim(),
+        treatment: draft.treatment?.trim(),
+        reviewBody: undefined,
+        nextVisit: draft.nextVisit,
+        medicine: undefined,
+      })
+      const record: PetRecord = {
+        id: draft.id,
+        userId,
+        petId: selectedPet.id,
+        type: 'hospital',
+        date: draft.visitDate,
+        memo: [
+          draft.hospitalName.trim(),
+          draft.diagnosis?.trim(),
+          draft.treatment?.trim(),
+          draft.cost ? `진료비 ${draft.cost.toLocaleString('ko-KR')}원` : '',
+        ].filter(Boolean).join(' · '),
+        clinicDetails: draft,
+        hospitalId: draft.hospitalName.trim(),
+        reviewId: draft.reviewId,
+        status: 'manual',
+        createdAt: new Date().toISOString(),
+      }
+      setRecords((current) => [record, ...current.filter((item) => item.id !== record.id)])
+      setSelectedDate(draft.visitDate)
+      setVisibleMonth(new Date(`${draft.visitDate}T00:00:00`))
+      setClinicEditorOpen(false)
+      setClinicDraft(null)
+      setSavedClinicDraft(draft)
+      showSmartToast('진료 기록을 저장했어요.')
+    } catch (error: unknown) {
+      console.error('Clinic record save failed.', error)
+      setClinicError('진료 기록을 저장하지 못했어요. 입력 내용은 그대로 유지했어요.')
+    } finally {
+      setClinicSaving(false)
+    }
   }
 
   const makeSmartRecord = (type: PetRecordType, message: string, memo?: string, foods?: string[], photo?: string) => {
@@ -985,7 +1087,7 @@ export default function DiaryPage({
       const completedAt = new Date().toISOString()
       const foodNames = foods.map((food) => food.foodName)
       const record: PetRecord = {
-        id: dailyTask ? `task-${dailyTask.id}` : crypto.randomUUID(),
+        id: crypto.randomUUID(),
         userId,
         petId: selectedPet.id,
         type: 'food',
@@ -999,17 +1101,19 @@ export default function DiaryPage({
         status: 'completed',
         createdAt: completedAt,
       }
-      await saveAppData('care_records', userId, record, {
-        pet_id: record.petId,
-        record_date: record.date,
-        record_type: record.type,
-        memo: record.memo ?? '',
-        daily_task_id: record.dailyTaskId,
-        occurred_at: record.occurredAt,
-        scheduled_for: record.scheduledFor,
-        status: record.status ?? 'manual',
-      })
-      setRecords([record, ...records.filter((item) => dailyTask ? item.dailyTaskId !== dailyTask.id : item.id !== record.id)])
+      const storedRecord = dailyTask
+        ? await saveDailyTaskCareRecord(userId, record)
+        : (await saveAppData('care_records', userId, record, {
+            pet_id: record.petId,
+            record_date: record.date,
+            record_type: record.type,
+            memo: record.memo ?? '',
+            daily_task_id: record.dailyTaskId,
+            occurred_at: record.occurredAt,
+            scheduled_for: record.scheduledFor,
+            status: record.status ?? 'manual',
+          }), record)
+      setRecords([storedRecord, ...records.filter((item) => dailyTask ? item.dailyTaskId !== dailyTask.id : item.id !== storedRecord.id)])
       if (dailyTask && usingCarePlans) {
         completingTaskIds.current.add(dailyTask.id)
         await markDailyTaskCompleted(dailyTask.id)
@@ -1067,7 +1171,7 @@ export default function DiaryPage({
     }
     const label = getEnvironmentMetricLabel(metricType, fallbackProfile, recordMeasurementType)
     const record: PetRecord = {
-      id: dailyTask ? `task-${dailyTask.id}` : crypto.randomUUID(),
+      id: crypto.randomUUID(),
       userId,
       petId: selectedPet.id,
       type: 'other',
@@ -1082,17 +1186,19 @@ export default function DiaryPage({
     }
     setEnvironmentSaving(true)
     try {
-      await saveAppData('care_records', userId, record, {
-        pet_id: record.petId,
-        record_date: record.date,
-        record_type: record.type,
-        memo: record.memo ?? '',
-        daily_task_id: record.dailyTaskId,
-        occurred_at: record.occurredAt,
-        scheduled_for: record.scheduledFor,
-        status: record.status ?? 'manual',
-      })
-      setRecords([record, ...records.filter((item) => dailyTask ? item.dailyTaskId !== dailyTask.id : item.id !== record.id)])
+      const storedRecord = dailyTask
+        ? await saveDailyTaskCareRecord(userId, record)
+        : (await saveAppData('care_records', userId, record, {
+            pet_id: record.petId,
+            record_date: record.date,
+            record_type: record.type,
+            memo: record.memo ?? '',
+            daily_task_id: record.dailyTaskId,
+            occurred_at: record.occurredAt,
+            scheduled_for: record.scheduledFor,
+            status: record.status ?? 'manual',
+          }), record)
+      setRecords([storedRecord, ...records.filter((item) => dailyTask ? item.dailyTaskId !== dailyTask.id : item.id !== storedRecord.id)])
       if (dailyTask && usingCarePlans) {
         completingTaskIds.current.add(dailyTask.id)
         await markDailyTaskCompleted(dailyTask.id)
@@ -1257,8 +1363,8 @@ export default function DiaryPage({
     )
   }
 
-  if (dateDetailsOpen) {
-    return <DateRecordsScreen
+  const dateRecordsView = dateDetailsOpen ? (
+    <DateRecordsScreen
       date={selectedDate}
       records={displayPetRecords.filter((record) => record.date === selectedDate)}
       onBack={() => setDateDetailsOpen(false)}
@@ -1280,15 +1386,45 @@ export default function DiaryPage({
           status: 'manual',
         }, ...records])
       }}
+      mobileActions={!readOnly ? (
+        <>
+          <DailyPlan
+            pet={selectedPet}
+            tasks={planReminders}
+            selectedDate={selectedDate}
+            hasCarePlans={petCarePlans.length > 0}
+            onAddPlan={openReminderCreate}
+            onEditPlan={(reminder) => {
+              setEditingReminder(reminder)
+              setRoutinePresetType(null)
+              setReminderFormOpen(true)
+            }}
+            onDeletePlan={removePlan}
+            onComplete={(item) => completePlan(item.reminder, item.dailyTask)}
+            onUndo={(item) => undoPlan(item.reminder, item.dailyTask)}
+            onSkip={(item) => skipPlan(item.dailyTask)}
+          />
+          <IncidentAddBar pet={selectedPet} disabled={selectedDate > today} onOpen={openSmartAdd} onOpenRoutine={openIncidentRoutine} />
+        </>
+      ) : null}
     />
-  }
+  ) : null
 
   if (visualizationOpen) {
-    return <DataVisualizationScreen records={petRecords} petName={selectedPet?.name ?? '펫'} onBack={() => setVisualizationOpen(false)} onCreateQna={selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id) : undefined} />
+    return <DataVisualizationScreen
+      records={petRecords}
+      petName={selectedPet?.name ?? '펫'}
+      onBack={() => setVisualizationOpen(false)}
+      onCreateQna={selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id) : undefined}
+      onShedComplete={() => saveShedCheckRecord('탈피 완료')}
+      onShedNotYet={() => saveShedCheckRecord('탈피 확인 · 완료 안됨')}
+    />
   }
 
   return (
     <section className="diary-page">
+      {dateRecordsView ?? (
+        <>
       <div className={`diary-pet-bar ${!readOnly && pets.length > 1 ? 'has-menu' : 'single-pet'}`}>
         {!readOnly && pets.length > 1 && (
           <button className="diary-pet-menu-trigger" type="button" aria-label="펫 전환 메뉴 열기" aria-expanded={petMenuOpen} onClick={() => setPetMenuOpen(true)}>
@@ -1346,7 +1482,6 @@ export default function DiaryPage({
                 onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))}
                 onSelect={(date) => { if (date === selectedDate) setDateDetailsOpen(true); else setSelectedDate(date) }}
               />
-              <SelectedDateStatus date={selectedDate} records={displayPetRecords} />
             </main>
             <aside className="diary-detail-panel">
               {!readOnly && <DailyPlan pet={selectedPet} tasks={planReminders} selectedDate={selectedDate} hasCarePlans={petCarePlans.length > 0} onAddPlan={openReminderCreate} onEditPlan={(reminder) => { setEditingReminder(reminder); setRoutinePresetType(null); setReminderFormOpen(true) }} onDeletePlan={removePlan} onComplete={(item) => completePlan(item.reminder, item.dailyTask)} onUndo={(item) => undoPlan(item.reminder, item.dailyTask)} onSkip={(item) => skipPlan(item.dailyTask)} />}
@@ -1359,6 +1494,8 @@ export default function DiaryPage({
       <div className="diary-record-mobile-row">
         <button className="diary-record-top-button diary-record-mobile-button" type="button" onClick={() => setVisualizationOpen(true)}>기록 모아보기</button>
       </div>
+        </>
+      )}
 
       {smartSheet && selectedPet && (
         <Overlay onClose={() => setSmartSheet(null)}>
@@ -1399,8 +1536,78 @@ export default function DiaryPage({
           <HospitalReviewPicker
             petName={selectedPet.name}
             reviews={selectedPetHospitalReviews}
+            usedReviewIds={new Set([
+              ...petRecords.flatMap((record) => record.reviewId ? [record.reviewId] : []),
+              ...selectedPetHospitalReviews.flatMap((review) => review.clinicRecordId ? [review.id] : []),
+            ])}
+            onCreateNew={openNewClinicRecord}
             onSelect={openHospitalReviewRecord}
             onClose={() => setHospitalReviewPickerOpen(false)}
+          />
+        </Overlay>
+      )}
+      {clinicEditorOpen && clinicDraft && selectedPet && (
+        <Overlay onClose={() => {
+          if (clinicSaving) return
+          setClinicEditorOpen(false)
+          setClinicDraft(null)
+          setClinicError('')
+        }}>
+          <ClinicRecordEditor
+            petName={selectedPet.name}
+            hospitals={hospitals}
+            draft={clinicDraft}
+            saving={clinicSaving}
+            error={clinicError}
+            onChange={setClinicDraft}
+            onCancel={() => {
+              if (clinicSaving) return
+              setClinicEditorOpen(false)
+              setClinicDraft(null)
+              setClinicError('')
+            }}
+            onSave={() => void saveClinicRecord(clinicDraft)}
+          />
+        </Overlay>
+      )}
+      {savedClinicDraft && selectedPet && (
+        <Overlay onClose={() => setSavedClinicDraft(null)}>
+          <ClinicRecordNextActions
+            hospitalName={savedClinicDraft.hospitalName}
+            onClose={() => setSavedClinicDraft(null)}
+            onCreateReview={() => {
+              const hospital = savedClinicDraft.hospitalSnapshot
+                ?? hospitals.find((item) => item.name === savedClinicDraft.hospitalName)
+              if (!hospital || !onCreateClinicReview) return
+              onCreateClinicReview(hospital, {
+                id: crypto.randomUUID(),
+                hospitalId: hospital.id ?? hospital.name,
+                userId,
+                petId: selectedPet.id,
+                petName: selectedPet.name,
+                clinicRecordId: savedClinicDraft.id,
+                author: '',
+                rating: 5,
+                visitDate: savedClinicDraft.visitDate,
+                nextVisitDate: savedClinicDraft.nextVisit?.date,
+                nextVisitTime: savedClinicDraft.nextVisit?.time,
+                cost: savedClinicDraft.cost,
+                diagnosis: savedClinicDraft.diagnosis,
+                treatment: savedClinicDraft.treatment,
+                body: '',
+                hospitalName: hospital.name,
+                hospitalSnapshot: hospital,
+                createdAt: new Date().toISOString(),
+              })
+              setSavedClinicDraft(null)
+            }}
+            reviewDisabled={!onCreateClinicReview || !(savedClinicDraft.hospitalSnapshot ?? hospitals.find((item) => item.name === savedClinicDraft.hospitalName))}
+            onCreateMedicineRoutine={() => {
+              setSavedClinicDraft(null)
+              setEditingReminder(null)
+              setRoutinePresetType('medicine')
+              setReminderFormOpen(true)
+            }}
           />
         </Overlay>
       )}
@@ -1493,19 +1700,48 @@ function DailyPlan({
   onUndo: (task: { reminder: Reminder; overdue: boolean; dailyTask?: DailyTask }) => void
   onSkip: (task: { reminder: Reminder; overdue: boolean; dailyTask?: DailyTask }) => void
 }) {
+  const [listOpen, setListOpen] = useState(false)
   const isFuture = selectedDate > toDateKey(new Date())
   const overdueTasks = tasks.filter((task) => task.overdue && (!task.dailyTask || task.dailyTask.status === 'pending'))
-  const todayTasks = tasks.filter((task) => !task.overdue && task.dailyTask?.status !== 'skipped')
+  const isTaskCompleted = (task: { reminder: Reminder; dailyTask?: DailyTask }) => (
+    task.dailyTask?.status === 'completed'
+    || task.reminder.completedAt?.slice(0, 10) === selectedDate
+  )
+  const completedTasks = tasks.filter((task) => !task.overdue && isTaskCompleted(task))
+  const todayTasks = tasks.filter((task) => !task.overdue && task.dailyTask?.status !== 'skipped' && !isTaskCompleted(task))
+  const visibleTaskCount = overdueTasks.length + todayTasks.length + completedTasks.length
+  const listToggle = (
+    <button
+      className="daily-plan-list-toggle"
+      type="button"
+      aria-haspopup="dialog"
+      onClick={() => setListOpen(true)}
+    >
+      <span>
+        <strong>오늘 할 일</strong>
+        <small>{formatDate(selectedDate)}</small>
+      </span>
+      <span className="daily-plan-list-toggle-state">
+        {visibleTaskCount > 0 ? `전체 ${visibleTaskCount}개` : '목록'}
+      </span>
+    </button>
+  )
   const renderTask = (task: { reminder: Reminder; overdue: boolean; dailyTask?: DailyTask }) => {
     const { reminder, overdue, dailyTask } = task
-    const checked = dailyTask?.status === 'completed' || reminder.completedAt?.slice(0, 10) === selectedDate
+    const checked = isTaskCompleted(task)
+    const completedTime = checked && (dailyTask?.completedAt ?? reminder.completedAt)
+      ? new Date(dailyTask?.completedAt ?? reminder.completedAt ?? '').toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })
+      : ''
     const taskDescription = overdue
       ? `${dailyTask?.scheduledDate ?? '지난 일정'} · 밀린 할 일`
+      : checked
+        ? `${completedTime || '완료'} · 완료한 루틴`
       : reminder.reminderType === 'medicine'
         ? `${dailyTask?.scheduledDate ?? selectedDate} · ${dailyTask?.occurrenceNo ?? 1}회차`
         : formatPlanDays(reminder)
     return <div className={`daily-plan-task-row ${overdue ? 'overdue' : ''}`} key={`${reminder.id}-${dailyTask?.id ?? selectedDate}`}>
-      <div className="daily-plan-task">
+      <div className={`daily-plan-task ${routinePhotoKeys[reminder.reminderType] ? 'has-routine-photo' : ''}`}>
+        <RoutinePhoto type={reminder.reminderType} className="daily-plan-routine-photo" />
         <span className="daily-plan-task-content">
           <span className="daily-plan-title-line">
             <strong>{planLabel(reminder, pet)}</strong>
@@ -1517,7 +1753,7 @@ function DailyPlan({
               </div>
             </details>
           </span>
-          {overdue && <small>{taskDescription}</small>}
+          {(overdue || checked) && <small>{taskDescription}</small>}
         </span>
         <label className="daily-plan-check-wrap">
           <span className={`daily-plan-check ${checked ? 'checked' : ''}`} aria-hidden="true">{checked ? '✓' : ''}</span>
@@ -1528,23 +1764,41 @@ function DailyPlan({
     </div>
   }
 
-  if (!hasCarePlans) {
-    return (
-      <section className="daily-plan-panel">
-        <header><div><h2>오늘 할 일</h2><p>{formatDate(selectedDate)}</p></div><button type="button" onClick={onAddPlan}>루틴 추가</button></header>
-        <div className="daily-plan-first-empty">
-          <strong>아직 반복 일정이 없어요.</strong>
-        </div>
-      </section>
-    )
-  }
-
   return (
-    <section className="daily-plan-panel">
-      <header><div><h2>오늘 할 일</h2><p>{formatDate(selectedDate)}</p></div><button type="button" onClick={onAddPlan}>루틴 추가</button></header>
-      {overdueTasks.length > 0 && <section className="daily-task-group overdue-group"><h3>밀린 할 일</h3><div className="daily-plan-list">{overdueTasks.map(renderTask)}</div></section>}
-      <section className="daily-task-group today-task-group">{todayTasks.length ? <div className="daily-plan-list">{todayTasks.map(renderTask)}</div> : <p className="daily-plan-empty">오늘 예정된 일이 없어요.</p>}</section>
-    </section>
+    <>
+      <section className="daily-plan-panel">
+        <header>{listToggle}<button className="daily-plan-add-button" type="button" onClick={onAddPlan}>루틴 추가</button></header>
+        {hasCarePlans && (
+          <div className="daily-plan-inline-list">
+            {overdueTasks.length > 0 && <div className="daily-plan-list">{overdueTasks.map(renderTask)}</div>}
+            {todayTasks.length > 0 && <div className="daily-plan-list">{todayTasks.map(renderTask)}</div>}
+            {overdueTasks.length === 0 && todayTasks.length === 0 && (
+              <button className="daily-plan-completed-summary" type="button" onClick={() => setListOpen(true)}>
+                {completedTasks.length > 0 ? '오늘 할 일을 모두 마쳤어요.' : '오늘 예정된 일이 없어요.'}
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+      {listOpen && (
+        <Overlay onClose={() => setListOpen(false)}>
+          <section className="daily-plan-dialog" role="dialog" aria-modal="true" aria-labelledby="daily-plan-dialog-title">
+            <header>
+              <div><h2 id="daily-plan-dialog-title">오늘 할 일</h2><p>{formatDate(selectedDate)}</p></div>
+            </header>
+            {!hasCarePlans ? (
+              <div className="daily-plan-first-empty"><strong>아직 반복 일정이 없어요.</strong></div>
+            ) : (
+              <div className="daily-plan-list-content">
+                {overdueTasks.length > 0 && <section className="daily-task-group overdue-group"><h3>밀린 할 일</h3><div className="daily-plan-list">{overdueTasks.map(renderTask)}</div></section>}
+                <section className="daily-task-group today-task-group">{todayTasks.length ? <div className="daily-plan-list">{todayTasks.map(renderTask)}</div> : <p className="daily-plan-empty">오늘 예정된 일이 없어요.</p>}</section>
+                {completedTasks.length > 0 && <section className="daily-task-group completed-task-group"><h3>완료한 루틴</h3><div className="daily-plan-list">{completedTasks.map(renderTask)}</div></section>}
+              </div>
+            )}
+          </section>
+        </Overlay>
+      )}
+    </>
   )
 }
 
@@ -1631,8 +1885,8 @@ function CarePlanPanel({
     <section className="care-plan-panel">
       <header><div><h2>반복 일정</h2><p>요일을 정해두면 오늘 할 일로 보여요.</p></div>{petPlans.length > 0 && <button type="button" onClick={onAdd}>루틴 추가</button>}</header>
       {petPlans.length ? <div className="care-plan-list">{petPlans.map((plan) => (
-        <article className={!plan.isActive ? 'inactive' : ''} key={plan.id}>
-          <div><strong>{planLabel(plan)}</strong><span>{formatPlanDays(plan)}</span></div>
+        <article className={`${!plan.isActive ? 'inactive' : ''} ${routinePhotoKeys[plan.reminderType] ? 'has-routine-photo' : ''}`} key={plan.id}>
+          <div className="care-plan-summary"><RoutinePhoto type={plan.reminderType} className="care-plan-routine-photo" /><span><strong>{planLabel(plan)}</strong><span>{formatPlanDays(plan)}</span></span></div>
           <details className="care-plan-menu">
             <summary aria-label={`${planLabel(plan)} 일정 메뉴`} title="일정 메뉴"><span className="menu-dots" aria-hidden="true"><span /><span /><span /></span></summary>
             <div>
@@ -1692,12 +1946,6 @@ function getMatingOptions(records: PetRecord[], pets: DiaryPet[], selectedPet?: 
     })
 }
 
-function SelectedDateStatus({ date, records }: { date: string; records: PetRecord[] }) {
-  const dayRecords = records.filter((record) => record.date === date)
-  if (!dayRecords.length) return null
-  return <section className="selected-date-status"><h2>{formatDate(date)}</h2><div>{dayRecords.map((record) => <span className="status-record" key={`record-${record.id}`}>{recordMeta[record.type].label} · {recordSummary(record)}</span>)}</div></section>
-}
-
 function planLabel(reminder: Reminder, pet?: DiaryPet, speciesProfiles: SpeciesCareProfile[] = fallbackSpeciesCareProfiles) {
   if (reminder.reminderType === 'medicine' || reminder.reminderType === 'hospital') return reminder.title || reminderMeta[reminder.reminderType].label
   if (reminder.reminderType === 'custom') return reminder.title || '직접 입력'
@@ -1735,11 +1983,15 @@ function isReminderVisibleForPet(reminder: Reminder, pet: DiaryPet, speciesProfi
 function HospitalReviewPicker({
   petName,
   reviews,
+  usedReviewIds,
+  onCreateNew,
   onSelect,
   onClose,
 }: {
   petName: string
   reviews: HospitalReview[]
+  usedReviewIds: Set<string>
+  onCreateNew: () => void
   onSelect: (review: HospitalReview) => void
   onClose: () => void
 }) {
@@ -1748,19 +2000,21 @@ function HospitalReviewPicker({
       <header>
         <div>
           <h2 id="hospital-review-picker-title">진료 기록</h2>
-          <p>{petName}의 작성한 리뷰에서 불러옵니다.</p>
+          <p>{petName}의 진료 내용을 직접 작성하거나 리뷰에서 불러옵니다.</p>
         </div>
         <button type="button" aria-label="진료 기록 닫기" onClick={onClose}>×</button>
       </header>
+      <button className="hospital-review-picker-new" type="button" onClick={onCreateNew}>새 진료 기록 작성</button>
       {reviews.length > 0 ? (
         <div className="hospital-review-picker-list">
           {reviews.map((review) => {
             const hospitalName = review.hospitalName || review.hospitalSnapshot?.name || '병원 리뷰'
+            const alreadyUsed = usedReviewIds.has(review.id)
             return (
-              <button key={review.id} type="button" onClick={() => onSelect(review)}>
+              <button key={review.id} type="button" disabled={alreadyUsed} onClick={() => onSelect(review)}>
                 <span>
                   <strong>{hospitalName}</strong>
-                  <small>{review.visitDate ?? review.createdAt.slice(0, 10)}</small>
+                  <small>{alreadyUsed ? '진료 기록에 연결됨' : review.visitDate ?? review.createdAt.slice(0, 10)}</small>
                 </span>
                 <span>
                   {review.diagnosis && <small>{review.diagnosis}</small>}
@@ -1772,8 +2026,134 @@ function HospitalReviewPicker({
           })}
         </div>
       ) : (
-        <p className="hospital-review-picker-empty">이 펫으로 작성한 진료 리뷰가 없어요.</p>
+        <p className="hospital-review-picker-empty">불러올 리뷰가 없어도 진료 기록을 직접 작성할 수 있어요.</p>
       )}
+    </section>
+  )
+}
+
+function ClinicRecordEditor({
+  petName,
+  hospitals,
+  draft,
+  saving,
+  error,
+  onChange,
+  onCancel,
+  onSave,
+}: {
+  petName: string
+  hospitals: HospitalSnapshot[]
+  draft: ClinicDraft
+  saving: boolean
+  error: string
+  onChange: (draft: ClinicDraft) => void
+  onCancel: () => void
+  onSave: () => void
+}) {
+  const update = (patch: Partial<ClinicDraft>) => onChange({ ...draft, ...patch })
+  const canSave = Boolean(
+    draft.hospitalName.trim()
+    && draft.visitDate
+    && (!draft.nextVisit || draft.nextVisit.date)
+  )
+  const selectableHospitals = draft.hospitalSnapshot
+    && !hospitals.some((hospital) => hospitalOptionValue(hospital) === hospitalOptionValue(draft.hospitalSnapshot!))
+    ? [draft.hospitalSnapshot, ...hospitals]
+    : hospitals
+  const hospitalValue = draft.hospitalSnapshot
+    ? hospitalOptionValue(draft.hospitalSnapshot)
+    : selectableHospitals.find((hospital) => hospital.name === draft.hospitalName)
+      ? hospitalOptionValue(selectableHospitals.find((hospital) => hospital.name === draft.hospitalName)!)
+      : ''
+
+  return (
+    <section className="clinic-record-editor" role="dialog" aria-modal="true" aria-labelledby="clinic-record-editor-title">
+      <header>
+        <div>
+          <h2 id="clinic-record-editor-title">진료 기록 작성</h2>
+          <p>{petName}{draft.reviewId ? ' · 리뷰에서 불러온 내용' : ''}</p>
+        </div>
+        <button type="button" aria-label="진료 기록 닫기" onClick={onCancel}>×</button>
+      </header>
+      <div className="clinic-record-fields">
+        <label>
+          병원 <span aria-label="필수">*</span>
+          <select
+            value={hospitalValue}
+            onChange={(event) => {
+              const hospital = selectableHospitals.find((item) => hospitalOptionValue(item) === event.target.value)
+              update({ hospitalName: hospital?.name ?? '', hospitalSnapshot: hospital })
+            }}
+          >
+            <option value="">병원을 선택하세요</option>
+            {draft.hospitalName && !hospitalValue && <option value="" disabled>{draft.hospitalName} · 현재 검색 목록에 없음</option>}
+            {selectableHospitals.map((hospital) => (
+              <option key={hospitalOptionValue(hospital)} value={hospitalOptionValue(hospital)}>
+                {hospital.name}{hospital.address ? ` · ${hospital.address}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="clinic-record-row">
+          <label>방문 날짜 <span aria-label="필수">*</span><input type="date" value={draft.visitDate} onChange={(event) => update({ visitDate: event.target.value })} /></label>
+          <label>진료비<input inputMode="numeric" value={draft.cost ? draft.cost.toLocaleString('ko-KR') : ''} onChange={(event) => update({ cost: Number(event.target.value.replace(/\D/g, '')) || undefined })} placeholder="예: 35,000" /></label>
+        </div>
+        <label>진단 또는 방문 사유<input value={draft.diagnosis ?? ''} onChange={(event) => update({ diagnosis: event.target.value })} /></label>
+        <label>진료 내용<input value={draft.treatment ?? ''} onChange={(event) => update({ treatment: event.target.value })} /></label>
+        <fieldset>
+          <legend>다음 예정일이 있나요?</legend>
+          <div className="clinic-record-choice">
+            <button type="button" className={draft.nextVisit ? 'active' : ''} aria-pressed={Boolean(draft.nextVisit)} onClick={() => update({ nextVisit: draft.nextVisit ?? { date: '', time: '09:00' } })}>예</button>
+            <button type="button" className={!draft.nextVisit ? 'active' : ''} aria-pressed={!draft.nextVisit} onClick={() => update({ nextVisit: undefined })}>아니요</button>
+          </div>
+          {draft.nextVisit && (
+            <div className="clinic-record-row">
+              <label>다음 진료일<input type="date" value={draft.nextVisit.date} onChange={(event) => update({ nextVisit: { ...draft.nextVisit!, date: event.target.value } })} /></label>
+              <label>알림 시간<input type="time" value={draft.nextVisit.time} onChange={(event) => update({ nextVisit: { ...draft.nextVisit!, time: event.target.value } })} /></label>
+            </div>
+          )}
+        </fieldset>
+      </div>
+      {error && <p className="clinic-record-error" role="alert">{error}</p>}
+      <footer>
+        <button type="button" onClick={onCancel} disabled={saving}>취소</button>
+        <button type="button" onClick={onSave} disabled={!canSave || saving}>{saving ? '저장 중' : '진료 기록 저장'}</button>
+      </footer>
+    </section>
+  )
+}
+
+function hospitalOptionValue(hospital: HospitalSnapshot) {
+  return hospital.id || `${hospital.name}|${hospital.address}`
+}
+
+function ClinicRecordNextActions({
+  hospitalName,
+  reviewDisabled,
+  onCreateReview,
+  onCreateMedicineRoutine,
+  onClose,
+}: {
+  hospitalName: string
+  reviewDisabled: boolean
+  onCreateReview: () => void
+  onCreateMedicineRoutine: () => void
+  onClose: () => void
+}) {
+  return (
+    <section className="clinic-record-next-actions" role="dialog" aria-modal="true" aria-labelledby="clinic-record-next-title">
+      <header>
+        <div>
+          <h2 id="clinic-record-next-title">진료 기록을 저장했어요</h2>
+          <p>{hospitalName}</p>
+        </div>
+        <button type="button" aria-label="후속 작업 닫기" onClick={onClose}>×</button>
+      </header>
+      <div className="clinic-record-next-buttons">
+        <button type="button" onClick={onCreateReview} disabled={reviewDisabled}>리뷰 작성하러 가기</button>
+        <button type="button" onClick={onCreateMedicineRoutine}>약 루틴 작성하러 가기</button>
+      </div>
     </section>
   )
 }
@@ -1925,6 +2305,7 @@ function Calendar({
   onSelect: (date: string) => void
 }) {
   const days = useMemo(() => getCalendarDays(month), [month])
+  const todayKey = toDateKey(new Date())
   const monthInputRef = useRef<HTMLInputElement>(null)
   const currentYear = month.getFullYear()
   const currentMonth = month.getMonth()
@@ -1970,23 +2351,25 @@ function Calendar({
           const calendarItems = dayRecords
             .map((record) => ({ id: record.id, ...calendarRecordTag(record) }))
             .filter((item, index, items) => index === items.findIndex((value) => value.label === item.label))
-          const compactSize = calendarItems.length > 7 ? 'tiny' : calendarItems.length > 4 ? 'compact' : ''
+          const visibleItems = calendarItems.slice(0, 2)
+          const hiddenItemCount = Math.max(0, calendarItems.length - visibleItems.length)
           return (
             <button
               key={key}
-              className={`calendar-day ${key === selectedDate ? 'selected' : ''} ${day.getMonth() !== month.getMonth() ? 'muted' : ''}`}
+              className={`calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${day.getMonth() !== month.getMonth() ? 'muted' : ''}`}
               onClick={() => onSelect(key)}
             >
               <span className="day-head">
                 <span className="day-number">{day.getDate()}</span>
               </span>
               <span className="calendar-tags" aria-label={`${dayRecords.length} records`}>
-                {calendarItems.map((item) => (
-                  <small className={`calendar-tag ${item.className} ${compactSize}`} key={item.id}>
-                    {item.iconSrc ? <img src={item.iconSrc} alt="" aria-hidden="true" /> : item.icon ? <i>{item.icon}</i> : null}
+                {visibleItems.map((item) => (
+                  <small className={`calendar-tag ${item.className}`} key={item.id}>
+                    {item.iconSrc ? <img className={item.iconIsRoutineCard ? 'routine-record-mark-image' : ''} src={item.iconSrc} alt="" aria-hidden="true" /> : item.icon ? <i>{item.icon}</i> : null}
                     <b>{item.label}</b>
                   </small>
                 ))}
+                {hiddenItemCount > 0 && <small className="calendar-tag-more">+{hiddenItemCount}</small>}
               </span>
             </button>
           )
@@ -2008,6 +2391,7 @@ function RecordDetailScreen({
   onBack: () => void
   onDelete: () => void
 }) {
+  const tag = calendarRecordTag(record)
   return (
     <main className="diary-create-screen record-detail-screen">
       <header>
@@ -2017,9 +2401,9 @@ function RecordDetailScreen({
       </header>
       <section className="record-detail-view">
         <div className="record-detail-title">
-          <span>{recordMeta[record.type].icon}</span>
+          <span className="record-detail-mark">{tag.iconSrc ? <img className={tag.iconIsRoutineCard ? 'routine-record-mark-image' : ''} src={tag.iconSrc} alt="" aria-hidden="true" /> : tag.icon}</span>
           <div>
-            <h1>{recordMeta[record.type].label}</h1>
+            <h1>{tag.label}</h1>
             <p>{pet?.name ?? '펫 없음'} · {formatDate(record.date)}</p>
           </div>
         </div>
@@ -2304,6 +2688,7 @@ function ReminderCreateScreen({
                 <div>
                   {visibleRoutineTypes.map((key) => (
                     <button type="button" className={routineTypes.includes(key) ? 'selected' : ''} disabled={existingTypes.has(key)} key={key} onClick={() => toggleRoutineType(key)}>
+                      <RoutinePhoto type={key} className="routine-picker-photo" />
                       <strong>{routineOptionLabel(key, selectedPet, speciesCareProfiles)}</strong>
                       {existingTypes.has(key) && <em>이미 있음</em>}
                     </button>
@@ -2314,6 +2699,7 @@ function ReminderCreateScreen({
                 <div>
                   {customDisplayedTypes.map((key) => (
                     <button type="button" className={routineTypes.includes(key) ? 'selected' : ''} key={key} onClick={() => toggleRoutineType(key)}>
+                      <RoutinePhoto type={key} className="routine-picker-photo" />
                       <strong>{routineOptionLabel(key, selectedPet, speciesCareProfiles)}</strong>
                     </button>
                   ))}
@@ -2415,7 +2801,7 @@ function PhotoPicker({ value, onChange }: { value?: string; onChange: (value?: s
   )
 }
 
-function DateRecordsScreen({ date, records, onBack, onOpenRecord, onDelete, onAddMemo }: { date: string; records: DisplayPetRecord[]; onBack: () => void; onOpenRecord: (record: DisplayPetRecord) => void; onDelete: (id: string | string[]) => void; onAddMemo: (memo: string) => void }) {
+function DateRecordsScreen({ date, records, mobileActions, onBack, onOpenRecord, onDelete, onAddMemo }: { date: string; records: DisplayPetRecord[]; mobileActions?: ReactNode; onBack: () => void; onOpenRecord: (record: DisplayPetRecord) => void; onDelete: (id: string | string[]) => void; onAddMemo: (memo: string) => void }) {
   const [memo, setMemo] = useState('')
   const saveMemo = () => {
     const nextMemo = memo.trim()
@@ -2424,10 +2810,10 @@ function DateRecordsScreen({ date, records, onBack, onOpenRecord, onDelete, onAd
     setMemo('')
   }
 
-  return <main className="diary-create-screen date-records-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}>←</button><strong>{formatDate(date)} 기록</strong><span /></header><section className="date-records-content">{records.length ? records.map((record) => {
+  return <main className="diary-create-screen date-records-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}>←</button><strong>{formatDate(date)}</strong><span /></header><section className="date-records-content compact-date-records">{records.length ? records.map((record) => {
     const tag = calendarRecordTag(record)
-    return <article key={record.id}><button type="button" onClick={() => onOpenRecord(record)}><span className="selected-date-record-icon">{tag.iconSrc ? <img src={tag.iconSrc} alt="" /> : tag.icon}</span><span><strong>{tag.label}</strong><small>{recordSummary(record)}</small></span></button><button type="button" aria-label="기록 삭제" onClick={() => onDelete(record.sourceIds ?? record.id)}>×</button></article>
-  }) : <p>이 날짜에 작성된 기록이 없어요.</p>}</section><section className="date-memo-composer"><label>메모<textarea value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="이 날짜에 남길 메모" /></label><button type="button" disabled={!memo.trim()} onClick={saveMemo}>메모 추가</button></section></main>
+    return <article key={record.id}><button type="button" onClick={() => onOpenRecord(record)}><span className="date-record-mark" aria-hidden="true">{tag.iconSrc ? <img className={tag.iconIsRoutineCard ? 'routine-record-mark-image' : ''} src={tag.iconSrc} alt="" /> : tag.icon}</span><strong>{tag.label}</strong></button><button type="button" aria-label={`${tag.label} 기록 삭제`} onClick={() => onDelete(record.sourceIds ?? record.id)}>×</button></article>
+  }) : <p>이 날짜에 작성된 기록이 없어요.</p>}</section>{mobileActions ? <section className="date-records-mobile-actions">{mobileActions}</section> : null}<section className="date-memo-composer"><label>메모<textarea value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="이 날짜에 남길 메모" /></label><button type="button" disabled={!memo.trim()} onClick={saveMemo}>메모 추가</button></section></main>
 }
 
 function DiaryNotice({ records }: { records: PetRecord[] }) {
@@ -2467,7 +2853,19 @@ function DiaryInsightBanner({
   )
 }
 
-function DataVisualization({ records, petName, onCreateQna }: { records: PetRecord[]; petName: string; onCreateQna?: () => void }) {
+function DataVisualization({
+  records,
+  petName,
+  onCreateQna,
+  onShedComplete,
+  onShedNotYet,
+}: {
+  records: PetRecord[]
+  petName: string
+  onCreateQna?: () => void
+  onShedComplete?: () => void
+  onShedNotYet?: () => void
+}) {
   const [activeMetric, setActiveMetric] = useState<'shed' | 'environment' | 'weight' | 'poop'>('shed')
   const environmentRecords = records
     .filter((record) => record.environmentRecord)
@@ -2477,12 +2875,12 @@ function DataVisualization({ records, petName, onCreateQna }: { records: PetReco
   const humidityRecords = environmentRecords.filter((record) => record.environmentRecord?.metricType === 'humidity')
   const weightRecords = records.filter((record) => record.type === 'weight' && record.weight !== undefined).sort(compareRecordTime)
   const shedRecords = records.filter((record) => record.type === 'shed').sort(compareRecordTime)
-  const displayShedRecords = collapseShedRecordsForDisplay(shedRecords).filter((record) => record.type === 'shed')
+  const shedSummary = getShedCycleSummary(shedRecords)
   const poopRecords = records.filter((record) => record.type === 'poop').sort(compareRecordTime)
-  const hasAnyData = environmentRecords.length > 0 || weightRecords.length > 0 || displayShedRecords.length > 0 || poopRecords.length > 0
+  const hasAnyData = environmentRecords.length > 0 || weightRecords.length > 0 || shedSummary.count > 0 || poopRecords.length > 0
   if (!hasAnyData) return <div className="data-visualization"><DataVisualizationHeader petName={petName} onCreateQna={onCreateQna} /><div className="data-visualization-empty">아직 모아볼 기록이 없어요.</div></div>
   const metricCounts = {
-    shed: displayShedRecords.length,
+    shed: shedSummary.count,
     environment: environmentRecords.length,
     weight: weightRecords.length,
     poop: poopRecords.length,
@@ -2492,9 +2890,11 @@ function DataVisualization({ records, petName, onCreateQna }: { records: PetReco
   return (
     <div className="data-visualization">
       <DataVisualizationHeader petName={petName} onCreateQna={onCreateQna} />
-      <DiaryInsightBanner records={records} petName={petName} />
+      <DiaryInsightBanner records={records} petName={petName} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} />
       <div className="record-collection-tabs" aria-label="모아보기 항목">
-        <button className={selectedMetric === 'shed' ? 'active' : ''} type="button" onClick={() => setActiveMetric('shed')}>탈피 <span>{metricCounts.shed}</span></button>
+        <button className={selectedMetric === 'shed' ? 'active' : ''} type="button" onClick={() => setActiveMetric('shed')}>
+          탈피 {shedSummary.ongoing ? <em>탈피 중</em> : null}<span>{metricCounts.shed}</span>
+        </button>
         <button className={selectedMetric === 'environment' ? 'active' : ''} type="button" onClick={() => setActiveMetric('environment')}>온습도 <span>{metricCounts.environment}</span></button>
         <button className={selectedMetric === 'weight' ? 'active' : ''} type="button" onClick={() => setActiveMetric('weight')}>체중 <span>{metricCounts.weight}</span></button>
         <button className={selectedMetric === 'poop' ? 'active' : ''} type="button" onClick={() => setActiveMetric('poop')}>배변 <span>{metricCounts.poop}</span></button>
@@ -2610,7 +3010,15 @@ function buildShedInsight(records: PetRecord[], petName: string): DiaryInsight |
   const ongoingShed = getOngoingShedRecord(records)
   if (ongoingShed) {
     const days = daysBetween(ongoingShed.date, toDateKey(new Date()))
-    if (days < 1) return null
+    if (days < 1) {
+      return {
+        id: 'shed-ongoing',
+        metric: 'shed',
+        level: 'normal',
+        title: '탈피 중',
+        body: `${petName}의 탈피 시작 기록이 있어요. 완료 확인은 내일부터 표시돼요.`,
+      }
+    }
     const levelNumber = shedDelayLevel(days)
     const durations = buildShedDurationRecords(records)
     const averageDuration = averageDurationDays(durations)
@@ -2619,7 +3027,7 @@ function buildShedInsight(records: PetRecord[], petName: string): DiaryInsight |
       id: 'shed-ongoing',
       metric: 'shed',
       level: levelNumber >= 4 ? 'urgent' : levelNumber >= 2 ? 'caution' : 'notice',
-      title: levelNumber > 0 ? `탈피가 ${levelNumber}단계 확인 상태예요.` : '탈피가 완료됐나요?',
+      title: levelNumber > 0 ? `탈피 중 · ${levelNumber}단계 확인 상태예요.` : '탈피 중 · 탈피가 완료됐나요?',
       body: levelNumber > 0
         ? `${durationHint}${petName}의 탈피 시작 기록 후 ${days}일이 지났어요. 탈피가 끝났는지 확인해주세요.`
         : `${durationHint}${petName}의 탈피 시작 기록이 있어요. 탈피가 끝났다면 완료로 남겨주세요.`,
@@ -2726,6 +3134,20 @@ function buildShedDurationRecords(records: PetRecord[]) {
   })
 }
 
+function getShedCycleSummary(records: PetRecord[]) {
+  const sheds = records.filter((record) => record.type === 'shed').sort(compareRecordTime)
+  const completedCycles = buildShedDurationRecords(sheds)
+  const pairedIds = new Set(completedCycles.flatMap((record) => record.sourceIds ?? []))
+  const standaloneCompletions = sheds.filter((record) => isCompletedShed(record) && !pairedIds.has(record.id))
+  const ongoing = getOngoingShedRecord(sheds)
+
+  return {
+    completedCycles,
+    ongoing,
+    count: completedCycles.length + standaloneCompletions.length + (ongoing ? 1 : 0),
+  }
+}
+
 function collapseShedRecordsForDisplay(records: PetRecord[]): DisplayPetRecord[] {
   const combinedSheds = buildShedDurationRecords(records)
   const pairedShedIds = new Set(combinedSheds.flatMap((record) => record.sourceIds ?? []))
@@ -2776,8 +3198,9 @@ function WeightLineChart({ records }: { records: PetRecord[] }) {
 function ShedCycleChart({ records }: { records: PetRecord[] }) {
   const durations = buildShedDurationRecords(records)
   const average = averageDurationDays(durations)
-  if (durations.length === 0) return <section className="environment-chart"><header><strong>탈피 기간</strong><span>탈피 시작과 완료 기록이 더 필요해요</span></header></section>
-  return <SimpleLineChart title="탈피 기간" subtitle={`평균 ${average}일 정도 탈피해요`} unit="일" records={durations} getValue={(record) => 'duration' in record ? Number(record.duration) : 0} />
+  const ongoing = getOngoingShedRecord(records)
+  if (durations.length === 0) return <section className="environment-chart shed-cycle-status"><header><strong>탈피 기간</strong><span>{ongoing ? '탈피 중' : '탈피 시작과 완료 기록이 더 필요해요'}</span></header></section>
+  return <SimpleLineChart title="탈피 기간" subtitle={`${ongoing ? '탈피 중 · ' : ''}평균 ${average}일 정도 탈피해요`} unit="일" records={durations} getValue={(record) => 'duration' in record ? Number(record.duration) : 0} />
 }
 
 function PoopStatusChart({ records }: { records: PetRecord[] }) {
@@ -2834,8 +3257,8 @@ function EnvironmentLineChart({ title, records }: { title: string; records: PetR
   )
 }
 
-function DataVisualizationScreen({ records, petName, onBack, onCreateQna }: { records: PetRecord[]; petName: string; onBack: () => void; onCreateQna?: () => void }) {
-  return <main className="diary-create-screen data-visualization-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}>←</button><strong>기록 모아보기</strong><span /></header><DataVisualization records={records} petName={petName} onCreateQna={onCreateQna} /></main>
+function DataVisualizationScreen({ records, petName, onBack, onCreateQna, onShedComplete, onShedNotYet }: { records: PetRecord[]; petName: string; onBack: () => void; onCreateQna?: () => void; onShedComplete?: () => void; onShedNotYet?: () => void }) {
+  return <main className="diary-create-screen data-visualization-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}>←</button><strong>기록 모아보기</strong><span /></header><DataVisualization records={records} petName={petName} onCreateQna={onCreateQna} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} /></main>
 }
 
 function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
@@ -3120,33 +3543,55 @@ function getRecordMemo(draft: RecordDraft) {
   return draft.status || '기록'
 }
 
-function recordSummary(record: PetRecord) {
-  if (record.environmentRecord) return `${formatEnvironmentValue(record.environmentRecord)} · ${record.environmentRecord.riskLevel === 0 ? '적정 범위' : `${record.environmentRecord.riskLevel}단계 ${environmentRiskLabel(record.environmentRecord.riskLevel)}`}`
-  if (record.type === 'food' && getRecordFoodNames(record).length) return getRecordFoodNames(record).join(' · ')
-  if (record.type === 'weight' && record.weight !== undefined) return `${formatWeightValue(record.weight)}g`
-  return record.memo?.trim() || recordMeta[record.type].label
+function getRoutineTypeFromRecord(record: PetRecord): ReminderType | null {
+  if (record.environmentRecord) {
+    if (record.environmentRecord.metricType === 'humidity') return 'humidity'
+    return record.environmentRecord.measurementType === 'water' ? 'water_temperature' : 'temperature'
+  }
+  if (record.type === 'food') return 'feed'
+  if (record.type === 'weight') return 'weight'
+
+  const memo = record.memo?.replace(/\s+/g, '') ?? ''
+  if (memo.includes('물그릇교체') || memo.includes('물교체') || memo.includes('물관리')) return 'water'
+  if (memo.includes('분무')) return 'mist'
+  if (memo.includes('부분청소')) return 'partial_cleaning'
+  if (memo.includes('전체청소')) return 'full_cleaning'
+  if (memo.includes('바닥재교체')) return 'substrate_change'
+  if (memo.includes('구조물세척')) return 'structure_cleaning'
+  if (memo.includes('벽닦기')) return 'wall_wipe'
+  if (memo.toUpperCase().includes('UVB')) return 'uvb_check'
+  if (memo.includes('수질확인')) return 'water_quality'
+  if (memo.includes('여과기상태확인') || memo.includes('여과기확인')) return 'filter_check'
+  if (record.type === 'cleaning') return 'cleaning'
+  return null
 }
 
-function calendarRecordTag(record: PetRecord) {
-  if (record.environmentRecord) {
-    const label = record.environmentRecord.metricType === 'humidity'
-      ? '습도'
-      : record.environmentRecord.measurementType === 'water'
-        ? '수온'
-        : '온도'
-    return {
-      icon: record.environmentRecord.metricType === 'humidity' ? '??' : '???',
-      label,
-      className: record.environmentRecord.metricType,
-    }
-  }
+function calendarRecordTag(record: PetRecord): CalendarRecordTag {
   if (record.type === 'poop') return { icon: recordMeta.poop.icon, iconSrc: incidentIconSrc.poop, label: recordMeta.poop.label, className: 'poop' }
   if (record.type === 'shed') return { icon: recordMeta.shed.icon, iconSrc: incidentIconSrc.shed, label: recordMeta.shed.label, className: 'shed' }
   if (record.type === 'hospital') return { icon: recordMeta.hospital.icon, iconSrc: incidentIconSrc.hospital, label: '진료', className: 'hospital' }
   if (record.type === 'other' && record.memo?.startsWith('메이팅')) return { icon: '', iconSrc: incidentIconSrc.mating, label: '메이팅', className: 'mating' }
   if (record.type === 'other' && record.memo?.startsWith('산란')) return { icon: '', iconSrc: incidentIconSrc.egg, label: '산란', className: 'egg' }
   if (record.type === 'other' && record.memo?.startsWith('약')) return { icon: '', iconSrc: incidentIconSrc.medicine, label: '약', className: 'medicine' }
-  if (record.type === 'other' && record.memo?.includes('물')) return { icon: '', label: '물', className: 'water' }
+
+  const routineType = getRoutineTypeFromRecord(record)
+  const photoKey = routineType ? routinePhotoKeys[routineType] : undefined
+  if (routineType && photoKey) {
+    const label = routineType === 'humidity'
+      ? '습도'
+      : routineType === 'water_temperature'
+        ? '수온'
+        : routineType === 'temperature'
+          ? '온도'
+          : reminderMeta[routineType].label
+    return {
+      icon: '',
+      iconSrc: `/assets/routine-icons/cards/${photoKey}.png`,
+      iconIsRoutineCard: true,
+      label,
+      className: routineType.replaceAll('_', '-'),
+    }
+  }
   return { icon: recordMeta[record.type].icon, label: recordMeta[record.type].label, className: record.type }
 }
 

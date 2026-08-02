@@ -49,7 +49,16 @@ export async function saveAppData<T extends { id: string }>(
   if (error) throw error
 }
 
-export async function deleteAppData(table: AppDataTable, id: string) {
-  const { error } = await supabase.from(table).delete().eq('id', id)
+export async function deleteAppData(table: AppDataTable, id: string, userId: string) {
+  const { data, error } = await supabase
+    .from(table)
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select('id')
+
   if (error) throw error
+  if (!data?.some((row) => row.id === id)) {
+    throw new Error(`No ${table} row was deleted.`)
+  }
 }

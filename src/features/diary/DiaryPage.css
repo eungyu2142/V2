@@ -94,6 +94,7 @@
 .calendar-tags small.pending{background:var(--color-accent-100);color:var(--color-accent-700)}
 .calendar-tags small i{font-style:normal;flex:0 0 auto}
 .calendar-tags em{color:var(--color-text-secondary);font-size:.68rem;font-style:normal}
+.calendar-tags small.calendar-tag-more{justify-content:flex-start;background:transparent;color:var(--color-text-secondary);font-weight:900}
 .calendar-dots{display:flex;align-items:center;justify-content:center;gap:4px;min-height:18px;padding-top:2px}
 .calendar-dots .calendar-dot{display:block;width:6px;height:6px;padding:0;border-radius:50%;background:var(--color-primary-600);overflow:hidden}
 .calendar-dots .calendar-dot.food{background:var(--color-primary-600)}
@@ -354,13 +355,47 @@
 .hospital-review-picker h2{margin:0;font-size:1.05rem}
 .hospital-review-picker p{margin:4px 0 0;color:var(--color-text-secondary);font-size:.82rem}
 .hospital-review-picker>header>button{display:grid;width:34px;height:34px;place-items:center;flex:0 0 auto;border:0;border-radius:50%;background:var(--color-background);color:var(--color-text-secondary);font-size:1.15rem}
+.hospital-review-picker-new{min-height:42px;border:0;border-radius:var(--radius-md);background:var(--color-primary-600);color:var(--color-text-primary);font-weight:800}
 .hospital-review-picker-list{display:grid;gap:0;overflow:auto}
 .hospital-review-picker-list>button{display:grid;gap:6px;width:100%;min-height:66px;padding:12px 2px;border:0;border-bottom:1px solid var(--color-border);background:transparent;color:var(--color-text-primary);text-align:left}
 .hospital-review-picker-list>button:hover{background:var(--color-primary-50)}
+.hospital-review-picker-list>button:disabled{cursor:not-allowed;opacity:.5}
 .hospital-review-picker-list>button>span{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
 .hospital-review-picker-list strong,.hospital-review-picker-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hospital-review-picker-list small{color:var(--color-text-secondary);font-size:.76rem}
 .hospital-review-picker-empty{padding:28px 0;text-align:center}
+.diary-modal:has(.clinic-record-editor),.diary-modal:has(.clinic-record-next-actions){top:50%;right:auto;bottom:auto;left:50%;width:min(620px,calc(100vw - 32px));max-height:min(86svh,760px);transform:translate(-50%,-50%);border-radius:12px;box-shadow:0 20px 54px color-mix(in srgb,var(--color-primary-900) 24%,transparent)}
+.clinic-record-editor{display:grid;gap:16px;padding:20px}
+.clinic-record-editor>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border)}
+.clinic-record-editor h2,.clinic-record-editor p{margin:0}
+.clinic-record-editor>header p{margin-top:4px;color:var(--color-text-secondary);font-size:.82rem}
+.clinic-record-editor>header>button{display:grid;width:34px;height:34px;place-items:center;border:0;border-radius:50%;background:var(--color-background);font-size:1.15rem}
+.clinic-record-fields{display:grid;gap:13px;overflow:auto}
+.clinic-record-fields label,.clinic-record-fields fieldset{display:grid;gap:6px;margin:0;color:var(--color-text-secondary);font-size:.82rem}
+.clinic-record-fields label>span{color:var(--color-error-600)}
+.clinic-record-fields input,.clinic-record-fields textarea,.clinic-record-fields select{width:100%;min-height:42px;padding:9px 11px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text-primary);font:inherit}
+.clinic-record-fields textarea{resize:vertical}
+.clinic-record-fields fieldset{padding:0;border:0}
+.clinic-record-fields legend{margin-bottom:7px;color:var(--color-text-primary);font-weight:700}
+.clinic-record-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.clinic-record-medicine{grid-template-columns:repeat(2,minmax(0,1fr))}
+.clinic-record-choice{display:flex;gap:8px}
+.clinic-record-choice button{min-width:72px;min-height:38px;border:1px solid var(--color-border);border-radius:9999px;background:var(--color-surface);color:var(--color-text-primary)}
+.clinic-record-choice button.active{border-color:var(--color-primary-600);background:var(--color-primary-50)}
+.clinic-record-error{color:var(--color-error-600);font-size:.85rem}
+.clinic-record-editor>footer{display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--color-border)}
+.clinic-record-editor>footer button{min-height:42px;padding:0 18px;border:1px solid var(--color-primary-200);border-radius:9999px;background:var(--color-surface);color:var(--color-primary-700);font-weight:800}
+.clinic-record-editor>footer button:last-child{border-color:var(--color-primary-600);background:var(--color-primary-600);color:var(--color-text-primary)}
+.clinic-record-editor>footer button:disabled{opacity:.5}
+.clinic-record-next-actions{display:grid;gap:18px;padding:22px}
+.clinic-record-next-actions>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--color-border)}
+.clinic-record-next-actions h2,.clinic-record-next-actions p{margin:0}
+.clinic-record-next-actions p{margin-top:5px;color:var(--color-text-secondary);font-size:.85rem}
+.clinic-record-next-actions>header>button{display:grid;width:34px;height:34px;place-items:center;border:0;border-radius:50%;background:var(--color-background);color:var(--color-text-secondary);font-size:1.15rem}
+.clinic-record-next-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.clinic-record-next-buttons button{min-height:46px;padding:0 18px;border:1px solid var(--color-primary-300);border-radius:9999px;background:var(--color-surface);color:var(--color-primary-700);font-weight:800}
+.clinic-record-next-buttons button:first-child{border-color:var(--color-primary-600);background:var(--color-primary-600);color:var(--color-text-primary)}
+.clinic-record-next-buttons button:disabled{cursor:not-allowed;opacity:.45}
 
 @media (min-width: 761px) {
   .diary-modal:has(.feeding-food-dialog),
@@ -388,6 +423,11 @@
     transform:none;
   }
   .hospital-review-picker{padding:16px}
+  .diary-modal:has(.clinic-record-editor),.diary-modal:has(.clinic-record-next-actions){top:auto;right:0;bottom:0;left:0;width:auto;max-height:92svh;transform:none;border-radius:12px 12px 0 0}
+  .clinic-record-editor{padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .clinic-record-row,.clinic-record-medicine{grid-template-columns:1fr}
+  .clinic-record-next-actions{padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+  .clinic-record-next-buttons{grid-template-columns:1fr}
 }
 
 .alarm-board{display:grid;gap:18px;padding-top:12px}
@@ -666,12 +706,78 @@
 .data-visualization{display:grid;gap:16px;min-width:min(100%,600px);padding:4px}
 .data-visualization-screen{min-height:100vh}.data-visualization-screen>.data-visualization{width:min(100%,720px);margin:24px auto;padding:18px 0}
 .date-records-screen{min-height:100vh}.date-records-content{width:min(100%,680px);margin:24px auto;padding:0 4px}.date-records-content article{display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:center;border-bottom:1px solid var(--color-background)}.date-records-content article>button:first-child{display:flex;align-items:center;gap:10px;width:100%;padding:14px 0;border:0;background:transparent;text-align:left}.date-records-content article>button:first-child>span:last-child{display:grid;gap:3px}.date-records-content strong{color:var(--color-text-primary);font-size:.9rem}.date-records-content small{color:var(--color-text-secondary);font-size:.8rem}.date-records-content article>button:last-child{border:0;background:transparent;color:var(--color-text-secondary);font-size:1.2rem}.date-records-content>p{padding:30px 0;color:var(--color-text-secondary)}
+.compact-date-records article>button:first-child{gap:9px;min-height:48px;padding:10px 0;color:var(--color-text-primary)}
+.compact-date-records strong{font-size:1rem}
+.date-record-mark{display:grid;width:30px;height:30px;flex:0 0 auto;overflow:hidden;place-items:center;border-radius:50%;background:var(--color-primary-50);color:var(--color-primary-600);font-size:1rem}
+.date-record-mark img{width:24px;height:24px;object-fit:contain}
+.date-record-mark img.routine-record-mark-image{width:100%;height:100%;object-fit:contain}
+.record-detail-mark{overflow:hidden}
+.record-detail-mark img{width:38px;height:38px;object-fit:contain}
+.record-detail-mark img.routine-record-mark-image{width:100%;height:100%;object-fit:contain}
+.calendar-tags small img.routine-record-mark-image{object-fit:contain!important}
+
+/* Keep two record labels and the +N row inside compact calendar cells. */
+.diary-page .calendar-day {
+  gap: 2px !important;
+  padding: 5px 7px !important;
+}
+
+.diary-page .day-number {
+  font-size: .9rem !important;
+  line-height: 1.05 !important;
+}
+
+.diary-page .calendar-tags {
+  gap: 2px !important;
+}
+
+.diary-page .calendar-tags small,
+.diary-page .calendar-tags small.calendar-tag-more {
+  min-height: 14px !important;
+  padding: 0 3px !important;
+  font-size: .56rem !important;
+  line-height: 1 !important;
+}
+
+.diary-page .calendar-tags small img {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* Diary uses its own compact header, so it needs less top space than other pages. */
+.app-shell:not(.map-shell):has(.diary-page > .diary-pet-bar) {
+  padding-top: 10px !important;
+}
+
+@media (max-width: 900px) {
+  .app-shell:not(.map-shell):has(.diary-page > .diary-pet-bar) {
+    padding-top: 6px !important;
+  }
+}
+
+@media (min-width: 901px) {
+  .diary-page .calendar-month-bar {
+    margin-bottom: 4px !important;
+  }
+
+  .diary-page .calendar-weekdays span {
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+  }
+
+  .diary-page .calendar-days {
+    grid-template-rows: repeat(6, minmax(94px, 1fr)) !important;
+  }
+}
+.date-records-mobile-actions{display:none}
 .data-visualization header{display:grid;gap:3px}.data-visualization-heading{display:flex!important;align-items:center;justify-content:space-between;gap:12px}.data-visualization h2{margin:0;color:var(--color-text-primary);font-size:1.1rem}.data-visualization p{margin:0;color:var(--color-text-secondary);font-size:.78rem}
 .record-collection-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .record-collection-tabs button{display:flex;min-height:42px;align-items:center;justify-content:center;gap:6px;border:1px solid var(--color-primary-100);border-radius:999px;background:#fff;color:var(--color-text-secondary);font-size:.82rem;font-weight:900}
 .record-collection-tabs button.active{border-color:var(--color-primary-600);background:var(--color-primary-600);color:#fff}
+.record-collection-tabs em{font-style:normal;font-size:.68rem;font-weight:900;white-space:nowrap}
 .record-collection-tabs span{display:grid;min-width:20px;height:20px;place-items:center;border-radius:999px;background:var(--color-primary-50);color:var(--color-primary-700);font-size:.68rem}
 .record-collection-tabs button.active span{background:#fff;color:var(--color-primary-700)}
+.shed-cycle-status header span{color:var(--color-primary-700);font-weight:900}
 .record-collection-qna{min-height:44px;padding:0 22px;border:1px solid var(--color-primary-600);border-radius:999px;background:var(--color-primary-600);color:var(--color-surface);font-size:.9rem;font-weight:900;white-space:nowrap;box-shadow:0 16px 30px color-mix(in srgb,var(--color-primary-600) 18%,transparent)}
 .chart-type-switcher{display:flex;gap:6px}.chart-type-switcher button{min-height:32px;padding:0 10px;border:1px solid var(--color-primary-100);border-radius:999px;background:#fff;color:var(--color-text-secondary);font-size:.74rem;font-weight:800}.chart-type-switcher button.active{background:var(--color-primary-50);color:var(--color-primary-600)}
 .line-chart-wrap{position:relative;padding:8px 0 0 27px;border-bottom:1px solid var(--color-border)}
@@ -1636,6 +1742,10 @@
   align-content: start !important;
 }
 
+.diary-page .daily-plan-panel.is-collapsed {
+  min-height: 0 !important;
+}
+
 .diary-page .daily-plan-panel header button {
   min-height: 52px !important;
   padding: 0 26px !important;
@@ -1644,6 +1754,137 @@
   color: #fff !important;
   font-size: .98rem !important;
   box-shadow: 0 16px 30px color-mix(in srgb,var(--diary-accent) 18%,transparent) !important;
+}
+
+.diary-page .daily-plan-panel header .daily-plan-list-toggle {
+  display: flex !important;
+  min-width: 0 !important;
+  min-height: 52px !important;
+  flex: 1 1 auto !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 7px 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  text-align: left !important;
+  box-shadow: none !important;
+}
+
+.diary-page .daily-plan-panel header .daily-plan-list-toggle:hover:not(:disabled),
+.diary-page .daily-plan-panel header .daily-plan-list-toggle:focus-visible {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.daily-plan-list-toggle > span:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.daily-plan-list-toggle strong {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-plan-list-toggle small {
+  color: var(--color-text-secondary);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.daily-plan-list-toggle-state {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-primary-700);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.daily-plan-list-toggle-state > span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-50);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.daily-plan-list-content {
+  display: grid;
+  gap: 12px;
+}
+
+.daily-plan-inline-list {
+  display: grid;
+  gap: 6px;
+  padding: 4px 2px 0;
+}
+
+.daily-plan-inline-list > .daily-plan-list + .daily-plan-list {
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border);
+}
+
+.daily-plan-completed-summary {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: .82rem;
+  text-align: left;
+}
+
+.daily-plan-completed-summary:hover,
+.daily-plan-completed-summary:focus-visible {
+  color: var(--color-primary-700);
+}
+
+/* Keep the expanded pending list in normal flow so it cannot overlap incident actions. */
+.diary-page .diary-detail-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+.diary-page .daily-plan-panel,
+.diary-page .incident-add-panel {
+  position: relative !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+}
+
+.diary-page .daily-plan-inline-list,
+.diary-page .daily-plan-inline-list .daily-plan-list,
+.diary-page .daily-plan-inline-list .daily-plan-task-row {
+  position: relative !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.completed-task-group {
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.completed-task-group .daily-plan-task strong {
+  color: var(--color-text-secondary);
 }
 
 .diary-page .daily-plan-first-empty button {
@@ -1931,6 +2172,108 @@
   }
 }
 
+/* Today is a subtle calendar state; the task list opens in its own dialog. */
+.diary-page .calendar-day.today,
+.diary-page .calendar-day.today.selected {
+  background: color-mix(in srgb, var(--color-primary-600) 10%, var(--color-surface)) !important;
+}
+
+/* The shared calendar styles target every direct span. Diary cells have both a
+   date header and a records container, so reset them before styling the number. */
+.diary-page .calendar-day > .day-head,
+.diary-page .calendar-day > .calendar-tags,
+.diary-page .calendar-day.today > .day-head,
+.diary-page .calendar-day.today > .calendar-tags {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.diary-page .calendar-day > .day-head {
+  display: flex !important;
+}
+
+.diary-page .calendar-day > .calendar-tags {
+  display: grid !important;
+}
+
+.diary-page .calendar-day.today .day-number {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  color: var(--color-surface);
+}
+
+.diary-page .daily-plan-panel {
+  min-height: 0 !important;
+}
+
+.diary-modal:has(.daily-plan-dialog) {
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(82svh, 720px);
+  transform: translate(-50%, -50%);
+  border-radius: 10px;
+  box-shadow: 0 20px 54px color-mix(in srgb, var(--color-primary-900) 22%, transparent);
+}
+
+.diary-modal:has(.daily-plan-dialog) .diary-modal-close {
+  display: grid;
+}
+
+.daily-plan-dialog {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.daily-plan-dialog > header {
+  padding-right: 38px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 14px;
+}
+
+.daily-plan-dialog h2,
+.daily-plan-dialog p {
+  margin: 0;
+}
+
+.daily-plan-dialog h2 {
+  color: var(--color-text-primary);
+  font-size: 1.15rem;
+}
+
+.daily-plan-dialog header p {
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: .8rem;
+}
+
+@media (max-width: 720px) {
+  .diary-modal:has(.daily-plan-dialog) {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 88svh;
+    transform: none;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .daily-plan-dialog {
+    padding: 20px 18px max(22px, env(safe-area-inset-bottom));
+  }
+}
+
 /* Latest diary polish: keep record tags full-width and avoid top overlap on mobile. */
 .diary-page .calendar-tags,
 .diary-page .calendar-tags small {
@@ -2192,4 +2535,225 @@
 
 .diary-modal:has(.smart-add-sheet) .diary-modal-close {
   display: grid;
+}
+
+/* 2026-07-30 Keep the desktop diary inside one viewport. */
+@media (min-width: 901px) {
+  html:has(.diary-page > .diary-pet-bar),
+  body:has(.diary-page > .diary-pet-bar) {
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .app-shell:not(.map-shell):has(.diary-page > .diary-pet-bar) {
+    height: 100svh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .app-shell:not(.map-shell):has(.diary-page > .diary-pet-bar) .app-main {
+    height: 100svh !important;
+    min-height: 0 !important;
+    padding-bottom: 14px !important;
+    overflow: hidden !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    gap: 12px !important;
+    overflow: hidden !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-content-shell,
+  .diary-page:has(> .diary-pet-bar) .diary-main-flow,
+  .diary-page:has(> .diary-pet-bar) .diary-workspace,
+  .diary-page:has(> .diary-pet-bar) .diary-calendar-area {
+    min-height: 0 !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-content-shell {
+    flex: 1 1 auto !important;
+    height: 0 !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-main-flow,
+  .diary-page:has(> .diary-pet-bar) .diary-workspace,
+  .diary-page:has(> .diary-pet-bar) .diary-calendar-area {
+    height: 100% !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-main-flow {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-workspace {
+    align-items: stretch !important;
+    padding-top: 0 !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-calendar-area {
+    grid-template-rows: minmax(0, 1fr) auto !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .calendar-month {
+    display: grid !important;
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .calendar-days {
+    grid-template-rows: repeat(6, minmax(0, 1fr)) !important;
+    min-height: 0 !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .calendar-day {
+    min-height: 0 !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-detail-panel {
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    scrollbar-width: none;
+  }
+
+  .diary-page:has(> .diary-pet-bar) .diary-detail-panel::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .date-records-mobile-actions {
+    display: grid;
+    width: min(100%, 680px);
+    gap: 14px;
+    margin: 14px auto 0;
+  }
+
+  .date-records-mobile-actions .daily-plan-panel,
+  .date-records-mobile-actions .incident-add-panel {
+    padding: 14px !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 12px !important;
+    background: var(--color-surface) !important;
+    box-shadow: none !important;
+  }
+
+  .date-records-mobile-actions .incident-add-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .date-records-screen .date-records-content {
+    margin-top: 14px;
+  }
+}
+
+/* Routine artwork uses the exact user-provided horizontal cards. */
+.routine-photo {
+  display: block;
+  flex: 0 0 auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.routine-recommendation-field button:not(.routine-more-button):has(.routine-picker-photo) {
+  display: flex !important;
+  min-height: 76px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  overflow: hidden;
+  padding: 8px 12px !important;
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
+}
+
+.routine-recommendation-field button:not(.routine-more-button):not(:has(.routine-photo)) {
+  justify-content: center !important;
+}
+
+.routine-recommendation-field button:not(.routine-more-button) > .routine-picker-photo {
+  display: block !important;
+  width: 56px !important;
+  height: 56px !important;
+  flex: 0 0 56px !important;
+  object-fit: contain;
+}
+
+.routine-recommendation-field button:not(.routine-more-button):has(.routine-picker-photo) strong {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+  clip: auto !important;
+  color: inherit !important;
+  font-size: .84rem !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+  white-space: normal !important;
+}
+
+.routine-recommendation-field button:not(.routine-more-button):has(.routine-picker-photo).selected {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-600) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+  outline: 0;
+}
+
+.routine-recommendation-field button:not(.routine-more-button):has(.routine-picker-photo).selected::after {
+  content: none;
+}
+
+.daily-plan-task.has-routine-photo {
+  grid-template-columns: 34px minmax(0, 1fr) 24px !important;
+}
+
+.daily-plan-routine-photo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.care-plan-summary {
+  display: flex !important;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.care-plan-summary > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.care-plan-routine-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+@media (max-width: 520px) {
+  .routine-recommendation-field button:not(.routine-more-button):has(.routine-picker-photo) {
+    min-height: 68px !important;
+    gap: 7px !important;
+    padding: 6px 8px !important;
+  }
+
+  .routine-recommendation-field button:not(.routine-more-button) > .routine-picker-photo {
+    width: 48px !important;
+    height: 48px !important;
+    flex-basis: 48px !important;
+  }
 }
