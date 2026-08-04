@@ -189,21 +189,27 @@ export default function PetsScreen({
           <input aria-label="펫 검색" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="예시) 크레스티드 게코" />
           {query && <button type="button" aria-label="검색어 지우기" onClick={() => setQuery('')}>×</button>}
         </label>
-        <div className="my-pet-filter-row">
-          <div className="filter-tags" aria-label="동물 분류 필터">
-            {visibleCategoryOptions.map((item) => (
-              <button
-                className={(item === 'all' ? selectedCategories.length === 0 : isVisiblePetCategory(item) && selectedCategories.includes(item)) ? 'active' : ''}
-                type="button"
-                key={item}
-                onClick={() => toggleCategory(item)}
-                aria-pressed={item === 'all' ? selectedCategories.length === 0 : isVisiblePetCategory(item) && selectedCategories.includes(item)}
-              >
-                <span>{animalCategoryLabels[item]}</span>
-              </button>
-            ))}
-          </div>
-          <button className="pet-add-icon" type="button" onClick={onRegisterPet} aria-label="펫 등록">+</button>
+        <div className={`my-pet-filter-row ${pets.length === 0 ? 'first-pet-state' : ''}`}>
+          {pets.length === 0 ? (
+            <button className="pet-first-register-button" type="button" onClick={onRegisterPet}>나의 첫 반려동물 등록하기</button>
+          ) : (
+            <>
+              <div className="filter-tags" aria-label="동물 분류 필터">
+                {visibleCategoryOptions.map((item) => (
+                  <button
+                    className={(item === 'all' ? selectedCategories.length === 0 : isVisiblePetCategory(item) && selectedCategories.includes(item)) ? 'active' : ''}
+                    type="button"
+                    key={item}
+                    onClick={() => toggleCategory(item)}
+                    aria-pressed={item === 'all' ? selectedCategories.length === 0 : isVisiblePetCategory(item) && selectedCategories.includes(item)}
+                  >
+                    <span>{animalCategoryLabels[item]}</span>
+                  </button>
+                ))}
+              </div>
+              <button className="pet-add-icon" type="button" onClick={onRegisterPet} aria-label="펫 등록">+</button>
+            </>
+          )}
         </div>
       </section>
 
@@ -215,7 +221,6 @@ export default function PetsScreen({
           <div className="pet-empty-state">
             <strong>{pets.length === 0 ? '아직 등록된 펫이 없어요' : '검색 결과가 없어요'}</strong>
             <p>{pets.length === 0 ? '관리할 반려동물을 먼저 등록해 주세요.' : '검색어 또는 분류를 다시 확인해 주세요.'}</p>
-            {pets.length === 0 && <button type="button" onClick={onRegisterPet}>첫 펫 등록하기</button>}
           </div>
         ) : (
           <div className="pet-list card-view">

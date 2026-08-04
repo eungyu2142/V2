@@ -24,7 +24,7 @@ export default function StepShell({ title, children, onBack, currentStep, stepCo
     window.addEventListener('popstate', handleBrowserBack)
     return () => window.removeEventListener('popstate', handleBrowserBack)
   }, [])
-  const progress = currentStep !== undefined && stepCount ? (currentStep + 1) / stepCount : undefined
+  const progress = currentStep !== undefined && stepCount ? Math.min(1, (currentStep + 1) / stepCount) : undefined
   const keyword = stepLabels?.[currentStep ?? 0] ?? (title.includes('QNA') ? '질문' : title.includes('펫') ? '펫' : '작성')
   return (
     <main className={`step-screen ${title.includes('질문') ? 'qna-create-screen' : ''}`}>

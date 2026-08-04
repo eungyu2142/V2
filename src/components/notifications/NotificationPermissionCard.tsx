@@ -9,14 +9,16 @@ import {
 const initialState: PushSubscriptionState = {
   permission: 'default',
   isSubscribed: false,
+  isDatabaseActive: false,
+  status: 'disabled',
 }
 
 function permissionLabel(state: PushSubscriptionState) {
-  if (state.permission === 'unsupported') return '지원하지 않음'
-  if (state.permission === 'denied') return '차단됨'
-  if (state.permission === 'granted' && state.isSubscribed) return '허용됨'
-  if (state.permission === 'granted') return '구독 해제됨'
-  return '아직 선택하지 않음'
+  if (state.status === 'enabled') return '알림 켜짐'
+  if (state.status === 'disabled') return '알림 꺼짐'
+  if (state.status === 'registration-required') return '기기 등록 필요'
+  if (state.status === 'blocked') return '브라우저에서 차단됨'
+  return '지원되지 않는 환경'
 }
 
 function permissionMessage(state: PushSubscriptionState) {

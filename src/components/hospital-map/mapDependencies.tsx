@@ -1,14 +1,14 @@
 /* This module intentionally groups the map feature's pure helpers and its small map icon. */
 /* eslint-disable react-refresh/only-export-components */
 import type { AnimalCategory, Coordinates, Hospital, HospitalGoogleReview, HospitalOpeningHours, HospitalReview, HospitalSnapshot, Pet } from '../../types/app'
-import type { NaverMapApi } from '../../types/map'
+import type { GoogleHtmlMarker, GoogleLatLngLiteral, GoogleMapApi, GoogleMapInstance, GoogleOverlayViewInstance } from '../../types/map'
 import { supabase } from '../../lib/supabase'
 
 const savedHospitalStorageKey = 'exocare-saved-hospitals'
 const savedHospitalDetailsStorageKey = 'exocare-liked-hospitals'
-let naverMapsLoader: Promise<NaverMapApi> | null = null
+let googleMapsLoader: Promise<GoogleMapApi> | null = null
 const googleHospitalDetailsCache = new Map<string, Promise<Hospital | null>>()
-const hospitalCareCategories = ['reptile'] as const
+const hospitalCareCategories = ['reptile', 'amphibian'] as const
 
 export const animalCategoryOptions: AnimalCategory[] = ['all', 'reptile', 'amphibian', 'rodent', 'bird', 'other']
 export const hospitalAnimalCategoryOptions: AnimalCategory[] = ['all', ...hospitalCareCategories]
@@ -22,7 +22,7 @@ export const animalCategoryLabels: Record<AnimalCategory, string> = {
 }
 
 export function isHospitalCareCategory(category?: string): category is Exclude<AnimalCategory, 'all'> {
-  return category === 'reptile'
+  return category === 'reptile' || category === 'amphibian'
 }
 
 export function toReviewAnimalCategory(category?: AnimalCategory): Exclude<AnimalCategory, 'all'> {
@@ -149,28 +149,104 @@ export function CategoryTagIcon({ category }: { category: AnimalCategory }) {
 }
 
 
-export function loadNaverMaps(clientId: string) {
-  if (window.naver?.maps) return Promise.resolve(window.naver)
-  if (naverMapsLoader) return naverMapsLoader
+export function loadGoogleMaps(apiKey: string) {
+  if (window.google?.maps?.Map) return Promise.resolve(window.google)
+  if (googleMapsLoader) return googleMapsLoader
 
-  naverMapsLoader = new Promise<NaverMapApi>((resolve, reject) => {
-    const existingScript = document.querySelector<HTMLScriptElement>('script[data-naver-map-sdk="true"]')
+  googleMapsLoader = new Promise<GoogleMapApi>((resolve, reject) => {
+    window.gm_authFailure = () => {
+      window.dispatchEvent(new Event('exocare-google-maps-auth-failure'))
+    }
+    const finish = () => {
+      if (window.google?.maps?.Map) resolve(window.google)
+      else reject(new Error('Google Maps JavaScript API namespace is unavailable.'))
+    }
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-map-sdk="true"]')
     if (existingScript) {
-      existingScript.addEventListener('load', () => window.naver?.maps ? resolve(window.naver) : reject(new Error('Naver Maps SDK authentication failed or maps namespace is unavailable.')), { once: true })
-      existingScript.addEventListener('error', () => reject(new Error('Naver Maps SDK failed to load.')), { once: true })
+      existingScript.addEventListener('load', finish, { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('Google Maps JavaScript API failed to load.')), { once: true })
       return
     }
 
+    window.__exoGoogleMapsReady = finish
     const script = document.createElement('script')
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}&submodules=geocoder`
+    const params = new URLSearchParams({
+      key: apiKey,
+      loading: 'async',
+      callback: '__exoGoogleMapsReady',
+      v: 'weekly',
+      language: 'ko',
+      region: 'KR',
+    })
+    script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`
     script.async = true
-    script.dataset.naverMapSdk = 'true'
-    script.addEventListener('load', () => window.naver?.maps ? resolve(window.naver) : reject(new Error('Naver Maps SDK authentication failed or maps namespace is unavailable.')), { once: true })
-    script.addEventListener('error', () => reject(new Error('Naver Maps SDK failed to load.')), { once: true })
+    script.dataset.googleMapSdk = 'true'
+    script.addEventListener('error', () => reject(new Error('Google Maps JavaScript API failed to load.')), { once: true })
     document.head.appendChild(script)
   })
 
-  return naverMapsLoader
+  return googleMapsLoader
+}
+
+export function createGoogleHtmlMarker({
+  api,
+  map,
+  position,
+  html,
+  title,
+  zIndex,
+  onClick,
+}: {
+  api: GoogleMapApi
+  map: GoogleMapInstance
+  position: GoogleLatLngLiteral
+  html: string
+  title: string
+  zIndex: number
+  onClick?: () => void
+}): GoogleHtmlMarker {
+  const BaseOverlay = api.maps.OverlayView
+
+  class HtmlMarker extends BaseOverlay {
+    private container: HTMLDivElement | null = null
+    private currentZIndex = zIndex
+    private readonly markerPosition = new api.maps.LatLng(position.lat, position.lng)
+
+    onAdd() {
+      const container = document.createElement('div')
+      container.className = 'google-html-marker'
+      container.innerHTML = html
+      container.title = title
+      container.style.zIndex = String(this.currentZIndex)
+      container.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onClick?.()
+      })
+      this.container = container
+      this.getPanes()?.overlayMouseTarget.appendChild(container)
+    }
+
+    draw() {
+      const pixel = this.getProjection()?.fromLatLngToDivPixel(this.markerPosition)
+      if (!pixel || !this.container) return
+      this.container.style.transform = `translate3d(${pixel.x}px, ${pixel.y}px, 0)`
+    }
+
+    onRemove() {
+      this.container?.remove()
+      this.container = null
+    }
+
+    setZIndex(nextZIndex: number) {
+      this.currentZIndex = nextZIndex
+      if (this.container) this.container.style.zIndex = String(nextZIndex)
+    }
+  }
+
+  const marker = new HtmlMarker() as HtmlMarker & GoogleOverlayViewInstance
+  marker.setMap(map)
+  return marker
 }
 
 export function readBrowserLocation() {
@@ -191,8 +267,21 @@ export function readBrowserLocation() {
 }
 
 export async function searchHospitals(query: string, category: AnimalCategory, location: Coordinates | null) {
-  const storedHospitals = await loadStoredHospitals(query, category)
-  const hospitals = storedHospitals.length > 0 ? storedHospitals : await loadCollectedHospitals(query, category)
+  const storedHospitals = await Promise.race([
+    loadStoredHospitals(query, category).catch((error: unknown) => {
+      console.error('Stored hospital data load failed.', error)
+      return []
+    }),
+    new Promise<Hospital[]>((resolve) => {
+      window.setTimeout(() => resolve([]), 2_500)
+    }),
+  ])
+  const hospitals = storedHospitals.length > 0
+    ? storedHospitals
+    : await loadCollectedHospitals(query, category).catch((error: unknown) => {
+        console.error('Collected hospital fallback load failed.', error)
+        return []
+      })
   return sortHospitalsByDistance(hospitals, location)
 }
 
@@ -307,13 +396,17 @@ export function loadGoogleHospitalDetails(hospital: Hospital) {
       longitude: hospital.lng,
       radiusMeters: 5_000,
       includeDetails: true,
+      hospitalId: hospital.id,
+      hospitalName: hospital.name,
+      hospitalAddress: hospital.address,
+      googlePlaceId: hospital.googlePlaceId,
     },
   }).then(({ data, error }) => {
     if (error) throw error
     const item = (data as { hospitals?: Array<Record<string, unknown>> } | null)?.hospitals?.[0]
-    if (!item) return null
+    if (!item) return { ...hospital, googleDetailsLoaded: true }
     const details = transformHospitalItem(item, 0, hospital.name, 'reptile')
-    if (!details) return null
+    if (!details) return { ...hospital, googleDetailsLoaded: true }
     return {
       ...hospital,
       phone: details.phone || hospital.phone,
@@ -457,11 +550,6 @@ function convertNaverLocalCoords(mapx: number, mapy: number): Coordinates | null
     return { lat, lng }
   }
 
-  const naver = window.naver
-  if (naver?.maps.TransCoord) {
-    const latLng = naver.maps.TransCoord.fromTM128ToLatLng(new naver.maps.Point(mapx, mapy))
-    return { lat: latLng.lat(), lng: latLng.lng() }
-  }
   return null
 }
 

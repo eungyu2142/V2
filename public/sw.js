@@ -1,4 +1,4 @@
-const CACHE_NAME = 'repdiary-pwa-v3'
+const CACHE_NAME = 'repdiary-pwa-v4'
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/exopet-logo.png', '/favicon.svg']
 const DEFAULT_NOTIFICATION = {
   title: 'ExoCare',

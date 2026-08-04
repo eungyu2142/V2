@@ -10,7 +10,8 @@ import MapScreen from './components/hospital-map/MapScreen'
 import { QnaCreateFlow, QnaScreen } from './components/qna/QnaScreen'
 import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
 import { supabase } from './lib/supabase'
-import { deactivatePushSubscriptionForLogout } from './lib/pushNotifications'
+import { dataUrlToImageFile, removeUploadedImage, uploadImageFile } from './lib/imageStorage'
+import { deactivatePushSubscriptionForLogout, syncCurrentDevicePushSubscription } from './lib/pushNotifications'
 import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
 import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost, Tab } from './types/app'
 export type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost } from './types/app'
@@ -184,6 +185,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [qnaInitialPetId, setQnaInitialPetId] = useState<string | null>(initialUrlState.tab === 'qna' ? initialUrlState.petId : null)
   const [editingDraft, setEditingDraft] = useState<DraftItem | null>(null)
   const [mapFocusHospital, setMapFocusHospital] = useState<HospitalSnapshot | null>(null)
+  const [diaryClinicHospital, setDiaryClinicHospital] = useState<HospitalSnapshot | null>(null)
   const [currentPetId, setCurrentPetId] = useState<string | null>(initialUrlState.petId)
   const [pets, setPets] = useState<Pet[]>([])
   const [qnaPosts, setQnaPosts] = useState<QnaPost[]>([])
@@ -196,6 +198,13 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const bottomNavDragStartRef = useRef<number | null>(null)
   const suppressNextBottomNavClickRef = useRef(false)
   const previousContentTabRef = useRef<Tab>(initialUrlState.tab === 'profile' ? 'map' : initialUrlState.tab)
+
+  useEffect(() => {
+    void syncCurrentDevicePushSubscription().catch((error: unknown) => {
+      if (import.meta.env.DEV) console.error('Current device push synchronization failed.', error)
+    })
+  }, [session.user.id])
+
   useEffect(() => {
     let active = true
     queueMicrotask(() => {
@@ -210,6 +219,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setCreateMode(null)
       setEditingPet(null)
       setEditingDraft(null)
+      setDiaryClinicHospital(null)
       setQnaOpenId(null)
       setDiaryPetId(initialUrlState.petId)
       setCurrentPetId(initialUrlState.petId)
@@ -330,6 +340,24 @@ function AuthenticatedApp({ session }: { session: Session }) {
     moveTab('map')
   }
 
+  const openHospitalVisitRecord = (hospital: HospitalSnapshot) => {
+    const petId = currentPetId && pets.some((pet) => pet.id === currentPetId)
+      ? currentPetId
+      : pets[0]?.id
+    if (!petId) {
+      window.alert('방문 기록을 남기려면 마이 펫을 먼저 등록해 주세요.')
+      return
+    }
+    setCurrentPetId(petId)
+    setDiaryPetId(petId)
+    setDiaryReadOnly(false)
+    setDiaryClinicHospital(hospital)
+    setEditingDraft(null)
+    setCreateMode(null)
+    syncAppUrl('diary', petId)
+    setActiveTab('diary')
+  }
+
   const openClinicReview = (hospital: HospitalSnapshot, review: HospitalReview) => {
     setCurrentPetId(review.petId ?? currentPetId)
     setEditingDraft({
@@ -344,16 +372,34 @@ function AuthenticatedApp({ session }: { session: Session }) {
     moveTab('map')
   }
 
-  const savePet = async (pet: Pet) => {
-    setPets((items) => [pet, ...items.filter((item) => item.id !== pet.id)])
-    setCurrentPetId(pet.id)
+  const savePet = async (pet: Pet, selectedPhotoFile?: File) => {
+    let uploadedPhotoUrl = ''
     try {
-      await saveAppData('pets', session.user.id, pet, {
-        name: pet.name, species: pet.species, category: pet.group,
-        gender: pet.gender, photo_url: pet.photo ?? null,
+      const legacyPhotoFile = !selectedPhotoFile && pet.photo?.startsWith('data:')
+        ? await dataUrlToImageFile(pet.photo, `${pet.id}.jpg`)
+        : undefined
+      const photoFile = selectedPhotoFile ?? legacyPhotoFile
+      if (photoFile) {
+        uploadedPhotoUrl = (await uploadImageFile({
+          file: photoFile,
+          userId: session.user.id,
+          area: 'pets',
+          ownerId: pet.id,
+        })).url
+      }
+      const storedPet = { ...pet, photo: uploadedPhotoUrl || pet.photo }
+      await saveAppData('pets', session.user.id, storedPet, {
+        name: storedPet.name, species: storedPet.species, category: storedPet.group,
+        gender: storedPet.gender, photo_url: storedPet.photo ?? null,
       })
+      setPets((items) => [storedPet, ...items.filter((item) => item.id !== storedPet.id)])
+      setCurrentPetId(storedPet.id)
+      setDataError('')
     } catch (error) {
-      console.error('Supabase pet save failed; kept local state.', error)
+      if (uploadedPhotoUrl) void removeUploadedImage(uploadedPhotoUrl).catch(() => undefined)
+      console.error('Supabase pet save failed.', error)
+      setDataError('펫 사진 또는 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      throw error
     }
   }
 
@@ -542,12 +588,25 @@ function AuthenticatedApp({ session }: { session: Session }) {
     })
   }
 
-  const saveProfile = async (nextProfile: AppProfile) => {
+  const saveProfile = async (nextProfile: AppProfile, selectedAvatarFile?: File) => {
+    let uploadedAvatarUrl = ''
     try {
+      const legacyAvatarFile = !selectedAvatarFile && nextProfile.avatarUrl.startsWith('data:')
+        ? await dataUrlToImageFile(nextProfile.avatarUrl, 'profile-avatar.jpg')
+        : undefined
+      const avatarFile = selectedAvatarFile ?? legacyAvatarFile
+      if (avatarFile) {
+        uploadedAvatarUrl = (await uploadImageFile({
+          file: avatarFile,
+          userId: session.user.id,
+          area: 'profiles',
+          ownerId: session.user.id,
+        })).url
+      }
       const normalized = {
         username: nextProfile.username.trim(),
         nickname: nextProfile.nickname.trim(),
-        avatarUrl: nextProfile.avatarUrl.trim(),
+        avatarUrl: uploadedAvatarUrl || nextProfile.avatarUrl.trim(),
       }
       const { error } = await supabase.from('profiles').upsert({
         id: session.user.id,
@@ -565,11 +624,14 @@ function AuthenticatedApp({ session }: { session: Session }) {
       ])) as Record<string, HospitalReview[]>
       setHospitalReviews(nextHospitalReviews)
       localStorage.setItem(reviewStorageKey, JSON.stringify(nextHospitalReviews))
+      setDataError('')
       void Promise.all(nextQnaPosts.filter((post) => post.mine === true).map((post) => saveAppData(qnaTable, session.user.id, post, {
         category: qnaDatabaseCategory, title: post.title, body: post.body, view_count: post.viewCount ?? 0,
       }))).catch(() => setDataError('프로필 사진을 작성 글에 반영하지 못했습니다.'))
-    } catch {
-      setDataError('?꾨줈???뺣낫瑜???ν븯吏 紐삵뻽?듬땲??')
+    } catch (error) {
+      if (uploadedAvatarUrl) void removeUploadedImage(uploadedAvatarUrl).catch(() => undefined)
+      setDataError('프로필 사진 또는 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      throw error
     }
   }
 
@@ -602,8 +664,8 @@ function AuthenticatedApp({ session }: { session: Session }) {
       speciesOptions={petSpeciesOptions}
       renderCategoryIcon={(category) => <CategoryTagIcon category={category} />}
       onClose={() => { setCreateMode(null); setEditingPet(null); setEditingDraft(null) }}
-      onSave={async (pet) => {
-        await savePet(pet)
+      onSave={async (pet, photoFile) => {
+        await savePet(pet, photoFile)
         if (editingDraft?.draftType === 'pet') await deleteDraft(editingDraft.id)
         setEditingDraft(null)
       }}
@@ -677,12 +739,12 @@ function AuthenticatedApp({ session }: { session: Session }) {
         </div>
       </header>}
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={setLikedHospitals} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={setLikedHospitals} onCreateClinicRecord={openHospitalVisitRecord} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">
           {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
-          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitalReviews={hospitalReviews} hospitals={allHospitals} initialPetId={diaryPetId ?? currentPetId ?? undefined} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onCreateClinicReview={openClinicReview} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitalReviews={hospitalReviews} hospitals={allHospitals} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
           {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={allHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalOnMap} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
           {activeTab === 'profile' && (
             <ProfileScreen

@@ -1,6 +1,7 @@
 # send-routine-notifications
 
-완료되지 않은 루틴의 정시, 10분 뒤, 다음 날 반복 Web Push를 전송한다.
+날짜별 루틴 occurrence의 정시, 10분 뒤, 다음 날 반복 Web Push를 전송한다.
+`care_plans`는 반복 원본, `daily_tasks`는 occurrence이며 앞으로 14일을 미리 생성한다.
 
 ## 필요한 Secrets
 
@@ -48,11 +49,12 @@ Invoke-RestMethod `
 
 1. `push_subscriptions`에 테스트 사용자의 활성 구독이 있는지 확인한다.
 2. 같은 사용자의 `routine_notification_jobs` 작업을 `pending`으로 두고 `next_notification_at`을 현재보다 이전으로 설정한다.
-3. 함수를 한 번 호출하고 `notification_stage = 2`, `next_notification_at = scheduled_at + 10분`인지 확인한다.
-4. 다시 due 상태로 만든 뒤 호출해 stage 3과 다음 날 같은 서울 시각을 확인한다.
-5. 작업을 `completed`, `skipped`, `cancelled`로 바꾸고 호출해 발송되지 않는지 확인한다.
+3. 함수를 한 번 호출하고 최초 작업이 `sent`, `sent_at` 저장 및 `retry-10m` 작업 생성 상태인지 확인한다.
+4. 10분 작업을 due 상태로 호출해 `retry-next-day`가 원래 서울 시각의 다음 날로 생성되는지 확인한다.
+5. `daily_tasks.status`를 `completed` 또는 `skipped`로 변경하고 해당 occurrence의 미발송 작업이 `cancelled`인지 확인한다.
 6. 만료된 구독으로 404 또는 410 응답을 만들고 `is_active = false`로 변경되는지 확인한다.
-7. 동일 시점에 함수를 여러 번 호출해 한 실행만 작업을 선점하는지 확인한다.
+7. 동일 시점에 함수를 여러 번 호출해 한 실행만 `processing`으로 선점하는지 확인한다.
+8. `materialize_all_routine_notification_windows(null, 14)`를 반복 호출해 occurrence와 dedupe key 수가 증가하지 않는지 확인한다.
 
 로컬 Edge Runtime 실행에는 Docker Desktop이 필요하다.
 

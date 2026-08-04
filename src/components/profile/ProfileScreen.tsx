@@ -1,30 +1,41 @@
 import { type ChangeEvent, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  disablePushNotifications,
   enablePushNotifications,
   getPushSubscriptionState,
   type PushSubscriptionState,
 } from '../../lib/pushNotifications'
-import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaPost } from '../../types/app'
+import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaComment, QnaPost } from '../../types/app'
+import { validateImageFile } from '../../lib/imageStorage'
+import { QnaTrustBadge } from '../qna/QnaTrustBadge'
+import { getNextTrustTarget, getTrustLevel, getTrustScoreForMine } from '../qna/qnaTrust'
 
-type ProfileTab = 'posts' | 'drafts' | 'likes' | 'settings'
+type ProfileTab = 'posts' | 'drafts' | 'likes' | 'accepted' | 'settings'
 type WrittenFilter = 'qna' | 'reviews'
-type ProfileActivityId = 'posts' | 'drafts' | 'likes' | 'reviews'
+type ProfileActivityId = 'posts' | 'drafts' | 'likes' | 'accepted'
 type LikeFilter = 'posts' | 'hospitals' | 'reviews'
 type WrittenPost = QnaPost & { kind: 'question' }
 type ProfileReviewItem = HospitalReview & { hospitalId: string }
+
+const PROFILE_DRAFTS_ENABLED = false
+const PROFILE_REVIEWS_ENABLED = false
 
 const profileTabs: Array<{ id: ProfileTab; label: string }> = [
   { id: 'posts', label: '작성한 글' },
   { id: 'drafts', label: '임시저장' },
   { id: 'likes', label: '좋아요' },
+  { id: 'accepted', label: '채택 답변' },
   { id: 'settings', label: '설정' },
 ]
 
-const profileTabIds = new Set<ProfileTab>(profileTabs.map((tab) => tab.id))
+const visibleProfileTabs = profileTabs.filter((tab) => PROFILE_DRAFTS_ENABLED || tab.id !== 'drafts')
+const profileTabIds = new Set<ProfileTab>(visibleProfileTabs.map((tab) => tab.id))
 
 const initialNotificationState: PushSubscriptionState = {
   permission: 'default',
   isSubscribed: false,
+  isDatabaseActive: false,
+  status: 'disabled',
 }
 
 function isProfileTab(value: string | null): value is ProfileTab {
@@ -39,6 +50,7 @@ function readProfileTabFromUrl(): ProfileTab {
 }
 
 function readWrittenFilterFromUrl(): WrittenFilter {
+  if (!PROFILE_REVIEWS_ENABLED) return 'qna'
   if (typeof window === 'undefined') return 'qna'
   const params = new URLSearchParams(window.location.search)
   return params.get('tab') === 'reviews' || params.get('category') === 'reviews' ? 'reviews' : 'qna'
@@ -77,21 +89,6 @@ function clipText(value: string, limit = 120) {
   const text = value.trim()
   if (text.length <= limit) return text
   return `${text.slice(0, limit)}...`
-}
-
-function notificationStatusLabel(state: PushSubscriptionState) {
-  if (state.permission === 'unsupported') return '지원 안 됨'
-  if (state.permission === 'denied') return '차단됨'
-  if (state.permission === 'granted' && state.isSubscribed) return '허용됨'
-  if (state.permission === 'granted') return '허용됨'
-  return '미요청'
-}
-
-function notificationButtonLabel(state: PushSubscriptionState) {
-  if (state.permission === 'unsupported') return '지원 안 됨'
-  if (state.permission === 'denied') return '브라우저 설정에서 변경'
-  if (state.permission === 'granted' && state.isSubscribed) return '알림 켜짐'
-  return '알림 켜기'
 }
 
 function readableNotificationError(error: unknown) {
@@ -134,7 +131,7 @@ function ProfileScreen({
   drafts: DraftItem[]
   onSignOut: () => void
   onDeleteAccount: () => void | Promise<void>
-  onSaveProfile: (profile: AppProfile) => void
+  onSaveProfile: (profile: AppProfile, avatarFile?: File) => void | Promise<void>
   onDeleteDraft: (draftId: string) => void
   onContinueDraft: (draft: DraftItem) => void
   onOpenWrittenPost: (kind: 'question', id: string) => void
@@ -151,17 +148,23 @@ function ProfileScreen({
 }) {
   const [view, setView] = useState<ProfileTab>(() => readProfileTabFromUrl())
   const [writtenFilter, setWrittenFilter] = useState<WrittenFilter>(() => readWrittenFilterFromUrl())
-  const [username, setUsername] = useState(profile.username)
+  const username = profile.username
   const [nickname, setNickname] = useState(profile.nickname)
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl)
+  const [avatarFile, setAvatarFile] = useState<File | undefined>()
   const [profileSaved, setProfileSaved] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deletingAccount, setDeletingAccount] = useState(false)
   const tabsRef = useRef<HTMLDivElement | null>(null)
+  const avatarPreviewObjectUrlRef = useRef('')
 
   useEffect(() => {
     syncProfileTabUrl(view, writtenFilter)
   }, [view, writtenFilter])
+
+  useEffect(() => () => {
+    if (avatarPreviewObjectUrlRef.current) URL.revokeObjectURL(avatarPreviewObjectUrlRef.current)
+  }, [])
 
   const displayName = profile.nickname || profile.username || '사용자'
   const accountId = profile.username || 'account'
@@ -189,13 +192,28 @@ function ProfileScreen({
     )),
     [hospitalReviews],
   )
-  const likedCount = likedQnaItems.length + likedHospitals.length + likedReviewItems.length
+  const likedCount = likedQnaItems.length + likedHospitals.length + (PROFILE_REVIEWS_ENABLED ? likedReviewItems.length : 0)
+  const acceptedAnswers = useMemo<Array<{ post: QnaPost; comment: QnaComment }>>(
+    () => qnaPosts.flatMap((post) => {
+      if (!post.selectedAnswerCommentId) return []
+      const comment = post.comments.find((item) => item.id === post.selectedAnswerCommentId && item.mine === true)
+      return comment ? [{ post, comment }] : []
+    }),
+    [qnaPosts],
+  )
+  const trustScore = getTrustScoreForMine(qnaPosts)
+  const trustLevel = getTrustLevel(trustScore)
+  const nextTrust = getNextTrustTarget(trustScore)
+  const trustFloor = trustLevel === 0 ? 0 : trustLevel === 1 ? 5 : trustLevel === 2 ? 15 : 25
+  const trustProgress = nextTrust
+    ? Math.max(0, Math.min(100, ((trustScore - trustFloor) / (nextTrust.target - trustFloor)) * 100))
+    : 100
   const [likeFilter, setLikeFilter] = useState<LikeFilter>(() => (
     likedQnaItems.length > 0
       ? 'posts'
       : likedHospitals.length > 0
         ? 'hospitals'
-        : 'reviews'
+        : 'posts'
   ))
 
   const openTab = (tab: ProfileTab, shouldScroll = true) => {
@@ -208,15 +226,31 @@ function ProfileScreen({
   const attachAvatar = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setAvatarUrl(typeof reader.result === 'string' ? reader.result : '')
-    reader.readAsDataURL(file)
+    try {
+      validateImageFile(file)
+      if (avatarPreviewObjectUrlRef.current) URL.revokeObjectURL(avatarPreviewObjectUrlRef.current)
+      const previewUrl = URL.createObjectURL(file)
+      avatarPreviewObjectUrlRef.current = previewUrl
+      setAvatarUrl(previewUrl)
+      setAvatarFile(file)
+      setProfileSaved(false)
+    } catch (error) {
+      setProfileSaved(false)
+      window.alert(error instanceof Error ? error.message : '프로필 사진을 불러오지 못했습니다.')
+    }
   }
 
-  const saveCurrentProfile = () => {
-    onSaveProfile({ username, nickname, avatarUrl })
-    setProfileSaved(true)
+  const saveCurrentProfile = async () => {
+    try {
+      await onSaveProfile({ username, nickname, avatarUrl }, avatarFile)
+      setAvatarFile(undefined)
+      setProfileSaved(true)
+    } catch {
+      setProfileSaved(false)
+    }
   }
+  const hasProfileChanges = nickname.trim() !== profile.nickname
+    || avatarUrl.trim() !== profile.avatarUrl
 
   return (
     <section className="profile-page" aria-labelledby="profile-page-title">
@@ -229,22 +263,45 @@ function ProfileScreen({
         isLoading={!profile.username && !profile.nickname}
       />
 
+      <section className="profile-trust-summary" aria-label="신뢰 답변자 등급">
+        <div className="profile-trust-heading">
+          <div className="profile-trust-copy">
+            <span className="profile-trust-label">답변 신뢰도</span>
+            <div>
+              <strong>{trustLevel > 0 ? '신뢰 답변자' : '일반 사용자'}</strong>
+              {trustLevel > 0 ? <QnaTrustBadge score={trustScore} /> : <span className="profile-trust-level">Lv.0</span>}
+            </div>
+          </div>
+          <div className="profile-trust-score">
+            <strong>{trustScore}</strong>
+            <span>포인트</span>
+          </div>
+        </div>
+        <div
+          className="profile-trust-progress"
+          role="progressbar"
+          aria-label={nextTrust ? `신뢰 답변자 레벨 ${nextTrust.level} 진행도` : '신뢰 답변자 최고 등급'}
+          aria-valuemin={trustFloor}
+          aria-valuemax={nextTrust?.target ?? 25}
+          aria-valuenow={nextTrust ? trustScore : Math.min(trustScore, 25)}
+        >
+          <span style={{ width: `${trustProgress}%` }} />
+        </div>
+        <div className="profile-trust-footer">
+          <span>{nextTrust ? `다음 등급 Lv.${nextTrust.level}` : '최고 등급 달성'}</span>
+          <strong>{nextTrust ? `${nextTrust.target - trustScore}점 남음` : '완료'}</strong>
+        </div>
+      </section>
+
       <ProfileActivitySummary
-        activeId={view === 'posts' && writtenFilter === 'reviews' ? 'reviews' : view}
+        activeId={view}
         items={[
-          { id: 'posts', label: 'Q&A', count: writtenPosts.length },
-          { id: 'drafts', label: '임시저장', count: drafts.length },
+          { id: 'posts', label: '글', count: writtenPosts.length + (PROFILE_REVIEWS_ENABLED ? myReviews.length : 0) },
+          ...(PROFILE_DRAFTS_ENABLED ? [{ id: 'drafts' as const, label: '임시저장', count: drafts.length }] : []),
           { id: 'likes', label: '좋아요', count: likedCount },
-          { id: 'reviews', label: '병원 리뷰', count: myReviews.length },
+          { id: 'accepted', label: '채택 답변', count: acceptedAnswers.length },
         ]}
-        onSelect={(activity) => {
-          if (activity === 'posts' || activity === 'reviews') {
-            setWrittenFilter(activity === 'reviews' ? 'reviews' : 'qna')
-            openTab('posts')
-            return
-          }
-          openTab(activity)
-        }}
+        onSelect={(activity) => openTab(activity)}
       />
 
       <div ref={tabsRef} className="profile-detail-area">
@@ -273,7 +330,7 @@ function ProfileScreen({
             />
           )}
 
-          {view === 'drafts' && (
+          {PROFILE_DRAFTS_ENABLED && view === 'drafts' && (
             <ProfileDraftList
               drafts={drafts}
               onContinue={onContinueDraft}
@@ -296,6 +353,13 @@ function ProfileScreen({
             />
           )}
 
+          {view === 'accepted' && (
+            <ProfileAcceptedAnswerList
+              answers={acceptedAnswers}
+              onOpenPost={(id) => onOpenWrittenPost('question', id)}
+            />
+          )}
+
           {view === 'settings' && (
             <ProfileSettings
               userId={userId}
@@ -303,10 +367,13 @@ function ProfileScreen({
               nickname={nickname}
               avatarUrl={avatarUrl}
               profileSaved={profileSaved}
+              hasProfileChanges={hasProfileChanges}
               deleteConfirm={deleteConfirm}
               deletingAccount={deletingAccount}
-              onUsernameChange={setUsername}
-              onNicknameChange={setNickname}
+              onNicknameChange={(value) => {
+                setNickname(value)
+                setProfileSaved(false)
+              }}
               onAvatarChange={attachAvatar}
               onSave={saveCurrentProfile}
               onSignOut={onSignOut}
@@ -348,7 +415,6 @@ function ProfileHeader({
         <div>
           <span className="profile-skeleton-line wide" />
           <span className="profile-skeleton-line" />
-          <span className="profile-skeleton-line intro" />
         </div>
       </div>
     )
@@ -371,7 +437,6 @@ function ProfileHeader({
         <div className="profile-summary-copy">
           <h2>{displayName}</h2>
           <p>@{accountId}</p>
-          <span>한 줄 소개가 없습니다.</span>
         </div>
       </div>
     </header>
@@ -414,9 +479,9 @@ function ProfileTabs({ activeTab, onSelect }: { activeTab: ProfileTab; onSelect:
     const nextIndex = event.key === 'Home'
       ? 0
       : event.key === 'End'
-        ? profileTabs.length - 1
-        : (index + (event.key === 'ArrowRight' ? 1 : -1) + profileTabs.length) % profileTabs.length
-    const nextTab = profileTabs[nextIndex]
+        ? visibleProfileTabs.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + visibleProfileTabs.length) % visibleProfileTabs.length
+    const nextTab = visibleProfileTabs[nextIndex]
     onSelect(nextTab.id)
     event.currentTarget.parentElement
       ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]
@@ -425,7 +490,7 @@ function ProfileTabs({ activeTab, onSelect }: { activeTab: ProfileTab; onSelect:
 
   return (
     <nav className="profile-detail-tabs" aria-label="프로필 세부 활동" role="tablist">
-      {profileTabs.map((tab, index) => (
+      {visibleProfileTabs.map((tab, index) => (
         <button
           key={tab.id}
           id={`profile-tab-${tab.id}`}
@@ -482,7 +547,7 @@ function ProfileWrittenContent({
         >
           Q&amp;A <span>{posts.length}</span>
         </button>
-        <button
+        {PROFILE_REVIEWS_ENABLED && <button
           className={filter === 'reviews' ? 'is-active' : ''}
           type="button"
           role="tab"
@@ -490,10 +555,10 @@ function ProfileWrittenContent({
           onClick={() => onFilterChange('reviews')}
         >
           리뷰 <span>{reviews.length}</span>
-        </button>
+        </button>}
       </div>
 
-      {filter === 'qna' ? (
+      {filter === 'qna' || !PROFILE_REVIEWS_ENABLED ? (
         <ProfilePostList
           posts={posts}
           onCreateQuestion={onCreateQuestion}
@@ -529,7 +594,6 @@ function ProfilePostList({
   if (posts.length === 0) {
     return (
       <ProfileEmptyState
-        icon="?"
         title="아직 작성한 글이 없습니다."
         description="궁금한 내용을 Q&A에 남겨보세요."
         actionLabel="질문 작성하기"
@@ -546,8 +610,9 @@ function ProfilePostList({
             <span className="profile-row-kicker">Q&A · {formatDate(post.createdAt)}</span>
             <strong>{post.title}</strong>
             <p>{clipText(post.body)}</p>
-            <span className="profile-row-meta">
-              {post.status === 'resolved' ? '해결' : '답변 대기'} · 조회 {post.viewCount ?? 0} · 댓글 {post.comments?.length ?? 0}
+            <span className="profile-row-status-meta">
+              <ProfilePostStatus status={post.status} />
+              <span>조회 {post.viewCount ?? 0} · 댓글 {post.comments?.length ?? 0}</span>
             </span>
           </button>
           <ProfileRowMenu
@@ -566,6 +631,16 @@ function ProfilePostList({
   )
 }
 
+function ProfilePostStatus({ status }: { status: QnaPost['status'] }) {
+  const isResolved = status === 'resolved'
+
+  return (
+    <span className={`profile-post-status ${isResolved ? 'resolved' : 'waiting'}`}>
+      {isResolved ? '해결' : '답변 대기'}
+    </span>
+  )
+}
+
 function ProfileDraftList({
   drafts,
   onContinue,
@@ -576,7 +651,7 @@ function ProfileDraftList({
   onDelete: (draftId: string) => void
 }) {
   if (drafts.length === 0) {
-    return <ProfileEmptyState icon="임" title="임시저장된 글이 없습니다." />
+    return <ProfileEmptyState title="임시저장된 글이 없습니다." />
   }
 
   return (
@@ -606,6 +681,23 @@ function ProfileDraftList({
   )
 }
 
+function ProfileAcceptedAnswerList({ answers, onOpenPost }: { answers: Array<{ post: QnaPost; comment: QnaComment }>; onOpenPost: (id: string) => void }) {
+  return (
+    <ProfileLikeSection title="채택된 답변" count={answers.length}>
+      {answers.map(({ post, comment }) => (
+        <article key={`${post.id}-${comment.id}`} className="profile-list-row">
+          <button className="profile-row-main" type="button" onClick={() => onOpenPost(post.id)}>
+            <span className="profile-row-kicker">Q&A · {formatDate(post.createdAt)}</span>
+            <strong>{post.title}</strong>
+            <p>{comment.body}</p>
+            <span className="profile-row-meta">채택 답변</span>
+          </button>
+        </article>
+      ))}
+    </ProfileLikeSection>
+  )
+}
+
 function ProfileLikeList({
   filter,
   onFilterChange,
@@ -629,17 +721,16 @@ function ProfileLikeList({
   onUnlikeHospital: (hospital: HospitalSnapshot) => void
   onUnlikeReview: (hospitalId: string, reviewId: string) => void
 }) {
-  const total = posts.length + hospitals.length + reviews.length
+  const total = posts.length + hospitals.length + (PROFILE_REVIEWS_ENABLED ? reviews.length : 0)
   const filters: Array<{ id: LikeFilter; label: string; count: number }> = [
     { id: 'posts', label: '게시글', count: posts.length },
     { id: 'hospitals', label: '병원', count: hospitals.length },
     { id: 'reviews', label: '리뷰', count: reviews.length },
-  ]
+  ].filter((item) => PROFILE_REVIEWS_ENABLED || item.id !== 'reviews') as Array<{ id: LikeFilter; label: string; count: number }>
 
   if (total === 0) {
     return (
       <ProfileEmptyState
-        icon="♡"
         title="아직 좋아요한 항목이 없습니다."
         description="필요한 글이나 병원을 저장해보세요."
       />
@@ -668,8 +759,9 @@ function ProfileLikeList({
               <button className="profile-row-main" type="button" onClick={() => onOpenPost(post.id)}>
                 <span className="profile-row-kicker">Q&A · {formatDate(post.createdAt)}</span>
                 <strong>{post.title}</strong>
-                <span className="profile-row-meta">
-                  {post.status === 'resolved' ? '해결' : '답변 대기'} · 조회 {post.viewCount ?? 0} · 댓글 {post.comments?.length ?? 0}
+                <span className="profile-row-status-meta">
+                  <ProfilePostStatus status={post.status} />
+                  <span>조회 {post.viewCount ?? 0} · 댓글 {post.comments?.length ?? 0}</span>
                 </span>
               </button>
               <ProfileRowMenu items={[{ label: '좋아요 해제', onClick: () => onUnlikePost(post.id) }]} />
@@ -694,7 +786,7 @@ function ProfileLikeList({
         </ProfileLikeSection>
       )}
 
-      {filter === 'reviews' && (
+      {PROFILE_REVIEWS_ENABLED && filter === 'reviews' && (
         <ProfileLikeSection title="리뷰" count={reviews.length}>
           {reviews.map((review) => (
             <article key={review.id} className="profile-list-row">
@@ -704,7 +796,11 @@ function ProfileLikeList({
                 disabled={!review.hospitalSnapshot}
                 onClick={() => review.hospitalSnapshot && onOpenHospital(review.hospitalSnapshot)}
               >
-                <span className="profile-row-kicker">리뷰 · 별점 {review.rating}</span>
+                <span className="profile-row-kicker profile-review-kicker">
+                  <span>리뷰</span>
+                  <span aria-hidden="true">·</span>
+                  <ProfileRatingStars rating={review.rating} />
+                </span>
                 <strong>{review.hospitalName || review.hospitalSnapshot?.name || '병원 리뷰'}</strong>
                 <p>{clipText(review.body || review.content || '')}</p>
               </button>
@@ -729,6 +825,17 @@ function ProfileLikeSection({ title, count, children }: { title: string; count: 
   )
 }
 
+function ProfileRatingStars({ rating }: { rating: number }) {
+  const normalizedRating = Math.max(0, Math.min(5, Math.round(rating)))
+
+  return (
+    <span className="profile-rating-stars" aria-label={`별점 ${rating}점, 5점 만점`}>
+      <span aria-hidden="true">{'★'.repeat(normalizedRating)}</span>
+      <span className="is-empty" aria-hidden="true">{'☆'.repeat(5 - normalizedRating)}</span>
+    </span>
+  )
+}
+
 function ProfileReviewList({
   reviews,
   onCreateReview,
@@ -743,7 +850,6 @@ function ProfileReviewList({
   if (reviews.length === 0) {
     return (
       <ProfileEmptyState
-        icon="병"
         title="아직 작성한 병원 리뷰가 없습니다."
         description="방문한 병원의 경험을 남겨보세요."
         actionLabel="리뷰 작성하기"
@@ -757,8 +863,10 @@ function ProfileReviewList({
       {reviews.map((review) => (
         <article key={review.id} className="profile-list-row" role="listitem">
           <button className="profile-row-main" type="button" onClick={() => onEdit(review)}>
-            <span className="profile-row-kicker">
-              {formatReviewDate(review.visitDate || review.createdAt)} · 별점 {review.rating}
+            <span className="profile-row-kicker profile-review-kicker">
+              <span>{formatReviewDate(review.visitDate || review.createdAt)}</span>
+              <span aria-hidden="true">·</span>
+              <ProfileRatingStars rating={review.rating} />
             </span>
             <strong>{review.hospitalName || review.hospitalSnapshot?.name || '병원 리뷰'}</strong>
             <span className="profile-row-meta">{review.petName || review.species || '방문 동물 정보 없음'}</span>
@@ -786,9 +894,9 @@ function ProfileSettings({
   nickname,
   avatarUrl,
   profileSaved,
+  hasProfileChanges,
   deleteConfirm,
   deletingAccount,
-  onUsernameChange,
   onNicknameChange,
   onAvatarChange,
   onSave,
@@ -801,9 +909,9 @@ function ProfileSettings({
   nickname: string
   avatarUrl: string
   profileSaved: boolean
+  hasProfileChanges: boolean
   deleteConfirm: string
   deletingAccount: boolean
-  onUsernameChange: (value: string) => void
   onNicknameChange: (value: string) => void
   onAvatarChange: (event: ChangeEvent<HTMLInputElement>) => void
   onSave: () => void
@@ -813,56 +921,110 @@ function ProfileSettings({
 }) {
   return (
     <div className="profile-settings">
-      <section className="profile-settings-section" aria-labelledby="profile-account-title">
-        <h3 id="profile-account-title">계정 정보</h3>
-        <div className="profile-settings-grid">
-          <label>
-            <span>아이디</span>
-            <input value={username} onChange={(event) => onUsernameChange(event.target.value)} placeholder="username" />
-          </label>
-          <label>
-            <span>닉네임</span>
-            <input value={nickname} onChange={(event) => onNicknameChange(event.target.value)} placeholder="nickname" />
-          </label>
-          <label className="profile-file-field">
-            <span>프로필 사진</span>
-            <span className="profile-file-button">사진 선택</span>
-            <input type="file" accept="image/*" onChange={onAvatarChange} />
-          </label>
-          {avatarUrl && <img className="profile-avatar-preview" src={avatarUrl} alt="프로필 사진 미리보기" />}
-        </div>
-        <div className="profile-settings-actions">
-          <button className="profile-primary-button" type="button" onClick={onSave}>저장</button>
-          {profileSaved && <p role="status">프로필 정보를 저장했습니다.</p>}
-        </div>
-      </section>
-
-      <NotificationSettings userId={userId} />
-
-      <section className="profile-settings-section" aria-labelledby="profile-security-title">
-        <h3 id="profile-security-title">계정 관리</h3>
-        <div className="profile-account-actions">
-          <button type="button" onClick={onSignOut}>로그아웃</button>
-          <button type="button" disabled>비밀번호 변경</button>
-          <label>
-            <span>계정 삭제 확인 문구</span>
-            <input value={deleteConfirm} onChange={(event) => onDeleteConfirmChange(event.target.value)} placeholder="계정 삭제" />
-          </label>
-          <button
-            className="danger"
-            type="button"
-            disabled={deleteConfirm !== '계정 삭제' || deletingAccount}
-            onClick={onDeleteAccount}
-          >
-            {deletingAccount ? '삭제 중...' : '회원 탈퇴'}
-          </button>
-        </div>
-      </section>
+      <ProfileSection
+        username={username}
+        nickname={nickname}
+        avatarUrl={avatarUrl}
+        profileSaved={profileSaved}
+        hasProfileChanges={hasProfileChanges}
+        onNicknameChange={onNicknameChange}
+        onAvatarChange={onAvatarChange}
+        onSave={onSave}
+      />
+      <NotificationSection userId={userId} />
+      <AccountSection onSignOut={onSignOut} />
+      <DangerZoneSection
+        deleteConfirm={deleteConfirm}
+        deletingAccount={deletingAccount}
+        onDeleteConfirmChange={onDeleteConfirmChange}
+        onDeleteAccount={onDeleteAccount}
+      />
     </div>
   )
 }
 
-function NotificationSettings({ userId }: { userId: string }) {
+function ProfileSection({
+  username,
+  nickname,
+  avatarUrl,
+  profileSaved,
+  hasProfileChanges,
+  onNicknameChange,
+  onAvatarChange,
+  onSave,
+}: {
+  username: string
+  nickname: string
+  avatarUrl: string
+  profileSaved: boolean
+  hasProfileChanges: boolean
+  onNicknameChange: (value: string) => void
+  onAvatarChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onSave: () => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState('')
+  const showAvatar = Boolean(avatarUrl) && failedAvatarUrl !== avatarUrl
+  const fallback = (nickname || username || '사용자').slice(0, 1)
+
+  return (
+    <section className="settings-card" aria-labelledby="settings-profile-title">
+      <header className="settings-card-header">
+        <h3 id="settings-profile-title">프로필</h3>
+        <p>다른 사용자에게 표시되는 프로필 정보를 관리합니다.</p>
+      </header>
+      <div className="settings-profile-layout">
+        <div className="settings-avatar-field">
+          <button
+            className="settings-avatar-button"
+            type="button"
+            aria-label="프로필 사진 변경"
+            title="프로필 사진 변경"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {showAvatar ? (
+              <img src={avatarUrl} alt="현재 프로필 사진" onError={() => setFailedAvatarUrl(avatarUrl)} />
+            ) : (
+              <span aria-hidden="true">{fallback}</span>
+            )}
+            <span className="settings-avatar-overlay" aria-hidden="true">변경</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            className="settings-file-input"
+            type="file"
+            accept="image/*"
+            tabIndex={-1}
+            onChange={onAvatarChange}
+          />
+        </div>
+        <div className="settings-profile-fields">
+          <label className="settings-field">
+            <span>닉네임</span>
+            <input value={nickname} onChange={(event) => onNicknameChange(event.target.value)} placeholder="닉네임" />
+          </label>
+          <label className="settings-field">
+            <span>아이디</span>
+            <input value={username} readOnly aria-readonly="true" />
+          </label>
+          <div className="settings-save-row">
+            <button
+              className="settings-action-button primary"
+              type="button"
+              disabled={!hasProfileChanges}
+              onClick={onSave}
+            >
+              저장
+            </button>
+            {profileSaved && !hasProfileChanges && <p role="status">변경사항을 저장했습니다.</p>}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function NotificationSection({ userId }: { userId: string }) {
   const [state, setState] = useState<PushSubscriptionState>(initialNotificationState)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -883,12 +1045,14 @@ function NotificationSettings({ userId }: { userId: string }) {
     }
   }, [])
 
-  const enable = async () => {
-    if (state.permission === 'denied' || state.permission === 'unsupported' || state.isSubscribed) return
+  const toggleNotifications = async () => {
+    if (state.permission === 'denied' || state.permission === 'unsupported') return
     setIsSaving(true)
     setErrorMessage('')
     try {
-      setState(await enablePushNotifications(userId))
+      setState(await (state.isSubscribed
+        ? disablePushNotifications(userId)
+        : enablePushNotifications(userId)))
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error('Push notification opt-in failed.', error)
       setErrorMessage(readableNotificationError(error))
@@ -897,33 +1061,106 @@ function NotificationSettings({ userId }: { userId: string }) {
     }
   }
 
-  const buttonDisabled = isLoading || isSaving || state.permission === 'denied' || state.permission === 'unsupported' || state.isSubscribed
+  const isEnabled = state.status === 'enabled'
+  const switchDisabled = isLoading || isSaving || state.status === 'blocked' || state.status === 'unsupported'
+  const statusLabel = isLoading
+    ? '확인 중'
+    : state.status === 'enabled'
+      ? '알림 켜짐'
+      : state.status === 'disabled'
+        ? '알림 꺼짐'
+        : state.status === 'registration-required'
+          ? '기기 등록 필요'
+          : state.status === 'blocked'
+        ? '브라우저에서 차단됨'
+            : '지원되지 않는 환경'
 
   return (
-    <section className="profile-settings-section profile-notification-row" aria-labelledby="profile-notification-title">
-      <div>
-        <h3 id="profile-notification-title">돌봄 알림</h3>
+    <section className="settings-card settings-notification-card" aria-labelledby="settings-notification-title">
+      <div className="settings-card-header">
+        <h3 id="settings-notification-title">돌봄 알림</h3>
         <p>등록한 루틴과 완료하지 않은 돌봄을 알려드립니다.</p>
       </div>
-      <div className="profile-notification-controls">
-        <span>현재 상태: {isLoading ? '확인 중' : notificationStatusLabel(state)}</span>
-        <button type="button" disabled={buttonDisabled} onClick={enable}>
-          {isSaving ? '설정 중...' : notificationButtonLabel(state)}
-        </button>
+      <button
+        className="settings-switch"
+        type="button"
+        role="switch"
+        aria-checked={isEnabled}
+        aria-label={`돌봄 알림 ${isEnabled ? '끄기' : '켜기'}`}
+        disabled={switchDisabled}
+        onClick={toggleNotifications}
+      >
+        <span aria-hidden="true" />
+      </button>
+      <div className="settings-notification-status" aria-live="polite">
+        <span>현재 상태</span>
+        <strong>{isSaving ? '변경 중' : statusLabel}</strong>
       </div>
       {errorMessage && <p className="profile-settings-error" role="alert">{errorMessage}</p>}
     </section>
   )
 }
 
+function AccountSection({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <section className="settings-card" aria-labelledby="settings-account-title">
+      <header className="settings-card-header">
+        <h3 id="settings-account-title">계정</h3>
+        <p>로그인과 보안 관련 기능을 관리합니다.</p>
+      </header>
+      <div className="settings-account-actions">
+        <button className="settings-action-button secondary" type="button" onClick={onSignOut}>로그아웃</button>
+      </div>
+    </section>
+  )
+}
+
+function DangerZoneSection({
+  deleteConfirm,
+  deletingAccount,
+  onDeleteConfirmChange,
+  onDeleteAccount,
+}: {
+  deleteConfirm: string
+  deletingAccount: boolean
+  onDeleteConfirmChange: (value: string) => void
+  onDeleteAccount: () => void
+}) {
+  const canDelete = deleteConfirm === '계정 삭제' && !deletingAccount
+
+  return (
+    <section className="settings-card settings-danger-card" aria-labelledby="settings-danger-title">
+      <header className="settings-card-header">
+        <h3 id="settings-danger-title">Danger Zone</h3>
+        <p>계정을 삭제하면 작성한 데이터와 프로필을 복구할 수 없습니다.</p>
+      </header>
+      <label className="settings-field">
+        <span>삭제 확인</span>
+        <input
+          value={deleteConfirm}
+          autoComplete="off"
+          placeholder="계정 삭제"
+          onChange={(event) => onDeleteConfirmChange(event.target.value)}
+        />
+      </label>
+      <button
+        className="settings-action-button danger"
+        type="button"
+        disabled={!canDelete}
+        onClick={onDeleteAccount}
+      >
+        {deletingAccount ? '삭제 중...' : '회원 탈퇴'}
+      </button>
+    </section>
+  )
+}
+
 function ProfileEmptyState({
-  icon,
   title,
   description,
   actionLabel,
   onAction,
 }: {
-  icon: string
   title: string
   description?: string
   actionLabel?: string
@@ -931,7 +1168,6 @@ function ProfileEmptyState({
 }) {
   return (
     <div className="profile-empty-state">
-      <span aria-hidden="true">{icon}</span>
       <h3>{title}</h3>
       {description && <p>{description}</p>}
       {actionLabel && onAction && <button type="button" onClick={onAction}>{actionLabel}</button>}

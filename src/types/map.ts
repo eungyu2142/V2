@@ -1,19 +1,60 @@
-export type NaverMapApi = {
+export type GoogleLatLngLiteral = {
+  lat: number
+  lng: number
+}
+
+export type GoogleMapsListener = {
+  remove: () => void
+}
+
+export type GoogleMapInstance = {
+  setCenter: (center: GoogleLatLngLiteral) => void
+  setZoom: (zoom: number) => void
+  getZoom: () => number | undefined
+  panTo: (center: GoogleLatLngLiteral) => void
+  addListener: (eventName: string, listener: () => void) => GoogleMapsListener
+}
+
+export type GoogleOverlayViewInstance = {
+  setMap: (map: GoogleMapInstance | null) => void
+  getPanes: () => { overlayMouseTarget: Element } | null
+  getProjection: () => {
+    fromLatLngToDivPixel: (position: GoogleLatLng) => { x: number; y: number } | null
+  } | null
+}
+
+export type GoogleLatLng = {
+  lat: () => number
+  lng: () => number
+}
+
+export type GoogleMapApi = {
   maps: {
-    LatLng: new (latitude: number, longitude: number) => unknown
-    Point: new (x: number, y: number) => unknown
-    Map: new (element: HTMLElement, options: { center: unknown; zoom: number }) => {
-      setCenter: (center: unknown) => void
-      setZoom: (zoom: number) => void
-      panTo?: (center: unknown, options?: { duration?: number }) => void
-      morph?: (center: unknown, zoom?: number, options?: { duration?: number }) => void
-    }
-    Marker: new (options: { position: unknown; map: unknown; title?: string; icon?: string | { content: string } }) => { setMap: (map: unknown | null) => void }
-    Event: { addListener: (target: unknown, eventName: string, listener: () => void) => void }
-    TransCoord?: { fromTM128ToLatLng: (point: unknown) => { lat: () => number; lng: () => number } }
+    Map: new (element: HTMLElement, options: {
+      center: GoogleLatLngLiteral
+      zoom: number
+      clickableIcons?: boolean
+      disableDefaultUI?: boolean
+      fullscreenControl?: boolean
+      gestureHandling?: string
+      mapTypeControl?: boolean
+      streetViewControl?: boolean
+      zoomControl?: boolean
+    }) => GoogleMapInstance
+    LatLng: new (latitude: number, longitude: number) => GoogleLatLng
+    OverlayView: new () => GoogleOverlayViewInstance
   }
 }
 
+export type GoogleHtmlMarker = {
+  setMap: (map: GoogleMapInstance | null) => void
+  setZIndex: (zIndex: number) => void
+}
+
 declare global {
-  interface Window { naver?: NaverMapApi }
+  interface Window {
+    google?: GoogleMapApi
+    __exoGoogleMapsReady?: () => void
+    gm_authFailure?: () => void
+  }
 }

@@ -772,3 +772,75 @@
 - 핵심 변경 내용: 작성한 글 안에 Q&A·리뷰 카테고리와 실제 개수를 추가했다. 병원 리뷰 상위 탭을 제거하고 활동 요약의 Q&A와 병원 리뷰 수치는 각각 해당 카테고리로 바로 이동하게 연결했다. 기존 `/profile?tab=reviews` 주소는 `/profile?tab=posts&category=reviews` 상태로 호환한다.
 - 검증 결과: ESLint와 프로덕션 빌드로 확인했다.
 - 남은 작업: 없음.
+## 2026-08-04 Q&A·리뷰 상단 수치 통합
+
+- 요청 요약: 상단 활동 요약의 Q&A와 병원 리뷰를 `글`로 통합하고, 작성한 글 내부에는 Q&A·리뷰 두 카테고리를 표시.
+- 분석·판단 이유: 상단에서 Q&A와 병원 리뷰를 나눠 표시하면서 작성한 글 내부에서도 다시 나누면 같은 분류가 중복된다. 상단은 전체 작성 콘텐츠 수를 빠르게 보여주고, 세부 유형은 작성한 글 안에서 선택하도록 역할을 분리했다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 상단 활동 요약을 `글·임시저장·좋아요` 3개로 줄였다. 글 수치는 실제 Q&A 개수와 병원 리뷰 개수의 합으로 계산한다. 작성한 글 내부의 Q&A·리뷰 두 카테고리와 각각의 개수는 유지했다.
+- 검증 결과: ESLint와 프로덕션 빌드로 확인했다.
+- 남은 작업: 없음.
+## 2026-08-04 빈 상태 문자 마크 제거
+
+- 요청 요약: 프로필 빈 상태에 표시되는 `병`, `임`, `?`, `♡` 원형 마크 제거.
+- 분석·판단 이유: 문자 한 글자를 원형 배경에 넣은 마크는 정보 전달력이 낮고 빈 상태의 제목보다 먼저 시선을 끌었다. 모든 빈 상태가 공통 컴포넌트를 사용하므로 개별 숨김이 아니라 공통 구조에서 제거했다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: `ProfileEmptyState`의 icon prop과 렌더링 요소를 제거하고 네 호출부의 문자 값을 삭제했다. 원형 마크 CSS를 삭제하고 제목 위 여백을 정리했다.
+- 검증 결과: ESLint와 프로덕션 빌드로 확인했다.
+- 남은 작업: 없음.
+## 2026-08-04 Q&A 답변 상태 색상 표시
+
+- 요청 요약: 프로필 작성 글 목록에서도 `답변 대기`와 `해결` 상태를 색상으로 구분.
+- 분석·판단 이유: 기존에는 상태가 조회·댓글 수와 같은 메타 문장으로 표시되어 빠르게 구분하기 어려웠다. 상태만 별도 배지로 분리하고 기존 Q&A 화면과 같은 의미의 색상 체계를 사용했다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 공통 `ProfilePostStatus`를 추가해 답변 대기는 Accent, 해결은 Primary 색상 배지로 표시했다. 작성한 Q&A와 좋아요한 Q&A 목록에 동일하게 적용하고 조회·댓글 수는 중립 메타 정보로 분리했다.
+- 검증 결과: ESLint와 프로덕션 빌드로 확인했다.
+- 남은 작업: 없음.
+## 2026-08-04 리뷰 별점 시각화
+
+- 요청 요약: 프로필 리뷰 목록의 `별점 5` 같은 문자 표현을 실제 별 표시로 변경.
+- 분석·판단 이유: 숫자 문구보다 별 아이콘 배열이 리뷰 평점이라는 의미와 상대적인 점수를 더 빠르게 전달한다. 작성 리뷰와 좋아요한 리뷰가 같은 데이터를 보여주므로 공통 컴포넌트로 통일했다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 5점 기준으로 채운 별과 빈 별을 생성하는 `ProfileRatingStars`를 추가했다. 화면에서는 별만 보여주고 스크린리더에는 실제 점수와 5점 만점 정보를 제공한다. 작성 리뷰와 좋아요한 리뷰 목록에 모두 적용했다.
+- 검증 결과: ESLint와 프로덕션 빌드로 확인했다.
+- 남은 작업: 없음.
+## 2026-08-04 설정 화면 정보 구조 전면 개편
+
+- 요청 요약: 설정을 프로필, 돌봄 알림, 계정, Danger Zone 네 카드로 나누고 현대적인 설정 UX와 반응형 레이아웃을 적용.
+- 분석·판단 이유: 기존 화면은 프로필 편집, 알림, 로그아웃, 탈퇴가 밑줄형 섹션과 하나의 계정 영역에 섞여 있어 현재 상태와 위험 기능의 경계가 약했다. 프로젝트에는 Tailwind가 설치되어 있지 않고 기존 화면이 `App.css` 디자인 토큰을 사용하므로 전역 빌드 체계를 추가하지 않고 같은 결과를 토큰 기반 CSS로 구현했다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/App.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: `ProfileSection`, `NotificationSection`, `AccountSection`, `DangerZoneSection`으로 분리했다. 사진 클릭 업로드, 읽기 전용 아이디, 실제 변경 시에만 저장 활성화, push 구독·해제 스위치, 동일 크기 계정 버튼, 확인 문구 기반 탈퇴 활성화를 연결했다. 설정 콘텐츠는 최대 820px, 카드 간격 24px, 입력·버튼 높이 46px로 통일했다.
+- 검증 결과: ESLint와 프로덕션 빌드를 통과했다. 개발 서버는 `http://127.0.0.1:5173/`에서 실행했다. 브라우저 자동 검증은 로컬 주소가 브라우저 보안 정책에 차단되어 진행하지 못했다.
+- 남은 작업: 비밀번호 변경은 기존 이벤트와 API가 없어 기존처럼 비활성 상태다. 실제 기능 연결 시 버튼 이벤트를 추가해야 한다.
+## 2026-08-05 모바일 설정 탭 노출
+
+- 요청 요약: 모바일 프로필 탭에서 화면 밖으로 밀린 `설정`을 항상 보이게 수정.
+- 분석·판단 이유: 모바일에서도 데스크톱용 탭 간격과 고정 폭을 유지해 다섯 번째 설정 탭이 오른쪽으로 잘렸다. 다섯 탭의 중요도가 같으므로 모바일 너비를 동일한 5열로 배분했다.
+- 수정 파일: `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 760px 이하에서 프로필 탭을 5열 그리드로 전환하고 간격을 제거했다. 각 탭은 폭 100%, 최소 폭 0, 13px 글자와 줄바꿈 금지를 적용해 설정까지 한 화면에 표시한다.
+- 검증 결과: 프로필 파일 대상 ESLint와 프로덕션 빌드는 통과했다. 전체 ESLint는 이번 작업과 무관한 `src/components/hospital-map/MapScreen.tsx:279`의 기존 `react-hooks/set-state-in-effect` 오류로 실패했다.
+- 남은 작업: 없음.
+## 2026-08-05 활동 요약 4항목 한 줄 배치
+
+- 요청 요약: 글·임시저장·좋아요·채택 답변 요약이 모바일에서 두 줄로 내려가지 않도록 크기를 줄여 한 줄로 표시.
+- 분석·판단 이유: 채택 답변 항목이 추가됐지만 그리드가 3열로 유지되어 네 번째 항목이 자동으로 다음 줄에 배치됐다. 380px 이하에서는 버튼을 다시 키우는 예외 규칙도 있어 함께 정리했다.
+- 수정 파일: `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 활동 요약을 동일 너비 4열로 바꾸고 모바일 간격, padding, 숫자·라벨 크기를 축소했다. 최소 클릭 높이는 44px로 유지했다.
+- 검증 결과: 프로필 파일 대상 ESLint와 프로덕션 빌드로 확인했다.
+- 남은 작업: 없음.
+## 2026-08-05 프로필 한 줄 소개 제거
+
+- 요청 요약: 프로필 헤더의 한 줄 소개 영역 제거.
+- 분석·판단 이유: 현재 소개 저장 데이터가 연결되어 있지 않고 `한 줄 소개가 없습니다.`라는 빈 상태 문구만 반복되어 사용자 식별에 도움이 되지 않았다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 프로필 헤더의 소개 문구와 로딩 skeleton 소개 줄을 제거했다. 소개 전용 말줄임·줄바꿈 CSS도 삭제하고 닉네임과 아이디만 유지했다.
+- 검증 결과: 프로필 파일 대상 ESLint와 프로덕션 빌드로 확인했다.
+- 남은 작업: 없음.
+## 2026-08-05 신뢰 답변자 진행도 UI 개선
+
+- 요청 요약: 한 줄 텍스트로 표시되던 신뢰 답변자 정보를 더 완성도 있는 UI로 개선.
+- 분석·판단 이유: 기존에는 등급, 현재 점수, 다음 목표가 동일한 작은 글자로 붙어 있어 중요한 상태와 성장 방향을 빠르게 이해하기 어려웠다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/App.css`, `docs/project-records/profile.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 현재 등급, 큰 포인트 수치, 다음 레벨 진행 바, 남은 점수 순서로 정보 계층을 재구성했다. 레벨별 점수 구간을 기준으로 진행률을 계산하고 progressbar 접근성 속성을 추가했다. 모바일에서는 padding과 글자 크기를 축소한다.
+- 검증 결과: 프로필 파일 대상 ESLint와 프로덕션 빌드로 확인했다.
+- 남은 작업: 없음.

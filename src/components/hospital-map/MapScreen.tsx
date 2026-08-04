@@ -3,23 +3,178 @@ import { linkReviewToDiary } from '../../features/diary/diaryService'
 import type { PetRecord } from '../../features/diary/diaryTypes'
 import { loadAppData } from '../../lib/appData'
 import HospitalReviewForm from './MapAndReview'
+import HeartIcon from '../common/HeartIcon'
 import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
-import { buildHospitalSearchQuery, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadNaverMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory, writeSavedHospitalSnapshots } from './mapDependencies'
-import type { NaverMapApi } from '../../types/map'
+import { buildHospitalSearchQuery, createGoogleHtmlMarker, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadGoogleMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory, writeSavedHospitalSnapshots } from './mapDependencies'
+import type { GoogleHtmlMarker, GoogleLatLngLiteral, GoogleMapInstance } from '../../types/map'
 const HOSPITAL_LIST_PAGE_SIZE = 10
-function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
-  const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
+const HOSPITAL_REVIEWS_ENABLED = false
+const DEFAULT_MAP_CENTER: Coordinates = { lat: 37.5665, lng: 126.978 }
+const MAP_LOCATION_SESSION_KEY = 'exocare-map-location'
+function HospitalAddressIcon() {
+  return (
+    <svg className="hospital-detail-meta-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 22c4.6-4.2 7-8 7-11.3A7 7 0 1 0 5 10.7C5 14 7.4 17.8 12 22Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
+      <circle cx="12" cy="10.5" r="2.8" fill="currentColor" />
+    </svg>
+  )
+}
+
+function PhoneIcon() {
+  return (
+    <svg className="hospital-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7.2 3.4 4.8 5.8c-.7.7-.8 1.8-.3 2.8 2.4 5 5.9 8.5 10.9 10.9 1 .5 2.1.4 2.8-.3l2.4-2.4-4.2-3.1-2.1 2.1c-2.7-1.5-4.6-3.4-6.1-6.1l2.1-2.1-3.1-4.2Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" />
+      <path d="M14.5 5.2c2.3.5 3.8 2 4.3 4.3M14.8 1.8c4 .7 6.7 3.4 7.4 7.4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function CopyIcon() {
+  return (
+    <svg className="hospital-copy-svg" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="8" y="7" width="11" height="13" rx="2.2" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M16 7V5.8A2.8 2.8 0 0 0 13.2 3H5.8A2.8 2.8 0 0 0 3 5.8v9.4A2.8 2.8 0 0 0 5.8 18H8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2.25" />
+      <path d="m15.4 15.4 4.1 4.1" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.25" />
+    </svg>
+  )
+}
+
+function CurrentLocationIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 21c3.8-3.6 6-6.7 6-9.5a6 6 0 1 0-12 0c0 2.8 2.2 5.9 6 9.5Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="11" r="2.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+function OpeningStatusIcon({ open }: { open: boolean }) {
+  return (
+    <svg className="hospital-status-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      {open ? <circle className="hospital-status-icon-mark" cx="12" cy="12" r="3.6" /> : <path className="hospital-status-icon-mark" d="M8.2 12h7.6" />}
+    </svg>
+  )
+}
+
+type HospitalDisplayReviewSummary = {
+  average: number
+  count: number
+  source: 'exocare' | null
+}
+
+function getHospitalDisplayReviewSummary(hospitalReviews: HospitalReview[]): HospitalDisplayReviewSummary {
+  const exocare = getReviewSummary(hospitalReviews.filter((review) => isHospitalCareCategory(review.animalCategory)))
+  if (exocare.count > 0) return { average: exocare.average, count: exocare.count, source: 'exocare' }
+  return { average: 0, count: 0, source: null }
+}
+
+function getHospitalOpeningStatusLabel(hospital: Hospital) {
+  if (hospital.isOpenNow === true) return '영업 중'
+  if (hospital.isOpenNow === false) return '영업 종료'
+  return null
+}
+
+function getOpeningTransitionDescription(hospital: Hospital, now = new Date()) {
+  const hours = hospital.currentOpeningHours ?? hospital.regularOpeningHours
+  const value = hospital.isOpenNow === true
+    ? hours?.nextCloseTime
+    : hospital.isOpenNow === false
+      ? hours?.nextOpenTime
+      : undefined
+  if (!value) return null
+  const target = new Date(value)
+  if (Number.isNaN(target.getTime())) return null
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+  const dayDifference = Math.round((targetDay.getTime() - today.getTime()) / 86_400_000)
+  const dayLabel = dayDifference === 0
+    ? '오늘'
+    : dayDifference === 1
+      ? '내일'
+      : `${target.getMonth() + 1}월 ${target.getDate()}일`
+  const timeLabel = new Intl.DateTimeFormat('ko-KR', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(target)
+  return `${dayLabel} ${timeLabel} ${hospital.isOpenNow === true ? '종료' : '영업 시작'}`
+}
+
+function buildHospitalDirectionsUrl(hospital: Hospital) {
+  const query = encodeURIComponent(`${hospital.name} ${hospital.address}`.trim())
+  const placeId = hospital.googlePlaceId ? `&destination_place_id=${encodeURIComponent(hospital.googlePlaceId)}` : ''
+  return `https://www.google.com/maps/dir/?api=1&destination=${query}${placeId}`
+}
+
+function normalizeOpeningRange(value: string) {
+  const [rawStart, rawEnd] = value.split(/\s*[~～]\s*/, 2)
+  const start = rawStart?.trim() ?? ''
+  let end = rawEnd?.trim() ?? ''
+  if (!start || !end) return value.trim()
+
+  const meridiem = start.match(/^(오전|오후)\s*/)?.[1]
+  if (meridiem && !/^(오전|오후)\s*/.test(end)) end = `${meridiem} ${end}`
+  return `${start} ~ ${end}`
+}
+
+function parseTodayOpeningHours(description: string | null) {
+  if (!description) return { hours: null, breakTime: null }
+  const separatorIndex = description.indexOf(':')
+  const value = separatorIndex < 0 ? description : description.slice(separatorIndex + 1)
+  const periods = value.split(/\s*,\s*/).map((period) => normalizeOpeningRange(period)).filter(Boolean)
+  if (periods.length === 0) return { hours: null, breakTime: null }
+  if (periods.length === 1) return { hours: periods[0], breakTime: null }
+
+  const firstRange = periods[0].split(' ~ ')
+  const secondRange = periods[1].split(' ~ ')
+  const lastRange = periods[periods.length - 1].split(' ~ ')
+  if (firstRange.length !== 2 || lastRange.length !== 2) return { hours: periods.join(', '), breakTime: null }
+
+  return {
+    hours: `${firstRange[0]} ~ ${lastRange[1]}`,
+    breakTime: secondRange.length === 2 ? `${firstRange[1]} ~ ${secondRange[0]}` : null,
+  }
+}
+
+function readSessionMapLocation(): Coordinates | null {
+  try {
+    const value = sessionStorage.getItem(MAP_LOCATION_SESSION_KEY)
+    if (!value) return null
+    const parsed = JSON.parse(value) as Partial<Coordinates>
+    return typeof parsed.lat === 'number' && typeof parsed.lng === 'number'
+      ? { lat: parsed.lat, lng: parsed.lng }
+      : null
+  } catch {
+    return null
+  }
+}
+
+function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onCreateClinicRecord, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onCreateClinicRecord: (hospital: HospitalSnapshot) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+  const [initialMapLocation] = useState<Coordinates | null>(readSessionMapLocation)
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<Array<Exclude<AnimalCategory, 'all'>>>([])
   const [selectedSort, setSelectedSort] = useState<HospitalSort>('distance')
+  const [openNowOnly, setOpenNowOnly] = useState(false)
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
-  const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(null)
-  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'error')
-  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'idle')
+  const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(initialMapLocation)
+  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>(googleMapsApiKey ? 'loading' : 'error')
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(googleMapsApiKey ? 'loading' : 'idle')
   const [isLoading, setIsLoading] = useState(false)
-  const [, setMessage] = useState(naverMapClientId ? '' : '.env.local의 VITE_NAVER_MAP_CLIENT_ID를 확인해주세요.')
+  const [message, setMessage] = useState(googleMapsApiKey ? '' : '빌드 환경의 VITE_GOOGLE_MAPS_API_KEY를 확인해주세요.')
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false)
+  const [isOpeningHoursExpanded, setIsOpeningHoursExpanded] = useState(false)
   const [copiedAddressHospitalId, setCopiedAddressHospitalId] = useState<string | null>(null)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewBody, setReviewBody] = useState('')
@@ -41,35 +196,30 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [clinicRecords, setClinicRecords] = useState<PetRecord[]>([])
   const [reviewClinicRecordId, setReviewClinicRecordId] = useState('')
   const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false)
-  const [mobileSheetState, setMobileSheetState] = useState<MobileMapSheetState>('middle')
+  const [mobileSheetState, setMobileSheetState] = useState<MobileMapSheetState>('collapsed')
   const [sheetDragY, setSheetDragY] = useState(0)
   const [isSheetDragging, setIsSheetDragging] = useState(false)
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [visibleHospitalCount, setVisibleHospitalCount] = useState(HOSPITAL_LIST_PAGE_SIZE)
   const mapElementRef = useRef<HTMLDivElement | null>(null)
-  const mapInstanceRef = useRef<InstanceType<NaverMapApi['maps']['Map']> | null>(null)
-  const markersRef = useRef<Array<InstanceType<NaverMapApi['maps']['Marker']>>>([])
-  const currentLocationMarkerRef = useRef<InstanceType<NaverMapApi['maps']['Marker']> | null>(null)
+  const mapInstanceRef = useRef<GoogleMapInstance | null>(null)
+  const markersRef = useRef<GoogleHtmlMarker[]>([])
+  const currentLocationMarkerRef = useRef<GoogleHtmlMarker | null>(null)
+  const initialLocationRequestRef = useRef(false)
   const lastHospitalSearchKeyRef = useRef('')
   const sheetDragStartRef = useRef<number | null>(null)
+  const sheetDragDistanceRef = useRef(0)
 
-  function moveMapSmoothly(position: unknown, zoom: number) {
+  function moveMapSmoothly(position: GoogleLatLngLiteral, zoom: number) {
     const map = mapInstanceRef.current
     if (!map) return
 
     try {
-      if (typeof map.morph === 'function') {
-        map.morph(position, zoom, { duration: 520 })
-        return
-      }
-
-      if (typeof map.panTo === 'function') {
-        map.panTo(position, { duration: 520 })
-        window.setTimeout(() => map.setZoom(zoom), 220)
-        return
-      }
+      map.panTo(position)
+      if (map.getZoom() !== zoom) window.setTimeout(() => map.setZoom(zoom), 180)
+      return
     } catch (error) {
-      console.error('Naver map smooth move error:', error)
+      console.error('Google map smooth move error:', error)
     }
 
     map.setCenter(position)
@@ -81,21 +231,26 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     return sortedHospitals
       .filter((hospital) => hospitalMatchesQuery(hospital, query))
       .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
+      .filter((hospital) => !openNowOnly || hospital.isOpenNow !== false)
       .sort((a, b) => {
         if (selectedSort === 'reviews') {
-          const bCount = getReviewSummary(reviews[b.id] ?? []).count + (b.googleReviewCount ?? 0)
-          const aCount = getReviewSummary(reviews[a.id] ?? []).count + (a.googleReviewCount ?? 0)
+          const bCount = getReviewSummary(reviews[b.id] ?? []).count
+          const aCount = getReviewSummary(reviews[a.id] ?? []).count
           return bCount - aCount
         }
         if (selectedSort === 'rating') {
           const bSummary = getReviewSummary(reviews[b.id] ?? [])
           const aSummary = getReviewSummary(reviews[a.id] ?? [])
-          return (bSummary.count > 0 ? bSummary.average : b.rating ?? 0) - (aSummary.count > 0 ? aSummary.average : a.rating ?? 0)
+          return bSummary.average - aSummary.average
         }
         return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
       })
-  }, [query, reviews, selectedCategories, selectedSort, sortedHospitals])
+  }, [openNowOnly, query, reviews, selectedCategories, selectedSort, sortedHospitals])
   const visibleHospitals = filteredHospitals.slice(0, visibleHospitalCount)
+  const visibleHospitalDetailIds = visibleHospitals
+    .filter((hospital) => !hospital.googleDetailsLoaded)
+    .map((hospital) => hospital.id)
+    .join('|')
   const hasMoreHospitals = visibleHospitalCount < filteredHospitals.length
   const selectedHospital = filteredHospitals.find((hospital) => hospital.id === selectedHospitalId) ?? null
   const selectedHospitalReviews = selectedHospital ? (reviews[selectedHospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory)) : []
@@ -133,7 +288,11 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const selectedHospitalIsLiked = selectedHospital ? likedHospitals.some((hospital) => isSameHospitalIdentity(hospital, selectedHospital)) : false
   const selectedHospitalOpeningHours = selectedHospital?.openingHours ?? []
   const selectedHospitalTodayHours = getTodayOpeningHoursDescription(selectedHospitalOpeningHours)
-  const isHospitalDetailsLoading = Boolean(selectedHospital && !selectedHospital.googleDetailsLoaded)
+  const selectedHospitalTodaySchedule = parseTodayOpeningHours(selectedHospitalTodayHours)
+  const selectedHospitalDisplayReviewSummary = selectedHospital
+    ? getHospitalDisplayReviewSummary(selectedHospitalReviews)
+    : { average: 0, count: 0, source: null }
+  const selectedHospitalOpeningTransition = selectedHospital ? getOpeningTransitionDescription(selectedHospital) : null
 
   useEffect(() => {
     let cancelled = false
@@ -158,6 +317,29 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       })
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    const candidates = visibleHospitals.filter((hospital) => !hospital.googleDetailsLoaded)
+    if (candidates.length === 0) return
+    let cancelled = false
+
+    const enrichVisibleHospitals = async () => {
+      for (let index = 0; index < candidates.length; index += 2) {
+        const batch = candidates.slice(index, index + 2)
+        const details = await Promise.all(batch.map((hospital) => loadGoogleHospitalDetails(hospital)))
+        if (cancelled) return
+        const detailsById = new Map(details.filter((hospital): hospital is Hospital => Boolean(hospital)).map((hospital) => [hospital.id, hospital]))
+        if (detailsById.size > 0) {
+          setHospitals((items) => items.map((hospital) => detailsById.get(hospital.id) ?? hospital))
+        }
+      }
+    }
+
+    void enrichVisibleHospitals()
+    return () => { cancelled = true }
+    // The stable id string prevents detail updates from restarting the same batch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleHospitalDetailIds])
 
   useEffect(() => {
     if (!selectedHospital || selectedHospital.googleDetailsLoaded) return
@@ -218,50 +400,53 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   }, [pets, reviewDraftPayload, reviews])
 
   useEffect(() => {
-    if (!naverMapClientId) return
+    const handleGoogleMapsAuthFailure = () => {
+      setMapStatus('error')
+      setMessage('Google Cloud에서 Maps JavaScript API를 활성화해 주세요.')
+    }
+    window.addEventListener('exocare-google-maps-auth-failure', handleGoogleMapsAuthFailure)
+    return () => window.removeEventListener('exocare-google-maps-auth-failure', handleGoogleMapsAuthFailure)
+  }, [])
+
+  useEffect(() => {
+    if (!googleMapsApiKey) return
 
     let mounted = true
 
-    Promise.allSettled([loadNaverMaps(naverMapClientId), readBrowserLocation()])
-      .then(([naverResult, locationResult]) => {
+    loadGoogleMaps(googleMapsApiKey)
+      .then((google) => {
         if (!mounted || !mapElementRef.current) return
 
-        if (naverResult.status === 'rejected') throw naverResult.reason
-
         try {
-          const naver = naverResult.value
-          const firstLocation = locationResult.status === 'fulfilled' ? locationResult.value : null
-          const centerLocation = firstLocation ?? { lat: 37.5665, lng: 126.978 }
-          if (!naver.maps) throw new Error('Naver Maps API authentication failed.')
-          const center = new naver.maps.LatLng(centerLocation.lat, centerLocation.lng)
-          mapInstanceRef.current = new naver.maps.Map(mapElementRef.current, { center, zoom: 12 })
-          naver.maps.Event.addListener(mapInstanceRef.current, 'click', () => {
+          const centerLocation = initialMapLocation ?? DEFAULT_MAP_CENTER
+          if (!google.maps) throw new Error('Google Maps JavaScript API authentication failed.')
+          mapInstanceRef.current = new google.maps.Map(mapElementRef.current, {
+            center: centerLocation,
+            zoom: initialMapLocation ? 14 : 12,
+            clickableIcons: false,
+            fullscreenControl: false,
+            gestureHandling: 'greedy',
+            mapTypeControl: false,
+            streetViewControl: false,
+            zoomControl: true,
+          })
+          mapInstanceRef.current.addListener('click', () => {
             setSelectedHospitalId(null)
             setIsReviewFormOpen(false)
             setMobileSheetState('collapsed')
           })
           setMapStatus('ready')
-
-          if (firstLocation) {
-            setCurrentLocation(firstLocation)
-            setLocationStatus('ready')
-            setMessage('')
-          } else {
-            console.error('Initial geolocation error:', locationResult.status === 'rejected' ? locationResult.reason : null)
-            setLocationStatus('error')
-            setMessage('')
-          }
         } catch (error) {
-          console.error('Naver map initialization error:', error)
+          console.error('Google map initialization error:', error)
           setMapStatus('error')
-          setMessage(`지도를 초기화하지 못했습니다. ${window.location.origin}을 네이버 콘솔 Web 서비스 URL에 등록해주세요.`)
+          setMessage('Google Maps JavaScript API 설정과 웹사이트 제한을 확인해주세요.')
         }
       })
       .catch((error) => {
-        console.error('Naver map load error:', error)
+        console.error('Google map load error:', error)
         if (!mounted) return
         setMapStatus('error')
-        setMessage(`지도를 불러오지 못했습니다. 네이버 콘솔의 Web 서비스 URL에 ${window.location.origin}을 등록했는지 확인해주세요.`)
+        setMessage('Google Maps JavaScript API 키와 허용된 웹사이트 주소를 확인해주세요.')
       })
 
     return () => {
@@ -269,68 +454,88 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       markersRef.current.forEach((marker) => marker.setMap(null))
       currentLocationMarkerRef.current?.setMap(null)
     }
-  }, [naverMapClientId])
+  }, [googleMapsApiKey, initialMapLocation])
 
   useEffect(() => {
-    const naver = window.naver
-    const map = mapInstanceRef.current
-    if (!naver?.maps?.LatLng || !map || !currentLocation) return
+    if (initialLocationRequestRef.current) return
+    initialLocationRequestRef.current = true
 
-    const position = new naver.maps.LatLng(currentLocation.lat, currentLocation.lng)
+    readBrowserLocation()
+      .then((location) => {
+        sessionStorage.setItem(MAP_LOCATION_SESSION_KEY, JSON.stringify(location))
+        setCurrentLocation(location)
+        setLocationStatus('ready')
+        setMessage('')
+      })
+      .catch((error) => {
+        console.error('Initial geolocation error:', error)
+        setLocationStatus('error')
+        setMessage('')
+      })
+  }, [])
+
+  useEffect(() => {
+    const google = window.google
+    const map = mapInstanceRef.current
+    if (!google?.maps?.OverlayView || !map || !currentLocation) return
+
+    const position = currentLocation
     currentLocationMarkerRef.current?.setMap(null)
-    currentLocationMarkerRef.current = new naver.maps.Marker({
+    currentLocationMarkerRef.current = createGoogleHtmlMarker({
+      api: google,
       position,
       map,
       title: '내 위치',
-      icon: { content: '<div class="current-location-marker" aria-label="내 위치"><span></span></div>' },
+      html: '<div class="current-location-marker" aria-label="내 위치"><span></span></div>',
+      zIndex: 180,
     })
-    ;(currentLocationMarkerRef.current as unknown as { setZIndex?: (zIndex: number) => void }).setZIndex?.(180)
     moveMapSmoothly(position, 14)
-  }, [currentLocation])
+  }, [currentLocation, mapStatus])
 
   useEffect(() => {
-    const naver = window.naver
+    const google = window.google
     const map = mapInstanceRef.current
     const hospital = selectedHospital
-    if (!naver?.maps?.LatLng || !map || !hospital) return
-    const position = new naver.maps.LatLng(hospital.lat, hospital.lng)
+    if (!google?.maps?.Map || !map || !hospital) return
+    const position = { lat: hospital.lat, lng: hospital.lng }
     moveMapSmoothly(position, 16)
   }, [selectedHospital])
 
   useEffect(() => {
-    const naver = window.naver
+    const google = window.google
     const map = mapInstanceRef.current
-    if (!naver?.maps?.LatLng || !naver.maps.Marker || !naver.maps.Event || !map) return
+    if (!google?.maps?.OverlayView || !map) return
 
     markersRef.current.forEach((marker) => marker.setMap(null))
     markersRef.current = []
 
     filteredHospitals.forEach((hospital) => {
-      const position = new naver.maps.LatLng(hospital.lat, hospital.lng)
+      const position = { lat: hospital.lat, lng: hospital.lng }
       const appReviewCount = getReviewSummary(
         (reviews[hospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory)),
       ).count
-      const hospitalReviewCount = appReviewCount + (hospital.googleReviewCount ?? 0)
       const hospitalIsLiked = likedHospitals.some((likedHospital) => isSameHospitalIdentity(likedHospital, hospital))
-      const marker = new naver.maps.Marker({
+      const marker = createGoogleHtmlMarker({
+        api: google,
         position,
         map,
         title: hospital.name,
-        icon: { content: hospitalMarkerContent(hospital, hospital.id === selectedHospitalId, hospitalReviewCount, hospitalIsLiked) },
-      })
-      ;(marker as unknown as { setZIndex?: (zIndex: number) => void }).setZIndex?.(hospital.id === selectedHospitalId ? 260 : 210)
-      naver.maps.Event.addListener(marker, 'click', () => {
-        setSelectedHospitalId(hospital.id)
-        setMobileSheetState('middle')
+        html: hospitalMarkerContent(hospital, hospital.id === selectedHospitalId, appReviewCount, hospitalIsLiked),
+        zIndex: hospital.id === selectedHospitalId ? 260 : 210,
+        onClick: () => {
+          setSelectedHospitalId(hospital.id)
+          setMobileSheetState('middle')
+        },
       })
       markersRef.current.push(marker)
     })
-  }, [filteredHospitals, likedHospitals, reviews, selectedHospitalId])
+  }, [filteredHospitals, likedHospitals, mapStatus, reviews, selectedHospitalId])
 
   const getCurrentLocation = () => {
     setLocationStatus('loading')
     return readBrowserLocation()
       .then((location) => {
+        sessionStorage.setItem(MAP_LOCATION_SESSION_KEY, JSON.stringify(location))
         setCurrentLocation(location)
         setLocationStatus('ready')
         return location
@@ -580,6 +785,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
 
   const beginSheetDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number; stopPropagation: () => void }) => {
     sheetDragStartRef.current = event.clientY
+    sheetDragDistanceRef.current = 0
     setIsSheetDragging(true)
     setSheetDragY(0)
     event.currentTarget.setPointerCapture?.(event.pointerId)
@@ -589,18 +795,24 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const moveSheetDrag = (event: { clientY: number; preventDefault: () => void }) => {
     if (sheetDragStartRef.current === null) return
     const nextDragY = event.clientY - sheetDragStartRef.current
+    sheetDragDistanceRef.current = nextDragY
     setSheetDragY(nextDragY)
     if (Math.abs(nextDragY) > 0) event.preventDefault()
   }
 
   const finishSheetDrag = () => {
-    const dragDistance = sheetDragY
+    const dragDistance = sheetDragDistanceRef.current
     sheetDragStartRef.current = null
+    sheetDragDistanceRef.current = 0
     setIsSheetDragging(false)
     setSheetDragY(0)
 
-    if (dragDistance < -56) {
-      setMobileSheetState((state) => state === 'collapsed' ? 'middle' : 'expanded')
+    if (dragDistance < -48) {
+      setMobileSheetState((state) => {
+        if (state === 'expanded') return state
+        if (state === 'middle') return 'expanded'
+        return dragDistance < -120 ? 'expanded' : 'middle'
+      })
       return
     }
 
@@ -611,10 +823,15 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       return
     }
 
+    if (mobileSheetState === 'middle') {
+      setMobileSheetState('collapsed')
+      return
+    }
+
     if (selectedHospital) {
       setSelectedHospitalId(null)
       setIsReviewFormOpen(false)
-      setMobileSheetState('middle')
+      setMobileSheetState('collapsed')
       return
     }
 
@@ -676,17 +893,13 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   return (
     <section className={`map-page mobile-sheet-${mobileSheetState} ${selectedHospital ? 'has-selected-hospital' : ''}`}>
       <section className="map-area">
-        <div className="map-canvas" ref={mapElementRef}>
-          {mapStatus !== 'ready' && (
-            <div className="map-load-state">
-              <strong>{mapStatus === 'error' ? '지도를 불러오지 못했습니다' : '네이버 지도를 불러오는 중입니다'}</strong>
-              {mapStatus === 'error' && <small>네이버 콘솔 Web 서비스 URL에 {window.location.origin} 을 등록해 주세요.</small>}
-            </div>
-          )}
-        </div>
-        <button className="map-mobile-location-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation} aria-label="내 위치로 이동">
-          <span>{locationStatus === 'loading' ? '확인중' : '내 위치'}</span>
-        </button>
+        <div className="map-canvas" ref={mapElementRef} />
+        {mapStatus !== 'ready' && (
+          <div className="map-load-state">
+            <strong>{mapStatus === 'error' ? '지도를 불러오지 못했습니다' : 'Google 지도를 불러오는 중입니다'}</strong>
+            {mapStatus === 'error' && <small>{message || 'VITE_GOOGLE_MAPS_API_KEY와 Google Cloud의 웹사이트 제한을 확인해 주세요.'}</small>}
+          </div>
+        )}
       </section>
       <aside className={`map-side-panel ${isSidePanelCollapsed ? 'collapsed' : ''}`} aria-label="병원 검색과 정보">
         <button className="map-side-collapse-toggle" type="button" onClick={() => setIsSidePanelCollapsed((value) => !value)} aria-label={isSidePanelCollapsed ? '병원 목록 열기' : '병원 목록 닫기'}>
@@ -699,28 +912,30 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           </button>
         )}
         <form className="map-search-panel" onSubmit={submit}>
-          <label>
-            병원 검색
-            <input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }} placeholder="지역명, 병원명" />
-          </label>
-          <button className="map-search-icon-button" type="submit" disabled={isLoading} aria-label="검색">
-            <span aria-hidden="true" />
-          </button>
+          <div className="map-search-field">
+            <label htmlFor="hospital-map-search">병원 검색</label>
+            <span className="map-search-leading-icon" aria-hidden="true"><SearchIcon /></span>
+            <input id="hospital-map-search" value={query} onChange={(event) => { setQuery(event.target.value); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }} placeholder="지역명 또는 병원명을 입력하세요" />
+          </div>
           <button className="secondary-button" type="button" disabled={locationStatus === 'loading'} onClick={requestCurrentLocation}>
+            <CurrentLocationIcon />
             <span>{locationStatus === 'loading' ? '확인중' : '내 위치'}</span>
           </button>
         </form>
 
-        <div className="map-sort-tabs" aria-label="병원 정렬">
+        <div className="map-sort-tabs" aria-label="병원 정렬과 필터">
           {([
             ['distance', '가까운 순'],
             ['reviews', '리뷰 많은 순'],
             ['rating', '평점 높은 순'],
-          ] as Array<[HospitalSort, string]>).map(([sort, label]) => (
+          ] as Array<[HospitalSort, string]>).filter(([sort]) => HOSPITAL_REVIEWS_ENABLED || sort === 'distance').map(([sort, label]) => (
             <button className={selectedSort === sort ? 'active' : ''} type="button" key={sort} onClick={() => { setSelectedSort(sort); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
               {label}
             </button>
           ))}
+          <button className={openNowOnly ? 'active' : ''} type="button" aria-pressed={openNowOnly} onClick={() => { setOpenNowOnly((value) => !value); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
+            영업 중
+          </button>
         </div>
 
         <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
@@ -732,6 +947,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
               {visibleHospitals.map((hospital) => (
                 <HospitalListRow
                   hospital={hospital}
+                  reviews={reviews[hospital.id] ?? []}
                   key={hospital.id}
                   active={hospital.id === selectedHospitalId}
                   onSelect={() => { setSelectedHospitalId(hospital.id); setMobileSheetState('middle') }}
@@ -761,52 +977,93 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                 aria-pressed={selectedHospitalIsLiked}
                 onClick={() => toggleSavedHospital(selectedHospital)}
               >
-                <span className="hospital-heart-icon" aria-hidden="true" />
+                <HeartIcon filled={selectedHospitalIsLiked} />
               </button>
               <button className="panel-close" type="button" aria-label="병원 상세 닫기" onClick={() => setSelectedHospitalId(null)} />
             </div>
           </header>
 
+          <div className="hospital-detail-summary" aria-label="병원 요약 정보">
+            {HOSPITAL_REVIEWS_ENABLED && <HospitalRatingSummary summary={selectedHospitalDisplayReviewSummary} />}
+            <span className="hospital-summary-distance">{selectedHospital.distanceKm === undefined ? '거리 계산 전' : `${selectedHospital.distanceKm.toFixed(1)}km`}</span>
+            {getHospitalOpeningStatusLabel(selectedHospital) && (
+              <span className={`hospital-open-status ${selectedHospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>
+                <OpeningStatusIcon open={selectedHospital.isOpenNow === true} />
+                {getHospitalOpeningStatusLabel(selectedHospital)}
+              </span>
+            )}
+          </div>
+          {selectedHospitalOpeningTransition && <p className="hospital-opening-transition">{selectedHospitalOpeningTransition}</p>}
+
           <section className="hospital-basic-info" aria-label="병원 기본 정보">
             <div className="hospital-address-row">
-              <p><span className="meta-icon location" aria-hidden="true" />{selectedHospital.address || '주소 정보 없음'}</p>
+              <p><HospitalAddressIcon />{selectedHospital.address || '주소 정보 없음'}</p>
               {selectedHospital.address && (
                 <button className={`hospital-address-copy ${copiedAddressHospitalId === selectedHospital.id ? 'copied' : ''}`} type="button" aria-label={copiedAddressHospitalId === selectedHospital.id ? '주소 복사 완료' : '병원 주소 복사'} title={copiedAddressHospitalId === selectedHospital.id ? '복사됨' : '주소 복사'} onClick={() => void copyHospitalAddress(selectedHospital)}>
-                  <span className="hospital-copy-icon" aria-hidden="true" />
+                  <CopyIcon />
                   <span className="sr-only">{copiedAddressHospitalId === selectedHospital.id ? '복사됨' : '복사'}</span>
                 </button>
               )}
             </div>
-            <p className="hospital-distance"><span className="meta-icon distance" aria-hidden="true" />{selectedHospital.distanceKm === undefined ? '내 위치 기준 거리 계산 전' : `내 위치에서 ${selectedHospital.distanceKm.toFixed(1)}km`}</p>
             <div className="hospital-opening-hours" aria-label="영업시간">
-              <div className="hospital-opening-current">
-                <strong className={selectedHospital.isOpenNow === true ? 'is-open' : selectedHospital.isOpenNow === false ? 'is-closed' : 'is-unknown'}>
-                  {isHospitalDetailsLoading ? '영업정보 확인 중' : selectedHospital.isOpenNow === true ? '영업 중' : selectedHospital.isOpenNow === false ? '영업 종료' : '영업시간 정보 없음'}
-                </strong>
-                <span>{selectedHospitalTodayHours || '오늘 운영시간 정보 없음'}</span>
-              </div>
               {selectedHospitalOpeningHours.length > 0 ? (
-                <details>
-                  <summary>요일별 영업시간</summary>
-                  <ul>
-                    {selectedHospitalOpeningHours.map((description) => (
-                      <li key={description}>{description}</li>
-                    ))}
-                  </ul>
-                </details>
+                <>
+                  <div className="hospital-opening-current">
+                    <div className="hospital-opening-title">
+                      <strong>오늘 운영시간</strong>
+                      {getHospitalOpeningStatusLabel(selectedHospital) && (
+                        <span className={`hospital-opening-badge ${selectedHospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>
+                          {getHospitalOpeningStatusLabel(selectedHospital)}
+                        </span>
+                      )}
+                    </div>
+                    <span className="hospital-today-hours">{selectedHospitalTodaySchedule.hours ?? '오늘 운영시간 정보 없음'}</span>
+                  </div>
+                  {selectedHospitalTodaySchedule.breakTime && (
+                    <div className="hospital-opening-break">
+                      <span>휴게시간</span>
+                      <span>{selectedHospitalTodaySchedule.breakTime}</span>
+                    </div>
+                  )}
+                <div className="hospital-weekly-hours">
+                  <button className="hospital-weekly-hours-toggle" type="button" aria-expanded={isOpeningHoursExpanded} onClick={() => setIsOpeningHoursExpanded((expanded) => !expanded)}>
+                    <span className="hospital-hours-chevron" aria-hidden="true" />
+                    요일별 영업시간 ({isOpeningHoursExpanded ? '접기' : '펼치기'})
+                  </button>
+                  <div className={`hospital-weekly-hours-panel ${isOpeningHoursExpanded ? 'is-open' : ''}`} aria-hidden={!isOpeningHoursExpanded}>
+                    <div>
+                      <ul>
+                        {selectedHospitalOpeningHours.map((description) => (
+                          <li key={description}>{description}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                </>
               ) : (
-                <span className="hospital-opening-empty">등록된 영업시간이 없습니다</span>
+                <span className="hospital-opening-empty">운영시간 정보 없음</span>
               )}
             </div>
           </section>
+          <section className="hospital-primary-actions" aria-label="병원 주요 작업">
+            {selectedHospital.phone ? (
+              <a href={`tel:${selectedHospital.phone}`}><PhoneIcon />전화하기</a>
+            ) : (
+              <button type="button" disabled><PhoneIcon />전화번호 없음</button>
+            )}
+            <a href={buildHospitalDirectionsUrl(selectedHospital)} target="_blank" rel="noreferrer">길찾기</a>
+          </section>
+          <button className="hospital-visit-record-action" type="button" onClick={() => onCreateClinicRecord(toHospitalSnapshot(selectedHospital))}>
+            <span>이 병원으로 방문 기록 남기기</span>
+          </button>
           <section className="hospital-contact-info" aria-labelledby="hospital-contact-title">
             <h3 id="hospital-contact-title">연락처</h3>
             <dl>
-              <div><dt>전화번호</dt><dd>{selectedHospital.phone ? <a href={`tel:${selectedHospital.phone}`}>{selectedHospital.phone}</a> : '정보 없음'}</dd></div>
-              <div><dt>홈페이지</dt><dd>{selectedHospital.websiteUri ? <a href={selectedHospital.websiteUri} target="_blank" rel="noreferrer">홈페이지 열기</a> : '정보 없음'}</dd></div>
+              <div><dt>전화번호</dt><dd>{selectedHospital.phone ? <a className="hospital-phone-link" href={`tel:${selectedHospital.phone}`}><PhoneIcon />{selectedHospital.phone}</a> : <span className="hospital-contact-empty">없음</span>}</dd></div>
             </dl>
           </section>
-          <section className="hospital-review-panel" aria-labelledby="exocare-review-title">
+          {HOSPITAL_REVIEWS_ENABLED && <section className="hospital-review-panel" aria-labelledby="exocare-review-title">
             <header className="hospital-section-header">
               <div>
                 <h3 id="exocare-review-title">방문 리뷰</h3>
@@ -833,28 +1090,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             ) : (
               <div className="hospital-review-empty">
                 <strong>아직 작성된 방문 리뷰가 없습니다.</strong>
-                <span>이 병원에 방문했다면 경험을 공유해 주세요.</span>
+                <span>첫 번째 리뷰를 작성해 다른 사용자에게 도움을 주세요.</span>
               </div>
             )}
-          </section>
-
-          {(isHospitalDetailsLoading || selectedHospital.rating !== undefined || selectedHospital.googleReviewCount !== undefined || selectedHospital.googleMapsUri) && (
-            <section className="hospital-google-rating" aria-labelledby="google-rating-title">
-              <h3 id="google-rating-title">Google 평점</h3>
-              {isHospitalDetailsLoading ? (
-                <p>평점 정보를 확인하고 있습니다.</p>
-              ) : (
-                <div className="hospital-google-rating-row">
-                  <strong><span aria-hidden="true">★</span> {selectedHospital.rating !== undefined ? selectedHospital.rating.toFixed(1) : '정보 없음'}</strong>
-                  <span>{selectedHospital.googleReviewCount !== undefined ? `평가 ${selectedHospital.googleReviewCount.toLocaleString()}개` : '평가 수 정보 없음'}</span>
-                  {selectedHospital.googleMapsUri && <a href={selectedHospital.googleMapsUri} target="_blank" rel="noreferrer">Google Maps에서 확인 ↗</a>}
-                </div>
-              )}
-            </section>
-          )}
+          </section>}
         </article>
       )}
-      {selectedHospital && isReviewFormOpen && (
+      {copiedAddressHospitalId && <div className="map-action-toast" role="status" aria-live="polite">주소를 복사했습니다.</div>}
+      {HOSPITAL_REVIEWS_ENABLED && selectedHospital && isReviewFormOpen && (
         <div className="hospital-review-modal-layer">
           <button className="hospital-review-modal-backdrop" type="button" aria-label="리뷰 작성 닫기" onClick={closeReviewForm} />
           <section className="hospital-review-modal" role="dialog" aria-modal="true" aria-labelledby="hospital-review-modal-title">
@@ -919,13 +1162,30 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   )
 }
 
-function HospitalListRow({ hospital, active, onSelect }: { hospital: Hospital; active: boolean; onSelect: () => void }) {
+function HospitalRatingSummary({ summary, compact = false }: { summary: HospitalDisplayReviewSummary; compact?: boolean }) {
+  if (summary.source === null) return null
+  return (
+    <span className={`hospital-rating-summary ${compact ? 'compact' : ''}`} aria-label={`ExoCare 방문 리뷰 별점 ${summary.average.toFixed(1)}점`}>
+      <span className="hospital-rating-stars" aria-hidden="true">
+        <span>★★★★★</span>
+        <span style={{ width: `${Math.min(100, Math.max(0, summary.average / 5 * 100))}%` }}>★★★★★</span>
+      </span>
+    </span>
+  )
+}
+
+function HospitalListRow({ hospital, reviews, active, onSelect }: { hospital: Hospital; reviews: HospitalReview[]; active: boolean; onSelect: () => void }) {
+  const reviewSummary = getHospitalDisplayReviewSummary(reviews)
   return (
     <article className={`map-hospital-row ${active ? 'active' : ''}`}>
       <button className="map-hospital-row-main" type="button" onClick={onSelect}>
         <span>
           <strong>{hospital.name}</strong>
-          <small>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</small>
+          {HOSPITAL_REVIEWS_ENABLED && <HospitalRatingSummary summary={reviewSummary} compact />}
+          <small>
+            <span>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</span>
+            {getHospitalOpeningStatusLabel(hospital) && <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${hospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>}
+          </small>
         </span>
       </button>
     </article>
@@ -933,36 +1193,74 @@ function HospitalListRow({ hospital, active, onSelect }: { hospital: Hospital; a
 }
 
 function HospitalReviewItem({ review, fallbackAuthor, fallbackAvatarUrl, onDelete, onEdit, onToggleLike }: { review: HospitalReview; fallbackAuthor: string; fallbackAvatarUrl: string; onDelete: () => void; onEdit: () => void; onToggleLike: () => void }) {
+  const [isManageMenuOpen, setIsManageMenuOpen] = useState(false)
   const authorName = review.author && review.author !== '익명' ? review.author : fallbackAuthor
   const avatarUrl = review.mine ? fallbackAvatarUrl : review.authorAvatarUrl
   const body = review.body || review.content || ''
+  const petName = review.petName || '반려동물'
+  const species = review.species?.trim() || '정보 없음'
   const reviewMeta = [
-    review.petName || review.species || '반려동물 정보 없음',
-    review.visitDate ? formatReviewDate(review.visitDate) : '',
+    `작성자 ${authorName}`,
+    formatReviewDate(review.visitDate || review.createdAt),
     review.cost ? `${review.cost.toLocaleString('ko-KR')}원` : '',
   ].filter(Boolean).join(' · ')
 
   return (
-    <article className="review-item">
+    <article className={`review-item ${isManageMenuOpen ? 'is-manage-menu-open' : ''}`}>
       <div className="review-item-head">
         <ReviewAuthorAvatar url={avatarUrl} name={authorName} />
-        <div>
-          <strong>{authorName}</strong>
+        <div className="review-pet-info">
+          <strong>{petName}</strong>
+          <small className="review-species-label">종: {species}</small>
           <small>{reviewMeta}</small>
         </div>
-        <span className="review-rating-badge" aria-label={`평점 ${review.rating}점`}>{review.rating.toFixed(1)}</span>
+        <div className="review-item-head-tools">
+          <ReviewRatingStars rating={review.rating} />
+          {review.mine && (
+            <div
+              className="review-manage-menu"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsManageMenuOpen(false)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setIsManageMenuOpen(false)
+              }}
+            >
+              <button className="review-manage-trigger" type="button" aria-label="내 리뷰 관리" aria-expanded={isManageMenuOpen} aria-haspopup="menu" onClick={() => setIsManageMenuOpen((open) => !open)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
+              </button>
+              {isManageMenuOpen && (
+                <div className="review-manage-popover" role="menu">
+                  <button type="button" role="menuitem" onClick={() => { setIsManageMenuOpen(false); onEdit() }}>수정</button>
+                  <button className="danger" type="button" role="menuitem" onClick={() => { setIsManageMenuOpen(false); onDelete() }}>삭제</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       {body && <p className="review-item-body">{body}</p>}
       {review.tags && review.tags.length > 0 && <div className="review-item-tags" aria-label="리뷰 태그">{review.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
       {review.images && review.images.length > 0 && <div className="review-image-row">{review.images.map((image) => <img src={image} alt="" key={image} />)}</div>}
       <footer className="review-item-footer">
-        <time>{formatReviewDate(review.createdAt)}</time>
         <div className="review-item-actions">
-          <button className={`review-like-button ${review.liked ? 'active' : ''}`} type="button" onClick={onToggleLike}>♥ {review.likes ?? 0}</button>
-          {review.mine && <><button type="button" onClick={onEdit}>수정</button><button type="button" onClick={onDelete}>삭제</button></>}
+          <button className={`review-like-button ${review.liked ? 'active' : ''}`} type="button" aria-label={review.liked ? '리뷰 좋아요 취소' : '리뷰 좋아요'} aria-pressed={review.liked === true} onClick={onToggleLike}><HeartIcon filled={review.liked === true} /><span>{review.likes ?? 0}</span></button>
         </div>
       </footer>
     </article>
+  )
+}
+
+function ReviewRatingStars({ rating }: { rating: number }) {
+  const filledStars = Math.max(0, Math.min(5, Math.round(rating)))
+  return (
+    <span className="review-rating-stars" aria-label={`평점 ${rating}점`} role="img">
+      {Array.from({ length: 5 }, (_, index) => (
+        <svg className={index < filledStars ? 'is-filled' : ''} viewBox="0 0 24 24" aria-hidden="true" key={index}>
+          <polygon points="12,2 15.1,8.2 22,9.2 17,14 18.2,21 12,17.7 5.8,21 7,14 2,9.2 8.9,8.2" />
+        </svg>
+      ))}
+    </span>
   )
 }
 

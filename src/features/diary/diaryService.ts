@@ -9,6 +9,8 @@ type CarePlanRow = {
   task_type: CarePlan['taskType']
   title: string
   repeat_days: number[]
+  recurrence_type?: 'weekdays' | 'interval'
+  recurrence_interval_days?: number
   start_date: string
   end_date: string | null
   notification_time: string | null
@@ -40,6 +42,8 @@ const toCarePlan = (row: CarePlanRow): CarePlan => ({
   taskType: row.task_type,
   title: row.title,
   repeatDays: row.repeat_days ?? [],
+  recurrenceType: row.recurrence_type ?? 'weekdays',
+  recurrenceIntervalDays: row.recurrence_interval_days ?? 1,
   startDate: row.start_date,
   endDate: row.end_date ?? undefined,
   notificationTime: row.notification_time?.slice(0, 5) ?? '09:00',
@@ -73,6 +77,14 @@ export async function listCarePlans(userId: string, petId?: string) {
 }
 
 export async function listDailyTasks(userId: string, from: string, to: string, petId?: string) {
+  const { error: rollingWindowError } = await supabase.rpc('materialize_my_routine_notification_windows', {
+    p_from_date: null,
+    p_days: 14,
+  })
+  if (rollingWindowError && import.meta.env.DEV) {
+    console.error('Rolling routine window materialization failed.', rollingWindowError)
+  }
+
   const { error: materializeError } = await supabase.rpc('materialize_daily_tasks', {
     p_pet_id: petId ?? null,
     p_from_date: from,
@@ -95,16 +107,27 @@ export async function saveCarePlan(userId: string, plan: CarePlan) {
     task_type: plan.taskType,
     title: plan.title,
     repeat_days: plan.repeatDays,
+    recurrence_type: plan.recurrenceType ?? 'weekdays',
+    recurrence_interval_days: plan.recurrenceIntervalDays ?? 1,
     start_date: plan.startDate,
     end_date: plan.endDate ?? null,
     notification_time: plan.notificationTime,
     is_active: plan.isActive,
   })
   if (error) throw error
+
+  const { error: windowError } = await supabase.rpc('refresh_routine_notification_window', {
+    p_routine_id: plan.id,
+    p_from_date: null,
+    p_days: 14,
+  })
+  if (windowError && import.meta.env.DEV) {
+    console.error('Routine saved, but its rolling notification window could not be refreshed.', windowError)
+  }
 }
 
 export async function deleteCarePlan(id: string) {
-  const { error } = await supabase.from('care_plans').delete().eq('id', id)
+  const { error } = await supabase.rpc('archive_care_plan', { p_routine_id: id })
   if (error) throw error
 }
 
@@ -120,6 +143,12 @@ export async function markDailyTaskCompleted(taskId: string) {
     .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', taskId)
   if (error) throw error
+  const { error: notificationError } = await supabase.rpc('cancel_occurrence_notification_jobs', {
+    p_occurrence_id: taskId,
+  })
+  if (notificationError && import.meta.env.DEV) {
+    console.error('Daily task completed, but remaining notifications could not be cancelled.', notificationError)
+  }
 }
 
 export async function saveDailyTaskCareRecord(userId: string, record: PetRecord) {
@@ -157,11 +186,32 @@ export async function saveDailyTaskCareRecord(userId: string, record: PetRecord)
 export async function undoDailyTask(taskId: string) {
   const { error } = await supabase.rpc('undo_daily_task', { p_task_id: taskId })
   if (error) throw error
+
+  const { data: task, error: taskError } = await supabase
+    .from('daily_tasks')
+    .select('care_plan_id, scheduled_date')
+    .eq('id', taskId)
+    .maybeSingle()
+  if (taskError || !task?.care_plan_id) return
+  const { error: notificationError } = await supabase.rpc('materialize_routine_notification_window', {
+    p_routine_id: task.care_plan_id,
+    p_from_date: task.scheduled_date,
+    p_days: 14,
+  })
+  if (notificationError && import.meta.env.DEV) {
+    console.error('Daily task restored, but its notifications could not be restored.', notificationError)
+  }
 }
 
 export async function skipDailyTask(taskId: string, reason?: string) {
   const { error } = await supabase.rpc('skip_daily_task', { p_task_id: taskId, p_reason: reason ?? null })
   if (error) throw error
+  const { error: notificationError } = await supabase.rpc('cancel_occurrence_notification_jobs', {
+    p_occurrence_id: taskId,
+  })
+  if (notificationError && import.meta.env.DEV) {
+    console.error('Daily task skipped, but remaining notifications could not be cancelled.', notificationError)
+  }
 }
 
 export type ClinicDiaryInput = {

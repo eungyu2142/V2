@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { AttachedDiarySnapshot, AttachedRecordSnapshot, HospitalSnapshot, QnaPost, QnaSort } from '../../types/app'
-import type { PetRecord } from '../../features/diary/diaryTypes'
+import { DataVisualization } from '../../features/diary/DiaryPage'
 
 const text = {
   loadingRecords: '\uAE30\uB85D \uBD88\uB7EC\uC624\uB294 \uC911',
@@ -70,11 +70,7 @@ export function DiaryTimelineAttachment({ snapshot, mode, onRemove }: { snapshot
 }
 
 export function DiaryVisualizationAttachment({ snapshot }: { snapshot: AttachedDiarySnapshot }) {
-  const [metric, setMetric] = useState<'all' | 'poop' | 'environment'>('all')
-  const records = snapshot.records.filter((record) => metric === 'all' || (metric === 'poop' ? record.type === 'poop' : Boolean(record.environmentRecord)))
-  const maxCount = Math.max(1, records.length)
-  const labelFor = (record: PetRecord) => record.environmentRecord ? '온습도' : record.type === 'poop' ? '배변' : record.type === 'food' ? '먹이' : '기록'
-  return <section className="qna-diary-visualization"><strong>{snapshot.petName}의 기록</strong><div className="qna-diary-visualization-tabs"><button className={metric === 'all' ? 'active' : ''} type="button" onClick={() => setMetric('all')}>전체</button><button className={metric === 'poop' ? 'active' : ''} type="button" onClick={() => setMetric('poop')}>배변</button><button className={metric === 'environment' ? 'active' : ''} type="button" onClick={() => setMetric('environment')}>온습도</button></div><div className="qna-diary-visualization-chart">{records.map((record) => <div className="qna-diary-visualization-item" key={record.id}><span>{labelFor(record)}</span><i style={{ height: `${Math.max(18, (1 / maxCount) * 100)}%` }} /><time>{record.date}</time></div>)}</div></section>
+  return <DataVisualization records={snapshot.records} petName={snapshot.petName} />
 }
 
 export function RecordAttachCard({ record, mode, onRemove, onOpen }: { record: AttachedRecordSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {

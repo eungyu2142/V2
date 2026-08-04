@@ -26,12 +26,12 @@ export type HospitalGoogleReview = {
   googleMapsUri?: string
 }
 export type Pet = { id: string; name: string; group: AnimalCategory; species: string; gender: 'male' | 'female' | 'unknown'; photo?: string; photoPosition?: { x: number; y: number }; weight?: string; weightUnit?: 'g' | 'kg'; birthday?: string; adoptionDate?: string; registeredAt?: string; description?: string; ageStage?: string; ageText?: string }
-export type QnaCategory = '건강/증상' | '사육/관리'
+export type QnaCategory = '질병' | '사육' | '먹이' | '환경' | '행동' | '번식'
 export type QnaStatus = 'unresolved' | 'resolved'
 export type QnaSort = 'latest' | 'popular' | 'comments'
 export type QnaListStatus = 'all' | 'waiting' | 'answered' | 'resolved'
 export type HospitalSnapshot = { id?: string; name: string; address: string; phone: string; lat: number; lng: number; animalTags: string[]; naverLink: string; source: 'naver_local_search' | 'local_hospital_data'; rating?: number; googleReviewCount?: number; googleReviews?: HospitalGoogleReview[]; regularOpeningHours?: HospitalOpeningHours | null; currentOpeningHours?: HospitalOpeningHours | null; openingHours?: string[]; isOpenNow?: boolean | null; openingHoursUpdatedAt?: string | null }
-export type QnaComment = { id: string; author: string; authorAvatarUrl?: string; body: string; createdAt: string; mine: boolean; hospitalSnapshot?: HospitalSnapshot }
+export type QnaComment = { id: string; author: string; authorAvatarUrl?: string; body: string; createdAt: string; mine: boolean; isAccepted?: boolean; liked?: boolean; likes?: number; hospitalSnapshot?: HospitalSnapshot }
 export type AttachedRecordSnapshot = { recordId: string; petId: string; petName: string; animalGroup: string; animalSpecies: string; recordDate: string; recordType: PetRecordType; recordTypeLabel: string; summary: string; photoUrl?: string }
 export type AttachedDiarySnapshot = { petId: string; petName: string; petPhoto?: string; records: PetRecord[]; startDate: string; endDate: string; totalCount: number }
 export type QnaPost = { id: string; category: QnaCategory; status?: QnaStatus; selectedAnswerCommentId?: string; title: string; body: string; author: string; authorAvatarUrl?: string; mine?: boolean; animal: string; petId: string; animalGroup?: string; animalSpecies?: string; image?: string; images?: string[]; linkedRecordId?: string; attachedRecordSnapshot?: AttachedRecordSnapshot; attachedDiarySnapshot?: AttachedDiarySnapshot; createdAt: string; viewCount?: number; liked: boolean; likes: number; comments: QnaComment[] }

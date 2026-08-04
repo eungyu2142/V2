@@ -1,6 +1,204 @@
 # maps 작업 기록
 
+## 2026-08-05 검색창·내 위치 버튼 통합
+
+- 요청 요약: 돋보기 버튼을 제거하고 작은 검색 버튼을 왼쪽, 내 위치를 입력창 오른쪽에 배치한다.
+- 분석·판단 이유: 병원 검색과 위치 기반 재정렬을 동일한 상단 제어 영역에서 제공해야 모바일 지도 조작 흐름이 단순해진다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 검색 폼 순서와 3열 반응형 레이아웃을 수정하고 별도처럼 보이던 위치 버튼을 폼 안에 고정했다.
+- 검증 결과: 빌드로 지도 검색·내 위치 기능 연결을 확인한다.
+- 남은 작업: 모바일 실화면에서 검색 제어 영역과 정렬 행 간격을 확인한다.
+
+## 2026-08-05 병원 운영시간 빈 문구 단일화
+
+- 요청 요약: 영업시간이 없는 병원에서 세 줄로 나타나던 안내를 한 줄로 줄인다.
+- 분석·판단 이유: 지도 상세의 빈 상태는 짧고 명확해야 병원 핵심 정보 탐색을 방해하지 않는다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: `운영시간 정보 없음` 단일 문구만 표시하도록 렌더링 조건을 수정했다.
+- 검증 결과: 빌드로 병원 상세 렌더링을 확인한다.
+- 남은 작업: 없음.
+
+## 2026-08-05 Google 평가 노출 제거
+
+- 요청 요약: 병원 찾기에서 Google 평점·리뷰 UI를 제거하고 ExoCare 방문 리뷰 별점만 유지한다.
+- 분석·판단 이유: 지도 상세과 목록의 평가 출처를 앱 내부 실제 진료 리뷰로 통일할 필요가 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: Google 평점 섹션과 수치 노출을 삭제하고 정렬·마커도 앱 리뷰 기준으로 전환했다.
+- 검증 결과: 빌드로 병원 검색·영업시간·전화·길찾기 기능이 유지되는지 확인한다.
+- 남은 작업: Google 리뷰 텍스트는 병원 후보 판별 정확도를 위해 Edge Function 내부에서만 사용한다.
+
+## 2026-08-05 리뷰 카드 관리·좋아요 위치 조정
+
+- 요청 요약: 병원 리뷰의 점 3개 메뉴를 우측 상단으로 옮기고 좋아요 상태 색상을 검정/빨강으로 분리한다.
+- 분석·판단 이유: 카드 관리와 사용자 반응을 시각적으로 분리해 리뷰 탐색 중 오조작을 줄일 필요가 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 리뷰 헤더 도구 영역과 좋아요 상태별 스타일을 적용했다.
+- 검증 결과: 빌드로 병원 상세 리뷰 렌더링을 확인한다.
+- 남은 작업: 실제 모바일 상세 패널에서 메뉴 노출 위치를 확인한다.
+
+## 2026-08-05 병원 운영시간·휴게시간 표시 개선
+
+- 요청 요약: 병원 상세의 오늘 운영시간과 휴게시간을 분리하고 요일별 영업시간을 슬라이드 아코디언으로 제공한다.
+- 분석·판단 이유: Google이 반환한 복수 운영 구간을 사용자에게 의미 있는 본 영업시간과 휴게시간으로 재구성할 필요가 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 운영 구간 파싱, 영업 상태 배지, 휴게시간 보조 행, 요일별 아코디언을 구현했다.
+- 검증 결과: 빌드로 지도 상세 데이터 흐름과 타입을 확인한다.
+- 남은 작업: 특수 휴일에 여러 휴게시간이 반환되는 사례는 실제 데이터로 추가 검증할 수 있다.
+
+## 2026-08-05 병원 리뷰 종 정보 강조
+
+- 요청 요약: 병원 리뷰 카드에서 하트 숫자를 빨간색으로 통일하고 동물 이름과 `종: ...` 정보를 명확히 노출한다.
+- 분석·판단 이유: 작성자 중심보다 진료받은 동물 중심의 표시가 특수동물 병원 탐색 목적에 더 적합하다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 반려동물 이름과 종을 상단 핵심 정보로 이동하고 작성자 닉네임은 보조 정보로 낮췄다.
+- 검증 결과: 빌드로 지도 상세 리뷰 렌더링을 확인한다.
+- 남은 작업: 종이 비어 있는 기존 리뷰 데이터는 정보 없음으로 표시된다.
+
+## 2026-08-05 병원 리뷰 카드 표시 개선
+
+- 요청 요약: 병원 상세 리뷰의 중복 날짜, 숫자 평점, 불규칙 태그, 수정·삭제와 하트 표시를 개선한다.
+- 분석·판단 이유: 리뷰 본문 중심으로 읽히도록 메타 정보와 보조 행동을 압축할 필요가 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 단일 날짜, 별 5개, 동일 높이 태그, 점 3개 수정·삭제 메뉴, 빨간 좋아요 상태를 적용했다.
+- 검증 결과: 빌드로 지도 상세 리뷰 기능의 타입과 렌더링 구문을 확인한다.
+- 남은 작업: 실제 모바일 상세 패널에서 팝오버가 화면 밖으로 나가지 않는지 확인한다.
+
+## 2026-08-05 영업 중 필터 잘림 수정
+
+- 요청 요약: 병원 찾기 정렬 영역의 `영업 중` 버튼이 잘리지 않게 한다.
+- 분석·판단 이유: 가로 스크롤 방식보다 네 개 선택지를 균등 배치하는 편이 현재 패널 구조에서 검색 조건을 빠르게 비교하기 좋다.
+- 수정 파일: `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 정렬·영업 필터 행을 반응형 4열 그리드로 통일했다.
+- 검증 결과: 빌드로 기존 영업 중 필터 기능을 유지한 CSS 변경을 확인한다.
+- 남은 작업: 모바일 최소 폭에서 실화면 확인이 필요하다.
+
+## 2026-08-05 병원 주소 복사 버튼 상태 수정
+
+- 요청 요약: 병원 상세의 주소 복사 버튼이 hover 시 축소되고 원형으로 바뀌는 문제를 해결한다.
+- 분석·판단 이유: 지도 상세 패널 내 중복 CSS의 상태별 선택자 우선순위가 달라 레이아웃이 흔들렸다.
+- 수정 파일: `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 복사 버튼의 모든 상호작용 상태를 같은 치수와 radius로 통합했다.
+- 검증 결과: 빌드로 CSS 적용 가능 여부를 확인한다.
+- 남은 작업: 실제 지도 상세에서 주소 복사 전후의 시각 상태를 확인한다.
+
+## 2026-08-05 지도 내 위치 마커 재정리
+
+- 요청 요약: 참고 이미지 방향으로 내 위치 마커를 자연스럽게 통일한다.
+- 분석·판단 이유: 중복된 레거시 스타일을 최종 우선순위 규칙으로 덮어 모바일과 웹에서 같은 마커를 보여줘야 한다.
+- 수정 파일: `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 디자인 토큰 기반의 민트 동심원과 단일 펄스를 적용하고 기존 Geolocation 위치 및 지도 이동 로직은 유지했다.
+- 검증 결과: production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-05 병원 영업 필터와 모바일 태그 행 수정
+
+- 요청 요약: 영업 중 필터에서 병원이 나오지 않는 문제와 마지막 태그 잘림을 해결한다.
+- 분석·판단 이유: 미확인 상태를 종료 상태처럼 제외한 로직과 모바일 가로 스크롤 태그 폭이 원인이었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: `isOpenNow !== false`인 병원을 선로딩 대상에 남기고 모바일 태그를 4열 Grid로 고정했다.
+- 검증 결과: ESLint와 production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-05 모바일 바텀시트와 필터 영역 분리
+
+- 요청 요약: 최대 확장 시트가 `영업 중`을 포함한 상단 필터를 덮지 않게 한다.
+- 분석·판단 이유: 지도 검색·정렬 컨트롤과 결과 시트의 점유 영역을 분리해야 조작 가능한 요소가 유지된다.
+- 수정 파일: `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: safe-area와 검색·필터 높이를 expanded 계산식에 반영했다.
+- 검증 결과: production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-05 병원 주소 복사 호버 안정화
+
+- 요청 요약: 병원 상세 주소 복사 버튼의 비정상적인 호버 변화를 제거한다.
+- 분석·판단 이유: 버튼 상태 변화가 주소 정보의 정렬과 시각적 안정성을 해쳤다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 버튼의 모든 상호작용 상태에서 동일한 치수·표면을 유지하고 클릭 후 토스트만 노출하도록 했다.
+- 검증 결과: ESLint와 production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-05 모바일 병원 목록 바텀시트 최대 전개
+
+- 요청 요약: 병원 목록을 위로 길게 드래그하면 상단까지 확실하게 펼쳐지도록 한다.
+- 분석·판단 이유: 기존 제스처는 이동 거리와 무관하게 collapsed에서 middle로만 이동했다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 실시간 드래그 거리 ref와 장거리 임계값을 도입하고 expanded 높이를 모바일 가용 영역 전체로 조정했다.
+- 검증 결과: ESLint와 production build를 실행한다.
+- 남은 작업: 실제 기기의 주소창 축소·확장 상태에서 상단 간격을 확인한다.
+
+## 2026-08-05 병원 상세 행동·영업 상태 아이콘 개선
+
+- 요청 요약: 참고 이미지의 전화, 복사, 영업 상태 아이콘 방향을 병원 상세에 반영한다.
+- 분석·판단 이유: 작은 패널에서도 기능과 현재 상태가 즉시 구분되어야 한다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 코드 기반 SVG를 사용해 전화·복사 아이콘을 교체하고 영업 중과 종료를 형태와 색상으로 분리했다.
+- 검증 결과: ESLint와 production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-05 목록용 Google 상세정보 사전 보강
+
+- 요청 요약: 병원 클릭 이후에만 영업 상태와 평점이 나타나는 문제를 수정한다.
+- 분석·판단 이유: DB 병원 후보에는 기본 정보만 있고 Google 상세는 선택 시에만 조회되고 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/mapDependencies.tsx`, `supabase/functions/search-reptile-amphibian-places/index.ts`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: 보이는 목록을 2개 단위로 보강하고 검색 실패 병원도 완료 상태로 처리해 반복 호출을 막았다. Edge Function 반환 평점은 키워드 리뷰 재계산값 대신 Places의 `rating`, `userRatingCount`로 변경했다.
+- 검증 결과: ESLint와 production build를 실행한다.
+- 남은 작업: Edge Function 배포가 필요하다.
+
+## 2026-08-05 영업 중 필터 및 Google Places 평점 연결
+
+- 요청 요약: 병원 찾기에 `영업 중` 선택지를 추가하고 Google Places 평점을 사용한다.
+- 분석·판단 이유: 현재 운영 중인 병원을 즉시 찾고 외부 장소 데이터와 동일한 평점 기준으로 병원을 비교할 수 있어야 한다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: `isOpenNow === true` 필터를 추가하고 `rating`, `googleReviewCount`를 목록 요약·평점 정렬·상세 Google 평점에 연결했다.
+- 검증 결과: ESLint와 production build를 실행한다.
+- 남은 작업: Google 상세정보가 아직 로드되지 않은 병원은 영업 상태 및 평점 정보가 표시되지 않을 수 있다.
+
+## 2026-08-05 전화번호 링크 호버 간소화
+
+- 요청 요약: 병원 상세 연락처 전화번호의 진한 호버 배경을 없앤다.
+- 분석·판단 이유: 전화번호가 주요 버튼처럼 보이지 않도록 상세 패널의 정보 위계를 유지해야 한다.
+- 수정 파일: `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`, `docs/project-records/maps.md`.
+- 핵심 변경 내용: `tel:` 연결은 유지하고 호버·포커스 피드백을 밑줄로 단순화했다.
+- 검증 결과: 병원 지도 파일 린트와 production build를 실행한다.
+- 남은 작업: 없음.
+
 지도/리뷰 영역의 기획, 구현, 오류 처리, UI 수정 내용을 날짜별로 기록한다.
+
+## 2026-08-05 운영시간 띄어쓰기 정규화
+
+- 요청 요약: 병원 상세 운영시간의 물결표 앞뒤 띄어쓰기를 통일한다.
+- 분석·판단 이유: 외부 운영시간 문자열의 공백 차이를 그대로 노출하면 시간대별 표기 완성도가 떨어진다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`.
+- 핵심 변경 내용: `~`와 `～` 주변 공백을 표시 단계에서 ` ~ `로 정규화한다.
+- 검증 결과: 병원 지도 파일 린트와 production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-04 병원 운영시간 가독성 개선
+
+- 요청 요약: 오늘 운영시간을 요일·오전/첫 시간대·두 번째 시간대의 세 줄로 나누고 요일별 영업시간의 펼침 동작을 문구로 알린다.
+- 분석·판단 이유: 휴게시간 전후 운영 시간이 붙어 있으면 영업 종료 여부와 실제 방문 가능 시간을 혼동할 수 있다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`.
+- 핵심 변경 내용: Google 운영시간 설명을 표시 단계에서 안전하게 분리하고 details 상태에 따라 펼치기·접기 문구를 전환한다.
+- 검증 결과: lint와 production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-04 병원 상세 위치 정보 마크 정돈
+
+- 요청 요약: 주소와 거리 앞의 마크를 참고 이미지와 같은 위치 핀·사람 형태로 교체한다.
+- 분석·판단 이유: 병원 상세의 기본 정보는 빠르게 훑을 수 있어야 하므로 의미가 즉시 구분되는 실루엣이 필요하다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`.
+- 핵심 변경 내용: 주소와 거리에 전용 SVG 아이콘을 적용하고 크기, 색상, 줄바꿈 시 기준선을 통일했다.
+- 검증 결과: lint와 production build를 실행한다.
+- 남은 작업: 없음.
+
+## 2026-08-04 Google 지도 활성화 오류와 양서·파충류 평점 분리
+
+- 요청 요약: 병원 찾기에서 비어 있는 Google 지도를 복구하고 Google 평점은 양서류·파충류 관련 평가만 사용한다.
+- 분석·판단 이유: 브라우저 로그에서 `ApiNotActivatedMapError`가 확인되어 키 누락이 아니라 키 소속 Google Cloud 프로젝트의 Maps JavaScript API 비활성화가 지도 타일 차단 원인임을 확정했다. Google Places의 장소 `rating`은 모든 이용자 리뷰의 전체 집계이므로 양서·파충류 평점으로 사용할 수 없다.
+- 수정 파일: `src/types/map.ts`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/MapScreen.tsx`, `supabase/functions/search-reptile-amphibian-places/index.ts`, `docs/project-records/maps.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: Google 지도 인증 실패 콜백을 UI 오류 상태와 연결했다. Places가 제공한 리뷰 본문 중 파충류·양서류 또는 관련 종 키워드가 확인된 리뷰만 보관하고 해당 리뷰 별점만 계산한다. 목록 정렬과 마커 리뷰 수도 같은 기준을 사용한다.
+- 검증 결과: lint와 production build를 통과했고 `search-reptile-amphibian-places` Edge Function을 프로젝트 `ckevydslbfxnspyfikeu`에 배포했다.
+- 남은 작업: Google Cloud Console에서 현재 브라우저 지도 키가 속한 프로젝트의 Maps JavaScript API를 활성화한 뒤 새로고침한다.
 
 ## 기준
 
@@ -887,3 +1085,134 @@
 - 핵심 변경 내용: 주요 액션 줄과 사용하지 않는 길찾기 URL 생성 코드를 제거했다. 닫기 X는 50% 좌표를 기준으로 교차하도록 고정하고, 주소 복사는 두 개의 작은 사각형으로 다시 그렸다.
 - 검증 결과: production build와 lint로 확인한다.
 - 남은 작업: 없음.
+## 2026-08-04 Google Maps JavaScript API 지도 전환
+
+### 요청 요약
+
+- 병원 찾기 화면의 지도 SDK를 호출 가능한 Google Maps JavaScript API로 전환한다.
+
+### 분석·판단 이유
+
+- 기존 병원 목록, Google Places 상세정보, 리뷰 데이터는 지도 SDK와 분리되어 있어 지도 렌더링 계층만 교체하는 것이 기존 기능을 가장 안전하게 유지한다.
+- 기존 HTML 병원 마커는 일반 이미지 마커로 바꾸지 않고 Google `OverlayView`에 올려 리뷰 수, 선택, 좋아요 상태를 그대로 표현한다.
+- Places 서버 Secret과 브라우저 지도 키는 용도와 노출 범위가 다르므로 지도는 `VITE_GOOGLE_MAPS_API_KEY`만 사용한다.
+
+### 수정 파일
+
+- `src/types/map.ts`
+- `src/components/hospital-map/mapDependencies.tsx`
+- `src/components/hospital-map/MapScreen.tsx`
+- `src/App.css`
+- `docs/APP_REQUIREMENTS.md`
+- `docs/project-records/maps.md`
+- `docs/project-records/UI.md`
+- `docs/project-records/UX.md`
+
+### 핵심 변경 내용
+
+- Google Maps JavaScript API 비동기 로더를 추가하고 한국어·대한민국 지역 설정을 적용했다.
+- 지도 최초 중심은 브라우저 위치 권한이 허용되면 사용자 위치, 거부되면 서울 중심으로 설정한다.
+- 현재 위치와 병원 마커를 Google HTML 오버레이로 렌더링하고 마커 클릭 시 기존 병원 상세·바텀시트 흐름을 유지한다.
+- 병원 선택과 내 위치 이동은 `panTo` 뒤 줌을 조절해 부드럽게 이동한다.
+- 네이버 SDK 좌표 변환 의존성을 제거하고 수집 데이터의 위도·경도 또는 기존 좌표 fallback만 사용한다.
+
+### 검증 결과
+
+- `npm run lint` 통과.
+- `npm run build` 통과. 기존 번들 크기 경고만 남아 있다.
+
+### 남은 작업
+
+- 키 파일에 값을 저장하지 않고 실행 세션 또는 배포 환경에 `VITE_GOOGLE_MAPS_API_KEY`를 주입한 뒤 실제 지도 타일, 현재 위치, 병원 마커를 브라우저에서 최종 확인한다.
+## 2026-08-04 Google 지도 초기 진입 안정화
+
+- 요청 요약: 병원 찾기 진입 시 Google 지도가 늦게 나타나거나 중심과 화면이 반복해서 튕기는 현상을 수정했다.
+- 분석 및 판단: 지도 SDK 로드와 브라우저 위치 조회를 하나의 `Promise.allSettled`로 묶어 위치 응답이 끝날 때까지 지도 생성까지 지연되고 있었다. 지도와 위치는 생명주기가 다르므로 각각 독립적으로 처리하는 것이 안정적이다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `docs/project-records/maps.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: Google 지도는 서울 기본 중심 또는 현재 세션의 마지막 위치로 즉시 한 번 생성한다. 위치 조회는 별도 1회만 실행하고, 성공하면 지도를 다시 만들지 않고 기존 지도에서 부드럽게 중심을 이동한다. 지도 준비 이후 병원 및 현재 위치 마커 효과가 다시 실행되도록 준비 상태를 연결했다.
+- 추가 확인: Google 지도와 React 로딩 UI가 같은 DOM 컨테이너를 관리해 `removeChild` 충돌이 발생하고 있었다. 지도 전용 컨테이너를 비우고 로딩·오류 상태를 형제 레이어로 분리해 지도 진입 시 전체 화면이 사라지는 런타임 오류를 제거했다.
+- 검증 결과: lint와 production build로 TypeScript 및 번들 오류를 확인한다.
+- 남은 작업: 로그인된 실제 브라우저에서 위치 권한 허용과 거부 각각의 첫 진입 움직임을 최종 확인한다.
+## 2026-08-05 리뷰 별점 색상 정리
+
+- 요청 요약: 리뷰 작성 별점이 민트색으로 표시되는 문제를 수정했다.
+- 분석·판단 이유: 지도 전용 별점 선택 CSS의 우선순위가 공통 노란 별점 규칙보다 높았다.
+- 수정 파일: `src/App.css`.
+- 핵심 변경 내용: 지도 리뷰 별점의 선택·호버·포커스 색상을 `--color-rating-500`으로 지정하고 불필요한 버튼 배경과 테두리를 제거했다.
+- 검증 결과: 지도 화면 스타일 적용 여부와 production build를 확인한다.
+- 남은 작업: 없음.
+## 2026-08-05 운영시간 범위 묶음 표시
+
+- 요청 요약: 병원 운영시간에서 물결표와 양쪽 시간을 붙여 표시했다.
+- 분석·판단 이유: 시간 구간 내부의 공백과 줄바꿈으로 시작·종료 시간이 서로 분리되어 보였다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`.
+- 핵심 변경 내용: 물결표 주변 공백을 제거하고 한 시간 구간에는 `white-space: nowrap`을 적용했다.
+- 검증 결과: 병원 지도 파일 lint와 production build를 확인한다.
+- 남은 작업: 없음.
+## 2026-08-05 오늘 운영시간 센터링
+
+- 요청 요약: 병원 상세의 여러 운영시간 구간을 가운데 정렬했다.
+- 분석·판단 이유: 시간 구간의 길이가 서로 달라 줄마다 시각적 중심이 달랐다.
+- 수정 파일: `src/App.css`.
+- 핵심 변경 내용: 운영시간 영역에 내용 너비와 가운데 아이템 정렬을 적용했다.
+- 검증 결과: production build를 확인한다.
+- 남은 작업: 없음.
+## 2026-08-05 병원 상세에서 방문 기록 작성 연결
+
+- 요청 요약: 지도에서 선택한 병원으로 방문 기록을 남기는 동작을 추가했다.
+- 분석·판단 이유: 병원 선택 상태를 다이어리 진료 기록으로 전달해야 사용자가 병원을 다시 찾지 않아도 된다.
+- 수정 파일: `src/App.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `src/App.css`.
+- 핵심 변경 내용: 병원 상세 액션을 누르면 다이어리로 이동하고 병원·반려동물·오늘 날짜가 미리 입력된 진료 기록 폼을 연다.
+- 검증 결과: 관련 파일 lint와 production build를 확인한다.
+- 남은 작업: 없음.
+## 2026-08-05 병원 찾기 목록·상세·바텀시트 UX 개선
+
+- 요청 요약: 기존 지도 검색·정렬·상세 조회를 유지하면서 병원 비교 정보와 모바일 탐색성을 강화했다.
+- 분석·판단 이유: 병원 목록에 평점·리뷰·영업 상태가 없어 상세를 반복해서 열어야 했고, 영업 종료 뒤 재개 시각도 파악할 수 없었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`.
+- 핵심 변경 내용: 병원 목록과 상세 요약에 실제 리뷰 기반 평점·개수, 거리, 영업 상태를 추가했다. Google Opening Hours 응답의 다음 열기·닫기 시각을 한국어 상대 날짜로 표시한다. 전화·길찾기, 복사 툴팁·토스트를 추가하고 모바일 바텀시트를 35%·70%·최대 95%로 정리했다. 기존 API 호출, 검색, 정렬, 지도 마커 및 상세 조회 로직은 변경하지 않았다.
+- 검증 결과: `npm run lint`, `npm run build`를 모두 통과했다.
+- 남은 작업: 로그인된 실제 서비스 화면에서 지도와 패널의 최종 시각 확인이 필요하다.
+## 2026-08-05 병원 상세 연락처·영업 상태 간소화
+
+- 요청 요약: 홈페이지 행을 삭제하고 영업 상태 문구를 실제 open/closed 값으로 제한했다.
+- 분석·판단 이유: 영업시간 데이터 부재를 영업 상태처럼 표시하면 실제 영업 여부와 혼동된다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`.
+- 핵심 변경 내용: `isOpenNow`가 `true`면 `영업 중`, `false`면 `영업 종료`를 표시하고 `null`이면 상태를 숨긴다. 홈페이지 정보는 상세 패널에서 제거했다.
+- 검증 결과: 관련 파일 lint와 production build를 확인한다.
+- 남은 작업: 없음.
+
+## 2026-08-05 Google Places 병원 상세 30일 DB 캐시
+
+- 요청 요약: 병원 상세를 열 때마다 Google Places API를 호출하지 않고 Supabase `hospitals`에 저장한 상세정보를 30일간 재사용하도록 변경했다.
+- 분석·판단 이유: 브라우저 메모리 캐시는 새로고침과 기기 변경에 유지되지 않으므로 서버 DB를 캐시 원본으로 사용해야 호출 비용, 응답 지연, quota 소모를 함께 줄일 수 있다.
+- 수정 파일: `supabase/migrations/202608050004_google_places_hospital_cache.sql`, `supabase/functions/search-reptile-amphibian-places/index.ts`, `src/components/hospital-map/mapDependencies.tsx`.
+- 핵심 변경 내용: 상세 요청은 `external_id`, UUID, `google_place_id`, 좌표·검색어, 병원명·주소 순서로 DB 병원을 식별해 구버전 클라이언트도 지원한다. `places_last_updated`가 30일 이내면 DB 값을 즉시 반환하고, 만료되었을 때만 Google Places를 조회해 평점·평가 수·전화·홈페이지·정규/현재 영업시간·영업 상태를 갱신한다. Google 요청 실패 시 기존 DB 값을 지우지 않고 만료 캐시를 반환한다.
+- 검증 결과: migration `202608050004`를 ExoCare 원격 프로젝트에 적용하고 Edge Function 버전 21을 배포했다. 실제 동일 병원 2회 호출에서 첫 요청 `refreshed`, 두 번째 요청 `hit`을 확인했으며 production build를 통과했다.
+- 남은 작업: `is_open_now`는 마지막 갱신 시점의 스냅샷이므로 실시간 영업 상태가 반드시 필요한 정책으로 바뀌면 별도의 짧은 TTL을 적용한다.
+
+## 2026-08-05 내 리뷰 관리 메뉴 클리핑 수정
+
+- 요청 요약: 리뷰의 점 3개 버튼을 눌렀을 때 흰 배경 일부만 보이고 수정·삭제 항목이 잘리는 문제를 수정했다.
+- 분석·판단 이유: 관리 메뉴가 버튼 위쪽으로 열리면서 상세 패널의 스크롤 경계 밖으로 나가 클리핑되고 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`.
+- 핵심 변경 내용: 메뉴를 점 3개 버튼 아래로 열고, 열린 리뷰 행의 stacking context와 관련 컨테이너 overflow를 명시했다. 바깥으로 포커스가 이동하거나 Escape를 누르면 메뉴가 닫힌다.
+- 검증 결과: production build와 관련 정적 스타일 우선순위를 확인했다.
+- 남은 작업: 없음.
+
+## 2026-08-05 검색창·내 위치 액션 재배치
+
+- 요청 요약: 검색창 왼쪽의 초록 버튼을 제거하고 마이 펫 검색창처럼 작은 장식 돋보기를 입력창 왼쪽 안에 넣으며, 오른쪽 여백에 내 위치 버튼을 배치했다.
+- 분석·판단 이유: 검색 실행과 위치 이동은 서로 다른 행동이므로 입력창 내부 아이콘과 외부 보조 버튼으로 분리해야 한눈에 이해되고 모바일 폭도 효율적으로 사용한다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`.
+- 핵심 변경 내용: 클릭 버튼이 아닌 검색 아이콘을 입력창 왼쪽 내부에 배치하고 내 위치 버튼을 같은 행의 우측에 고정했다. Enter 검색과 입력 필터링을 유지했으며 지도 위에 중복 노출되던 모바일 내 위치 버튼은 제거했다.
+- 검증 결과: 변경 컴포넌트와 최종 CSS 우선순위를 확인하고 production build를 통과했다.
+- 남은 작업: 없음.
+## 2026-08-05 - 병원 목록 로딩 fallback 안정화
+
+- 요청 요약: 지도 운영 환경 설정 여부와 병원 목록이 다시 보이지 않는 원인을 확인했다.
+- 분석·판단: 지도 SDK의 허용 도메인 설정은 지도 타일 인증에 영향을 주지만, 병원 목록은 Supabase `hospitals` 또는 정적 JSON에서 독립적으로 표시되어야 한다. Supabase 조회가 지연될 경우 정적 데이터 fallback까지 도달하지 못할 수 있어 조회 대기 시간을 제한했다.
+- 수정 파일: `src/components/hospital-map/mapDependencies.tsx`
+- 핵심 변경: Supabase 병원 조회에 2.5초 제한을 적용하고, 조회 예외·지연 시 `public/data/exotic-hospitals.json`의 43개 병원으로 안전하게 전환하도록 보강했다.
+- 검증 결과: 정적 JSON은 UTF-8 기준 유효한 JSON이며 43개 병원 항목을 포함한다. `npm run build`, `npm run lint`를 모두 통과했다.
+- 남은 작업: Google Cloud 콘솔에서 브라우저 지도 키의 localhost·모바일 개발 주소·실제 배포 주소 허용 여부를 사용자가 확인해야 한다. 현재 저장소는 Vercel 프로젝트에 연결되어 있지 않아 실제 배포 도메인은 확인하지 못했다.

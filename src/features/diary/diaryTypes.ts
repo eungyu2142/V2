@@ -121,6 +121,8 @@ export type CarePlan = {
   taskType: CareTaskType
   title: string
   repeatDays: number[]
+  recurrenceType?: 'weekdays' | 'interval'
+  recurrenceIntervalDays?: number
   startDate: string
   endDate?: string
   notificationTime: string
