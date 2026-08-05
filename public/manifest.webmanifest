@@ -1,17 +1,17 @@
 {
-  "name": "이은규님의 웹앱",
-  "short_name": "이은규님의 웹앱",
-  "description": "특수동물의 돌봄 루틴과 기록을 관리하는 웹앱",
+  "name": "ExoPet",
+  "short_name": "ExoPet",
+  "description": "양서·파충류의 돌봄 기록과 동물병원 찾기를 위한 PWA",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f5f2ea",
-  "theme_color": "#0f6d5a",
+  "background_color": "#ffffff",
+  "theme_color": "#145f52",
   "icons": [
     {
       "src": "/exopet-logo.png",
-      "sizes": "1258x1254",
+      "sizes": "1254x1254",
       "type": "image/png",
       "purpose": "any maskable"
     }

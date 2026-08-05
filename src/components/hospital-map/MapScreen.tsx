@@ -5,10 +5,11 @@ import { loadAppData } from '../../lib/appData'
 import HospitalReviewForm from './MapAndReview'
 import HeartIcon from '../common/HeartIcon'
 import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
-import { buildHospitalSearchQuery, createGoogleHtmlMarker, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadGoogleMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory, writeSavedHospitalSnapshots } from './mapDependencies'
+import { buildHospitalSearchQuery, createGoogleHtmlMarker, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadGoogleMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory } from './mapDependencies'
 import type { GoogleHtmlMarker, GoogleLatLngLiteral, GoogleMapInstance } from '../../types/map'
 const HOSPITAL_LIST_PAGE_SIZE = 10
-const HOSPITAL_REVIEWS_ENABLED = false
+const HOSPITAL_REVIEWS_ENABLED = true
+const HOSPITAL_RATING_ENABLED = true
 const DEFAULT_MAP_CENTER: Coordinates = { lat: 37.5665, lng: 126.978 }
 const MAP_LOCATION_SESSION_KEY = 'exocare-map-location'
 function HospitalAddressIcon() {
@@ -68,12 +69,22 @@ function OpeningStatusIcon({ open }: { open: boolean }) {
 type HospitalDisplayReviewSummary = {
   average: number
   count: number
-  source: 'exocare' | null
+  source: 'google' | 'exocare' | 'combined' | null
 }
 
-function getHospitalDisplayReviewSummary(hospitalReviews: HospitalReview[]): HospitalDisplayReviewSummary {
-  const exocare = getReviewSummary(hospitalReviews.filter((review) => isHospitalCareCategory(review.animalCategory)))
-  if (exocare.count > 0) return { average: exocare.average, count: exocare.count, source: 'exocare' }
+function getHospitalDisplayReviewSummary(hospital: Hospital, hospitalReviews: HospitalReview[]): HospitalDisplayReviewSummary {
+  const exocareSummary = getReviewSummary(hospitalReviews.filter((review) => isHospitalCareCategory(review.animalCategory)))
+  const googleRating = typeof hospital.rating === 'number' && hospital.rating > 0 ? hospital.rating : null
+
+  if (googleRating !== null && exocareSummary.count > 0) {
+    return { average: (googleRating + exocareSummary.average) / 2, count: exocareSummary.count, source: 'combined' }
+  }
+  if (googleRating !== null) {
+    return { average: googleRating, count: 0, source: 'google' }
+  }
+  if (exocareSummary.count > 0) {
+    return { average: exocareSummary.average, count: exocareSummary.count, source: 'exocare' }
+  }
   return { average: 0, count: 0, source: null }
 }
 
@@ -116,6 +127,15 @@ function buildHospitalDirectionsUrl(hospital: Hospital) {
   return `https://www.google.com/maps/dir/?api=1&destination=${query}${placeId}`
 }
 
+function formatOpeningTime(value: string) {
+  const match = value.trim().match(/^(오전|오후)\s*(\d{1,2}):(\d{2})$/)
+  if (!match) return value.trim()
+  const [, meridiem, rawHour, minute] = match
+  let hour = Number(rawHour) % 12
+  if (meridiem === '오후') hour += 12
+  return `${String(hour).padStart(2, '0')}:${minute}`
+}
+
 function normalizeOpeningRange(value: string) {
   const [rawStart, rawEnd] = value.split(/\s*[~～]\s*/, 2)
   const start = rawStart?.trim() ?? ''
@@ -124,23 +144,25 @@ function normalizeOpeningRange(value: string) {
 
   const meridiem = start.match(/^(오전|오후)\s*/)?.[1]
   if (meridiem && !/^(오전|오후)\s*/.test(end)) end = `${meridiem} ${end}`
-  return `${start} ~ ${end}`
+  return `${formatOpeningTime(start)} ~ ${formatOpeningTime(end)}`
 }
 
 function parseTodayOpeningHours(description: string | null) {
-  if (!description) return { hours: null, breakTime: null }
+  if (!description) return { day: null, hours: null, breakTime: null }
   const separatorIndex = description.indexOf(':')
+  const day = separatorIndex < 0 ? null : description.slice(0, separatorIndex).trim()
   const value = separatorIndex < 0 ? description : description.slice(separatorIndex + 1)
   const periods = value.split(/\s*,\s*/).map((period) => normalizeOpeningRange(period)).filter(Boolean)
-  if (periods.length === 0) return { hours: null, breakTime: null }
-  if (periods.length === 1) return { hours: periods[0], breakTime: null }
+  if (periods.length === 0) return { day, hours: null, breakTime: null }
+  if (periods.length === 1) return { day, hours: periods[0], breakTime: null }
 
   const firstRange = periods[0].split(' ~ ')
   const secondRange = periods[1].split(' ~ ')
   const lastRange = periods[periods.length - 1].split(' ~ ')
-  if (firstRange.length !== 2 || lastRange.length !== 2) return { hours: periods.join(', '), breakTime: null }
+  if (firstRange.length !== 2 || lastRange.length !== 2) return { day, hours: periods.join(', '), breakTime: null }
 
   return {
+    day,
     hours: `${firstRange[0]} ~ ${lastRange[1]}`,
     breakTime: secondRange.length === 2 ? `${firstRange[1]} ~ ${secondRange[0]}` : null,
   }
@@ -231,17 +253,17 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     return sortedHospitals
       .filter((hospital) => hospitalMatchesQuery(hospital, query))
       .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
-      .filter((hospital) => !openNowOnly || hospital.isOpenNow !== false)
+      .filter((hospital) => !openNowOnly || hospital.isOpenNow === true)
       .sort((a, b) => {
         if (selectedSort === 'reviews') {
-          const bCount = getReviewSummary(reviews[b.id] ?? []).count
-          const aCount = getReviewSummary(reviews[a.id] ?? []).count
+          const bCount = getReviewSummary((reviews[b.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).count
+          const aCount = getReviewSummary((reviews[a.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).count
           return bCount - aCount
         }
         if (selectedSort === 'rating') {
-          const bSummary = getReviewSummary(reviews[b.id] ?? [])
-          const aSummary = getReviewSummary(reviews[a.id] ?? [])
-          return bSummary.average - aSummary.average
+          const bRating = getHospitalDisplayReviewSummary(b, reviews[b.id] ?? []).average
+          const aRating = getHospitalDisplayReviewSummary(a, reviews[a.id] ?? []).average
+          return bRating - aRating
         }
         return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
       })
@@ -290,7 +312,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const selectedHospitalTodayHours = getTodayOpeningHoursDescription(selectedHospitalOpeningHours)
   const selectedHospitalTodaySchedule = parseTodayOpeningHours(selectedHospitalTodayHours)
   const selectedHospitalDisplayReviewSummary = selectedHospital
-    ? getHospitalDisplayReviewSummary(selectedHospitalReviews)
+    ? getHospitalDisplayReviewSummary(selectedHospital, selectedHospitalReviews)
     : { average: 0, count: 0, source: null }
   const selectedHospitalOpeningTransition = selectedHospital ? getOpeningTransitionDescription(selectedHospital) : null
 
@@ -559,7 +581,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     const next = isLiked
       ? likedHospitals.filter((item) => !isSameHospitalIdentity(item, hospital))
       : [snapshot, ...likedHospitals.filter((item) => !isSameHospitalIdentity(item, hospital))]
-    writeSavedHospitalSnapshots(next)
     onLikedHospitalsChange(next)
   }
 
@@ -928,7 +949,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             ['distance', '가까운 순'],
             ['reviews', '리뷰 많은 순'],
             ['rating', '평점 높은 순'],
-          ] as Array<[HospitalSort, string]>).filter(([sort]) => HOSPITAL_REVIEWS_ENABLED || sort === 'distance').map(([sort, label]) => (
+          ] as Array<[HospitalSort, string]>).map(([sort, label]) => (
             <button className={selectedSort === sort ? 'active' : ''} type="button" key={sort} onClick={() => { setSelectedSort(sort); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
               {label}
             </button>
@@ -984,7 +1005,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           </header>
 
           <div className="hospital-detail-summary" aria-label="병원 요약 정보">
-            {HOSPITAL_REVIEWS_ENABLED && <HospitalRatingSummary summary={selectedHospitalDisplayReviewSummary} />}
+            {HOSPITAL_RATING_ENABLED && <HospitalRatingSummary summary={selectedHospitalDisplayReviewSummary} />}
             <span className="hospital-summary-distance">{selectedHospital.distanceKm === undefined ? '거리 계산 전' : `${selectedHospital.distanceKm.toFixed(1)}km`}</span>
             {getHospitalOpeningStatusLabel(selectedHospital) && (
               <span className={`hospital-open-status ${selectedHospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>
@@ -1017,29 +1038,31 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                         </span>
                       )}
                     </div>
-                    <span className="hospital-today-hours">{selectedHospitalTodaySchedule.hours ?? '오늘 운영시간 정보 없음'}</span>
-                  </div>
-                  {selectedHospitalTodaySchedule.breakTime && (
-                    <div className="hospital-opening-break">
-                      <span>휴게시간</span>
-                      <span>{selectedHospitalTodaySchedule.breakTime}</span>
-                    </div>
-                  )}
-                <div className="hospital-weekly-hours">
-                  <button className="hospital-weekly-hours-toggle" type="button" aria-expanded={isOpeningHoursExpanded} onClick={() => setIsOpeningHoursExpanded((expanded) => !expanded)}>
-                    <span className="hospital-hours-chevron" aria-hidden="true" />
-                    요일별 영업시간 ({isOpeningHoursExpanded ? '접기' : '펼치기'})
-                  </button>
-                  <div className={`hospital-weekly-hours-panel ${isOpeningHoursExpanded ? 'is-open' : ''}`} aria-hidden={!isOpeningHoursExpanded}>
-                    <div>
-                      <ul>
-                        {selectedHospitalOpeningHours.map((description) => (
-                          <li key={description}>{description}</li>
-                        ))}
-                      </ul>
+                    <div className="hospital-opening-schedule">
+                      <span className="hospital-today-hours">
+                        {selectedHospitalTodaySchedule.day && <b>{selectedHospitalTodaySchedule.day}</b>}
+                        <span>{selectedHospitalTodaySchedule.hours ?? '운영시간 정보 없음'}</span>
+                      </span>
+                      {selectedHospitalTodaySchedule.breakTime && (
+                        <small className="hospital-opening-break">휴게시간 {selectedHospitalTodaySchedule.breakTime}</small>
+                      )}
                     </div>
                   </div>
-                </div>
+                  <div className="hospital-weekly-hours">
+                    <button className="hospital-weekly-hours-toggle" type="button" aria-expanded={isOpeningHoursExpanded} onClick={() => setIsOpeningHoursExpanded((expanded) => !expanded)}>
+                      <span className="hospital-hours-chevron" aria-hidden="true" />
+                      요일별 영업시간 ({isOpeningHoursExpanded ? '접기' : '펼치기'})
+                    </button>
+                    <div className={`hospital-weekly-hours-panel ${isOpeningHoursExpanded ? 'is-open' : ''}`} aria-hidden={!isOpeningHoursExpanded}>
+                      <div>
+                        <ul>
+                          {selectedHospitalOpeningHours.map((description) => (
+                            <li key={description}>{description}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <span className="hospital-opening-empty">운영시간 정보 없음</span>
@@ -1164,24 +1187,30 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
 
 function HospitalRatingSummary({ summary, compact = false }: { summary: HospitalDisplayReviewSummary; compact?: boolean }) {
   if (summary.source === null) return null
+  const sourceLabel = summary.source === 'combined'
+    ? 'Google과 ExoCare 방문 리뷰 통합 별점'
+    : summary.source === 'exocare'
+      ? 'ExoCare 방문 리뷰 별점'
+      : 'Google 별점'
   return (
-    <span className={`hospital-rating-summary ${compact ? 'compact' : ''}`} aria-label={`ExoCare 방문 리뷰 별점 ${summary.average.toFixed(1)}점`}>
+    <span className={`hospital-rating-summary ${compact ? 'compact' : ''}`} aria-label={`${sourceLabel} ${summary.average.toFixed(1)}점`}>
       <span className="hospital-rating-stars" aria-hidden="true">
         <span>★★★★★</span>
         <span style={{ width: `${Math.min(100, Math.max(0, summary.average / 5 * 100))}%` }}>★★★★★</span>
       </span>
+      <span className="hospital-rating-value">{summary.average.toFixed(1)}</span>
     </span>
   )
 }
 
 function HospitalListRow({ hospital, reviews, active, onSelect }: { hospital: Hospital; reviews: HospitalReview[]; active: boolean; onSelect: () => void }) {
-  const reviewSummary = getHospitalDisplayReviewSummary(reviews)
+  const reviewSummary = getHospitalDisplayReviewSummary(hospital, reviews)
   return (
     <article className={`map-hospital-row ${active ? 'active' : ''}`}>
       <button className="map-hospital-row-main" type="button" onClick={onSelect}>
         <span>
           <strong>{hospital.name}</strong>
-          {HOSPITAL_REVIEWS_ENABLED && <HospitalRatingSummary summary={reviewSummary} compact />}
+          {HOSPITAL_RATING_ENABLED && <HospitalRatingSummary summary={reviewSummary} compact />}
           <small>
             <span>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</span>
             {getHospitalOpeningStatusLabel(hospital) && <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${hospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>}
@@ -1200,7 +1229,6 @@ function HospitalReviewItem({ review, fallbackAuthor, fallbackAvatarUrl, onDelet
   const petName = review.petName || '반려동물'
   const species = review.species?.trim() || '정보 없음'
   const reviewMeta = [
-    `작성자 ${authorName}`,
     formatReviewDate(review.visitDate || review.createdAt),
     review.cost ? `${review.cost.toLocaleString('ko-KR')}원` : '',
   ].filter(Boolean).join(' · ')

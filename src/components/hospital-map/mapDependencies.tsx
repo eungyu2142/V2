@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 
 const savedHospitalStorageKey = 'exocare-saved-hospitals'
 const savedHospitalDetailsStorageKey = 'exocare-liked-hospitals'
+const savedHospitalLegacyOwnerKey = 'exocare-liked-hospitals-legacy-owner'
 let googleMapsLoader: Promise<GoogleMapApi> | null = null
 const googleHospitalDetailsCache = new Map<string, Promise<Hospital | null>>()
 const hospitalCareCategories = ['reptile', 'amphibian'] as const
@@ -62,11 +63,21 @@ export const petSpeciesOptions: Record<Exclude<AnimalCategory, 'all'>, string[]>
 
 export const reviewStorageKey = 'exocare-hospital-reviews'
 
-export function readSavedHospitalSnapshots() {
+export function readSavedHospitalSnapshots(userId?: string) {
   try {
-    const stored = localStorage.getItem(savedHospitalDetailsStorageKey)
+    const userStorageKey = userId ? `${savedHospitalDetailsStorageKey}:${userId}` : savedHospitalDetailsStorageKey
+    let stored = localStorage.getItem(userStorageKey)
+    if (!stored && userId) {
+      const legacyOwner = localStorage.getItem(savedHospitalLegacyOwnerKey)
+      const legacyValue = localStorage.getItem(savedHospitalDetailsStorageKey)
+      if (legacyValue && (!legacyOwner || legacyOwner === userId)) {
+        localStorage.setItem(savedHospitalLegacyOwnerKey, userId)
+        localStorage.setItem(userStorageKey, legacyValue)
+        stored = legacyValue
+      }
+    }
     if (!stored) {
-      return readSavedHospitalIds().map((id) => ({
+      return readSavedHospitalIds(userId).map((id) => ({
         id,
         name: id,
         address: '',
@@ -85,9 +96,11 @@ export function readSavedHospitalSnapshots() {
   }
 }
 
-export function writeSavedHospitalSnapshots(items: HospitalSnapshot[]) {
-  localStorage.setItem(savedHospitalDetailsStorageKey, JSON.stringify(items))
-  localStorage.setItem(savedHospitalStorageKey, JSON.stringify(items.map((item) => item.id).filter(Boolean)))
+export function writeSavedHospitalSnapshots(items: HospitalSnapshot[], userId?: string) {
+  const detailsKey = userId ? `${savedHospitalDetailsStorageKey}:${userId}` : savedHospitalDetailsStorageKey
+  const idsKey = userId ? `${savedHospitalStorageKey}:${userId}` : savedHospitalStorageKey
+  localStorage.setItem(detailsKey, JSON.stringify(items))
+  localStorage.setItem(idsKey, JSON.stringify(items.map((item) => item.id).filter(Boolean)))
 }
 
 export function CategoryTagIcon({ category }: { category: AnimalCategory }) {
@@ -670,9 +683,19 @@ export function readStoredReviews() {
   }
 }
 
-function readSavedHospitalIds() {
+function readSavedHospitalIds(userId?: string) {
   try {
-    const stored = localStorage.getItem(savedHospitalStorageKey)
+    const userStorageKey = userId ? `${savedHospitalStorageKey}:${userId}` : savedHospitalStorageKey
+    let stored = localStorage.getItem(userStorageKey)
+    if (!stored && userId) {
+      const legacyOwner = localStorage.getItem(savedHospitalLegacyOwnerKey)
+      const legacyValue = localStorage.getItem(savedHospitalStorageKey)
+      if (legacyValue && (!legacyOwner || legacyOwner === userId)) {
+        localStorage.setItem(savedHospitalLegacyOwnerKey, userId)
+        localStorage.setItem(userStorageKey, legacyValue)
+        stored = legacyValue
+      }
+    }
     if (!stored) return []
     const parsed = JSON.parse(stored)
     return Array.isArray(parsed) ? parsed.map(String) : []

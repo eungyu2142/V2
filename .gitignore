@@ -40,3 +40,5 @@ project-V2/
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

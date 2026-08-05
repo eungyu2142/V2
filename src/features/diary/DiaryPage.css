@@ -48,7 +48,7 @@
 .diary-segment button{min-height:40px;border:0;border-radius:6px;background:transparent;color:var(--color-text-secondary);font-weight:900}
 .diary-segment button.active{background:var(--color-primary-600);color:#fff}
 .diary-segment button:first-child{font-size:0}
-.diary-segment button:first-child::after{content:'湲곕줉';font-size:1rem}
+.diary-segment button:first-child::after{content:'기록';font-size:1rem}
 
 .diary-content-shell{display:grid;gap:18px}
 .diary-main-flow{min-width:0}
@@ -793,12 +793,12 @@
 .date-records-mobile-actions{display:none}
 .data-visualization header{display:grid;gap:3px}.data-visualization-heading{display:flex!important;align-items:center;justify-content:space-between;gap:12px}.data-visualization h2{margin:0;color:var(--color-text-primary);font-size:1.1rem}.data-visualization p{margin:0;color:var(--color-text-secondary);font-size:.78rem}
 .record-collection-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.record-collection-tabs button{display:flex;min-height:42px;align-items:center;justify-content:center;gap:6px;border:1px solid var(--color-primary-100);border-radius:999px;background:#fff;color:var(--color-text-secondary);font-size:.82rem;font-weight:900}
+.record-collection-tabs button{display:flex;min-width:0;min-height:42px;align-items:center;justify-content:center;gap:6px;padding:0 8px;overflow:hidden;border:1px solid var(--color-primary-100);border-radius:999px;background:var(--color-surface);color:var(--color-text-secondary);font-size:.82rem;font-weight:900;line-height:1;white-space:nowrap}
 .record-collection-tabs button.active{border-color:var(--color-primary-600);background:var(--color-primary-600);color:#fff}
-.record-collection-tabs em{font-style:normal;font-size:.68rem;font-weight:900;white-space:nowrap}
 .record-collection-tabs span{display:grid;min-width:20px;height:20px;place-items:center;border-radius:999px;background:var(--color-primary-50);color:var(--color-primary-700);font-size:.68rem}
 .record-collection-tabs button.active span{background:#fff;color:var(--color-primary-700)}
-.shed-cycle-status header span{color:var(--color-primary-700);font-weight:900}
+.shed-cycle-status{min-height:68px;align-content:center}
+.shed-cycle-status header span{color:var(--color-primary-700);font-weight:900;white-space:nowrap}
 .record-collection-qna{min-height:44px;padding:0 22px;border:1px solid var(--color-primary-600);border-radius:999px;background:var(--color-primary-600);color:var(--color-surface);font-size:.9rem;font-weight:900;white-space:nowrap;box-shadow:0 16px 30px color-mix(in srgb,var(--color-primary-600) 18%,transparent)}
 .chart-type-switcher{display:flex;gap:6px}.chart-type-switcher button{min-height:32px;padding:0 10px;border:1px solid var(--color-primary-100);border-radius:999px;background:#fff;color:var(--color-text-secondary);font-size:.74rem;font-weight:800}.chart-type-switcher button.active{background:var(--color-primary-50);color:var(--color-primary-600)}
 .line-chart-wrap{position:relative;padding:8px 0 0 27px;border-bottom:1px solid var(--color-border)}
@@ -826,7 +826,7 @@
 .poop-status-chart b{color:var(--color-text-primary)}
 .poop-status-chart i{display:block;height:10px;min-width:4px;border-radius:999px}
 .poop-status-chart em{font-style:normal;text-align:right}
-@media(max-width:600px){.data-visualization{min-width:0}.data-visualization-button{font-size:.72rem;padding:0 9px}.line-chart{min-height:160px}.data-visualization-summary{display:grid;gap:3px}}
+@media(max-width:600px){.data-visualization{min-width:0;gap:12px}.data-visualization-button{font-size:.72rem;padding:0 9px}.record-collection-tabs{gap:5px}.record-collection-tabs button{min-height:38px;gap:4px;padding:0 5px;font-size:.74rem}.record-collection-tabs span{min-width:18px;height:18px;font-size:.62rem}.line-chart{min-height:160px}.data-visualization-summary{display:grid;gap:3px}}
 .daily-task-menu{position:absolute;right:38px;top:7px;z-index:4}
 .daily-task-menu summary{display:grid;width:28px;height:28px;place-items:center;border-radius:6px;color:var(--color-text-secondary);font-size:1.25rem;font-weight:900;line-height:1;cursor:pointer;list-style:none}
 .daily-task-menu summary::-webkit-details-marker{display:none}

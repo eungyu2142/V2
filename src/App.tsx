@@ -11,6 +11,7 @@ import { QnaCreateFlow, QnaScreen } from './components/qna/QnaScreen'
 import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
 import { supabase } from './lib/supabase'
 import { dataUrlToImageFile, removeUploadedImage, uploadImageFile } from './lib/imageStorage'
+import { deleteHospitalLike, getHospitalLikeKey, mergeLocalHospitalLikes, saveHospitalLike } from './lib/hospitalLikes'
 import { deactivatePushSubscriptionForLogout, syncCurrentDevicePushSubscription } from './lib/pushNotifications'
 import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
 import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost, Tab } from './types/app'
@@ -191,7 +192,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [qnaPosts, setQnaPosts] = useState<QnaPost[]>([])
   const [drafts, setDrafts] = useState<DraftItem[]>([])
   const [hospitalReviews, setHospitalReviews] = useState<Record<string, HospitalReview[]>>(() => readStoredReviews())
-  const [likedHospitals, setLikedHospitals] = useState<HospitalSnapshot[]>(() => readSavedHospitalSnapshots())
+  const [likedHospitals, setLikedHospitals] = useState<HospitalSnapshot[]>(() => readSavedHospitalSnapshots(session.user.id))
   const [allHospitals, setAllHospitals] = useState<HospitalSnapshot[]>([])
   const [profile, setProfile] = useState<AppProfile>({ username: '', nickname: '', avatarUrl: '' })
   const [dataError, setDataError] = useState('')
@@ -213,7 +214,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setQnaPosts([])
       setDrafts([])
       setHospitalReviews(readStoredReviews())
-      setLikedHospitals(readSavedHospitalSnapshots())
+      setLikedHospitals(readSavedHospitalSnapshots(session.user.id))
       setAllHospitals([])
       setProfile({ username: '', nickname: '', avatarUrl: '' })
       setCreateMode(null)
@@ -251,12 +252,18 @@ function AuthenticatedApp({ session }: { session: Session }) {
         console.warn('Optional hospital data load failed:', error)
         return [] as HospitalSnapshot[]
       }),
-    ]).then(([nextPets, nextPosts, nextDrafts, nextHospitals]) => {
+      mergeLocalHospitalLikes(session.user.id, readSavedHospitalSnapshots(session.user.id)).catch((error) => {
+        console.warn('Hospital like synchronization failed:', error)
+        return readSavedHospitalSnapshots(session.user.id)
+      }),
+    ]).then(([nextPets, nextPosts, nextDrafts, nextHospitals, nextLikedHospitals]) => {
       if (!active) return
       setPets(nextPets.map(normalizePet))
       setQnaPosts(nextPosts)
       setDrafts(nextDrafts)
       setAllHospitals(nextHospitals)
+      writeSavedHospitalSnapshots(nextLikedHospitals, session.user.id)
+      setLikedHospitals(nextLikedHospitals)
     }).catch((error) => {
       if (!active) return
       console.error('Initial data load failed:', error)
@@ -568,11 +575,28 @@ function AuthenticatedApp({ session }: { session: Session }) {
     updateQnaPosts(next)
   }
 
+  const updateLikedHospitals = (next: HospitalSnapshot[]) => {
+    const previous = likedHospitals
+    const previousKeys = new Set(previous.map(getHospitalLikeKey))
+    const nextKeys = new Set(next.map(getHospitalLikeKey))
+    const added = next.filter((hospital) => !previousKeys.has(getHospitalLikeKey(hospital)))
+    const removed = previous.filter((hospital) => !nextKeys.has(getHospitalLikeKey(hospital)))
+
+    writeSavedHospitalSnapshots(next, session.user.id)
+    setLikedHospitals(next)
+    void Promise.all([
+      ...added.map((hospital) => saveHospitalLike(session.user.id, hospital)),
+      ...removed.map((hospital) => deleteHospitalLike(session.user.id, hospital)),
+    ]).catch((error: unknown) => {
+      console.error('Hospital like synchronization failed.', error)
+      setDataError('병원 좋아요를 서버에 동기화하지 못했습니다. 네트워크 연결 후 다시 시도해 주세요.')
+    })
+  }
+
   const unlikeHospitalFromProfile = (hospital: HospitalSnapshot) => {
     const identity = { id: hospital.id ?? '', name: hospital.name, address: hospital.address }
     const next = likedHospitals.filter((item) => !isSameHospitalIdentity(item, identity))
-    writeSavedHospitalSnapshots(next)
-    setLikedHospitals(next)
+    updateLikedHospitals(next)
   }
 
   const unlikeReviewFromProfile = (hospitalId: string, reviewId: string) => {
@@ -739,7 +763,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
         </div>
       </header>}
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={setLikedHospitals} onCreateClinicRecord={openHospitalVisitRecord} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={updateLikedHospitals} onCreateClinicRecord={openHospitalVisitRecord} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">

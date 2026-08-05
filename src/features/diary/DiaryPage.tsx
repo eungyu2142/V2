@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
-import { completeDailyTask, deleteCarePlan, listCarePlans, listDailyTasks, markDailyTaskCompleted, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, skipDailyTask, undoDailyTask } from './diaryService'
+import { completeDailyTask, deleteCarePlan, listCarePlans, listCareRecords, listDailyTasks, markDailyTaskCompleted, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, skipDailyTask, undoDailyTask } from './diaryService'
 import type { CarePlan, CareTaskType, ClinicRecordDetails, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel } from './diaryTypes'
 import { cancelRoutineNotificationJobs, getFirstRoutineDate, markRoutineNotificationJobCompleted, markRoutineNotificationJobSkipped, upsertRoutineNotificationJob } from './routineNotificationJobs'
 import { customFoodOptionKey, fallbackSpeciesCareProfiles, findSpeciesCareProfile, listSpeciesCareProfiles, type CareEnvironmentProfile, type CareFoodOption, type SpeciesCareProfile } from './speciesCareProfiles'
@@ -680,7 +680,10 @@ export default function DiaryPage({
   useEffect(() => {
     let active = true
     Promise.all([
-      loadAppData<PetRecord>('care_records', { userId, scope: 'mine' }).catch(() => []),
+      listCareRecords(userId).catch((error) => {
+        console.error('Care records could not be loaded.', error)
+        return []
+      }),
       listCarePlans(userId).then((plans) => ({ plans, migrated: true })).catch(() => loadAppData<Reminder>('feeding_reminders', { userId, scope: 'mine' }).then((legacy) => ({ plans: legacy.map(reminderToCarePlan), migrated: false })).catch(() => ({ plans: [], migrated: false }))),
       listSpeciesCareProfiles().catch(() => fallbackSpeciesCareProfiles),
     ]).then(([nextRecords, planResult, nextSpeciesCareProfiles]) => {
@@ -3093,7 +3096,7 @@ export function DataVisualization({
       <DiaryInsightBanner records={records} petName={petName} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} onResolveInsight={onResolveInsight} />
       <div className="record-collection-tabs" aria-label="모아보기 항목">
         <button className={selectedMetric === 'shed' ? 'active' : ''} type="button" onClick={() => setActiveMetric('shed')}>
-          탈피 {shedSummary.ongoing ? <em>탈피 중</em> : null}<span>{metricCounts.shed}</span>
+          탈피 <span>{metricCounts.shed}</span>
         </button>
         <button className={selectedMetric === 'environment' ? 'active' : ''} type="button" onClick={() => setActiveMetric('environment')}>온습도 <span>{metricCounts.environment}</span></button>
         <button className={selectedMetric === 'weight' ? 'active' : ''} type="button" onClick={() => setActiveMetric('weight')}>체중 <span>{metricCounts.weight}</span></button>
@@ -3292,7 +3295,7 @@ function buildPoopInsight(records: PetRecord[], petName: string): DiaryInsight |
 }
 
 function insightLabel(metric: DiaryInsight['metric']) {
-  if (metric === 'shed') return '탈피 기간'
+  if (metric === 'shed') return '탈피'
   if (metric === 'environment') return '온습도 변화'
   if (metric === 'weight') return '체중 변화'
   return '배변 상태'
@@ -3429,8 +3432,8 @@ function ShedCycleChart({ records }: { records: PetRecord[] }) {
   const durations = buildShedDurationRecords(records)
   const average = averageDurationDays(durations)
   const ongoing = getOngoingShedRecord(records)
-  if (durations.length === 0) return <section className="environment-chart shed-cycle-status"><header><strong>탈피 기간</strong><span>{ongoing ? '탈피 중' : '탈피 시작과 완료 기록이 더 필요해요'}</span></header></section>
-  return <SimpleLineChart title="탈피 기간" subtitle={`${ongoing ? '탈피 중 · ' : ''}평균 ${average}일 정도 탈피해요`} unit="일" records={durations} getValue={(record) => 'duration' in record ? Number(record.duration) : 0} />
+  if (durations.length === 0) return <section className="environment-chart shed-cycle-status"><header><strong>탈피</strong><span>{ongoing ? '진행 중' : '완료 기록 없음'}</span></header></section>
+  return <SimpleLineChart title="탈피" subtitle={`${ongoing ? '진행 중 · ' : ''}평균 ${average}일`} unit="일" records={durations} getValue={(record) => 'duration' in record ? Number(record.duration) : 0} />
 }
 
 function PoopStatusChart({ records }: { records: PetRecord[] }) {

@@ -35,6 +35,52 @@ type DailyTaskRow = {
   updated_at: string
 }
 
+type CareRecordRow = {
+  id: string
+  user_id: string
+  pet_id: string
+  record_date: string
+  record_type: string
+  memo: string | null
+  payload: Partial<PetRecord> | null
+  daily_task_id: string | null
+  occurred_at: string | null
+  scheduled_for: string | null
+  status: string
+  created_at: string
+}
+
+const petRecordTypes = new Set<PetRecord['type']>([
+  'food',
+  'weight',
+  'shed',
+  'poop',
+  'cleaning',
+  'hospital',
+  'other',
+])
+
+const toPetRecordType = (value: string): PetRecord['type'] =>
+  petRecordTypes.has(value as PetRecord['type']) ? value as PetRecord['type'] : 'other'
+
+const toPetRecord = (row: CareRecordRow): PetRecord => {
+  const payload = row.payload ?? {}
+  return {
+    ...payload,
+    id: row.id,
+    userId: row.user_id,
+    petId: row.pet_id,
+    type: toPetRecordType(row.record_type),
+    date: row.record_date,
+    memo: row.memo ?? payload.memo,
+    dailyTaskId: row.daily_task_id ?? payload.dailyTaskId,
+    scheduledFor: row.scheduled_for ?? payload.scheduledFor,
+    occurredAt: row.occurred_at ?? payload.occurredAt,
+    status: row.status === 'manual' ? 'manual' : 'completed',
+    createdAt: payload.createdAt ?? row.occurred_at ?? row.created_at,
+  }
+}
+
 const toCarePlan = (row: CarePlanRow): CarePlan => ({
   id: row.id,
   userId: row.user_id,
@@ -97,6 +143,18 @@ export async function listDailyTasks(userId: string, from: string, to: string, p
   const { data, error } = await query
   if (error) throw error
   return ((data ?? []) as DailyTaskRow[]).map(toDailyTask)
+}
+
+export async function listCareRecords(userId: string, petId?: string) {
+  let query = supabase
+    .from('care_records')
+    .select('id, user_id, pet_id, record_date, record_type, memo, payload, daily_task_id, occurred_at, scheduled_for, status, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (petId) query = query.eq('pet_id', petId)
+  const { data, error } = await query
+  if (error) throw error
+  return ((data ?? []) as CareRecordRow[]).map(toPetRecord)
 }
 
 export async function saveCarePlan(userId: string, plan: CarePlan) {

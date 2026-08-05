@@ -1216,3 +1216,45 @@
 - 핵심 변경: Supabase 병원 조회에 2.5초 제한을 적용하고, 조회 예외·지연 시 `public/data/exotic-hospitals.json`의 43개 병원으로 안전하게 전환하도록 보강했다.
 - 검증 결과: 정적 JSON은 UTF-8 기준 유효한 JSON이며 43개 병원 항목을 포함한다. `npm run build`, `npm run lint`를 모두 통과했다.
 - 남은 작업: Google Cloud 콘솔에서 브라우저 지도 키의 localhost·모바일 개발 주소·실제 배포 주소 허용 여부를 사용자가 확인해야 한다. 현재 저장소는 Vercel 프로젝트에 연결되어 있지 않아 실제 배포 도메인은 확인하지 못했다.
+## 2026-08-05 - 병원 좋아요 Supabase 동기화
+
+- 요청 요약: localStorage 중심의 병원 좋아요를 사용자별 Supabase DB 저장 방식으로 전환하고 기기 간 동기화를 지원했다.
+- 분석·판단: 지도와 프로필이 서로 다른 저장 경로를 사용하면 상태가 어긋날 수 있어 App 수준의 단일 변경 함수로 통합했다. 기존 좋아요 유실을 막기 위해 사용자별 로컬 캐시를 DB 데이터와 병합하되, 과거 공용 캐시는 최초 로그인 사용자 한 명에게만 귀속한다.
+- 수정 파일: `src/App.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/mapDependencies.tsx`, `src/lib/hospitalLikes.ts`, `supabase/migrations/202608050008_hospital_likes.sql`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: `hospital_likes` 테이블과 본인 전용 RLS를 추가하고, 로그인 시 DB 조회·기존 로컬 데이터 이전·사용자별 캐시 갱신을 수행한다. 지도 및 프로필의 좋아요/취소는 낙관적으로 UI에 반영한 뒤 Supabase에 upsert/delete한다.
+- 검증 결과: migration을 연결된 Supabase 프로젝트에 적용했다. 비로그인 REST 조회는 200과 빈 배열을 반환해 테이블 존재 및 RLS 비공개 동작을 확인했다. `npm run build`, `npm run lint`를 통과했다.
+- 남은 작업: 실제 로그인 계정 두 기기에서 좋아요 추가·취소 후 재로그인 동기화를 확인한다.
+## 2026-08-05 - 내 위치 마커 타원 왜곡 방지
+
+- 요청 요약: 내 위치 마커가 타원으로 보이는 문제를 수정했다.
+- 분석·판단: 지도 오버레이의 0 크기 기준점과 누적된 마커 CSS 사이에서 한 축 크기가 재정의되지 않도록 최종 `.map-page` 규칙을 강화했다.
+- 수정 파일: `src/App.css`.
+- 핵심 변경: 단일 크기 변수로 가로·세로·최소·최대 크기를 고정하고 외곽 및 내부 원에 1:1 비율을 강제했다.
+- 검증 결과: `npm run build`, `npm run lint`를 모두 통과했다.
+- 남은 작업: 실제 모바일 지도에서 육안 확인한다.
+## 2026-08-05 - 지도 운영 체크리스트 검증
+
+- 요청 요약: 지도, 병원 마커·목록, 병원 상세의 Places 정보 연결 상태를 점검했다.
+- 분석·판단: 정적 fallback 43곳의 좌표 유효성과 중복 여부, 원격 Edge Function 상태, 30일 DB 캐시 응답을 각각 분리해 확인했다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`.
+- 핵심 변경: 숨겨져 있던 Google 별점·평가 수 요약과 관련 정렬을 복원했다. Google 리뷰 본문은 노출하지 않는다.
+- 검증 결과: 정적 병원 43곳 모두 유효하고 고유한 좌표를 가진다. `search-reptile-amphibian-places`는 ACTIVE이며 실제 호출에서 `supabase-places-cache` hit, 전화번호 `있음`, 현재 영업 상태 `true`, 운영시간 7개, 평점 4.8, 평가 42개를 확인했다. build와 lint 통과.
+- 남은 작업: 자동화 브라우저에는 로그인 세션이 없어 실제 지도 타일과 43개 마커의 시각 렌더링은 로그인된 사용자 브라우저에서 확인해야 한다.
+
+## 2026-08-05 - 운영시간·별점·방문 리뷰 정보 구조 정리
+
+- 요청 요약: 병원 상세의 운영시간을 안정적으로 정렬하고 Google 리뷰 노출을 줄이는 대신 앱 방문 리뷰 작성과 통합 별점을 제공했다.
+- 분석·판단: 지도 상세에서 즉시 판단할 정보는 오늘 운영시간과 별점이며, Google 평가 수·본문보다 ExoCare 사용자가 직접 남기는 방문 리뷰 흐름이 서비스 목적에 맞다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 오늘 요일과 시간을 한 줄로 표시하고 휴게시간과 전체 요일 아코디언을 분리했다. Google 별점은 ExoCare 방문 리뷰 평균과 결합하되 Google 평가 수와 본문은 숨겼으며 리뷰 작성 UI를 복원했다.
+- 검증 결과: `npm run build`와 `npm run lint`를 모두 통과했다.
+- 남은 작업: 실제 지도 상세에서 모바일·데스크톱 운영시간 카드와 리뷰 작성 완료 후 별점 반영을 확인한다.
+
+## 2026-08-05 - 영업 중 결과와 리뷰 좋아요 표시 보정
+
+- 요청 요약: 영업시간 미등록 병원을 영업 중 결과에서 제외하고 리뷰 날짜·금액 및 하트 표시를 정리했다.
+- 분석·판단: 영업 상태 미확인은 영업 중으로 단정할 수 없으며, 리뷰 액션은 외곽 버튼보다 하트 자체 상태가 명확하다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`.
+- 핵심 변경: `isOpenNow === true`만 필터링하고 리뷰 메타와 하트 스타일을 간소화했다.
+- 검증 결과: 빌드와 린트로 확인한다.
+- 남은 작업: 없음.

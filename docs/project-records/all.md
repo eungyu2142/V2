@@ -1,5 +1,18 @@
 # ExoPet 전체 작업 기록
 
+## 2026-08-05 배포 준비 전체 점검
+
+- 요청 요약: 배포 전에 구현 기능과 원격 백엔드 반영 상태를 빠짐없이 점검했다.
+- 분석·판단 이유: 빌드 성공만으로는 PWA 설치 정보, 원격 마이그레이션, Edge Function, Storage, 푸시 알림의 실제 준비 상태를 보장할 수 없다.
+- 수정 파일: `index.html`, `public/manifest.webmanifest`, `public/sw.js`, `src/features/diary/DiaryPage.css`.
+- 핵심 변경 내용: 깨진 앱 이름·설명·푸시 기본 문구와 다이어리 탭 글자를 정상 한국어로 교체하고 PWA 캐시 버전을 갱신했다.
+- 검증 결과: 원격 마이그레이션 33개와 핵심 Edge Function 배포 상태를 확인했고, `npm run build`와 `npm run lint`가 통과했다.
+- 남은 작업: Git에 포함되지 않은 신규 파일을 커밋하고 배포 서비스의 환경변수와 Google Maps 운영 도메인을 등록한 뒤 실제 기기 검수를 진행해야 한다.
+- 추가 점검: 원격 DB lint에서 `complete_daily_task`의 `ON CONFLICT`와 부분 고유 인덱스가 일치하지 않는 오류를 발견했다. 일반 고유 인덱스로 보정하는 `202608050010_fix_care_record_daily_task_conflict.sql`을 추가했다.
+- 추가 검증: `202608050010`을 원격 Supabase에 적용했고 재실행한 DB lint에서 오류가 0개로 확인됐다. 미사용 지역 변수 경고 2개만 남아 있으며 기능 동작을 막지 않는다.
+- 배포 준비: Vercel 프로젝트 `exopet`을 연결하고 `/profile` 같은 직접 경로에서도 앱이 열리도록 SPA rewrite 설정을 추가했다.
+- 배포 결과: Vercel Production 배포에 성공했으며 고정 주소는 `https://exopet-sage.vercel.app`이다. 루트, `/profile`, manifest, 서비스 워커가 모두 HTTP 200으로 응답하고 실제 브라우저에서 로그인 화면과 직접 경로 fallback이 정상 렌더링되는 것을 확인했다.
+
 이 문서는 ExoPet 특수동물 케어 PWA의 전체 작업 기록이다. 새 날짜별 기록 파일은 만들지 않고 이 파일에 날짜별 섹션을 추가한다.
 
 ## 기록 규칙
