@@ -391,3 +391,30 @@
 - 핵심 변경 내용: 프로필 임시저장 탭과 리뷰 카테고리·좋아요 리뷰 필터, 비밀번호 변경 버튼을 숨겼다. 지도 리뷰 정렬·평점·리뷰 목록·작성 모달을 제거했고 다이어리의 리뷰 불러오기·리뷰 작성 후속 버튼을 제거했다. 병원 기록 버튼은 진료 기록 작성기로 바로 연결된다.
 - 검증 결과: `npm run build`와 `npm run lint`가 성공했다.
 - 남은 작업: 백엔드의 기존 임시저장·리뷰 데이터 정리는 별도 요청 시 진행한다.
+## 2026-08-09 기술 스택 공부 문서화
+
+### 요청 요약
+
+사용자가 “내가 쓴 기술 스텍”을 공부할 수 있게 설명하고 문서화해 달라고 요청했다.
+
+### 분석·판단 이유
+
+`package.json`, `vite.config.ts`, `supabase/functions` 구조를 확인해 실제 프로젝트에서 쓰는 기술만 기준으로 정리했다. 단순 목록이 아니라 각 기술의 역할, 프로젝트 내 사용 위치, 공부할 핵심 개념을 함께 적었다.
+
+### 수정 파일
+
+- `docs/TECH_STACK_STUDY.md`
+- `docs/project-records/all.md`
+
+### 핵심 변경 내용
+
+React, TypeScript, Vite, CSS 디자인 토큰, PWA, Supabase, PostgreSQL, Supabase Edge Functions, ESLint, npm scripts를 공부용 문서로 정리했다.
+
+### 검증 결과
+
+문서 생성 작업이므로 앱 코드는 수정하지 않았다. 기술 스택 확인 과정에서 `npm run build`를 실행했으며, 기존 `src/components/hospital-map/MapScreen.tsx`의 미사용 선언 2개 때문에 빌드가 실패하는 상태를 확인했다.
+
+### 남은 작업
+
+- `src/components/hospital-map/MapScreen.tsx`의 미사용 `CSSProperties`, `getHospitalOpeningStatusClass` 정리
+- 다음 공부 단위로 React, TypeScript, Supabase 중 하나를 골라 더 자세히 정리 가능

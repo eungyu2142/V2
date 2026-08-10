@@ -396,8 +396,9 @@ export function hospitalFromSnapshot(snapshot: HospitalSnapshot): Hospital {
   }
 }
 
-export function loadGoogleHospitalDetails(hospital: Hospital) {
-  const cacheKey = `${normalizeText(hospital.name)}:${normalizeText(hospital.address)}`
+export function loadGoogleHospitalDetails(hospital: Hospital, options?: { refreshOpeningStatus?: boolean }) {
+  const openingStatusBucket = options?.refreshOpeningStatus ? Math.floor(Date.now() / (15 * 60 * 1000)) : 'details'
+  const cacheKey = `${normalizeText(hospital.name)}:${normalizeText(hospital.address)}:${openingStatusBucket}`
   const cached = googleHospitalDetailsCache.get(cacheKey)
   if (cached) return cached
 
@@ -413,6 +414,7 @@ export function loadGoogleHospitalDetails(hospital: Hospital) {
       hospitalName: hospital.name,
       hospitalAddress: hospital.address,
       googlePlaceId: hospital.googlePlaceId,
+      refreshOpeningStatus: options?.refreshOpeningStatus === true,
     },
   }).then(({ data, error }) => {
     if (error) throw error

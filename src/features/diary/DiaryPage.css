@@ -34,7 +34,9 @@
 .diary-insight-card small{color:var(--color-text-secondary);font-size:.72rem;font-weight:900}
 .diary-insight-card strong{font-size:.92rem}
 .diary-insight-card span{color:var(--color-text-secondary);font-size:.78rem;line-height:1.45}
-.diary-insight-actions{display:flex;gap:8px;margin-top:6px}
+.diary-insight-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.diary-insight-resolution{display:grid;gap:2px;margin-top:4px}
+.diary-insight-resolution>b{font-size:.8rem;color:var(--color-text-primary)}
 .diary-insight-actions button{min-height:34px;padding:0 16px;border:1px solid var(--color-primary-200);border-radius:999px;background:var(--color-surface);color:var(--color-primary-700);font-size:.78rem;font-weight:900}
 .diary-insight-actions button:first-child{border-color:var(--color-primary-600);background:var(--color-primary-600);color:var(--color-surface)}
 .diary-page .diary-insight-card .diary-insight-actions button,
@@ -348,9 +350,8 @@
 .environment-risk-gauge>div{display:grid;gap:4px}
 .environment-risk-gauge strong{color:var(--color-text-primary);font-size:.9rem}
 .environment-risk-gauge span{color:var(--color-text-secondary);font-size:.8rem;line-height:1.45}
-.environment-risk-gauge ol{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:0;padding:0;list-style:none}
+.environment-risk-gauge ol{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:0;padding:0;list-style:none}
 .environment-risk-gauge li{height:7px;border-radius:999px;background:var(--color-border)}
-.environment-risk-gauge.level-0 li.active{background:var(--color-primary-600)}
 .environment-risk-gauge.level-1 li.active{background:color-mix(in srgb, var(--color-primary-600) 70%, var(--color-surface))}
 .environment-risk-gauge.level-2 li.active{background:color-mix(in srgb, var(--color-accent-500) 45%, var(--color-primary-600))}
 .environment-risk-gauge.level-3 li.active{background:var(--color-accent-500)}
@@ -442,8 +443,9 @@
     transform:none;
   }
   .hospital-review-picker{padding:16px}
-  .diary-modal:has(.clinic-record-editor),.diary-modal:has(.clinic-record-next-actions){top:auto;right:0;bottom:0;left:0;width:auto;max-height:92svh;transform:none;border-radius:12px 12px 0 0}
-  .clinic-record-editor{padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .diary-modal:has(.clinic-record-editor),.diary-modal:has(.clinic-record-next-actions){top:auto;right:0;bottom:0;left:0;width:auto;max-height:84svh;overflow:hidden;transform:none;border-radius:12px 12px 0 0}
+  .clinic-record-editor{grid-template-rows:auto minmax(0,1fr) auto;max-height:84svh;overflow:hidden;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .clinic-record-fields{min-height:0;overscroll-behavior:contain}
   .clinic-record-row,.clinic-record-medicine{grid-template-columns:1fr}
   .clinic-record-next-actions{padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
   .clinic-record-next-buttons{grid-template-columns:1fr}
@@ -519,6 +521,11 @@
 .weight-step-buttons button:nth-child(n+3){border-color:var(--color-primary-600);background:var(--color-primary-50)}
 .weekday-picker{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .weekday-picker button{padding:0}
+.repeat-type-picker{grid-template-columns:repeat(2,minmax(0,96px));justify-content:start}
+.repeat-type-picker button{display:flex;align-items:center;justify-content:center;min-width:0;line-height:1;white-space:nowrap}
+.repeat-interval-field{grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:4px!important}
+.repeat-interval-input{display:flex;grid-column:1/-1;align-items:center;gap:10px;font-size:.9rem;font-weight:800}
+.repeat-interval-input input{width:110px!important}
 .photo-picker span{position:relative;display:grid;min-height:56px;place-items:center;border:1px dashed var(--color-primary-300);border-radius:8px;background:#fff;color:var(--color-primary-600)}
 .photo-picker input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .photo-picker small{color:var(--color-text-secondary);font-size:.85rem}

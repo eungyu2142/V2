@@ -13,6 +13,7 @@ type SearchRequest = {
   hospitalName?: string
   hospitalAddress?: string
   googlePlaceId?: string
+  refreshOpeningStatus?: boolean
 }
 
 type CachedHospitalRow = {
@@ -35,6 +36,7 @@ type CachedHospitalRow = {
   current_opening_hours: GoogleOpeningHours | null
   is_open_now: boolean | null
   places_last_updated: string | null
+  opening_hours_updated_at: string | null
 }
 
 type GooglePlace = {
@@ -84,11 +86,12 @@ type GoogleOpeningHours = {
 const GOOGLE_PLACES_TEXT_SEARCH_URL = 'https://places.googleapis.com/v1/places:searchText'
 const GOOGLE_PLACES_DETAILS_URL = 'https://places.googleapis.com/v1/places'
 const PLACES_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
+const OPENING_STATUS_CACHE_TTL_MS = 15 * 60 * 1000
 const HOSPITAL_CACHE_COLUMNS = [
   'id', 'external_id', 'name', 'address', 'road_address', 'phone', 'link', 'lat', 'lng',
   'supported_animals', 'google_place_id', 'google_rating', 'google_review_count',
   'google_phone', 'google_website', 'opening_hours', 'current_opening_hours',
-  'is_open_now', 'places_last_updated',
+  'is_open_now', 'places_last_updated', 'opening_hours_updated_at',
 ].join(',')
 const DEFAULT_QUERY = '파충류 동물 병원'
 const CORE_FIELD_MASK = [
@@ -144,7 +147,8 @@ Deno.serve(async (request) => {
 
     if (isDetailRequest && supabase) {
       cachedRow = await findCachedHospital(supabase, body)
-      if (cachedRow && isPlacesCacheFresh(cachedRow.places_last_updated)) {
+      const openingStatusIsFresh = isOpeningStatusCacheFresh(cachedRow?.opening_hours_updated_at ?? null)
+      if (cachedRow && isPlacesCacheFresh(cachedRow.places_last_updated) && (!body.refreshOpeningStatus || openingStatusIsFresh)) {
         return cachedResponse(cachedRow, query, 'hit')
       }
     }
@@ -283,6 +287,12 @@ function isPlacesCacheFresh(updatedAt: string | null) {
   if (!updatedAt) return false
   const timestamp = Date.parse(updatedAt)
   return Number.isFinite(timestamp) && Date.now() - timestamp < PLACES_CACHE_TTL_MS
+}
+
+function isOpeningStatusCacheFresh(updatedAt: string | null) {
+  if (!updatedAt) return false
+  const timestamp = Date.parse(updatedAt)
+  return Number.isFinite(timestamp) && Date.now() - timestamp < OPENING_STATUS_CACHE_TTL_MS
 }
 
 function cachedResponse(row: CachedHospitalRow, query: string, cache: 'hit' | 'stale') {

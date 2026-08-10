@@ -1,7 +1,9 @@
 ﻿import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { linkReviewToDiary } from '../../features/diary/diaryService'
+import type { CSSProperties } from 'react'
 import type { PetRecord } from '../../features/diary/diaryTypes'
 import { loadAppData } from '../../lib/appData'
+import { loadLikeStates, saveLike } from '../../lib/likes'
 import HospitalReviewForm from './MapAndReview'
 import HeartIcon from '../common/HeartIcon'
 import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
@@ -91,7 +93,13 @@ function getHospitalDisplayReviewSummary(hospital: Hospital, hospitalReviews: Ho
 function getHospitalOpeningStatusLabel(hospital: Hospital) {
   if (hospital.isOpenNow === true) return '영업 중'
   if (hospital.isOpenNow === false) return '영업 종료'
-  return null
+  return '영업정보 없음'
+}
+
+function getHospitalOpeningStatusClass(hospital: Hospital) {
+  if (hospital.isOpenNow === true) return 'is-open'
+  if (hospital.isOpenNow === false) return 'is-closed'
+  return 'is-unknown'
 }
 
 function getOpeningTransitionDescription(hospital: Hospital, now = new Date()) {
@@ -188,6 +196,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [selectedCategories, setSelectedCategories] = useState<Array<Exclude<AnimalCategory, 'all'>>>([])
   const [selectedSort, setSelectedSort] = useState<HospitalSort>('distance')
   const [openNowOnly, setOpenNowOnly] = useState(false)
+  const [isOpenNowFilterLoading, setIsOpenNowFilterLoading] = useState(false)
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
   const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(initialMapLocation)
@@ -195,6 +204,29 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(googleMapsApiKey ? 'loading' : 'idle')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState(googleMapsApiKey ? '' : '빌드 환경의 VITE_GOOGLE_MAPS_API_KEY를 확인해주세요.')
+  const reviewIdsKey = useMemo(() => Object.values(reviews).flat().map((review) => review.id).sort().join(','), [reviews])
+
+  useEffect(() => {
+    let active = true
+    const reviewIds = reviewIdsKey ? reviewIdsKey.split(',') : []
+    loadLikeStates('hospital_review', reviewIds, userId)
+      .then((states) => {
+        if (!active) return
+        const nextReviews = Object.fromEntries(Object.entries(reviews).map(([hospitalId, items]) => [
+          hospitalId,
+          items.map((review) => ({ ...review, ...(states[review.id] ?? { liked: false, likes: 0 }) })),
+        ]))
+        localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
+        onReviewsChange(nextReviews)
+      })
+      .catch((error) => {
+        console.error('Review likes load failed.', error)
+        if (active) setMessage('리뷰 좋아요를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+      })
+    return () => { active = false }
+    // Review IDs are the stable boundary; like count changes must not reload the query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewIdsKey, userId])
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false)
   const [isOpeningHoursExpanded, setIsOpeningHoursExpanded] = useState(false)
   const [copiedAddressHospitalId, setCopiedAddressHospitalId] = useState<string | null>(null)
@@ -219,7 +251,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [reviewClinicRecordId, setReviewClinicRecordId] = useState('')
   const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false)
   const [mobileSheetState, setMobileSheetState] = useState<MobileMapSheetState>('collapsed')
-  const [sheetDragY, setSheetDragY] = useState(0)
+  const [mobileSheetHeight, setMobileSheetHeight] = useState(35)
   const [isSheetDragging, setIsSheetDragging] = useState(false)
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [visibleHospitalCount, setVisibleHospitalCount] = useState(HOSPITAL_LIST_PAGE_SIZE)
@@ -230,7 +262,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const initialLocationRequestRef = useRef(false)
   const lastHospitalSearchKeyRef = useRef('')
   const sheetDragStartRef = useRef<number | null>(null)
-  const sheetDragDistanceRef = useRef(0)
+  const sheetDragStartHeightRef = useRef(35)
+  const mobileSheetHeightRef = useRef(35)
 
   function moveMapSmoothly(position: GoogleLatLngLiteral, zoom: number) {
     const map = mapInstanceRef.current
@@ -253,7 +286,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     return sortedHospitals
       .filter((hospital) => hospitalMatchesQuery(hospital, query))
       .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
-      .filter((hospital) => !openNowOnly || hospital.isOpenNow === true)
+      .filter((hospital) => !openNowOnly || hospital.isOpenNow !== false)
       .sort((a, b) => {
         if (selectedSort === 'reviews') {
           const bCount = getReviewSummary((reviews[b.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).count
@@ -382,7 +415,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       const hospital = hospitalFromSnapshot(focusHospital)
       setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
       setSelectedHospitalId(hospital.id)
-      setMobileSheetState('expanded')
+      setMobileSheetHeight(70)
+      setMobileSheetState('middle')
       setQuery(hospital.name)
       setSelectedCategories(hospital.categories.filter(isHospitalCareCategory))
     })
@@ -396,6 +430,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHospitals((items) => [hospital, ...items.filter((item) => item.id !== hospital.id)])
     setSelectedHospitalId(hospital.id)
+    setMobileSheetHeight(92)
     setMobileSheetState('expanded')
     setIsReviewFormOpen(true)
     setEditingReviewId((reviews[hospital.id] ?? []).some((review) => review.id === reviewDraftPayload.review.id && review.mine === true) ? reviewDraftPayload.review.id : null)
@@ -455,7 +490,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           mapInstanceRef.current.addListener('click', () => {
             setSelectedHospitalId(null)
             setIsReviewFormOpen(false)
-            setMobileSheetState('collapsed')
           })
           setMapStatus('ready')
         } catch (error) {
@@ -546,7 +580,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         zIndex: hospital.id === selectedHospitalId ? 260 : 210,
         onClick: () => {
           setSelectedHospitalId(hospital.id)
-          setMobileSheetState('middle')
         },
       })
       markersRef.current.push(marker)
@@ -774,18 +807,28 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     setReviewTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : current.length >= 5 ? current : [...current, tag])
   }
 
-  const toggleReviewLike = (hospitalId: string, reviewId: string) => {
+  const toggleReviewLike = async (hospitalId: string, reviewId: string) => {
+    const currentReview = (reviews[hospitalId] ?? []).find((review) => review.id === reviewId)
+    if (!currentReview) return
+    const nextLiked = !currentReview.liked
     const nextReviews = {
       ...reviews,
       [hospitalId]: (reviews[hospitalId] ?? []).map((review) => {
         if (review.id !== reviewId) return review
-        const liked = !review.liked
-        const likes = Math.max(0, (review.likes ?? 0) + (liked ? 1 : -1))
-        return { ...review, liked, likes }
+        const likes = Math.max(0, (review.likes ?? 0) + (nextLiked ? 1 : -1))
+        return { ...review, liked: nextLiked, likes }
       }),
     }
     localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
     onReviewsChange(nextReviews)
+    try {
+      await saveLike('hospital_review', reviewId, userId, nextLiked)
+    } catch (error) {
+      console.error('Review like save failed.', error)
+      localStorage.setItem(reviewStorageKey, JSON.stringify(reviews))
+      onReviewsChange(reviews)
+      setMessage('좋아요를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
   }
 
   const deleteReview = (hospitalId: string, reviewId: string) => {
@@ -804,67 +847,58 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     }
   }
 
-  const beginSheetDrag = (event: { clientY: number; currentTarget: { setPointerCapture?: (pointerId: number) => void }; pointerId: number; stopPropagation: () => void }) => {
+  const updateMobileSheetHeight = (height: number) => {
+    const clampedHeight = Math.min(92, Math.max(12, height))
+    mobileSheetHeightRef.current = clampedHeight
+    setMobileSheetHeight(clampedHeight)
+  }
+
+  useEffect(() => {
+    mobileSheetHeightRef.current = mobileSheetHeight
+  }, [mobileSheetHeight])
+
+  const beginSheetDrag = (event: { clientY: number; preventDefault: () => void; stopPropagation: () => void }) => {
     sheetDragStartRef.current = event.clientY
-    sheetDragDistanceRef.current = 0
+    sheetDragStartHeightRef.current = mobileSheetHeightRef.current
     setIsSheetDragging(true)
-    setSheetDragY(0)
-    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.preventDefault()
     event.stopPropagation()
   }
 
-  const moveSheetDrag = (event: { clientY: number; preventDefault: () => void }) => {
-    if (sheetDragStartRef.current === null) return
-    const nextDragY = event.clientY - sheetDragStartRef.current
-    sheetDragDistanceRef.current = nextDragY
-    setSheetDragY(nextDragY)
-    if (Math.abs(nextDragY) > 0) event.preventDefault()
-  }
-
   const finishSheetDrag = () => {
-    const dragDistance = sheetDragDistanceRef.current
     sheetDragStartRef.current = null
-    sheetDragDistanceRef.current = 0
     setIsSheetDragging(false)
-    setSheetDragY(0)
-
-    if (dragDistance < -48) {
-      setMobileSheetState((state) => {
-        if (state === 'expanded') return state
-        if (state === 'middle') return 'expanded'
-        return dragDistance < -120 ? 'expanded' : 'middle'
-      })
-      return
-    }
-
-    if (dragDistance <= 56) return
-
-    if (mobileSheetState === 'expanded') {
-      setMobileSheetState('middle')
-      return
-    }
-
-    if (mobileSheetState === 'middle') {
-      setMobileSheetState('collapsed')
-      return
-    }
-
-    if (selectedHospital) {
-      setSelectedHospitalId(null)
-      setIsReviewFormOpen(false)
-      setMobileSheetState('collapsed')
-      return
-    }
-
-    setMobileSheetState('collapsed')
   }
 
   const sheetDragHandlers = {
     onPointerDown: beginSheetDrag,
-    onPointerMove: moveSheetDrag,
-    onPointerUp: finishSheetDrag,
-    onPointerCancel: finishSheetDrag,
   }
+
+  useEffect(() => {
+    if (!isSheetDragging) return
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (sheetDragStartRef.current === null) return
+      event.preventDefault()
+      const dragDistance = event.clientY - sheetDragStartRef.current
+      const viewportHeight = Math.max(window.innerHeight, 1)
+      updateMobileSheetHeight(sheetDragStartHeightRef.current - (dragDistance / viewportHeight * 100))
+    }
+    const handlePointerEnd = () => {
+      const height = mobileSheetHeightRef.current
+      setMobileSheetState(height < 48 ? 'collapsed' : height < 78 ? 'middle' : 'expanded')
+      finishSheetDrag()
+    }
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: false })
+    window.addEventListener('pointerup', handlePointerEnd)
+    window.addEventListener('pointercancel', handlePointerEnd)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerEnd)
+      window.removeEventListener('pointercancel', handlePointerEnd)
+    }
+  }, [isSheetDragging])
 
   useEffect(() => {
     document.documentElement.classList.add('map-overscroll-lock')
@@ -878,7 +912,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   useEffect(() => {
     const openFromBottomNav = () => {
       setIsReviewFormOpen(false)
-      setMobileSheetState((state) => state === 'expanded' ? 'expanded' : 'expanded')
+      updateMobileSheetHeight(70)
+      setMobileSheetState('middle')
     }
     window.addEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
     return () => window.removeEventListener('map-bottom-nav-swipe-up', openFromBottomNav)
@@ -910,6 +945,50 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       console.error('Hospital address copy failed.', error)
     }
   }
+
+  const toggleOpenNowFilter = async () => {
+    if (openNowOnly) {
+      setOpenNowOnly(false)
+      return
+    }
+    if (isOpenNowFilterLoading) return
+
+    setIsOpenNowFilterLoading(true)
+    try {
+      for (let index = 0; index < hospitals.length; index += 2) {
+        const batch = hospitals.slice(index, index + 2)
+        const details = await Promise.all(batch.map((hospital) => loadGoogleHospitalDetails(hospital, { refreshOpeningStatus: true })))
+        const detailsById = new Map(details.filter((hospital): hospital is Hospital => Boolean(hospital)).map((hospital) => [hospital.id, hospital]))
+        setHospitals((items) => items.map((hospital) => detailsById.get(hospital.id) ?? hospital))
+      }
+      setOpenNowOnly(true)
+      setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
+    } catch (error) {
+      console.error('Hospital opening status refresh failed:', error)
+      setMessage('영업 상태를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setIsOpenNowFilterLoading(false)
+    }
+  }
+
+  const mobileSheetStyle = {
+    '--mobile-sheet-height': `${mobileSheetHeight}dvh`,
+  } as CSSProperties
+  const sortOptions: Array<[HospitalSort, string]> = [
+    ['distance', '가까운 순'],
+    ['reviews', '리뷰 많은 순'],
+    ['rating', '평점 높은 순'],
+  ]
+  const renderSortButtons = () => sortOptions.map(([sort, label]) => (
+    <button className={selectedSort === sort ? 'active' : ''} type="button" key={sort} onClick={() => { setSelectedSort(sort); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
+      {label}
+    </button>
+  ))
+  const renderOpenNowButton = () => (
+    <button className={`map-open-now-filter ${openNowOnly ? 'active' : ''}`} type="button" aria-pressed={openNowOnly} disabled={isOpenNowFilterLoading} onClick={() => void toggleOpenNowFilter()}>
+      {isOpenNowFilterLoading ? '영업 확인 중' : '영업 중'}
+    </button>
+  )
 
   return (
     <section className={`map-page mobile-sheet-${mobileSheetState} ${selectedHospital ? 'has-selected-hospital' : ''}`}>
@@ -944,23 +1023,19 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           </button>
         </form>
 
-        <div className="map-sort-tabs" aria-label="병원 정렬과 필터">
-          {([
-            ['distance', '가까운 순'],
-            ['reviews', '리뷰 많은 순'],
-            ['rating', '평점 높은 순'],
-          ] as Array<[HospitalSort, string]>).map(([sort, label]) => (
-            <button className={selectedSort === sort ? 'active' : ''} type="button" key={sort} onClick={() => { setSelectedSort(sort); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
-              {label}
-            </button>
-          ))}
-          <button className={openNowOnly ? 'active' : ''} type="button" aria-pressed={openNowOnly} onClick={() => { setOpenNowOnly((value) => !value); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
-            영업 중
-          </button>
+        <div className="map-desktop-sort-tabs" aria-label="병원 정렬과 필터">
+          {renderSortButtons()}
+          {renderOpenNowButton()}
+        </div>
+        <div className="map-mobile-open-filter" aria-label="영업 상태 필터">
+          {renderOpenNowButton()}
         </div>
 
-        <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
-          <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
+        <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={mobileSheetStyle}>
+          <button className="map-sheet-handle" type="button" aria-label="병원 목록 높이 조절" {...sheetDragHandlers} />
+          <div className="map-sheet-sort-tabs" aria-label="병원 정렬">
+            {renderSortButtons()}
+          </div>
           {filteredHospitals.length === 0 ? (
             <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
           ) : (
@@ -971,7 +1046,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                   reviews={reviews[hospital.id] ?? []}
                   key={hospital.id}
                   active={hospital.id === selectedHospitalId}
-                  onSelect={() => { setSelectedHospitalId(hospital.id); setMobileSheetState('middle') }}
+                  onSelect={() => setSelectedHospitalId(hospital.id)}
                 />
               ))}
               {hasMoreHospitals && (
@@ -986,8 +1061,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       </aside>
 
       {selectedHospital && (
-        <article className={`map-hospital-panel map-detail-dock mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} style={{ transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined }}>
-          <span className="map-sheet-handle" aria-hidden="true" {...sheetDragHandlers} />
+        <article className={`map-hospital-panel map-detail-dock mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} style={mobileSheetStyle}>
+          <button className="map-sheet-handle" type="button" aria-label="병원 상세 높이 조절" {...sheetDragHandlers} />
           <header className="hospital-detail-header">
             <strong>{selectedHospital.name}</strong>
             <div className="hospital-detail-tools">
@@ -1008,8 +1083,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             {HOSPITAL_RATING_ENABLED && <HospitalRatingSummary summary={selectedHospitalDisplayReviewSummary} />}
             <span className="hospital-summary-distance">{selectedHospital.distanceKm === undefined ? '거리 계산 전' : `${selectedHospital.distanceKm.toFixed(1)}km`}</span>
             {getHospitalOpeningStatusLabel(selectedHospital) && (
-              <span className={`hospital-open-status ${selectedHospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>
-                <OpeningStatusIcon open={selectedHospital.isOpenNow === true} />
+              <span className={`hospital-open-status ${getHospitalOpeningStatusClass(selectedHospital)}`}>
+                {typeof selectedHospital.isOpenNow === 'boolean' && <OpeningStatusIcon open={selectedHospital.isOpenNow} />}
                 {getHospitalOpeningStatusLabel(selectedHospital)}
               </span>
             )}
@@ -1033,7 +1108,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                     <div className="hospital-opening-title">
                       <strong>오늘 운영시간</strong>
                       {getHospitalOpeningStatusLabel(selectedHospital) && (
-                        <span className={`hospital-opening-badge ${selectedHospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>
+                        <span className={`hospital-opening-badge ${getHospitalOpeningStatusClass(selectedHospital)}`}>
                           {getHospitalOpeningStatusLabel(selectedHospital)}
                         </span>
                       )}
@@ -1188,9 +1263,9 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
 function HospitalRatingSummary({ summary, compact = false }: { summary: HospitalDisplayReviewSummary; compact?: boolean }) {
   if (summary.source === null) return null
   const sourceLabel = summary.source === 'combined'
-    ? 'Google과 ExoCare 방문 리뷰 통합 별점'
+    ? 'Google과 파작파작 방문 리뷰 통합 별점'
     : summary.source === 'exocare'
-      ? 'ExoCare 방문 리뷰 별점'
+      ? '파작파작 방문 리뷰 별점'
       : 'Google 별점'
   return (
     <span className={`hospital-rating-summary ${compact ? 'compact' : ''}`} aria-label={`${sourceLabel} ${summary.average.toFixed(1)}점`}>
@@ -1213,7 +1288,7 @@ function HospitalListRow({ hospital, reviews, active, onSelect }: { hospital: Ho
           {HOSPITAL_RATING_ENABLED && <HospitalRatingSummary summary={reviewSummary} compact />}
           <small>
             <span>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</span>
-            {getHospitalOpeningStatusLabel(hospital) && <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${hospital.isOpenNow === true ? 'is-open' : 'is-closed'}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>}
+            <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${getHospitalOpeningStatusClass(hospital)}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>
           </small>
         </span>
       </button>

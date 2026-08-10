@@ -1,7 +1,7 @@
 {
-  "name": "ExoPet",
-  "short_name": "ExoPet",
-  "description": "양서·파충류의 돌봄 기록과 동물병원 찾기를 위한 PWA",
+  "name": "파작파작",
+  "short_name": "파작파작",
+  "description": "양서파충류의 돌봄 기록과 동물병원 찾기를 위한 PWA",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

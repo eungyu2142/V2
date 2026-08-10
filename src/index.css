@@ -1,3 +1,5 @@
+@import './styles/tokens.css';
+
 :root {
   --color-primary-50: #E3F4EF;
   --color-primary-100: #BFE6DC;

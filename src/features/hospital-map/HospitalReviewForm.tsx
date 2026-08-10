@@ -159,7 +159,7 @@ export default function HospitalReviewForm({
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.ratingTitle}</strong>
-          <span>{text.required}</span>
+          <span className="review-required-star" aria-label={text.required}>*</span>
         </div>
         <div className="review-rating-picker" aria-label={text.ratingLabel}>
           {[1, 2, 3, 4, 5].map((score) => (
@@ -173,11 +173,11 @@ export default function HospitalReviewForm({
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.petTitle}</strong>
-          <span>{text.required}</span>
+          <span className="review-required-star" aria-label={text.required}>*</span>
         </div>
         <label className="review-pet-select">
           <span>{text.petSelectLabel}</span>
-          <select value={selectedPetId} onChange={(event) => onPetChange(event.target.value)}>
+          <select value={selectedPetId} onChange={(event) => onPetChange(event.target.value)} required>
             <option value="">{text.petSelectPlaceholder}</option>
             {pets.map((pet) => (
               <option key={pet.id} value={pet.id}>{pet.name}</option>
@@ -191,7 +191,7 @@ export default function HospitalReviewForm({
         <section className="review-input-section">
           <div className="review-input-head">
             <strong>진료 기록에서 불러오기</strong>
-            <span>{text.optional}</span>
+            <span className="optional-badge">{text.optional}</span>
           </div>
           <select value={selectedClinicRecordId} onChange={(event) => onClinicRecordSelect(event.target.value)}>
             <option value="">직접 작성</option>
@@ -210,8 +210,8 @@ export default function HospitalReviewForm({
         </div>
         <div className="review-form-row">
           <label>
-            {text.visitDate}
-            <input type="date" value={visitDate} onChange={(event) => onVisitDateChange(event.target.value)} />
+            {text.visitDate} <span className="review-required-star" aria-label={text.required}>*</span>
+            <input type="date" value={visitDate} onChange={(event) => onVisitDateChange(event.target.value)} required />
           </label>
           <label>
             {text.cost}
@@ -275,9 +275,9 @@ export default function HospitalReviewForm({
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.bodyTitle}</strong>
-          <span>{text.required}</span>
+          <span className="review-required-star" aria-label={text.required}>*</span>
         </div>
-        <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} placeholder={text.bodyPlaceholder} />
+        <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} placeholder={text.bodyPlaceholder} required />
       </section>
 
       <div className="step-actions review-form-actions">

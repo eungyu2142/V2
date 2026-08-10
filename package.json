@@ -1,15 +1,15 @@
 {
-  "name": "project-v2",
+  "name": "pajakpajak",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "node scripts/guard-qna-label.mjs",
+    "prebuild": "node scripts/guard-qna-label.mjs && node scripts/check-ui-architecture.mjs",
     "dev": "vite",
     "dev:chrome": "start \"\" chrome \"http://localhost:5173/\" && vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "collect:hospitals": "node scripts/collect-exotic-hospitals.mjs",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/check-ui-architecture.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -86,6 +86,7 @@ Deno.serve(async (request) => {
   }
 
   for (const job of jobs) {
+    let deliveredToDevice = false
     try {
       const { data: occurrence, error: occurrenceError } = await supabase
         .from('daily_tasks')
@@ -126,6 +127,7 @@ Deno.serve(async (request) => {
         else summary.retried += 1
         continue
       }
+      deliveredToDevice = true
 
       const next = getNextJob(job)
       const { data: finished, error: finishError } = await supabase.rpc('finish_routine_notification_job', {
@@ -136,9 +138,17 @@ Deno.serve(async (request) => {
         p_next_dedupe_key: next.dedupeKey,
       })
       if (finishError) throw finishError
-      if (finished) summary.sent += 1
+      if (!finished) throw new Error('NOTIFICATION_JOB_FINISH_REJECTED')
+      summary.sent += 1
     } catch (error: unknown) {
       console.error(`Routine notification job ${job.id} failed.`, error)
+      if (deliveredToDevice) {
+        // The push already reached at least one device. Retrying this row would
+        // notify the user again merely because the follow-up DB write failed.
+        await markDeliveredJobSent(supabase, job.id)
+        summary.sent += 1
+        continue
+      }
       const failedPermanently = await releaseJobForRetry(supabase, job)
       if (failedPermanently) summary.failed += 1
       else summary.retried += 1
@@ -155,6 +165,19 @@ function isAuthorizedCronRequest(request: Request, expectedSecret: string) {
     ? authorization.slice('Bearer '.length)
     : null
   return directSecret === expectedSecret || bearerSecret === expectedSecret
+}
+
+async function markDeliveredJobSent(
+  supabase: ReturnType<typeof createClient>,
+  jobId: string,
+) {
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('routine_notification_jobs')
+    .update({ status: 'sent', sent_at: now, last_notification_at: now, updated_at: now })
+    .eq('id', jobId)
+    .eq('status', 'processing')
+  if (error) console.error(`Failed to seal delivered notification job ${jobId}.`, error)
 }
 
 function readBatchLimit(value: string | undefined) {

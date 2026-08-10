@@ -23,7 +23,7 @@ function permissionLabel(state: PushSubscriptionState) {
 
 function permissionMessage(state: PushSubscriptionState) {
   if (state.permission === 'unsupported') return '이 기기에서는 알림을 지원하지 않아요.'
-  if (state.permission === 'denied') return '브라우저 설정에서 ExoCare 알림 권한을 허용해 주세요.'
+  if (state.permission === 'denied') return '브라우저 설정에서 파작파작 알림 권한을 허용해 주세요.'
   if (state.permission === 'granted' && state.isSubscribed) return '이 기기에서 돌봄 알림을 받을 수 있어요.'
   return '루틴 시간과 완료하지 않은 돌봄을 알려드려요.'
 }

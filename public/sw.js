@@ -1,7 +1,9 @@
-const CACHE_NAME = 'exopet-pwa-v5'
+const CACHE_NAME = 'pajakpajak-pwa-v6'
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/exopet-logo.png', '/favicon.svg']
+const DEFAULT_NOTIFICATION_TITLE = '\uD30C\uC791\uD30C\uC791'
+const DEFAULT_NOTIFICATION_BODY = '\uC644\uB8CC\uD558\uC9C0 \uC54A\uC740 \uB3CC\uBD04 \uC77C\uC815\uC774 \uC788\uC5B4\uC694.'
 const DEFAULT_NOTIFICATION = {
-  title: 'ExoPet',
+  title: '파작파작',
   body: '완료하지 않은 돌봄 루틴이 있어요.',
   icon: '/exopet-logo.png',
   badge: '/exopet-logo.png',
@@ -82,9 +84,9 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   const payload = readPushPayload(event)
   const targetUrl = buildNotificationUrl(payload)
-  const title = readString(payload.title, DEFAULT_NOTIFICATION.title)
+  const title = readString(payload.title, DEFAULT_NOTIFICATION_TITLE)
   const options = {
-    body: readString(payload.body, DEFAULT_NOTIFICATION.body),
+    body: readString(payload.body, DEFAULT_NOTIFICATION_BODY),
     icon: readString(payload.icon, DEFAULT_NOTIFICATION.icon),
     badge: readString(payload.badge, DEFAULT_NOTIFICATION.badge),
     tag: buildNotificationTag(payload),

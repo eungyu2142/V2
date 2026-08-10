@@ -2,6 +2,8 @@ import { type ChangeEvent, type PointerEvent, type ReactNode, useEffect, useRef,
 import StepShell from '../account/StepShell'
 import type { AnimalCategory, DraftItem, Pet } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
+import { RequiredMark } from '../common/FieldMarkers'
+import { ChoiceGroup, TextField } from '../ui'
 
 type SupportedPetCategory = 'reptile' | 'amphibian'
 type ReptileBranch = '도마뱀' | '뱀' | '거북이'
@@ -34,16 +36,12 @@ function isSupportedCategory(value?: AnimalCategory | ''): value is SupportedPet
   return value === 'reptile' || value === 'amphibian'
 }
 
-function RequiredMark() {
-  return <span className="required-mark" aria-label="필수">*</span>
-}
-
 function StepText({ label, value, onChange, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean }) {
-  return <label className="step-field"><span>{label}{required && <RequiredMark />}</span><input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} /></label>
+  return <TextField className="step-field" label={label} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} />
 }
 
 function StepSelect({ label, value, options, labels, onChange, required = false }: { label: string; value: string; options: string[]; labels?: Record<string, string>; onChange: (value: string) => void; required?: boolean }) {
-  return <fieldset className="step-choice-group"><legend>{label}{required && <RequiredMark />}</legend><div className="step-choice-grid">{options.map((option) => <button className={value === option ? 'active' : ''} type="button" key={option} onClick={() => onChange(option)}>{labels?.[option] ?? option}</button>)}</div></fieldset>
+  return <ChoiceGroup className="step-choice-group" label={label} value={value} options={options.map((option) => ({ value: option, label: labels?.[option] ?? option }))} onChange={(nextValue) => onChange(String(nextValue))} required={required} />
 }
 
 function ChipGroup({ label, value, options, onChange, required = false }: { label: string; value: string; options: string[]; onChange: (value: string) => void; required?: boolean }) {
@@ -81,7 +79,7 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
   const normalizedName = name.trim().slice(0, 24)
   const resolvedSpecies = speciesOption === customSpeciesOption ? customSpecies.trim().slice(0, 32) : speciesOption
   const customSpeciesValid = resolvedSpecies.length > 0 && /[0-9A-Za-z가-힣]/.test(resolvedSpecies)
-  const canNext = step === 0 ? normalizedName.length > 0 : step === 1 ? Boolean(group) : step === 2 ? Boolean(resolvedSpecies && (speciesOption !== customSpeciesOption || customSpeciesValid)) : step === 3 ? Boolean(photo) : true
+  const canNext = step === 0 ? normalizedName.length > 0 : step === 1 ? Boolean(group) : step === 2 ? Boolean(resolvedSpecies && (speciesOption !== customSpeciesOption || customSpeciesValid)) : step === 3 ? Boolean(photo && gender) : true
 
   useEffect(() => () => {
     if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current)
@@ -125,7 +123,7 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
   })
 
   const finish = async () => {
-    if (!group || !resolvedSpecies || !normalizedName || !photo) return
+    if (!group || !resolvedSpecies || !normalizedName || !photo || !gender) return
     const pet = buildPet()
     try {
       setSaveError('')
@@ -172,7 +170,7 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
   }
 
   const finishEdit = async () => {
-    if (!group || !resolvedSpecies || !normalizedName || !photo) return
+    if (!group || !resolvedSpecies || !normalizedName || !photo || !gender) return
     try {
       setSaveError('')
       await onSave(buildPet(), photoFile)
@@ -201,7 +199,7 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
       <button className={speciesOption === customSpeciesOption ? 'species-custom-toggle active' : 'species-custom-toggle'} type="button" onClick={() => { setSpeciesOption(customSpeciesOption); setLizardGroup(group === 'reptile' && reptileBranch === '도마뱀' ? '기타' : lizardGroup) }}>목록에 없나요? 직접 입력</button>
       {speciesOption === customSpeciesOption && <StepText label="종 직접 입력" value={customSpecies} onChange={(value) => setCustomSpecies(value.slice(0, 32))} placeholder={group === 'amphibian' ? '예: 팩맨' : '예: 팬서카멜레온'} required />}
     </div>}
-    {step === 3 && <div className="pet-confirm-step"><label className="pet-confirm-card pet-confirm-photo-card"><input type="file" accept="image/*" onChange={attachPhoto} /><div className="pet-card-icon pet-photo-adjuster" onPointerDown={startPhotoDrag} onPointerMove={(event) => { if (photo && event.currentTarget.hasPointerCapture(event.pointerId)) movePhotoPosition(event) }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId) }} onClick={(event) => { if (photo) event.preventDefault() }}>{photo ? <img src={photo} alt="선택한 펫 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }} draggable={false} /> : <span className="pet-photo-plus" aria-hidden="true">+</span>}</div><strong>{photo ? '사진 변경' : <>사진 추가<RequiredMark /></>}</strong><span>{normalizedName}</span>{photo && <small>사진을 움직여 위치를 맞출 수 있어요.</small>}</label><div className="pet-confirm-detail-panel"><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} /><div className="step-field"><span>나이</span><input inputMode="numeric" pattern="[0-9]*" value={ageText} onChange={(event) => setAgeText(event.target.value.replace(/[^0-9]/g, '').slice(0, 3))} placeholder="숫자 입력" /></div><div className="step-field"><span>몸무게</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="선택 입력" /><div className="weight-unit">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></div></div></div>}
+    {step === 3 && <div className="pet-confirm-step"><label className="pet-confirm-card pet-confirm-photo-card"><input type="file" accept="image/*" onChange={attachPhoto} /><div className="pet-card-icon pet-photo-adjuster" onPointerDown={startPhotoDrag} onPointerMove={(event) => { if (photo && event.currentTarget.hasPointerCapture(event.pointerId)) movePhotoPosition(event) }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId) }} onClick={(event) => { if (photo) event.preventDefault() }}>{photo ? <img src={photo} alt="선택한 펫 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }} draggable={false} /> : <span className="pet-photo-plus" aria-hidden="true">+</span>}</div><strong>{photo ? '사진 변경' : <>사진 추가<RequiredMark /></>}</strong><span>{normalizedName}</span>{photo && <small className="pet-photo-drag-hint"><span aria-hidden="true">↔</span>사진을 움직여 위치를 맞출 수 있어요.</small>}</label><div className="pet-confirm-detail-panel"><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} required /><div className="step-field"><span>나이</span><div className="age-input"><input inputMode="numeric" pattern="[0-9]*" value={ageText} onChange={(event) => setAgeText(event.target.value.replace(/[^0-9]/g, '').slice(0, 3))} placeholder="숫자 입력" aria-label="나이" /><span aria-hidden="true">살</span></div></div><div className="step-field"><span>몸무게</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="선택 입력" aria-label="몸무게" /><div className="weight-unit" aria-label="몸무게 단위">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} aria-pressed={weightUnit === unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></div></div></div>}
     {saveError && <p className="pet-save-error" role="alert">{saveError}</p>}
     <div className="step-actions"><button className="step-secondary step-back" type="button" disabled={step === 0} onClick={() => step > 0 ? setStep((value) => value - 1) : onClose()}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={step === 3 ? (isEditing ? finishEdit : finish) : () => setStep((value) => value + 1)}>{step === 3 ? (isEditing ? '수정 완료' : '등록 완료') : '다음'}</button></div>
   </StepShell>

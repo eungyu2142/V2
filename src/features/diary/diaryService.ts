@@ -209,36 +209,67 @@ export async function markDailyTaskCompleted(taskId: string) {
   }
 }
 
+export async function settleSupersededOverdueTasks(userId: string, task: DailyTask, completedDate: string) {
+  if (task.scheduledDate >= completedDate) return []
+
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('daily_tasks')
+    .update({
+      status: 'skipped',
+      skip_reason: 'overdue_consolidated',
+      updated_at: now,
+    })
+    .eq('user_id', userId)
+    .eq('pet_id', task.petId)
+    .eq('task_type', task.taskType)
+    .eq('status', 'pending')
+    .lt('scheduled_date', completedDate)
+    .neq('id', task.id)
+    .select('id')
+
+  if (error) throw error
+  const settledIds = (data ?? []).map((row) => String(row.id))
+
+  await Promise.all(settledIds.map(async (occurrenceId) => {
+    const { error: notificationError } = await supabase.rpc('cancel_occurrence_notification_jobs', {
+      p_occurrence_id: occurrenceId,
+    })
+    if (notificationError && import.meta.env.DEV) {
+      console.error('Superseded overdue notification cancellation failed.', notificationError)
+    }
+  }))
+
+  return settledIds
+}
+
 export async function saveDailyTaskCareRecord(userId: string, record: PetRecord) {
   if (!record.dailyTaskId) throw new Error('Daily task ID is required.')
 
   const { data: existing, error: lookupError } = await supabase
     .from('care_records')
-    .select('id')
+    .select('id, user_id, pet_id, record_date, record_type, memo, payload, daily_task_id, occurred_at, scheduled_for, status, created_at')
     .eq('user_id', userId)
     .eq('daily_task_id', record.dailyTaskId)
     .maybeSingle()
   if (lookupError) throw lookupError
+  if (existing) return toPetRecord(existing as CareRecordRow)
 
-  const storedRecord = {
-    ...record,
-    id: existing?.id ?? record.id,
-  }
-  const { error } = await supabase.from('care_records').upsert({
-    id: storedRecord.id,
+  const { data, error } = await supabase.from('care_records').insert({
+    id: record.id,
     user_id: userId,
-    pet_id: storedRecord.petId,
-    record_date: storedRecord.date,
-    record_type: storedRecord.type,
-    memo: storedRecord.memo ?? '',
-    payload: storedRecord,
-    daily_task_id: storedRecord.dailyTaskId,
-    occurred_at: storedRecord.occurredAt,
-    scheduled_for: storedRecord.scheduledFor,
-    status: storedRecord.status ?? 'completed',
-  })
+    pet_id: record.petId,
+    record_date: record.date,
+    record_type: record.type,
+    memo: record.memo ?? '',
+    payload: record,
+    daily_task_id: record.dailyTaskId,
+    occurred_at: record.occurredAt,
+    scheduled_for: record.scheduledFor,
+    status: record.status ?? 'completed',
+  }).select('id, user_id, pet_id, record_date, record_type, memo, payload, daily_task_id, occurred_at, scheduled_for, status, created_at').single()
   if (error) throw error
-  return storedRecord
+  return toPetRecord(data as CareRecordRow)
 }
 
 export async function undoDailyTask(taskId: string) {

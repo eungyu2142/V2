@@ -1,0 +1,21 @@
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --font-size-caption: 0.75rem;
+  --font-size-body: 0.875rem;
+  --font-size-control: 0.9375rem;
+  --font-size-section: 1.125rem;
+  --font-size-title: 1.5rem;
+
+  --control-height: 2.875rem;
+  --control-radius: 0.625rem;
+  --card-radius: 1rem;
+  --motion-fast: 160ms;
+  --motion-normal: 220ms;
+}

@@ -5,6 +5,7 @@ import {
   signInWithUsername,
   signUpWithUsername,
 } from '../lib/auth'
+import { RequiredMark } from './common/FieldMarkers'
 
 type AuthMode = 'login' | 'signup' | 'find-id' | 'reset-password'
 
@@ -70,28 +71,28 @@ export default function AuthScreen() {
   return (
     <main className="auth-screen">
       <section className="auth-panel">
-        <div className="auth-brand"><strong>Exocare</strong><span>특수동물 케어</span></div>
+        <div className="auth-brand"><img src="/exopet-logo.png" alt="" /><strong>파작파작</strong><span>양서파충류 케어</span></div>
         <div className="auth-tabs" role="tablist">
           <button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => switchMode('login')}>로그인</button>
           <button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => switchMode('signup')}>회원가입</button>
         </div>
         <form onSubmit={submit}>
           {(mode === 'login' || mode === 'signup' || mode === 'reset-password') && (
-            <label>아이디<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="영문 소문자, 숫자, 밑줄 4~20자" required /></label>
+            <label><span className="auth-field-label">아이디<RequiredMark /></span><input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="영문 소문자, 숫자, 밑줄 4~20자" required /></label>
           )}
           {(mode === 'signup' || mode === 'find-id') && (
-            <label>닉네임<input autoComplete="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="앱에서 사용할 이름" required /></label>
+            <label><span className="auth-field-label">닉네임<RequiredMark /></span><input autoComplete="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="앱에서 사용할 이름" required /></label>
           )}
           {(mode === 'find-id' || mode === 'reset-password') && (
-            <label>반려동물 이름<input value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="등록한 반려동물 이름" required /></label>
+            <label><span className="auth-field-label">반려동물 이름<RequiredMark /></span><input value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="등록한 반려동물 이름" required /></label>
           )}
           {(mode === 'login' || mode === 'signup') && (
-            <label>비밀번호<input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="6자 이상" minLength={6} required /></label>
+            <label><span className="auth-field-label">비밀번호<RequiredMark /></span><input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="6자 이상" minLength={6} required /></label>
           )}
           {mode === 'reset-password' && (
             <>
-              <label>새 비밀번호<input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="6자 이상" minLength={6} required /></label>
-              <label>새 비밀번호 확인<input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="새 비밀번호 재입력" minLength={6} required /></label>
+              <label><span className="auth-field-label">새 비밀번호<RequiredMark /></span><input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="6자 이상" minLength={6} required /></label>
+              <label><span className="auth-field-label">새 비밀번호 확인<RequiredMark /></span><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="새 비밀번호 재입력" minLength={6} required /></label>
             </>
           )}
           {foundUsername && <p className="auth-result">아이디: <strong>{foundUsername}</strong></p>}
