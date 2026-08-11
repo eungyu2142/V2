@@ -1,4 +1,25 @@
+@import 'tailwindcss';
 @import './styles/tokens.css';
+
+@theme inline {
+  --color-brand-50: var(--color-primary-50);
+  --color-brand-100: var(--color-primary-100);
+  --color-brand-300: var(--color-primary-300);
+  --color-brand-500: var(--color-primary-500);
+  --color-brand-600: var(--color-primary-600);
+  --color-brand-700: var(--color-primary-700);
+  --color-brand-900: var(--color-primary-900);
+  --color-app-surface: var(--color-surface);
+  --color-app-background: var(--color-background);
+  --color-app-border: var(--color-border);
+  --color-app-ink: var(--color-text-primary);
+  --color-app-muted: var(--color-text-secondary);
+  --color-app-danger: var(--color-error-600);
+  --color-app-like: var(--color-like-500);
+  --color-app-rating: var(--color-rating-500);
+  --radius-control: var(--control-radius);
+  --radius-card: var(--card-radius);
+}
 
 :root {
   --color-primary-50: #E3F4EF;

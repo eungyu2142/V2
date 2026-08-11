@@ -8,6 +8,7 @@
     "dev": "vite",
     "dev:chrome": "start \"\" chrome \"http://localhost:5173/\" && vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
+    "css:purge": "node scripts/purge-unused-css.mjs",
     "collect:hospitals": "node scripts/collect-exotic-hospitals.mjs",
     "lint": "eslint . && node scripts/check-ui-architecture.mjs",
     "preview": "vite preview"
@@ -20,6 +21,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/oxide-win32-x64-msvc": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -28,6 +31,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "purgecss": "^8.0.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"

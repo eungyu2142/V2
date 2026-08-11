@@ -297,11 +297,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
       .filter((hospital) => !openNowOnly || hospital.isOpenNow !== false)
       .sort((a, b) => {
-        if (selectedSort === 'reviews') {
-          const bCount = getReviewSummary((reviews[b.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).count
-          const aCount = getReviewSummary((reviews[a.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).count
-          return bCount - aCount
-        }
         if (selectedSort === 'rating') {
           const bRating = getHospitalDisplayReviewSummary(b, reviews[b.id] ?? []).average
           const aRating = getHospitalDisplayReviewSummary(a, reviews[a.id] ?? []).average

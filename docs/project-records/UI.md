@@ -4913,7 +4913,7 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 분석·판단 이유: 병원 첨부는 저장 응답과 화면 상태를 일치시켜야 하며, 긴 병원 목록은 사용자가 명시적으로 요청할 때만 추가로 보여주는 편이 예측 가능하다.
 - 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/App.css`.
 - 핵심 변경 내용: 댓글에 병원 카드를 즉시 표시한 뒤 DB payload로 확정하며, 병원 선택 목록은 10개 단위 더보기 버튼으로 확장한다.
-- 검증 결과: 프로덕션 빌드와 ESLint로 확인한다.
+- 검증 결과: UI 구조 검사, TypeScript, 프로덕션 빌드와 ESLint가 모두 통과했다.
 - 남은 작업: 운영 화면에서 병원 첨부 댓글 등록과 더보기 버튼을 최종 확인한다.
 - 배포 결과: 수정본을 Vercel Production에 배포했으며 `https://exopet-sage.vercel.app`에 반영했다.
 ## 2026-08-05 - 기록 모아보기 탈피 탭 정리
@@ -5136,3 +5136,20 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 핵심 변경 내용: 완료 단계의 모바일 체크와 단계 라벨 체크를 실제 체크 문자로 렌더링하도록 수정했다. Q&A와 마이펫 등록이 공통 Stepper를 사용하므로 두 화면에 함께 반영된다.
 - 검증 결과: TypeScript와 lint 검증 예정.
 - 남은 작업: 실제 모바일 화면에서 Q&A와 마이펫 등록 단계를 한 번씩 확인한다.
+## 2026-08-11 - react-calendar 날짜 칸 크기 통일
+
+- 요청 요약: 기록 개수에 따라 달력 행 높이가 달라지는 문제를 고치고 모바일 달력도 함께 개선했다.
+- 분석·판단 이유: `react-calendar` 전환 후 기존 `.calendar-days`에 적용되던 6행 높이 규칙이 라이브러리 내부 그리드까지 전달되지 않아 기록이 많은 주만 커졌다. 라이브러리 내부 월간 뷰를 명시적인 6행 그리드로 구성해야 모든 날짜 칸이 동일해진다.
+- 수정 파일: `src/features/diary/DiaryPage.css`.
+- 핵심 변경 내용: 데스크톱과 모바일 모두 월간 달력을 동일 높이의 6개 주로 고정했다. 모바일은 화면 높이에 맞춘 달력 높이, 작은 이동 버튼과 요일 글자, 축소된 기록 아이콘·라벨을 적용했다.
+- 검증 결과: 프로덕션 빌드와 ESLint로 확인한다.
+- 남은 작업: 실제 모바일 기기에서 가장 작은 화면의 기록 라벨 가독성을 확인한다.
+
+## 2026-08-11 - Tailwind 도입과 미사용 CSS 정리
+
+- 요청 요약: 누적된 CSS와 중복 스타일을 정리하고 공통 UI를 Tailwind 기반으로 리팩터링해 CSS 비중을 낮춘다.
+- 분석·판단 이유: 프로젝트에는 Tailwind가 설치되어 있지 않았으며, `App.css`에 중복 선택자 555개와 완전히 동일한 규칙 215개가 누적되어 있었다. 반응형 덮어쓰기까지 무작정 삭제하면 모바일 화면이 깨질 수 있어 동일 규칙과 실제 TSX에서 참조되지 않는 선택자만 선별 제거했다.
+- 수정 파일: `vite.config.ts`, `src/index.css`, `src/App.css`, `src/features/diary/DiaryPage.css`, `src/components/ui/Button.tsx`, `src/components/ui/ChoiceGroup.tsx`, `src/components/ui/Field.tsx`, `src/components/ui/FormActions.tsx`, `src/components/ui/ui.css`, `scripts/purge-unused-css.mjs`, `package.json`, `package-lock.json`.
+- 핵심 변경 내용: Tailwind CSS 4를 Vite에 연결하고 기존 디자인 토큰을 Tailwind 테마에 매핑했다. 공통 버튼·입력·선택 그룹·폼 액션을 Tailwind 유틸리티로 이전했으며, 완전 중복 규칙 218개와 미사용 선택자를 제거했다. 재발 방지를 위해 `npm run css:purge` 명령을 추가했다.
+- 검증 결과: CSS 소스 총량이 약 838KB에서 566KB로 32.5% 감소했다. 프로덕션 빌드, ESLint, UI 구조 검사가 통과했고 로그인 화면 렌더링을 확인했다.
+- 남은 작업: 로그인된 내 펫·다이어리·지도·Q&A·프로필 화면은 실제 계정 세션에서 회귀 확인이 필요하다. 남은 레거시 CSS는 화면 단위로 Tailwind 전환을 계속해야 한다.

@@ -8,7 +8,6 @@
 .diary-pet-menu-trigger{display:grid;width:42px;height:42px;place-items:center;gap:4px;flex:0 0 auto;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);cursor:pointer}
 .diary-pet-menu-trigger span{display:block;width:18px;height:2px;border-radius:99px;background:var(--color-primary-900)}
 .diary-record-top-button{min-height:38px;padding:0 14px;border:1px solid var(--color-primary-100);border-radius:10px;background:var(--color-primary-50);color:var(--color-primary-700);font-size:.82rem;font-weight:900;white-space:nowrap}
-.diary-record-mobile-row{display:none}
 .diary-view-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px}
 .diary-notice-line{display:flex;align-items:center;gap:6px;margin:0 0 10px;padding:7px 0;border-top:1px solid var(--color-border);border-bottom:1px solid var(--color-border);color:var(--color-text-primary);font-size:.78rem;line-height:1.35}
 .diary-notice-line strong{color:var(--color-text-primary);font-weight:900}
@@ -46,11 +45,6 @@
 .diary-insight-card.notice{border-left-color:var(--color-primary-300)}
 .diary-insight-card.caution{border-left-color:var(--color-accent-500)}
 .diary-insight-card.urgent{border-left-color:var(--color-error-500)}
-.diary-segment{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:min(360px,100%);margin:12px 0 4px;padding:4px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-primary-50)}
-.diary-segment button{min-height:40px;border:0;border-radius:6px;background:transparent;color:var(--color-text-secondary);font-weight:900}
-.diary-segment button.active{background:var(--color-primary-600);color:#fff}
-.diary-segment button:first-child{font-size:0}
-.diary-segment button:first-child::after{content:'기록';font-size:1rem}
 
 .diary-content-shell{display:grid;gap:18px}
 .diary-main-flow{min-width:0}
@@ -74,21 +68,13 @@
 .diary-pet-menu nav small{grid-column:2;grid-row:2;color:var(--color-text-secondary);font-size:.74rem}
 
 .diary-workspace{display:grid;grid-template-columns:minmax(0,6.5fr) minmax(300px,3.5fr);gap:40px;padding-top:8px}
-.diary-calendar-area,.diary-detail-panel,.record-list-panel{background:transparent;box-shadow:none}
-.diary-calendar-area,.alarm-calendar{width:min(100%,64rem);margin:0 auto}
-
-.calendar-month-bar{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:12px}
-.calendar-month-bar strong{text-align:center;font-size:1.15rem}
-.calendar-month-bar button{height:42px;border:0;background:transparent;color:var(--color-primary-600);font-size:2rem}
-.calendar-weekdays,.calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
-.calendar-weekdays span{padding:8px;text-align:center;color:var(--color-text-secondary);font-size:.78rem;font-weight:800}
+.diary-calendar-area,.diary-detail-panel{background:transparent;box-shadow:none}
+.diary-calendar-area{width:min(100%,64rem);margin:0 auto}
 .calendar-day{display:grid;grid-template-rows:auto 1fr;align-content:start;gap:5px;min-width:0;min-height:82px;aspect-ratio:1 / 1;overflow:hidden;padding:8px;border:0;border-top:1px solid var(--color-border);border-right:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);text-align:left}
 .calendar-day:nth-child(7n+1){border-left:1px solid var(--color-border)}
 .calendar-day:nth-last-child(-n+7){border-bottom:1px solid var(--color-border)}
 .calendar-day.selected{box-shadow:inset 0 0 0 2px var(--color-primary-600);background:var(--color-primary-50)}
 .calendar-day.muted{opacity:.43}
-.day-head{display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0}
-.day-number{font-weight:900}
 .calendar-tags{display:grid;align-content:start;gap:3px;min-width:0}
 .calendar-tags small{display:flex;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:18px;padding:2px 5px;border-radius:5px;background:var(--color-primary-50);color:var(--color-primary-700);font-size:.68rem;font-weight:900;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .calendar-tags small b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -107,19 +93,6 @@
 .calendar-tags small i{font-style:normal;flex:0 0 auto}
 .calendar-tags em{color:var(--color-text-secondary);font-size:.68rem;font-style:normal}
 .calendar-tags small.calendar-tag-more{justify-content:flex-start;background:transparent;color:var(--color-text-secondary);font-weight:900}
-.calendar-dots{display:flex;align-items:center;justify-content:center;gap:4px;min-height:18px;padding-top:2px}
-.calendar-dots .calendar-dot{display:block;width:6px;height:6px;padding:0;border-radius:50%;background:var(--color-primary-600);overflow:hidden}
-.calendar-dots .calendar-dot.food{background:var(--color-primary-600)}
-.calendar-dots .calendar-dot.weight{background:var(--color-error-500)}
-.calendar-dots .calendar-dot.shed{background:var(--color-accent-500)}
-.calendar-dots .calendar-dot.poop{background:var(--color-accent-700)}
-.calendar-dots .calendar-dot.cleaning{background:var(--color-primary-600)}
-.calendar-dots .calendar-dot.hospital{background:var(--color-primary-600)}
-.calendar-dots .calendar-dot.other{background:var(--color-text-secondary)}
-.calendar-dots .calendar-dot.feed{background:var(--color-primary-600)}
-.calendar-dots .calendar-dot.medicine{background:var(--color-accent-600)}
-.calendar-dots .calendar-dot.alarm-dot.cleaning{background:var(--color-primary-600)}
-.calendar-dots em{color:var(--color-text-secondary);font-size:.68rem;font-style:normal}
 
 .diary-detail-panel{display:grid;align-content:start;gap:24px;border-left:1px solid var(--color-border);padding-left:22px}
 .daily-plan-panel{display:grid;gap:12px;padding-bottom:4px;border-bottom:1px solid var(--color-border)}
@@ -151,51 +124,7 @@
 .incident-add-actions button:disabled{opacity:.45}
 .incident-add-actions button span{margin-right:4px}
 .incident-add-icon{width:27px;height:27px;object-fit:contain;flex:0 0 auto}
-.record-list-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px}
-.record-list-panel h2{margin:0;font-size:1.05rem}
-.record-list-panel header span{color:var(--color-primary-600);font-weight:800}
-.record-list-heading{display:flex;align-items:baseline;gap:8px;min-width:0}
-.record-list-heading span{font-size:.8rem}
-.record-list{position:relative;display:grid;gap:10px;padding:5px 0 5px 18px}
-.record-list::before{position:absolute;top:12px;bottom:12px;left:5px;width:2px;background:var(--color-border);content:''}
-.record-list article{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:start;gap:8px;padding:0;border:0}
-.record-list article::before{position:absolute;top:18px;left:-18px;width:10px;height:10px;border:3px solid var(--color-primary-600);border-radius:50%;background:var(--color-surface);content:'';z-index:1}
-.record-list article.food::before{border-color:var(--color-primary-600)}
-.record-list article.weight::before{border-color:var(--color-error-500)}
-.record-list article.shed::before{border-color:var(--color-accent-500)}
-.record-list article.poop::before{border-color:var(--color-accent-700)}
-.record-list article.cleaning::before{border-color:var(--color-primary-600)}
-.record-list article.hospital::before{border-color:var(--color-primary-600)}
-.record-list article.other::before{border-color:var(--color-text-secondary)}
-.record-list article p{margin:3px 0 0;color:var(--color-text-secondary);font-size:.82rem}
-.record-list article button{width:30px;height:30px;border:0;background:transparent;color:var(--color-text-secondary);font-size:1.25rem}
-.record-list article .record-open{display:grid;width:100%;height:auto;grid-template-columns:36px minmax(0,1fr);align-items:start;gap:8px;padding:12px;border:1px solid var(--color-border);border-radius:8px;background:#fff;color:inherit;text-align:left;font:inherit;box-shadow:0 4px 12px var(--color-text-primary)08}
-.record-list article.food .record-open{border-left:4px solid var(--color-primary-600)}
-.record-list article.weight .record-open{border-left:4px solid var(--color-accent-600)}
-.record-list article.shed .record-open{border-left:4px solid var(--color-accent-500)}
-.record-list article.poop .record-open{border-left:4px solid var(--color-accent-700)}
-.record-list article.cleaning .record-open{border-left:4px solid var(--color-primary-600)}
-.record-list article.hospital .record-open{border-left:4px solid var(--color-primary-600)}
-.record-list article.other .record-open{border-left:4px solid var(--color-text-secondary)}
-.record-list article .record-open:hover{border-color:var(--color-primary-300)}
-.record-list article .record-open>div{min-width:0}
-.record-list article .record-open strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.record-list article .record-open p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.timeline-card-date{display:block;margin-bottom:3px;color:var(--color-text-secondary);font-size:.75rem;font-weight:800}
-.record-list article>button:last-child{margin-top:8px}
-.record-emoji{font-size:1.25rem}
-.diary-empty{padding:18px 0;color:var(--color-text-secondary)}
-.smart-add-panel{display:grid;gap:12px;margin-top:18px;padding:16px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface)}
-.smart-add-panel header{display:flex;align-items:center;gap:10px}
-.smart-add-pet-icon{display:grid;width:38px;height:38px;place-items:center;border-radius:50%;background:var(--color-primary-50);font-size:1.35rem}
-.smart-add-panel header div{display:grid;gap:2px}
-.smart-add-panel header small{color:var(--color-text-secondary);font-size:.78rem}
-.smart-add-actions{display:flex;flex-wrap:wrap;gap:8px}
-.smart-add-actions button,.smart-choice-list button{min-height:40px;padding:0 12px;border:1px solid var(--color-border);border-radius:999px;background:#fff;color:var(--color-text-primary);font-weight:800}
-.smart-add-actions button span{margin-right:4px}
-.smart-add-actions button:disabled{opacity:.45}
-.smart-add-actions .smart-add-detailed{margin-left:auto;background:var(--color-background);color:var(--color-primary-600)}
-.smart-add-disabled{color:var(--color-text-secondary);font-size:.8rem}
+.smart-choice-list button{min-height:40px;padding:0 12px;border:1px solid var(--color-border);border-radius:999px;background:#fff;color:var(--color-text-primary);font-weight:800}
 .smart-add-sheet{display:grid;gap:14px;padding:10px 18px calc(20px + env(safe-area-inset-bottom))}
 .smart-add-sheet h2{margin:0;font-size:1.15rem}
 .smart-add-sheet-pet{margin:-8px 0 0;color:var(--color-text-secondary);font-size:.85rem}
@@ -204,7 +133,7 @@
 .smart-choice-list{display:flex;flex-wrap:wrap;gap:8px}
 .smart-choice-list button.selected{border-color:var(--color-primary-600);background:var(--color-primary-50);color:var(--color-primary-600)}
 .smart-inline-input{display:block}
-.smart-inline-input input,.smart-add-sheet textarea,.smart-medicine-fields input,.smart-quantity-row input{min-height:40px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;background:#fff;font:inherit;box-sizing:border-box}
+.smart-inline-input input,.smart-add-sheet textarea,.smart-quantity-row input{min-height:40px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;background:#fff;font:inherit;box-sizing:border-box}
 .smart-inline-input input{width:104px}
 .smart-quantity-row{display:flex;align-items:end;gap:16px}
 .smart-quantity-row label,.smart-quantity-row>div{display:grid;gap:6px;font-size:.85rem;font-weight:800}
@@ -214,8 +143,6 @@
 .smart-unit-list button.selected{border-color:var(--color-primary-600);background:var(--color-primary-50);color:var(--color-primary-600)}
 .smart-save-button{min-height:46px;border:0;border-radius:8px;background:var(--color-primary-600);color:#fff;font-weight:900}
 .smart-add-sheet textarea{min-height:90px;resize:vertical}
-.smart-hospital-input{min-height:44px;padding:9px 11px;border:1px solid var(--color-border);border-radius:8px;background:#fff;font:inherit;box-sizing:border-box}
-.smart-medicine-fields{display:grid;gap:8px}
 .smart-pair-fields{display:grid;gap:10px}
 .smart-pair-fields label{display:grid;gap:6px;color:var(--color-text-primary);font-size:.86rem;font-weight:900}
 .smart-pair-fields select{min-height:42px;padding:0 10px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);color:var(--color-text-primary);font:inherit}
@@ -352,11 +279,6 @@
 .environment-risk-gauge span{color:var(--color-text-secondary);font-size:.8rem;line-height:1.45}
 .environment-risk-gauge ol{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:0;padding:0;list-style:none}
 .environment-risk-gauge li{height:7px;border-radius:999px;background:var(--color-border)}
-.environment-risk-gauge.level-1 li.active{background:color-mix(in srgb, var(--color-primary-600) 70%, var(--color-surface))}
-.environment-risk-gauge.level-2 li.active{background:color-mix(in srgb, var(--color-accent-500) 45%, var(--color-primary-600))}
-.environment-risk-gauge.level-3 li.active{background:var(--color-accent-500)}
-.environment-risk-gauge.level-4 li.active{background:var(--color-accent-700)}
-.environment-risk-gauge.level-5 li.active{background:var(--color-error-600)}
 
 .diary-modal:has(.hospital-review-picker){
   top:50%;
@@ -397,7 +319,6 @@
 .clinic-record-fields fieldset{padding:0;border:0}
 .clinic-record-fields legend{margin-bottom:7px;color:var(--color-text-primary);font-weight:700}
 .clinic-record-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.clinic-record-medicine{grid-template-columns:repeat(2,minmax(0,1fr))}
 .clinic-record-choice{display:flex;gap:8px}
 .clinic-record-choice button{min-width:72px;min-height:38px;border:1px solid var(--color-border);border-radius:9999px;background:var(--color-surface);color:var(--color-text-primary)}
 .clinic-record-choice button.active{border-color:var(--color-primary-600);background:var(--color-primary-50)}
@@ -446,50 +367,15 @@
   .diary-modal:has(.clinic-record-editor),.diary-modal:has(.clinic-record-next-actions){top:auto;right:0;bottom:0;left:0;width:auto;max-height:84svh;overflow:hidden;transform:none;border-radius:12px 12px 0 0}
   .clinic-record-editor{grid-template-rows:auto minmax(0,1fr) auto;max-height:84svh;overflow:hidden;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
   .clinic-record-fields{min-height:0;overscroll-behavior:contain}
-  .clinic-record-row,.clinic-record-medicine{grid-template-columns:1fr}
+  .clinic-record-row{grid-template-columns:1fr}
   .clinic-record-next-actions{padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
   .clinic-record-next-buttons{grid-template-columns:1fr}
 }
-
-.alarm-board{display:grid;gap:18px;padding-top:12px}
-.alarm-board-head{display:none}
-.alarm-board-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--color-border)}
-.alarm-board-head h2{margin:0;font-size:1.25rem}
-.alarm-board-head p{margin:3px 0 0;color:var(--color-text-secondary)}
-.alarm-board-head>div:last-child{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
-.alarm-board-head button,.alarm-actions button{min-height:36px;padding:0 12px;border:0;border-radius:6px;background:var(--color-primary-600);color:#fff;font-weight:900}
-.alarm-board-head button.ghost{border:1px solid var(--color-primary-100);background:#fff;color:var(--color-primary-600)}
-.alarm-calendar-layout{display:grid;grid-template-columns:minmax(0,6.5fr) minmax(300px,3.5fr);gap:40px;align-items:start;padding-bottom:6px;border-bottom:1px solid var(--color-border)}
-.alarm-calendar{min-width:0}
-.alarm-day.selected{box-shadow:inset 0 0 0 2px var(--color-primary-600);background:var(--color-primary-50)}
-.alarm-count{display:inline-grid;min-width:18px;height:18px;place-items:center;border-radius:999px;background:var(--color-accent-500);color:var(--color-accent-700);font-size:.68rem;font-weight:900;line-height:1}
-.calendar-tags small.alarm-calendar-tag{background:var(--color-accent-100);color:var(--color-accent-700)}
-.alarm-section{display:grid;gap:8px}
-.alarm-section h3{margin:0;font-size:1rem;color:var(--color-text-primary)}
-.alarm-list{display:grid;gap:8px}
-.alarm-list article{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid var(--color-border)}
-.alarm-list article>span{font-size:1.3rem}
-.alarm-list article>div:nth-child(2){display:grid;min-width:0}
-.alarm-list strong,.alarm-list small,.alarm-list p,.alarm-actions button{font-size:.88rem}
-.alarm-list strong,.alarm-list small,.alarm-list p{overflow:hidden;text-overflow:ellipsis}
-.alarm-list small{color:var(--color-text-secondary)}
-.alarm-list p{margin:4px 0 0;color:var(--color-text-secondary);font-size:.86rem}
-.alarm-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
-.alarm-actions button{min-height:32px;padding:0 10px;background:var(--color-background);color:var(--color-primary-600)}
-.alarm-actions button:first-child{background:var(--color-primary-600);color:#fff}
-
-.floating-add{position:fixed;right:24px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:14;width:58px;height:58px;border:0;border-radius:50%;background:var(--color-primary-600);color:#fff;box-shadow:0 12px 25px var(--color-primary-600)4d;font-size:2rem}
 .diary-overlay{position:fixed;inset:0;z-index:100}
 .diary-dim{position:absolute;inset:0;border:0;background:var(--color-text-primary)59}
 .diary-modal{position:absolute;right:0;bottom:0;left:0;max-height:88svh;overflow:auto;border-radius:16px 16px 0 0;background:var(--color-surface)}
 .diary-modal:has(.warning-dialog){right:auto;bottom:50%;left:50%;width:min(460px,calc(100vw - 32px));max-height:none;transform:translate(-50%,50%);border-radius:12px;box-shadow:0 20px 60px var(--color-text-primary)52}
-.record-type-sheet{padding:10px 18px calc(18px + env(safe-area-inset-bottom))}
 .sheet-handle{display:block;width:42px;height:5px;margin:0 auto 14px;border-radius:9px;background:var(--color-border)}
-.record-type-sheet h2{margin:0}
-.record-type-sheet p{margin:5px 0 14px;color:var(--color-text-secondary)}
-.record-type-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.record-type-grid button{display:flex;align-items:center;gap:10px;min-height:58px;padding:10px;border:1px solid var(--color-border);border-radius:8px;background:#fff;color:var(--color-text-primary);font-size:1rem}
-.record-type-grid button span{font-size:1.35rem}
 .warning-dialog{display:grid;gap:18px;padding:28px 20px calc(24px + env(safe-area-inset-bottom))}
 .warning-dialog h2{margin:0;font-size:1.2rem}
 .warning-dialog button{min-height:48px;border:0;border-radius:8px;background:var(--color-primary-600);color:#fff;font-weight:900}
@@ -539,18 +425,15 @@
 .choice-field button,.weekday-picker button{min-height:38px;height:38px;padding:0 10px;font-size:.86rem}
 .create-submit{background:var(--color-primary-600)}
 .create-submit.secondary{background:var(--color-primary-50);color:var(--color-primary-600)}
-.choice-field button.selected,.weekday-picker button.selected{border-color:var(--color-primary-600);background:var(--color-primary-50);color:var(--color-primary-600)}
 .diary-page{color:var(--color-text-primary);background:var(--color-background)}
-.diary-pet-avatar,.smart-add-pet-icon,.record-detail-title>span{background:var(--color-background);color:var(--color-primary-600)}
-.diary-segment{border-color:var(--color-border);background:var(--color-background)}
-.diary-segment button.active,.daily-plan-panel header button,.smart-add-actions .smart-add-detailed{background:var(--color-primary-50);color:var(--color-primary-600)}
-.calendar-day.selected,.alarm-day.selected{box-shadow:inset 0 0 0 2px var(--color-primary-600);background:var(--color-background)}
+.diary-pet-avatar,.record-detail-title>span{background:var(--color-background);color:var(--color-primary-600)}
+.daily-plan-panel header button{background:var(--color-primary-50);color:var(--color-primary-600)}
+.calendar-day.selected{box-shadow:inset 0 0 0 2px var(--color-primary-600);background:var(--color-background)}
 .calendar-tags small{background:var(--color-background);color:var(--color-primary-700)}
-.calendar-dots .calendar-dot,.calendar-dots .calendar-dot.food,.calendar-dots .calendar-dot.feed{background:var(--color-primary-600)}
 .daily-plan-task input{accent-color:var(--color-primary-600)}
-.incident-add-actions button,.smart-add-actions button,.smart-choice-list button,.smart-unit-list button,.record-type-grid button{border-color:var(--color-border);background:var(--color-surface);color:var(--color-primary-700)}
+.incident-add-actions button,.smart-choice-list button,.smart-unit-list button{border-color:var(--color-border);background:var(--color-surface);color:var(--color-primary-700)}
 .smart-choice-list button.selected,.smart-unit-list button.selected{border-color:var(--color-primary-600);background:var(--color-primary-50);color:var(--color-primary-600)}
-.smart-save-button,.alarm-board-head button,.alarm-actions button:first-child,.warning-dialog button{background:var(--color-primary-600)}
+.smart-save-button,.warning-dialog button{background:var(--color-primary-600)}
 .diary-create-screen{background:var(--color-background);color:var(--color-text-primary)}
 .diary-create-screen>header button{color:var(--color-primary-600)}
 .step-progress,.step-progress-selectable{background:var(--color-primary-100)}
@@ -558,22 +441,15 @@
 .daily-plan-panel header button,
 .care-plan-panel header button,
 .care-plan-empty button,
-.daily-plan-task-actions button,
-.alarm-board-head button,
-.alarm-actions button,
-.care-plan-actions button{border-color:var(--color-border);background:var(--color-surface);color:var(--color-primary-700)}
+.daily-plan-task-actions button{border-color:var(--color-border);background:var(--color-surface);color:var(--color-primary-700)}
 .daily-plan-panel header button,
 .care-plan-panel header button,
 .care-plan-empty button{background:var(--color-primary-50);color:var(--color-primary-600)}
-.diary-segment button.active,
-.smart-add-actions .smart-add-detailed{background:var(--color-primary-600);color:#fff}
 .daily-plan-task-row,
 .care-plan-panel,
 .daily-plan-panel,
-.incident-add-panel,
-.record-list-panel{border-color:var(--color-border)}
-.record-list article .record-open,
-.smart-add-panel,
+.incident-add-panel{border-color:var(--color-border)}
+
 .diary-modal{border-color:var(--color-border);background:var(--color-surface)}
 .record-detail-view{display:grid;gap:18px;max-width:760px;margin:auto}
 .record-detail-title{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--color-border)}
@@ -595,30 +471,17 @@
   .calendar-tags small{padding:2px 3px}
   .diary-modal{border-radius:16px 16px 0 0}
   .diary-modal:has(.warning-dialog){right:0;bottom:0;left:0;width:100%;transform:none;border-radius:16px 16px 0 0}
-  .alarm-calendar-layout{grid-template-columns:1fr}
-  .alarm-list article{grid-template-columns:32px minmax(0,1fr)}
-  .alarm-actions{grid-column:2;justify-content:flex-start}
 }
 
 @media(max-width:760px){
   .diary-pet-bar{display:flex;align-items:center;gap:10px;padding-top:4px}
-  .diary-segment{width:100%}
-  .floating-add{right:20px;bottom:calc(96px + env(safe-area-inset-bottom));width:58px;height:58px}
   .diary-detail-panel{gap:18px}
-  .alarm-board-head{display:none}
-  .alarm-board-head>div:last-child{justify-content:stretch}
-  .alarm-board-head button{flex:1}
 }
 
 @media(max-width:520px){
   .calendar-day{min-height:70px}
   .calendar-tags small i{display:none}
   .calendar-tags small{font-size:.66rem}
-  .calendar-weekdays span{padding:6px 0}
-}
-
-@media(min-width:761px){
-  .floating-add{right:28px;bottom:calc(24px + env(safe-area-inset-bottom))}
 }
 
 .create-title h1{font-size:1.18rem;line-height:1.35}
@@ -637,10 +500,7 @@
 .diary-page,
 .diary-workspace,
 .diary-detail-panel,
-.record-list-panel,
 .calendar-month,
-.alarm-calendar,
-.alarm-section,
 .record-detail-view {
   gap: 8px;
   padding: 0;
@@ -650,8 +510,7 @@
   box-shadow: none;
 }
 
-.timeline-card,
-.alarm-list article,
+
 .record-detail-list div {
   padding: 8px 0;
   border: 0;
@@ -660,8 +519,7 @@
   box-shadow: none;
 }
 
-.timeline-card + .timeline-card,
-.alarm-list article + article,
+
 .record-detail-list div + div {
   border-top: 1px solid rgba(23, 59, 54, .08);
 }
@@ -698,15 +556,11 @@
   border-radius: 8px 8px 0 0;
 }
 
-.alarm-board-head{display:none !important}
-
 .diary-mobile-tabs{display:none}
 .diary-workspace{grid-template-columns:minmax(0,7fr) minmax(300px,3fr);gap:28px;align-items:start}
-.diary-plan-column{display:none}
-.mobile-plan-panel{display:block}
 .care-plan-panel{display:grid;gap:14px;border-right:1px solid var(--color-border);padding-right:20px}
 .care-plan-panel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.care-plan-panel h2,.selected-date-status h2{margin:0;font-size:1.05rem}
+.care-plan-panel h2{margin:0;font-size:1.05rem}
 .care-plan-panel p{margin:4px 0 0;color:var(--color-text-secondary);font-size:.78rem}
 .care-plan-panel header button,.care-plan-empty button{min-height:34px;padding:0 10px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-background);color:var(--color-primary-600);font-size:.78rem;font-weight:900}
 .care-plan-list{display:grid;gap:0}
@@ -726,11 +580,7 @@
 .care-plan-empty button{justify-self:start}
 .daily-plan-task-row{border-bottom:1px solid var(--color-background)}
 .daily-plan-task-row .daily-plan-task{border-bottom:0}
-.record-list-panel>header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .data-visualization-button{min-height:34px;padding:0 11px;border:1px solid var(--color-primary-100);border-radius:999px;background:var(--color-surface);color:var(--color-primary-600);font-size:.78rem;font-weight:800;white-space:nowrap}
-.record-collection-entry{width:100%;min-height:44px;font-size:.9rem}
-.record-list-hint{margin:0;padding:18px 0;color:var(--color-text-secondary);font-size:.8rem}
-.selected-date-records{display:grid;gap:0}.selected-date-records article{display:grid;grid-template-columns:minmax(0,1fr) 28px;align-items:center;border-bottom:1px solid var(--color-background)}.selected-date-records article>button:first-child{display:flex;align-items:center;gap:9px;min-width:0;padding:11px 0;border:0;background:transparent;color:var(--color-text-primary);text-align:left}.selected-date-records article>button:last-child{width:28px;height:28px;border:0;background:transparent;color:var(--color-text-secondary);font-size:1.1rem}.selected-date-records article>button:first-child>span:last-child{display:grid;gap:2px;min-width:0}.selected-date-records strong{font-size:.82rem}.selected-date-records small{overflow:hidden;color:var(--color-text-secondary);font-size:.76rem;text-overflow:ellipsis;white-space:nowrap}.selected-date-record-icon{display:grid;width:30px;height:30px;flex:0 0 auto;place-items:center;border-radius:50%;background:var(--color-primary-50);font-size:1rem}
 .data-visualization{display:grid;gap:16px;min-width:min(100%,600px);padding:4px}
 .data-visualization-screen{min-height:100vh}.data-visualization-screen>.data-visualization{width:min(100%,720px);margin:24px auto;padding:18px 0}
 .date-records-screen{min-height:100vh}.date-records-content{width:min(100%,680px);margin:24px auto;padding:0 4px}.date-records-content article{display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:center;border-bottom:1px solid var(--color-background)}.date-records-content article>button:first-child{display:flex;align-items:center;gap:10px;width:100%;padding:14px 0;border:0;background:transparent;text-align:left}.date-records-content article>button:first-child>span:last-child{display:grid;gap:3px}.date-records-content strong{color:var(--color-text-primary);font-size:.9rem}.date-records-content small{color:var(--color-text-secondary);font-size:.8rem}.date-records-content article>button:last-child{border:0;background:transparent;color:var(--color-text-secondary);font-size:1.2rem}.date-records-content>p{padding:30px 0;color:var(--color-text-secondary)}
@@ -748,11 +598,6 @@
 .diary-page .calendar-day {
   gap: 2px !important;
   padding: 5px 7px !important;
-}
-
-.diary-page .day-number {
-  font-size: .9rem !important;
-  line-height: 1.05 !important;
 }
 
 .diary-page .calendar-tags {
@@ -782,21 +627,6 @@
     padding-top: 6px !important;
   }
 }
-
-@media (min-width: 901px) {
-  .diary-page .calendar-month-bar {
-    margin-bottom: 4px !important;
-  }
-
-  .diary-page .calendar-weekdays span {
-    padding-top: 5px !important;
-    padding-bottom: 5px !important;
-  }
-
-  .diary-page .calendar-days {
-    grid-template-rows: repeat(6, minmax(94px, 1fr)) !important;
-  }
-}
 .date-records-mobile-actions{display:none}
 .data-visualization header{display:grid;gap:3px}.data-visualization-heading{display:flex!important;align-items:center;justify-content:space-between;gap:12px}.data-visualization h2{margin:0;color:var(--color-text-primary);font-size:1.1rem}.data-visualization p{margin:0;color:var(--color-text-secondary);font-size:.78rem}
 .record-collection-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -807,11 +637,8 @@
 .shed-cycle-status{min-height:68px;align-content:center}
 .shed-cycle-status header span{color:var(--color-primary-700);font-weight:900;white-space:nowrap}
 .record-collection-qna{min-height:44px;padding:0 22px;border:1px solid var(--color-primary-600);border-radius:999px;background:var(--color-primary-600);color:var(--color-surface);font-size:.9rem;font-weight:900;white-space:nowrap;box-shadow:0 16px 30px color-mix(in srgb,var(--color-primary-600) 18%,transparent)}
-.chart-type-switcher{display:flex;gap:6px}.chart-type-switcher button{min-height:32px;padding:0 10px;border:1px solid var(--color-primary-100);border-radius:999px;background:#fff;color:var(--color-text-secondary);font-size:.74rem;font-weight:800}.chart-type-switcher button.active{background:var(--color-primary-50);color:var(--color-primary-600)}
-.line-chart-wrap{position:relative;padding:8px 0 0 27px;border-bottom:1px solid var(--color-border)}
-.line-chart{width:100%;height:auto;min-height:190px;overflow:visible}.line-chart line{stroke:var(--color-border);stroke-width:1}.line-chart-path{fill:none;stroke:var(--color-primary-600);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.line-chart circle{fill:#fff;stroke:var(--color-primary-600);stroke-width:3}.bar-chart-bar{fill:var(--color-primary-300)}.shape-chart-square{fill:var(--color-primary-600);stroke:#fff;stroke-width:2}
-.pie-chart{position:absolute;inset:35px 20% 35px 20%;border-radius:50%;box-shadow:inset 0 0 0 1px #fff;}
-.line-chart-scale{position:absolute;left:0;top:8px;bottom:27px;display:flex;flex-direction:column;justify-content:space-between;color:var(--color-text-secondary);font-size:.68rem}.line-chart-labels{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:6px;color:var(--color-text-secondary);font-size:.65rem}.line-chart-labels span{display:grid;gap:3px;min-width:0;padding:6px 3px;border-top:2px solid var(--color-primary-100);text-align:center}.line-chart-labels strong{color:var(--color-text-primary);font-size:.7rem}.line-chart-labels em{overflow:hidden;color:var(--color-text-secondary);font-size:.64rem;font-style:normal;text-overflow:ellipsis;white-space:nowrap}.line-chart-labels b{color:var(--color-primary-600);font-size:.72rem}.data-visualization-summary{display:flex;justify-content:space-between;color:var(--color-text-secondary);font-size:.78rem}.data-visualization-summary strong{color:var(--color-text-primary)}.data-visualization-empty{padding:35px 10px;color:var(--color-text-secondary);font-size:.86rem;text-align:center}
+.line-chart{width:100%;height:auto;min-height:190px;overflow:visible}.line-chart line{stroke:var(--color-border);stroke-width:1}.line-chart-path{fill:none;stroke:var(--color-primary-600);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.line-chart circle{fill:#fff;stroke:var(--color-primary-600);stroke-width:3}
+.line-chart-scale{position:absolute;left:0;top:8px;bottom:27px;display:flex;flex-direction:column;justify-content:space-between;color:var(--color-text-secondary);font-size:.68rem}.data-visualization-summary{display:flex;justify-content:space-between;color:var(--color-text-secondary);font-size:.78rem}.data-visualization-summary strong{color:var(--color-text-primary)}.data-visualization-empty{padding:35px 10px;color:var(--color-text-secondary);font-size:.86rem;text-align:center}
 .environment-chart{display:grid;gap:9px;padding-top:12px;border-top:1px solid var(--color-border)}
 .environment-chart header{display:flex!important;align-items:end;justify-content:space-between;gap:10px}
 .environment-chart header strong{color:var(--color-text-primary);font-size:.92rem}
@@ -844,12 +671,6 @@
 .daily-plan-task-actions{display:flex;gap:6px;padding:0 0 9px}
 .daily-plan-task-actions button{min-height:28px;padding:0 9px;border:1px solid var(--color-border);border-radius:6px;background:#fff;color:var(--color-primary-600);font-size:.72rem;font-weight:800}
 .daily-plan-task-row.overdue{border-left:3px solid var(--color-accent-500);padding-left:8px}
-.selected-date-status{display:grid;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--color-border)}
-.selected-date-status>div{display:grid;gap:6px}
-.selected-date-status span{font-size:.78rem}
-.status-complete{color:var(--color-primary-600)}.status-pending{color:var(--color-accent-700)}.status-skipped{color:var(--color-text-secondary)}.status-record{color:var(--color-primary-700)}
-.calendar-state{display:inline-grid;width:18px;height:18px;place-items:center;border-radius:50%;font-size:.72rem;font-style:normal;font-weight:900}
-.calendar-state.pending{background:var(--color-accent-100);color:var(--color-accent-700)}.calendar-state.complete{background:var(--color-primary-50);color:var(--color-primary-600)}
 
 @media(max-width:1100px) and (min-width:901px){
   .diary-workspace{grid-template-columns:minmax(190px,2fr) minmax(0,5fr) minmax(240px,2.8fr);gap:16px}
@@ -858,7 +679,6 @@
 
 @media(max-width:900px){
   .diary-insight-banner{grid-template-columns:minmax(0,1fr);width:100%;max-width:100%;min-width:0;overflow:hidden;box-sizing:border-box;margin:8px 0 14px;padding:10px;border-radius:12px}
-  .diary-insight-banner.empty{min-height:58px;align-items:start;text-align:left}
   .diary-insight-card{width:100%;max-width:100%;min-width:0;overflow:hidden;box-sizing:border-box;padding:9px 10px}
   .diary-insight-card strong{min-width:0;font-size:.86rem;overflow-wrap:anywhere}
   .diary-insight-card span{min-width:0;font-size:.74rem;white-space:normal;overflow-wrap:anywhere;word-break:keep-all}
@@ -871,21 +691,7 @@
   .diary-mobile-tabs button{min-height:38px;border:0;border-radius:7px;background:transparent;color:var(--color-text-secondary);font-weight:900}
   .diary-mobile-tabs button.active{background:var(--color-primary-600);color:#fff}
   .diary-workspace{display:block}
-  .diary-workspace.mobile-plan .diary-calendar-area{display:none}
-  .diary-workspace.mobile-calendar .diary-plan-column,.diary-workspace.mobile-calendar .mobile-plan-panel,.diary-workspace.mobile-calendar .daily-plan-panel,.diary-workspace.mobile-calendar .incident-add-panel{display:none}
-  .diary-workspace.mobile-calendar .diary-detail-panel,.diary-workspace.mobile-calendar .selected-date-status{display:none!important}
-  .diary-workspace.mobile-calendar .calendar-month{display:grid;grid-template-rows:auto auto minmax(0,1fr);height:calc(100svh - 190px);min-height:560px}
-  .diary-workspace.mobile-calendar .calendar-days{grid-template-rows:repeat(6,minmax(0,1fr));min-height:0}
-  .diary-workspace.mobile-calendar .calendar-day{min-height:0;height:auto;aspect-ratio:auto;padding:7px 4px}
-  .diary-workspace.mobile-calendar .calendar-tags{gap:2px;overflow:hidden}
-  .diary-workspace.mobile-calendar .calendar-tags small{justify-content:flex-start}
-  .diary-plan-column{display:none}
-  .mobile-plan-panel{display:block}
   .care-plan-panel{border:0;padding:0;margin-bottom:18px}
-}
-
-@media(min-width:901px){
-  .diary-detail-panel .mobile-plan-panel{display:block}
 }
 
 /* Final navy-blue overrides for diary planning controls. */
@@ -893,7 +699,6 @@
 .care-plan-panel header button,
 .care-plan-empty button,
 .daily-plan-task-actions button,
-.care-plan-actions button,
 .diary-mobile-tabs,
 .diary-mobile-tabs button.active {
   border-color: var(--color-border) !important;
@@ -908,61 +713,10 @@
   color: #fff !important;
 }
 .daily-plan-task input { accent-color: var(--color-primary-600) !important; }
-.calendar-day.selected,
-.alarm-day.selected { box-shadow: inset 0 0 0 2px var(--color-primary-600) !important; background: var(--color-background) !important; }
-.calendar-tags small,
-.calendar-state.complete { background: var(--color-primary-50) !important; color: var(--color-primary-600) !important; }
-.status-complete,
-.status-pending,
-.status-skipped,
-.status-record { color: var(--color-primary-600) !important; }
+.calendar-day.selected { box-shadow: inset 0 0 0 2px var(--color-primary-600) !important; background: var(--color-background) !important; }
+.calendar-tags small { background: var(--color-primary-50) !important; color: var(--color-primary-600) !important; }
 
 .daily-plan-panel > header { align-items: center; }
-.daily-plan-menu { position: relative; justify-self: end; }
-.daily-plan-menu summary {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border: 1px solid var(--color-primary-100);
-  border-radius: 50%;
-  background: #fff;
-  color: var(--color-primary-600);
-  font-size: 1.35rem;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  list-style: none;
-}
-.daily-plan-menu summary::-webkit-details-marker { display: none; }
-.daily-plan-menu summary:hover,
-.daily-plan-menu[open] summary { border-color: var(--color-text-primary); background: var(--color-primary-50); color: var(--color-text-primary); }
-.daily-plan-menu > div {
-  position: absolute;
-  top: 42px;
-  right: 0;
-  z-index: 4;
-  min-width: 96px;
-  padding: 4px;
-  border: 1px solid var(--color-primary-100);
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 10px 24px rgba(11, 63, 53, .16);
-}
-.daily-plan-menu button {
-  width: 100%;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 7px;
-  background: #fff;
-  color: var(--color-primary-600);
-  font: inherit;
-  font-size: .78rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.daily-plan-menu button:hover { background: var(--color-text-primary); color: #fff; }
 
 /* 2026-07-22 diary layout system: one centered container, stable grid, aligned panels. */
 .diary-page {
@@ -999,10 +753,7 @@
 .diary-calendar-area,
 .diary-detail-panel,
 .daily-plan-panel,
-.incident-add-panel,
-.record-list-panel,
-.smart-add-panel,
-.selected-date-status {
+.incident-add-panel {
   min-width: 0 !important;
 }
 
@@ -1013,9 +764,7 @@
 }
 
 .daily-plan-panel,
-.incident-add-panel,
-.smart-add-panel,
-.selected-date-status {
+.incident-add-panel {
   width: 100% !important;
   border: 1px solid var(--color-border) !important;
   border-radius: 16px !important;
@@ -1024,41 +773,25 @@
   box-shadow: 0 12px 32px rgba(11, 63, 53, 0.08) !important;
 }
 
-.record-list-panel {
-  width: 100% !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
 .daily-plan-list,
-.record-list,
-.selected-date-records,
 .smart-choice-list,
 .smart-unit-list {
   display: grid !important;
   gap: 12px !important;
 }
 
-.daily-plan-task-row,
-.record-list article,
-.selected-date-records article {
+.daily-plan-task-row {
   width: 100% !important;
   min-width: 0 !important;
 }
 
-.daily-plan-task,
-.record-list article .record-open,
-.selected-date-records article > button:first-child {
+.daily-plan-task {
   width: 100% !important;
   min-width: 0 !important;
   border-radius: 12px !important;
 }
 
 .incident-add-actions,
-.smart-add-actions,
 .daily-plan-task-actions {
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
@@ -1066,7 +799,6 @@
 }
 
 .incident-add-actions button,
-.smart-add-actions button,
 .daily-plan-task-actions button {
   min-height: 42px !important;
   border-radius: 12px !important;
@@ -1095,16 +827,9 @@
   }
 
   .daily-plan-panel,
-  .incident-add-panel,
-  .smart-add-panel,
-  .selected-date-status {
+  .incident-add-panel {
     padding: 16px !important;
     border-radius: 14px !important;
-  }
-
-  .record-list-panel {
-    padding: 0 !important;
-    border-radius: 0 !important;
   }
 }
 
@@ -1118,20 +843,16 @@
 .care-plan-panel p,
 .care-plan-empty,
 .daily-plan-empty,
-.daily-plan-task small,
-.selected-date-status span {
+.daily-plan-task small {
   color: var(--color-text-secondary) !important;
 }
 .daily-plan-panel,
-.care-plan-panel,
-.selected-date-status {
+.care-plan-panel {
   border-color: var(--color-border) !important;
 }
 
 .diary-mobile-tabs button.active,
-.diary-segment button.active,
-.calendar-day.selected,
-.alarm-day.selected {
+.calendar-day.selected {
   border-color: var(--color-text-primary) !important;
   background: var(--color-text-primary) !important;
   color: #fff !important;
@@ -1154,8 +875,7 @@
 .choice-field button,
 .weekday-picker button,
 .smart-choice-list button,
-.smart-unit-list button,
-.record-type-grid button {
+.smart-unit-list button {
   min-height: 44px;
   border-radius: 10px;
 }
@@ -1229,15 +949,6 @@
   font-size: 2rem;
 }
 
-.routine-card-image {
-  display: block;
-  width: 100%;
-  max-width: 118px;
-  height: 82px;
-  object-fit: contain;
-  pointer-events: none;
-}
-
 .routine-recommendation-field button.selected > span:first-child {
   background: color-mix(in srgb, #fff 18%, transparent);
   color: #fff;
@@ -1275,17 +986,6 @@
   font-weight: 900;
 }
 
-.routine-more-button {
-  justify-self: start;
-  min-height: 36px;
-  margin-top: -2px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-primary-600);
-  font-weight: 900;
-}
-
 .routine-recommendation-field small {
   color: var(--color-text-secondary);
   font-weight: 700;
@@ -1317,11 +1017,6 @@
 
   .routine-recommendation-field button:not(.routine-more-button) {
     min-height: 88px;
-  }
-
-  .routine-card-image {
-    max-width: 108px;
-    height: 76px;
   }
 }
 
@@ -1431,15 +1126,6 @@
     font-size: 1.35rem !important;
   }
 
-  .diary-workspace.mobile-plan .diary-calendar-area,
-  .diary-workspace.mobile-plan .selected-date-status {
-    display: none !important;
-  }
-
-  .diary-workspace.mobile-plan .diary-detail-panel {
-    display: grid !important;
-  }
-
   .diary-mobile-tabs {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -1508,66 +1194,6 @@
     top: 8px !important;
     z-index: 6 !important;
   }
-}
-
-.record-item-menu {
-  position: relative;
-  justify-self: end;
-}
-
-.record-item-menu summary {
-  display: none;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border-radius: 6px;
-  color: var(--color-text-secondary);
-  font-size: 1.2rem;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  list-style: none;
-}
-
-.record-item-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.record-item-menu summary:hover,
-.record-item-menu[open] summary {
-  background: var(--color-primary-50);
-  color: var(--color-text-primary);
-}
-
-.record-item-menu > div {
-  position: absolute;
-  top: 32px;
-  right: 0;
-  z-index: 8;
-  display: grid;
-  min-width: 78px;
-  padding: 4px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 8px 20px rgba(11, 63, 53, .16);
-}
-
-.record-item-menu button {
-  min-height: 32px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 6px;
-  background: #fff;
-  color: var(--color-primary-600);
-  font-size: .76rem;
-  font-weight: 800;
-  text-align: left;
-}
-
-.record-item-menu button:hover {
-  background: var(--color-text-primary);
-  color: #fff;
 }
 
 /* Keep each task menu beside its task name, while the checkbox stays on the right. */
@@ -1671,8 +1297,7 @@
   color: #fff !important;
 }
 
-.diary-page .diary-mobile-tabs button.active,
-.diary-page .diary-segment button.active {
+.diary-page .diary-mobile-tabs button.active {
   border-color: var(--diary-accent) !important;
   background: var(--diary-accent) !important;
   color: #fff !important;
@@ -1700,10 +1325,6 @@
   border-color: var(--diary-accent) !important;
   background: var(--diary-accent-soft) !important;
   color: var(--diary-accent-ink) !important;
-}
-
-.diary-page .bar-chart-bar {
-  fill: var(--diary-accent) !important;
 }
 
 .diary-page .daily-plan-panel,
@@ -1740,8 +1361,7 @@
 
 .diary-page .routine-tag-section + .routine-tag-section{padding-top:0;border-top:0}
 
-.diary-page .calendar-day.selected,
-.diary-page .alarm-day.selected {
+.diary-page .calendar-day.selected {
   box-shadow: inset 0 0 0 2px var(--color-primary-600) !important;
   background: var(--color-surface) !important;
 }
@@ -2089,83 +1709,11 @@
   .diary-page .diary-mobile-tabs {
     margin: 0 0 8px !important;
   }
-
-  .diary-page .diary-workspace.mobile-calendar {
-    display: block !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .diary-calendar-area {
-    display: block !important;
-    width: 100% !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .diary-detail-panel,
-  .diary-page .diary-workspace.mobile-calendar .selected-date-status,
-  .diary-page .diary-workspace.mobile-calendar .daily-plan-panel,
-  .diary-page .diary-workspace.mobile-calendar .incident-add-panel,
-  .diary-page .diary-workspace.mobile-calendar .record-list-panel,
-  .diary-page .diary-workspace.mobile-calendar .mobile-plan-panel {
-    display: none !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-month {
-    display: grid !important;
-    grid-template-rows: auto auto minmax(0, 1fr) !important;
-    width: 100% !important;
-    height: calc(100svh - 142px) !important;
-    min-height: 640px !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-days {
-    display: grid !important;
-    grid-template-rows: repeat(6, minmax(0, 1fr)) !important;
-    min-height: 0 !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-day {
-    min-height: 0 !important;
-    height: auto !important;
-    aspect-ratio: auto !important;
-    padding: 8px 3px !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-tags {
-    gap: 2px !important;
-    overflow: hidden !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-tags small {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    justify-content: flex-start !important;
-    min-height: 17px !important;
-    padding: 2px 3px !important;
-    border-radius: 3px !important;
-    font-size: .58rem !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-tags small.compact {
-    min-height: 15px !important;
-    font-size: .5rem !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-tags small.tiny {
-    min-height: 13px !important;
-    font-size: .44rem !important;
-  }
-
-  .diary-page .diary-workspace.mobile-calendar .calendar-tags small i {
-    display: inline !important;
-  }
 }
 
 @media(min-width:901px){
   .diary-page .calendar-month {
     min-height: min(760px, calc(100svh - 230px));
-  }
-
-  .diary-page .calendar-days {
-    grid-auto-rows: minmax(104px, 1fr);
   }
 }
 
@@ -2181,9 +1729,7 @@
   border-radius: 10px !important;
 }
 
-.routine-recommendation-field button:not(.routine-more-button) > span:first-child,
-.routine-recommendation-field .routine-card-image,
-.routine-recommendation-field .routine-card-fallback {
+.routine-recommendation-field button:not(.routine-more-button) > span:first-child {
   display: none !important;
 }
 
@@ -2216,9 +1762,8 @@
 
 /* The shared calendar styles target every direct span. Diary cells have both a
    date header and a records container, so reset them before styling the number. */
-.diary-page .calendar-day > .day-head,
+
 .diary-page .calendar-day > .calendar-tags,
-.diary-page .calendar-day.today > .day-head,
 .diary-page .calendar-day.today > .calendar-tags {
   width: 100% !important;
   height: auto !important;
@@ -2227,22 +1772,8 @@
   color: inherit !important;
 }
 
-.diary-page .calendar-day > .day-head {
-  display: flex !important;
-}
-
 .diary-page .calendar-day > .calendar-tags {
   display: grid !important;
-}
-
-.diary-page .calendar-day.today .day-number {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--color-primary-600);
-  color: var(--color-surface);
 }
 
 .diary-page .daily-plan-panel {
@@ -2352,13 +1883,6 @@
   min-width: 0 !important;
 }
 
-.selected-date-record-icon img,
-.date-records-content .selected-date-record-icon img {
-  width: 22px !important;
-  height: 22px !important;
-  object-fit: contain !important;
-}
-
 @media(max-width:900px){
   .diary-page .diary-pet-bar {
     display: grid !important;
@@ -2366,14 +1890,6 @@
     column-gap: 10px !important;
     row-gap: 4px !important;
     padding-right: 54px !important;
-  }
-
-  .diary-page .diary-pet-bar.single-pet {
-    grid-template-columns: minmax(0, 1fr) auto !important;
-  }
-
-  .diary-page .diary-pet-bar.single-pet .diary-pet-profile {
-    grid-column: 1 !important;
   }
 
   .diary-page .diary-record-desktop-button {
@@ -2393,26 +1909,6 @@
   .diary-page .diary-view-toolbar .diary-mobile-tabs {
     min-width: 0 !important;
     margin: 0 !important;
-  }
-
-  .diary-page .diary-record-mobile-row {
-    display: none !important;
-  }
-
-  .diary-page .diary-record-mobile-button {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    min-height: 34px !important;
-    width: auto !important;
-    max-width: 108px !important;
-    padding: 0 10px !important;
-    border: 1px solid var(--color-primary-100) !important;
-    border-radius: 9px !important;
-    background: var(--color-primary-50) !important;
-    box-shadow: none !important;
-    color: var(--color-primary-700) !important;
-    font-size: .7rem !important;
   }
 }
 
@@ -2455,89 +1951,6 @@
   }
 }
 /* 2026-07-29 Calendar navigation and quick year/month picker. */
-.calendar-month-bar {
-  position: relative;
-}
-
-.calendar-nav-button {
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  line-height: 1;
-}
-
-.calendar-title-picker {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  min-width: 0;
-}
-
-.calendar-title-button {
-  min-height: 42px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-size: 1.15rem;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.calendar-title-button:hover,
-.calendar-title-button[aria-expanded='true'] {
-  background: var(--color-primary-50);
-  color: var(--color-primary-700);
-}
-
-.calendar-quick-picker {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  z-index: 20;
-  display: grid;
-  width: min(340px, calc(100vw - 32px));
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: var(--color-surface);
-  box-shadow: 0 16px 44px color-mix(in srgb, var(--color-primary-900) 14%, transparent);
-  transform: translateX(-50%);
-}
-
-.calendar-year-row,
-.calendar-month-grid {
-  display: grid;
-  gap: 7px;
-}
-
-.calendar-year-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.calendar-month-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.calendar-year-row button,
-.calendar-month-grid button {
-  min-height: 34px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  font-size: .82rem;
-  font-weight: 900;
-}
-
-.calendar-year-row button.active,
-.calendar-month-grid button.active {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-600);
-  color: #fff;
-}
 /* 2026-07-29 Task menus, hamburger consistency, and native month picker. */
 .diary-page .diary-pet-menu-trigger {
   display: flex !important;
@@ -2570,29 +1983,6 @@
   height: 4px !important;
   border-radius: 999px !important;
   background: currentColor !important;
-}
-
-.calendar-title-button,
-.calendar-title-button:hover,
-.calendar-title-button:focus-visible {
-  background: transparent !important;
-  color: var(--color-text-primary) !important;
-  font-size: 1.15rem !important;
-  font-weight: 900 !important;
-}
-
-.calendar-native-month-input {
-  position: absolute !important;
-  inset: auto auto 0 50% !important;
-  width: 1px !important;
-  height: 1px !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: translateX(-50%) !important;
-}
-
-.calendar-quick-picker {
-  display: none !important;
 }
 /* 2026-07-29 Situation modal close button. */
 .diary-modal-close {
@@ -2683,11 +2073,6 @@
     display: grid !important;
     grid-template-rows: auto auto minmax(0, 1fr) !important;
     height: 100% !important;
-    min-height: 0 !important;
-  }
-
-  .diary-page:has(> .diary-pet-bar) .calendar-days {
-    grid-template-rows: repeat(6, minmax(0, 1fr)) !important;
     min-height: 0 !important;
   }
 
@@ -2840,11 +2225,26 @@
 /* react-calendar owns date arithmetic and navigation; these rules preserve the
    existing ExoCare calendar proportions and record-first day cells. */
 .diary-page .calendar-month .react-calendar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: 100%;
+  height: 100%;
+  min-height: 0;
   border: 0;
   background: transparent;
   color: var(--color-text-primary);
   font: inherit;
+}
+
+.diary-page .react-calendar__viewContainer,
+.diary-page .react-calendar__month-view {
+  min-height: 0;
+  height: 100%;
+}
+
+.diary-page .react-calendar__month-view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .diary-page .react-calendar__navigation {
@@ -2903,10 +2303,15 @@
 .diary-page .react-calendar__month-view__days {
   display: grid !important;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr)) !important;
+  min-height: 0;
 }
 
 .diary-page .react-calendar__month-view__days > .react-calendar__tile {
   max-width: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  aspect-ratio: auto !important;
 }
 
 .diary-page .react-calendar__tile.calendar-day {
@@ -2915,8 +2320,9 @@
   align-content: start;
   gap: 5px;
   min-width: 0;
-  min-height: 82px;
-  aspect-ratio: 1 / 1;
+  min-height: 0 !important;
+  height: auto !important;
+  aspect-ratio: auto !important;
   overflow: hidden;
   padding: 8px;
   border: 0;
@@ -3003,24 +2409,36 @@
 }
 
 @media (max-width: 760px) {
-  .diary-page .diary-workspace.mobile-calendar .react-calendar__month-view__days {
-    grid-template-rows: repeat(6, minmax(0, 1fr));
-    min-height: 0;
+
+  .diary-page .react-calendar__navigation {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    margin-bottom: 6px;
   }
 
-  .diary-page .diary-workspace.mobile-calendar .react-calendar__tile.calendar-day {
-    min-height: 0;
-    height: auto;
-    aspect-ratio: auto;
-    padding: 7px 4px;
+  .diary-page .react-calendar__navigation button {
+    min-height: 38px;
+  }
+
+  .diary-page .react-calendar__month-view__weekdays__weekday {
+    padding: 6px 2px;
+    font-size: .7rem;
+  }
+
+  .diary-page .react-calendar__tile.calendar-day > abbr {
+    font-size: .78rem;
+  }
+
+  .diary-page .react-calendar__tile.calendar-day.today > abbr {
+    width: 21px;
+    height: 21px;
   }
 }
 
 @media (max-width: 520px) {
   .diary-page .react-calendar__tile.calendar-day {
-    min-height: 70px;
+    min-height: 0 !important;
     aspect-ratio: auto;
-    padding: 6px 4px;
+    padding: 5px 3px !important;
   }
 
   .diary-page .react-calendar__navigation__label {

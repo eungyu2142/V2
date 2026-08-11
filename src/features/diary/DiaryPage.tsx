@@ -1,7 +1,7 @@
 import { type ChangeEvent, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactCalendar from 'react-calendar'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
-import { completeDailyTask, deleteCarePlan, listCarePlans, listCareRecords, listDailyTasks, markDailyTaskCompleted, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, settleSupersededOverdueTasks, skipDailyTask } from './diaryService'
+import { completeDailyTask, deleteCarePlan, listCarePlans, listCareRecords, listDailyTasks, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, settleSupersededOverdueTasks, skipDailyTask } from './diaryService'
 import type { CarePlan, CareTaskType, ClinicRecordDetails, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel } from './diaryTypes'
 import { cancelRoutineNotificationJobs, getFirstRoutineDate, markRoutineNotificationJobCompleted, markRoutineNotificationJobSkipped, upsertRoutineNotificationJob } from './routineNotificationJobs'
 import { customFoodOptionKey, fallbackSpeciesCareProfiles, findSpeciesCareProfile, listSpeciesCareProfiles, type CareEnvironmentProfile, type CareFoodOption, type SpeciesCareProfile } from './speciesCareProfiles'
@@ -1150,7 +1150,7 @@ export default function DiaryPage({
     makeSmartRecord('other', `산란 기록이 저장되었습니다`, `산란 · ${mating.femaleName} · ${mating.maleName} · ${mating.species}`)
   }
 
-  const completePlan = (reminder: Reminder, dailyTask?: DailyTask) => {
+  const completePlan = async (reminder: Reminder, dailyTask?: DailyTask) => {
     if (!selectedPet) return
     if (reminder.reminderType === 'feed') {
       setFeedingCompletion({ reminder, dailyTask })
@@ -1191,18 +1191,23 @@ export default function DiaryPage({
       return
     }
     if (dailyTask && usingCarePlans) {
-      if (dailyTask.status === 'completed' || records.some((record) => record.dailyTaskId === dailyTask.id) || completingTaskIds.current.has(dailyTask.id)) return
+      if (dailyTask.status === 'completed' || completingTaskIds.current.has(dailyTask.id)) return
       completingTaskIds.current.add(dailyTask.id)
       const label = planLabel(reminder)
-      const recordType = reminderMeta[reminder.reminderType].recordType
       const completedAt = new Date().toISOString()
-      setRecords((items) => [{ id: `task-${dailyTask.id}`, userId, petId: selectedPet.id, type: recordType, date: today, memo: label, foods: recordType === 'food' ? [label] : undefined, dailyTaskId: dailyTask.id, scheduledFor: dailyTask.scheduledDate, occurredAt: completedAt, status: 'completed', createdAt: completedAt }, ...items.filter((item) => item.dailyTaskId !== dailyTask.id)])
-      setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
-      consolidateOverdueTasksAfterCompletion(dailyTask)
-      void completeDailyTask(dailyTask.id)
-        .then(() => markNotificationJobCompletedForTask(dailyTask))
-        .catch((error) => console.error('Daily task completion sync failed; kept local state.', error))
-      showSmartToast(`${label} 완료 기록이 저장되었습니다`)
+      try {
+        const storedRecord = await completeDailyTask(dailyTask.id)
+        setRecords((items) => [storedRecord, ...items.filter((item) => item.dailyTaskId !== dailyTask.id)])
+        setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
+        consolidateOverdueTasksAfterCompletion(dailyTask)
+        void markNotificationJobCompletedForTask(dailyTask)
+        showSmartToast(`${label} 완료 기록이 저장되었습니다`)
+      } catch (error) {
+        console.error('Daily task completion failed.', error)
+        showSmartToast('완료 상태를 저장하지 못했어요. 다시 시도해주세요.')
+      } finally {
+        completingTaskIds.current.delete(dailyTask.id)
+      }
       return
     }
     const label = planLabel(reminder)
@@ -1272,8 +1277,6 @@ export default function DiaryPage({
           }), record)
       setRecords([storedRecord, ...records.filter((item) => dailyTask ? item.dailyTaskId !== dailyTask.id : item.id !== storedRecord.id)])
       if (dailyTask && usingCarePlans) {
-        completingTaskIds.current.add(dailyTask.id)
-        await markDailyTaskCompleted(dailyTask.id)
         void markNotificationJobCompletedForTask(dailyTask)
         setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
         consolidateOverdueTasksAfterCompletion(dailyTask)
@@ -1362,8 +1365,6 @@ export default function DiaryPage({
         ...records.filter((item) => dailyTask ? item.dailyTaskId !== dailyTask.id : item.id !== storedRecord.id),
       ]))
       if (dailyTask && usingCarePlans) {
-        completingTaskIds.current.add(dailyTask.id)
-        await markDailyTaskCompleted(dailyTask.id)
         void markNotificationJobCompletedForTask(dailyTask)
         setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
         consolidateOverdueTasksAfterCompletion(dailyTask)
@@ -1419,8 +1420,6 @@ export default function DiaryPage({
         ...records.filter((item) => dailyTask ? item.dailyTaskId !== dailyTask.id : item.id !== storedRecord.id),
       ]))
       if (dailyTask && usingCarePlans) {
-        completingTaskIds.current.add(dailyTask.id)
-        await markDailyTaskCompleted(dailyTask.id)
         void markNotificationJobCompletedForTask(dailyTask)
         setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
         consolidateOverdueTasksAfterCompletion(dailyTask)
@@ -1483,11 +1482,11 @@ export default function DiaryPage({
         date={recordDate}
         initialDraft={recordInitialDraft}
         onBack={closeRecordCreate}
-        onSave={(draft) => {
+        onSave={async (draft) => {
           const nextMemo = getRecordMemo(draft)
           const nextFoods = draft.type === 'food' ? [...draft.foods, draft.customFood].filter(Boolean) : undefined
           const duplicate = records.some((item) => item.petId === selectedPet.id && item.date === recordDate && item.type === draft.type && (item.memo ?? '') === nextMemo && (item.foods?.join('|') ?? '') === (nextFoods?.join('|') ?? ''))
-          if (duplicate) {
+          if (duplicate && !completingDailyTask) {
             showSmartToast('이미 같은 기록이 있어요.')
             return
           }
@@ -1512,12 +1511,17 @@ export default function DiaryPage({
               occurredAt: completedAt,
               status: 'completed' as const,
             }
-            saveRecordList([taskRecord, ...records])
-            setDailyTasks((items) => items.map((item) => item.id === completingDailyTask.id ? { ...item, status: 'completed', completedAt } : item))
-            consolidateOverdueTasksAfterCompletion(completingDailyTask)
-            void markDailyTaskCompleted(completingDailyTask.id)
-              .then(() => markNotificationJobCompletedForTask(completingDailyTask))
-              .catch((error) => console.error('Daily task completion sync failed after typed record; kept local state.', error))
+            try {
+              const storedRecord = await saveDailyTaskCareRecord(userId, taskRecord)
+              setRecords((items) => [storedRecord, ...items.filter((item) => item.dailyTaskId !== completingDailyTask.id)])
+              setDailyTasks((items) => items.map((item) => item.id === completingDailyTask.id ? { ...item, status: 'completed', completedAt } : item))
+              consolidateOverdueTasksAfterCompletion(completingDailyTask)
+              void markNotificationJobCompletedForTask(completingDailyTask)
+            } catch (error) {
+              console.error('Typed routine completion failed.', error)
+              showSmartToast('완료 상태를 저장하지 못했어요. 입력 내용은 유지되어 있습니다.')
+              return
+            }
           } else if (completingReminder) {
             saveRecordList([record, ...records])
             markReminderCompleted(completingReminder)

@@ -8,8 +8,11 @@ type FieldLabelProps = {
 }
 
 export function FieldLabel({ children, required = false, optional = false }: FieldLabelProps) {
-  return <span className="ui-field__label">{children}{required && <RequiredMark />}{optional && <OptionalBadge />}</span>
+  return <span className="inline-flex items-start justify-self-start text-[var(--font-size-body)] font-bold leading-[1.35] text-app-ink">{children}{required && <RequiredMark />}{optional && <OptionalBadge />}</span>
 }
+
+const fieldClasses = 'grid min-w-0 gap-2'
+const controlClasses = 'w-full min-w-0 rounded-control border border-app-border bg-app-surface text-[var(--font-size-control)] text-app-ink focus:border-brand-600 focus:outline-[3px] focus:outline-[color-mix(in_srgb,var(--color-primary-600)_18%,transparent)]'
 
 type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string
@@ -19,10 +22,10 @@ type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField({ label, optional = false, error, className = '', required, ...props }, ref) {
   return (
-    <label className={`ui-field ${error ? 'ui-field--error' : ''} ${className}`.trim()}>
+    <label className={`${fieldClasses} ${className}`.trim()}>
       <FieldLabel required={required} optional={optional}>{label}</FieldLabel>
-      <input ref={ref} required={required} aria-invalid={Boolean(error)} {...props} />
-      {error && <small className="ui-field__error">{error}</small>}
+      <input className={`${controlClasses} min-h-[var(--control-height)] px-3 ${error ? 'border-[var(--color-error-500)]' : ''}`} ref={ref} required={required} aria-invalid={Boolean(error)} {...props} />
+      {error && <small className="text-[var(--font-size-caption)] text-app-danger">{error}</small>}
     </label>
   )
 })
@@ -36,11 +39,11 @@ type TextAreaFieldProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
 
 export const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>(function TextAreaField({ label, optional = false, error, footer, className = '', required, ...props }, ref) {
   return (
-    <label className={`ui-field ${error ? 'ui-field--error' : ''} ${className}`.trim()}>
+    <label className={`${fieldClasses} ${className}`.trim()}>
       <FieldLabel required={required} optional={optional}>{label}</FieldLabel>
-      <textarea ref={ref} required={required} aria-invalid={Boolean(error)} {...props} />
+      <textarea className={`${controlClasses} min-h-28 resize-y p-3 ${error ? 'border-[var(--color-error-500)]' : ''}`} ref={ref} required={required} aria-invalid={Boolean(error)} {...props} />
       {footer}
-      {error && <small className="ui-field__error">{error}</small>}
+      {error && <small className="text-[var(--font-size-caption)] text-app-danger">{error}</small>}
     </label>
   )
 })

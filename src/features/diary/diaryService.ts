@@ -192,7 +192,8 @@ export async function deleteCarePlan(id: string) {
 export async function completeDailyTask(taskId: string) {
   const { data, error } = await supabase.rpc('complete_daily_task', { p_task_id: taskId })
   if (error) throw error
-  return data as PetRecord
+  if (!data || typeof data !== 'object') throw new Error('Completed routine record was not returned.')
+  return toPetRecord(data as CareRecordRow)
 }
 
 export async function markDailyTaskCompleted(taskId: string) {
@@ -253,7 +254,10 @@ export async function saveDailyTaskCareRecord(userId: string, record: PetRecord)
     .eq('daily_task_id', record.dailyTaskId)
     .maybeSingle()
   if (lookupError) throw lookupError
-  if (existing) return toPetRecord(existing as CareRecordRow)
+  if (existing) {
+    await markDailyTaskCompleted(record.dailyTaskId)
+    return toPetRecord(existing as CareRecordRow)
+  }
 
   const { data, error } = await supabase.from('care_records').insert({
     id: record.id,
@@ -269,6 +273,21 @@ export async function saveDailyTaskCareRecord(userId: string, record: PetRecord)
     status: record.status ?? 'completed',
   }).select('id, user_id, pet_id, record_date, record_type, memo, payload, daily_task_id, occurred_at, scheduled_for, status, created_at').single()
   if (error) throw error
+
+  try {
+    await markDailyTaskCompleted(record.dailyTaskId)
+  } catch (completionError) {
+    const { error: rollbackError } = await supabase
+      .from('care_records')
+      .delete()
+      .eq('id', data.id)
+      .eq('user_id', userId)
+    if (rollbackError && import.meta.env.DEV) {
+      console.error('Routine record rollback failed after completion update failed.', rollbackError)
+    }
+    throw completionError
+  }
+
   return toPetRecord(data as CareRecordRow)
 }
 
