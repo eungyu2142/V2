@@ -2836,3 +2836,194 @@
     flex-basis: 48px !important;
   }
 }
+
+/* react-calendar owns date arithmetic and navigation; these rules preserve the
+   existing ExoCare calendar proportions and record-first day cells. */
+.diary-page .calendar-month .react-calendar {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.diary-page .react-calendar__navigation {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  height: auto;
+  margin: 0 0 12px;
+}
+
+.diary-page .react-calendar__navigation button {
+  min-width: 0;
+  min-height: 42px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-primary-600);
+  font: inherit;
+}
+
+.diary-page .react-calendar__navigation button:enabled:hover,
+.diary-page .react-calendar__navigation button:enabled:focus-visible {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.diary-page .react-calendar__navigation__label {
+  color: var(--color-text-primary) !important;
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+}
+
+.diary-page .react-calendar__navigation__arrow {
+  font-size: 2rem !important;
+  line-height: 1;
+}
+
+.diary-page .react-calendar__month-view__weekdays {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.diary-page .react-calendar__month-view__weekdays__weekday {
+  padding: 8px;
+  color: var(--color-text-secondary);
+  font-size: .78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.diary-page .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+}
+
+.diary-page .react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.diary-page .react-calendar__month-view__days > .react-calendar__tile {
+  max-width: none !important;
+}
+
+.diary-page .react-calendar__tile.calendar-day {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  min-height: 82px;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  padding: 8px;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+  line-height: 1.2;
+}
+
+.diary-page .react-calendar__tile.calendar-day:nth-child(7n + 1) {
+  border-left: 1px solid var(--color-border);
+}
+
+.diary-page .react-calendar__tile.calendar-day:nth-last-child(-n + 7) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.diary-page .react-calendar__tile.calendar-day > abbr {
+  min-width: 0;
+  font-size: .9rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.diary-page .react-calendar__tile.calendar-day:enabled:hover,
+.diary-page .react-calendar__tile.calendar-day:enabled:focus-visible {
+  background: var(--color-primary-50);
+}
+
+.diary-page .react-calendar__tile.calendar-day.today:not(.selected) {
+  background: color-mix(in srgb, var(--color-primary-600) 10%, var(--color-surface)) !important;
+}
+
+.diary-page .react-calendar__tile.calendar-day.today > abbr {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  color: var(--color-surface);
+}
+
+.diary-page .react-calendar__tile.calendar-day.selected,
+.diary-page .react-calendar__tile.calendar-day.react-calendar__tile--active {
+  background: var(--color-primary-50) !important;
+  box-shadow: inset 0 0 0 2px var(--color-primary-600);
+}
+
+.diary-page .react-calendar__tile.calendar-day.muted {
+  opacity: .43;
+}
+
+.diary-page .react-calendar__year-view__months,
+.diary-page .react-calendar__decade-view__years {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.diary-page .react-calendar__year-view__months > .react-calendar__tile,
+.diary-page .react-calendar__decade-view__years > .react-calendar__tile {
+  max-width: none !important;
+  min-height: 52px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.diary-page .react-calendar__year-view__months > .react-calendar__tile:enabled:hover,
+.diary-page .react-calendar__year-view__months > .react-calendar__tile:enabled:focus-visible,
+.diary-page .react-calendar__decade-view__years > .react-calendar__tile:enabled:hover,
+.diary-page .react-calendar__decade-view__years > .react-calendar__tile:enabled:focus-visible,
+.diary-page .react-calendar__year-view__months > .react-calendar__tile--hasActive,
+.diary-page .react-calendar__decade-view__years > .react-calendar__tile--hasActive {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-50);
+}
+
+@media (max-width: 760px) {
+  .diary-page .diary-workspace.mobile-calendar .react-calendar__month-view__days {
+    grid-template-rows: repeat(6, minmax(0, 1fr));
+    min-height: 0;
+  }
+
+  .diary-page .diary-workspace.mobile-calendar .react-calendar__tile.calendar-day {
+    min-height: 0;
+    height: auto;
+    aspect-ratio: auto;
+    padding: 7px 4px;
+  }
+}
+
+@media (max-width: 520px) {
+  .diary-page .react-calendar__tile.calendar-day {
+    min-height: 70px;
+    aspect-ratio: auto;
+    padding: 6px 4px;
+  }
+
+  .diary-page .react-calendar__navigation__label {
+    font-size: 1rem !important;
+  }
+}

@@ -208,6 +208,89 @@ html {
   .qna-feed-page .qna-help-card .qna-card-stats { width: 100% !important; margin-left: 0 !important; }
 }
 
+/* 2026-08-11: amphibian and reptile clinic review composer. */
+.hospital-review-modal .review-clinical-field {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.hospital-review-modal .review-clinical-field textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.hospital-review-modal .review-next-visit-fields {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.hospital-review-modal .review-next-visit-summary {
+  margin: 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.hospital-review-modal .review-next-visit-summary strong {
+  color: var(--color-primary-700);
+}
+
+.hospital-review-modal .review-tag-group {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.hospital-review-modal .review-tag-group:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.hospital-review-modal .review-tag-group > strong {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.hospital-review-modal .review-tag-group.is-specialist > strong {
+  color: var(--color-primary-700);
+}
+
+.hospital-review-modal .review-tag-group.is-specialist .review-chip-grid button {
+  border-color: var(--color-primary-300);
+}
+
+.hospital-review-modal .review-tag-group.is-specialist .review-chip-grid button.active {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-100);
+  color: var(--color-primary-800);
+}
+
+@media (max-width: 760px) {
+  .hospital-review-modal .review-chip-grid {
+    flex-wrap: nowrap;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hospital-review-modal .review-chip-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hospital-review-modal .review-chip-grid button {
+    flex: 0 0 auto;
+    max-width: min(18rem, calc(100vw - 3rem));
+    white-space: normal;
+  }
+}
+
 /* 2026-07-24 final Naver Map inspired map/review surface. Keep at EOF. */
 .map-shell .map-page {
   background: #eef4fb !important;
@@ -14336,6 +14419,91 @@ body,
   .map-shell {
     --map-nav-left: 0%;
   }
+
+  .side-nav {
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .side-nav > nav,
+  .side-nav > .side-nav-profile {
+    position: relative;
+    z-index: 2;
+  }
+
+  .side-nav-botanical {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .side-nav-leaves {
+    position: absolute;
+    width: 72px;
+    height: auto;
+    color: var(--color-primary-100);
+    opacity: 0.34;
+  }
+
+  .side-nav-leaves-top {
+    top: 22%;
+    right: -25px;
+    transform: rotate(-8deg);
+  }
+
+  .side-nav-leaves-upper-left {
+    top: 11%;
+    left: -31px;
+    width: 62px;
+    transform: scaleX(-1) rotate(-13deg);
+  }
+
+  .side-nav-leaves-middle-left {
+    top: 39%;
+    left: -27px;
+    width: 66px;
+    transform: scaleX(-1) rotate(9deg);
+  }
+
+  .side-nav-leaves-middle-right {
+    top: 50%;
+    right: -29px;
+    width: 60px;
+    transform: rotate(15deg);
+  }
+
+  .side-nav-leaves-bottom {
+    bottom: 15%;
+    left: -30px;
+    width: 67px;
+    transform: scaleX(-1) rotate(-7deg);
+  }
+
+  .side-nav-leaves-lower-right {
+    right: -28px;
+    bottom: 3%;
+    width: 58px;
+    transform: rotate(12deg);
+  }
+
+  .side-nav-leaves .leaf-stem,
+  .side-nav-leaves .leaf-shape {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .side-nav-leaves .leaf-stem {
+    stroke-width: 2.4;
+  }
+
+  .side-nav-leaves .leaf-shape {
+    fill: color-mix(in srgb, currentColor 24%, transparent);
+    stroke-width: 1.8;
+  }
 }
 
 .side-nav button,
@@ -26070,8 +26238,8 @@ button.diary-dim:focus-visible {
 
 /* Hospital controls are structurally separated by viewport. */
 .map-side-panel .map-desktop-sort-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
   width: 100%;
   padding: 0.75rem 1rem;
@@ -26091,6 +26259,30 @@ button.diary-dim:focus-visible {
   font-size: clamp(0.75rem, 0.8vw, 0.875rem);
   font-weight: 800;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.map-side-panel .map-sort-menu {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.map-side-panel .map-sort-menu select {
+  min-width: 4.5rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
   cursor: pointer;
 }
 
@@ -26120,7 +26312,8 @@ button.diary-dim:focus-visible {
     position: fixed !important;
     z-index: 93 !important;
     top: calc(env(safe-area-inset-top, 0px) + 4.45rem) !important;
-    right: 0.75rem !important;
+    right: auto !important;
+    left: 0.75rem !important;
     display: block !important;
     width: auto !important;
     pointer-events: auto !important;
@@ -26159,5 +26352,57 @@ button.diary-dim:focus-visible {
     display: inline !important;
     overflow: visible !important;
     white-space: nowrap !important;
+  }
+
+  .map-side-panel .map-hospital-list,
+  .map-page .map-detail-dock,
+  .map-side-panel .map-hospital-list.mobile-sheet-collapsed,
+  .map-side-panel .map-hospital-list.mobile-sheet-middle,
+  .map-side-panel .map-hospital-list.mobile-sheet-expanded,
+  .map-page .map-detail-dock.mobile-sheet-collapsed,
+  .map-page .map-detail-dock.mobile-sheet-middle,
+  .map-page .map-detail-dock.mobile-sheet-expanded {
+    min-height: 2.75rem !important;
+  }
+
+  .map-side-panel .map-hospital-list > .map-sheet-handle,
+  .map-page .map-detail-dock > .map-sheet-handle,
+  .map-side-panel .map-hospital-list > .map-sheet-handle:hover,
+  .map-page .map-detail-dock > .map-sheet-handle:hover,
+  .map-side-panel .map-hospital-list > .map-sheet-handle:active,
+  .map-page .map-detail-dock > .map-sheet-handle:active {
+    position: sticky !important;
+    top: 0 !important;
+    margin: 0 !important;
+    border-radius: 1.125rem 1.125rem 0 0 !important;
+  }
+
+  .map-side-panel .map-sheet-sort-tabs {
+    top: 2.75rem !important;
+    min-height: 3.5rem;
+    align-items: center;
+    overflow: visible;
+  }
+
+  .map-side-panel .map-sheet-sort-tabs .map-sort-menu {
+    width: 100%;
+    justify-content: space-between;
+    min-height: 2.5rem;
+    border: 0;
+    border-radius: 0;
+    padding: 0 0.25rem;
+  }
+
+  .map-side-panel .map-sheet-sort-tabs .map-sort-menu select {
+    min-height: 2.5rem;
+    text-align: right;
+  }
+
+  .map-page .map-detail-dock .hospital-detail-header {
+    position: relative;
+    z-index: 1;
+    min-height: 3.5rem;
+    padding-top: 0.5rem;
+    background: var(--color-surface);
   }
 }

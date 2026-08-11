@@ -104,6 +104,31 @@ function NavigationIcon({ tab, mobile = false }: { tab: Tab; mobile?: boolean })
   )
 }
 
+function SidebarBotanicalDecoration() {
+  const sprigs = [
+    'side-nav-leaves-upper-left',
+    'side-nav-leaves-top',
+    'side-nav-leaves-middle-left',
+    'side-nav-leaves-middle-right',
+    'side-nav-leaves-bottom',
+    'side-nav-leaves-lower-right',
+  ]
+
+  return (
+    <div className="side-nav-botanical" aria-hidden="true">
+      {sprigs.map((className) => (
+        <svg className={`side-nav-leaves ${className}`} viewBox="0 0 96 150" key={className}>
+          <path className="leaf-stem" d="M88 4C72 30 74 61 55 83 39 101 20 113 8 145" />
+          <path className="leaf-shape" d="M73 39c-15-1-24-9-26-24 15 1 24 9 26 24Z" />
+          <path className="leaf-shape" d="M67 61c10-12 21-15 34-9-9 12-21 15-34 9Z" />
+          <path className="leaf-shape" d="M45 93c-14 2-24-4-30-17 14-2 24 4 30 17Z" />
+          <path className="leaf-shape" d="M34 110c11-9 22-10 33-2-11 9-22 10-33 2Z" />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
 const qnaTable = ['comm', 'unity_posts'].join('')
 const qnaDatabaseCategory = ['Q', '&A'].join('')
 
@@ -758,6 +783,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
         onClick={() => setSideNavOpen(false)}
       />
       <aside className={`side-nav ${sideNavOpen ? 'open' : ''}`}>
+        <SidebarBotanicalDecoration />
         <nav>
           {tabs.map((tab) => (
             <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={() => { moveTab(tab.id); setSideNavOpen(false) }}>

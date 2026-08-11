@@ -42,7 +42,7 @@ export function Stepper({ currentStep, stepCount, labels, onStepChange, classNam
               onClick={() => onStepChange?.(index)}
             >
               <span aria-hidden="true">
-                {status === 'completed' && <span className="ui-stepper__mobile-check">\u2713</span>}
+                {status === 'completed' && <span className="ui-stepper__mobile-check">{'✓'}</span>}
                 <span className={status === 'completed' ? 'ui-stepper__desktop-number' : ''}>{index + 1}</span>
               </span>
             </button>
@@ -55,7 +55,7 @@ export function Stepper({ currentStep, stepCount, labels, onStepChange, classNam
             const status = getStepStatus(index, currentStep)
             return (
               <span className={`is-${status}`} key={`${label}-${index}`}>
-                {status === 'completed' && <span className="ui-stepper__mobile-label-check">\u2713</span>}
+                {status === 'completed' && <span className="ui-stepper__mobile-label-check">{'✓'}</span>}
                 <span className={status === 'completed' ? 'ui-stepper__desktop-label-number' : ''}>{index + 1}.</span> {label}
               </span>
             )

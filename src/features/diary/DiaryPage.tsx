@@ -1,4 +1,5 @@
 import { type ChangeEvent, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import ReactCalendar from 'react-calendar'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
 import { completeDailyTask, deleteCarePlan, listCarePlans, listCareRecords, listDailyTasks, markDailyTaskCompleted, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, settleSupersededOverdueTasks, skipDailyTask } from './diaryService'
 import type { CarePlan, CareTaskType, ClinicRecordDetails, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel } from './diaryTypes'
@@ -8,6 +9,7 @@ import { toDateKey } from './mockDiaryData'
 import type { HospitalReview, HospitalSnapshot } from '../../types/app'
 import NotificationOptInNudge from '../../components/notifications/NotificationOptInNudge'
 import { OptionalBadge } from '../../components/common/FieldMarkers'
+import 'react-calendar/dist/Calendar.css'
 import './DiaryPage.css'
 
 export type DiaryPet = {
@@ -607,6 +609,25 @@ export default function DiaryPage({
   const petCarePlans = reminders.filter((reminder) => reminder.petId === effectivePetId)
   const petRecords = records.filter((record) => record.petId === effectivePetId)
   const displayPetRecords = useMemo(() => collapseShedRecordsForDisplay(petRecords), [petRecords])
+  const calendarPetRecords = useMemo(() => {
+    const scheduledHospitalRecords: PetRecord[] = activeReminders
+      .filter((reminder) => reminder.petId === effectivePetId && reminder.reminderType === 'hospital')
+      .flatMap((reminder) => {
+        const scheduledDate = reminder.startDate || reminder.reminderDate
+        if (!scheduledDate) return []
+        return [{
+          id: `scheduled-hospital-${reminder.id}-${scheduledDate}`,
+          userId,
+          petId: reminder.petId,
+          type: 'hospital' as const,
+          date: scheduledDate,
+          memo: '진료 예정',
+          scheduledFor: scheduledDate,
+          createdAt: reminder.createdAt,
+        }]
+      })
+    return [...displayPetRecords, ...scheduledHospitalRecords]
+  }, [activeReminders, displayPetRecords, effectivePetId, userId])
   const recentFoods = Array.from(new Set(petRecords.flatMap((record) => record.type === 'food' ? record.foods ?? [] : []))).slice(0, 3)
   const matingPetCandidates = selectedPet ? pets.filter((pet) => sameSpecies(pet, selectedPet)) : []
   const matingOptions = useMemo(() => getMatingOptions(records, pets, selectedPet), [pets, records, selectedPet])
@@ -1678,7 +1699,7 @@ export default function DiaryPage({
               <Calendar
                 month={visibleMonth}
                 selectedDate={selectedDate}
-                records={displayPetRecords}
+                records={calendarPetRecords}
                 onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))}
                 onSelect={(date) => { if (date === selectedDate) setDateDetailsOpen(true); else setSelectedDate(date) }}
               />
@@ -2516,77 +2537,61 @@ function Calendar({
   onMove: (amount: number) => void
   onSelect: (date: string) => void
 }) {
-  const days = useMemo(() => getCalendarDays(month), [month])
   const todayKey = toDateKey(new Date())
-  const monthInputRef = useRef<HTMLInputElement>(null)
-  const currentYear = month.getFullYear()
-  const currentMonth = month.getMonth()
-  const monthValue = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`
-  const openNativeMonthPicker = () => {
-    const input = monthInputRef.current
-    if (!input) return
-    if ('showPicker' in input && typeof input.showPicker === 'function') input.showPicker()
-    else input.focus()
-  }
-  const changeMonth = (value: string) => {
-    const [yearText, monthText] = value.split('-')
-    const nextYear = Number(yearText)
-    const nextMonth = Number(monthText) - 1
-    if (!Number.isFinite(nextYear) || !Number.isFinite(nextMonth)) return
-    onMove((nextYear - currentYear) * 12 + (nextMonth - currentMonth))
+  const renderRecordTags = (day: Date) => {
+    const key = toDateKey(day)
+    const dayRecords = records.filter((record) => record.date === key)
+    const calendarItems = dayRecords
+      .map((record) => ({ id: record.id, ...calendarRecordTag(record) }))
+      .filter((item, index, items) => index === items.findIndex((value) => value.label === item.label))
+    const visibleItems = calendarItems.slice(0, 2)
+    const hiddenItemCount = Math.max(0, calendarItems.length - visibleItems.length)
+
+    return (
+      <span className="calendar-tags" aria-label={`${dayRecords.length}개 기록`}>
+        {visibleItems.map((item) => (
+          <small className={`calendar-tag ${item.className}`} key={item.id}>
+            {item.iconSrc ? <img className={item.iconIsRoutineCard ? 'routine-record-mark-image' : ''} src={item.iconSrc} alt="" aria-hidden="true" /> : item.icon ? <i>{item.icon}</i> : null}
+            <b>{item.label}</b>
+          </small>
+        ))}
+        {hiddenItemCount > 0 && <small className="calendar-tag-more">+{hiddenItemCount}</small>}
+      </span>
+    )
   }
 
   return (
     <section className="calendar-month">
-      <header className="calendar-month-bar">
-        <button className="calendar-nav-button" type="button" aria-label="이전 달" onClick={() => onMove(-1)}>‹</button>
-        <div className="calendar-title-picker">
-          <button type="button" className="calendar-title-button" onClick={openNativeMonthPicker}>
-            {currentYear}년 {currentMonth + 1}월
-          </button>
-          <input
-            ref={monthInputRef}
-            className="calendar-native-month-input"
-            type="month"
-            value={monthValue}
-            aria-label="연도와 월 선택"
-            onChange={(event) => changeMonth(event.target.value)}
-          />
-        </div>
-        <button className="calendar-nav-button" type="button" aria-label="다음 달" onClick={() => onMove(1)}>›</button>
-      </header>
-      <div className="calendar-weekdays">{weekdays.map((day) => <span key={day}>{day}</span>)}</div>
-      <div className="calendar-days">
-        {days.map((day) => {
-          const key = toDateKey(day)
-          const dayRecords = records.filter((record) => record.date === key)
-          const calendarItems = dayRecords
-            .map((record) => ({ id: record.id, ...calendarRecordTag(record) }))
-            .filter((item, index, items) => index === items.findIndex((value) => value.label === item.label))
-          const visibleItems = calendarItems.slice(0, 2)
-          const hiddenItemCount = Math.max(0, calendarItems.length - visibleItems.length)
-          return (
-            <button
-              key={key}
-              className={`calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${day.getMonth() !== month.getMonth() ? 'muted' : ''}`}
-              onClick={() => onSelect(key)}
-            >
-              <span className="day-head">
-                <span className="day-number">{day.getDate()}</span>
-              </span>
-              <span className="calendar-tags" aria-label={`${dayRecords.length} records`}>
-                {visibleItems.map((item) => (
-                  <small className={`calendar-tag ${item.className}`} key={item.id}>
-                    {item.iconSrc ? <img className={item.iconIsRoutineCard ? 'routine-record-mark-image' : ''} src={item.iconSrc} alt="" aria-hidden="true" /> : item.icon ? <i>{item.icon}</i> : null}
-                    <b>{item.label}</b>
-                  </small>
-                ))}
-                {hiddenItemCount > 0 && <small className="calendar-tag-more">+{hiddenItemCount}</small>}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <ReactCalendar
+        activeStartDate={new Date(month.getFullYear(), month.getMonth(), 1)}
+        calendarType="gregory"
+        locale="ko-KR"
+        minDetail="decade"
+        maxDetail="month"
+        next2Label={null}
+        prev2Label={null}
+        nextLabel="›"
+        prevLabel="‹"
+        showFixedNumberOfWeeks
+        showNeighboringMonth
+        value={new Date(`${selectedDate}T00:00:00`)}
+        formatDay={(_, date) => String(date.getDate())}
+        formatMonthYear={(_, date) => `${date.getFullYear()}년 ${date.getMonth() + 1}월`}
+        formatShortWeekday={(_, date) => weekdays[date.getDay()]}
+        onActiveStartDateChange={({ activeStartDate, view }) => {
+          if (!activeStartDate || view !== 'month') return
+          const difference = (activeStartDate.getFullYear() - month.getFullYear()) * 12
+            + activeStartDate.getMonth() - month.getMonth()
+          if (difference !== 0) onMove(difference)
+        }}
+        onClickDay={(date) => onSelect(toDateKey(date))}
+        tileClassName={({ date, view }) => {
+          if (view !== 'month') return undefined
+          const key = toDateKey(date)
+          return `calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${date.getMonth() !== month.getMonth() ? 'muted' : ''}`
+        }}
+        tileContent={({ date, view }) => view === 'month' ? renderRecordTags(date) : null}
+      />
     </section>
   )
 }
@@ -3944,7 +3949,7 @@ function getRoutineTypeFromRecord(record: PetRecord): ReminderType | null {
 function calendarRecordTag(record: PetRecord): CalendarRecordTag {
   if (record.type === 'poop') return { icon: recordMeta.poop.icon, iconSrc: incidentIconSrc.poop, label: recordMeta.poop.label, className: 'poop' }
   if (record.type === 'shed') return { icon: recordMeta.shed.icon, iconSrc: incidentIconSrc.shed, label: recordMeta.shed.label, className: 'shed' }
-  if (record.type === 'hospital') return { icon: recordMeta.hospital.icon, iconSrc: incidentIconSrc.hospital, label: '진료', className: 'hospital' }
+  if (record.type === 'hospital') return { icon: recordMeta.hospital.icon, iconSrc: incidentIconSrc.hospital, label: record.memo === '진료 예정' ? '진료 예정' : '진료', className: 'hospital' }
   if (record.type === 'other' && record.memo?.startsWith('메이팅')) return { icon: '', iconSrc: incidentIconSrc.mating, label: '메이팅', className: 'mating' }
   if (record.type === 'other' && record.memo?.startsWith('산란')) return { icon: '', iconSrc: incidentIconSrc.egg, label: '산란', className: 'egg' }
   if (record.type === 'other' && record.memo?.startsWith('약')) return { icon: '', iconSrc: incidentIconSrc.medicine, label: '약', className: 'medicine' }
@@ -3991,16 +3996,6 @@ function getEnvironmentMetricLabel(metricType: 'temperature' | 'humidity', profi
 function getRecordFoodNames(record: PetRecord) {
   if (record.feedingFoods?.length) return record.feedingFoods.map((food) => food.foodName)
   return record.foods ?? []
-}
-
-function getCalendarDays(month: Date) {
-  const start = new Date(month.getFullYear(), month.getMonth(), 1)
-  start.setDate(1 - start.getDay())
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(start)
-    date.setDate(start.getDate() + index)
-    return date
-  })
 }
 
 function reminderOccursOn(reminder: Reminder, date: Date) {

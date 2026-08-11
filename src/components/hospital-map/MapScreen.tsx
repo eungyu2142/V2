@@ -102,6 +102,21 @@ function getHospitalOpeningStatusClass(hospital: Hospital) {
   return 'is-unknown'
 }
 
+function normalizeHospitalName(value: string) {
+  return value.toLocaleLowerCase('ko-KR').replace(/\s+/g, '').replace(/[^\p{L}\p{N}]/gu, '')
+}
+
+function buildReviewBodyFromClinicRecord(record: PetRecord) {
+  const details = record.clinicDetails
+  if (!details) return record.memo ?? ''
+  if (details.reviewBody?.trim()) return details.reviewBody.trim()
+  const lines = [
+    details.diagnosis?.trim() ? `병명/진단: ${details.diagnosis.trim()}` : '',
+    details.treatment?.trim() ? `처방: ${details.treatment.trim()}` : '',
+  ].filter(Boolean)
+  return lines.join('\n') || record.memo || ''
+}
+
 function getOpeningTransitionDescription(hospital: Hospital, now = new Date()) {
   const hours = hospital.currentOpeningHours ?? hospital.regularOpeningHours
   const value = hospital.isOpenNow === true
@@ -239,13 +254,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [reviewCost, setReviewCost] = useState('')
   const [reviewDiagnosis, setReviewDiagnosis] = useState('')
   const [reviewTreatment, setReviewTreatment] = useState('')
-  const [reviewMedicine, setReviewMedicine] = useState('')
   const [reviewPetId, setReviewPetId] = useState(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
-  const [reviewMedicineStartDate, setReviewMedicineStartDate] = useState(new Date().toISOString().slice(0, 10))
-  const [reviewMedicineEndDate, setReviewMedicineEndDate] = useState('')
-  const [reviewMedicineDailyCount, setReviewMedicineDailyCount] = useState('1')
-  const [reviewMedicineBagImage, setReviewMedicineBagImage] = useState('')
-  const [reviewMedicineOcrRaw, setReviewMedicineOcrRaw] = useState<unknown>(null)
   const [reviewTags, setReviewTags] = useState<string[]>([])
   const [clinicRecords, setClinicRecords] = useState<PetRecord[]>([])
   const [reviewClinicRecordId, setReviewClinicRecordId] = useState('')
@@ -321,7 +330,12 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   )
   const reviewClinicRecordOptions = useMemo(
     () => clinicRecords
-      .filter((record) => record.type === 'hospital' && record.petId === reviewPetId)
+      .filter((record) => {
+        if (record.type !== 'hospital' || record.petId !== reviewPetId) return false
+        if (!selectedHospital) return true
+        const recordHospitalName = record.clinicDetails?.hospitalName || record.hospitalId || ''
+        return normalizeHospitalName(recordHospitalName) === normalizeHospitalName(selectedHospital.name)
+      })
       .map((record) => ({
         id: record.id,
         hospitalName: record.clinicDetails?.hospitalName || record.hospitalId || '진료 기록',
@@ -329,7 +343,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         disabled: (Boolean(record.reviewId) || linkedClinicRecordIds.has(record.id)) && record.id !== reviewClinicRecordId,
       }))
       .sort((a, b) => b.visitDate.localeCompare(a.visitDate)),
-    [clinicRecords, linkedClinicRecordIds, reviewClinicRecordId, reviewPetId],
+    [clinicRecords, linkedClinicRecordIds, reviewClinicRecordId, reviewPetId, selectedHospital],
   )
   const canSubmitHospitalReview = Boolean(
     reviewPetId
@@ -338,7 +352,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     && reviewVisitDate.trim().length > 0
     && reviewRating >= 1
     && (!reviewHasNextVisit || reviewNextVisitDate)
-    && (!reviewMedicine.trim() || reviewMedicineEndDate)
   )
   const selectedHospitalIsLiked = selectedHospital ? likedHospitals.some((hospital) => isSameHospitalIdentity(hospital, selectedHospital)) : false
   const selectedHospitalOpeningHours = selectedHospital?.openingHours ?? []
@@ -442,14 +455,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     setReviewNextVisitTime(reviewDraftPayload.review.nextVisitTime ?? '09:00')
     setReviewCost(reviewDraftPayload.review.cost ? reviewDraftPayload.review.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(reviewDraftPayload.review.diagnosis ?? '')
-    setReviewTreatment(reviewDraftPayload.review.treatment ?? '')
-    setReviewMedicine(reviewDraftPayload.review.medicine ?? '')
+    setReviewTreatment(reviewDraftPayload.review.treatment ?? reviewDraftPayload.review.medicine ?? '')
     setReviewPetId(reviewDraftPayload.review.petId && pets.some((pet) => pet.id === reviewDraftPayload.review.petId && isHospitalCareCategory(pet.group)) ? reviewDraftPayload.review.petId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
-    setReviewMedicineStartDate(reviewDraftPayload.review.medicineStartDate ?? reviewDraftPayload.review.visitDate ?? new Date().toISOString().slice(0, 10))
-    setReviewMedicineEndDate(reviewDraftPayload.review.medicineEndDate ?? '')
-    setReviewMedicineDailyCount(String(reviewDraftPayload.review.medicineDailyCount ?? 1))
-    setReviewMedicineBagImage(reviewDraftPayload.review.medicineBagImage ?? '')
-    setReviewMedicineOcrRaw(reviewDraftPayload.review.medicineOcrRaw ?? null)
     setReviewTags(reviewDraftPayload.review.tags ?? [])
     setReviewClinicRecordId(reviewDraftPayload.review.clinicRecordId ?? '')
     setQuery(hospital.name)
@@ -658,12 +665,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     setReviewCost('')
     setReviewDiagnosis('')
     setReviewTreatment('')
-    setReviewMedicine('')
-    setReviewMedicineStartDate(new Date().toISOString().slice(0, 10))
-    setReviewMedicineEndDate('')
-    setReviewMedicineDailyCount('1')
-    setReviewMedicineBagImage('')
-    setReviewMedicineOcrRaw(null)
     setReviewTags([])
     setReviewClinicRecordId('')
     setReviewPetId(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
@@ -685,13 +686,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     setReviewNextVisitTime(review.nextVisitTime ?? '09:00')
     setReviewCost(review.cost ? review.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(review.diagnosis ?? '')
-    setReviewTreatment(review.treatment ?? '')
-    setReviewMedicine(review.medicine ?? '')
-    setReviewMedicineStartDate(review.medicineStartDate ?? review.visitDate ?? new Date().toISOString().slice(0, 10))
-    setReviewMedicineEndDate(review.medicineEndDate ?? '')
-    setReviewMedicineDailyCount(String(review.medicineDailyCount ?? 1))
-    setReviewMedicineBagImage(review.medicineBagImage ?? '')
-    setReviewMedicineOcrRaw(review.medicineOcrRaw ?? null)
+    setReviewTreatment(review.treatment ?? review.medicine ?? '')
     setReviewTags(review.tags ?? [])
     setReviewClinicRecordId(review.clinicRecordId ?? clinicRecords.find((record) => record.reviewId === review.id)?.id ?? '')
     setReviewPetId(review.petId && pets.some((pet) => pet.id === review.petId && isHospitalCareCategory(pet.group)) ? review.petId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
@@ -708,15 +703,11 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     setReviewVisitDate(details.visitDate)
     setReviewCost(details.cost ? details.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(details.diagnosis ?? '')
-    setReviewTreatment(details.treatment ?? '')
-    setReviewBody(details.reviewBody ?? record.memo ?? '')
+    setReviewTreatment(details.treatment ?? details.medicine?.name ?? '')
+    setReviewBody(buildReviewBodyFromClinicRecord(record))
     setReviewHasNextVisit(Boolean(details.nextVisit))
     setReviewNextVisitDate(details.nextVisit?.date ?? '')
     setReviewNextVisitTime(details.nextVisit?.time ?? '09:00')
-    setReviewMedicine(details.medicine?.name ?? '')
-    setReviewMedicineStartDate(details.medicine?.startDate ?? details.visitDate)
-    setReviewMedicineEndDate(details.medicine?.endDate ?? '')
-    setReviewMedicineDailyCount(String(details.medicine?.dailyCount ?? 1))
   }
 
   const submitReview = async (event: FormEvent<HTMLFormElement>) => {
@@ -726,12 +717,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     const reviewPet = pets.find((pet) => pet.id === reviewPetId)
     const existingReview = editingReviewId ? selectedHospitalReviews.find((item) => item.id === editingReviewId) : null
 
+    const reviewId = editingReviewId ?? reviewDraftPayload?.review.id ?? crypto.randomUUID()
+    const clinicRecordId = reviewClinicRecordId || existingReview?.clinicRecordId || reviewDraftPayload?.review.clinicRecordId || reviewId
     const review: HospitalReview = {
-      id: editingReviewId ?? reviewDraftPayload?.review.id ?? crypto.randomUUID(),
+      id: reviewId,
       hospitalId: selectedHospital.id,
       petId: reviewPetId,
       petName: reviewPet?.name,
-      clinicRecordId: reviewClinicRecordId || existingReview?.clinicRecordId,
+      clinicRecordId,
       author: profileReviewAuthor,
       authorAvatarUrl: profile.avatarUrl,
       animalCategory: selectedReviewAnimalCategory,
@@ -743,12 +736,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
       diagnosis: reviewDiagnosis.trim(),
       treatment: reviewTreatment.trim(),
-      medicine: reviewMedicine.trim(),
-      medicineStartDate: reviewMedicineStartDate,
-      medicineEndDate: reviewMedicineEndDate,
-      medicineDailyCount: Math.max(1, Number(reviewMedicineDailyCount) || 1),
-      medicineBagImage: reviewMedicineBagImage || undefined,
-      medicineOcrRaw: reviewMedicineOcrRaw ?? undefined,
       tags: reviewTags,
       body: reviewBody.trim(),
       content: reviewBody.trim(),
@@ -764,16 +751,10 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     localStorage.setItem(reviewStorageKey, JSON.stringify(nextReviews))
     onReviewsChange(nextReviews)
     try {
-      if (!reviewClinicRecordId) {
-        resetReviewForm()
-        setIsReviewFormOpen(false)
-        if (reviewDraft) void onDeleteDraft(reviewDraft.id)
-        return
-      }
       await linkReviewToDiary({
         userId,
         reviewId: review.id,
-        clinicRecordId: reviewClinicRecordId,
+        clinicRecordId,
         petId: reviewPetId,
         hospitalName: selectedHospital.name,
         visitDate: reviewVisitDate,
@@ -785,15 +766,31 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           date: reviewNextVisitDate,
           time: reviewNextVisitTime || '09:00',
         } : undefined,
-        medicine: reviewMedicine.trim() ? {
-          name: reviewMedicine.trim(),
-          startDate: reviewMedicineStartDate || reviewVisitDate,
-          endDate: reviewMedicineEndDate || undefined,
-          dailyCount: Math.max(1, Number(reviewMedicineDailyCount) || 1),
-          ocrRaw: reviewMedicineOcrRaw,
-        } : undefined,
       })
-      setClinicRecords((current) => current.map((record) => record.id === reviewClinicRecordId ? { ...record, reviewId: review.id } : record))
+      setClinicRecords((current) => {
+        const nextRecord: PetRecord = {
+          id: clinicRecordId,
+          userId,
+          petId: reviewPetId,
+          type: 'hospital',
+          date: reviewVisitDate,
+          memo: [selectedHospital.name, reviewDiagnosis.trim(), reviewTreatment.trim()].filter(Boolean).join(' · '),
+          clinicDetails: {
+            hospitalName: selectedHospital.name,
+            visitDate: reviewVisitDate,
+            cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
+            diagnosis: reviewDiagnosis.trim(),
+            treatment: reviewTreatment.trim(),
+            reviewBody: reviewBody.trim(),
+            nextVisit: reviewHasNextVisit && reviewNextVisitDate ? { date: reviewNextVisitDate, time: reviewNextVisitTime || '09:00' } : undefined,
+          },
+          hospitalId: selectedHospital.id,
+          reviewId: review.id,
+          status: 'manual',
+          createdAt: new Date().toISOString(),
+        }
+        return [nextRecord, ...current.filter((record) => record.id !== clinicRecordId)]
+      })
     } catch (error) {
       console.error('Review diary link failed.', error)
       setMessage('리뷰는 저장됐지만 다이어리 연결에 실패했어요.')
@@ -848,7 +845,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   }
 
   const updateMobileSheetHeight = (height: number) => {
-    const clampedHeight = Math.min(92, Math.max(12, height))
+    const clampedHeight = Math.min(96, Math.max(5, height))
     mobileSheetHeightRef.current = clampedHeight
     setMobileSheetHeight(clampedHeight)
   }
@@ -975,15 +972,24 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     '--mobile-sheet-height': `${mobileSheetHeight}dvh`,
   } as CSSProperties
   const sortOptions: Array<[HospitalSort, string]> = [
-    ['distance', '가까운 순'],
-    ['reviews', '리뷰 많은 순'],
-    ['rating', '평점 높은 순'],
+    ['distance', '거리순'],
+    ['rating', '평점순'],
   ]
-  const renderSortButtons = () => sortOptions.map(([sort, label]) => (
-    <button className={selectedSort === sort ? 'active' : ''} type="button" key={sort} onClick={() => { setSelectedSort(sort); setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE) }}>
-      {label}
-    </button>
-  ))
+  const renderSortMenu = (id: string) => (
+    <label className="map-sort-menu" htmlFor={id}>
+      <span>정렬</span>
+      <select
+        id={id}
+        value={selectedSort === 'rating' ? 'rating' : 'distance'}
+        onChange={(event) => {
+          setSelectedSort(event.target.value as HospitalSort)
+          setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
+        }}
+      >
+        {sortOptions.map(([sort, label]) => <option value={sort} key={sort}>{label}</option>)}
+      </select>
+    </label>
+  )
   const renderOpenNowButton = () => (
     <button className={`map-open-now-filter ${openNowOnly ? 'active' : ''}`} type="button" aria-pressed={openNowOnly} disabled={isOpenNowFilterLoading} onClick={() => void toggleOpenNowFilter()}>
       {isOpenNowFilterLoading ? '영업 확인 중' : '영업 중'}
@@ -1024,8 +1030,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         </form>
 
         <div className="map-desktop-sort-tabs" aria-label="병원 정렬과 필터">
-          {renderSortButtons()}
           {renderOpenNowButton()}
+          {renderSortMenu('hospital-sort-desktop')}
         </div>
         <div className="map-mobile-open-filter" aria-label="영업 상태 필터">
           {renderOpenNowButton()}
@@ -1034,7 +1040,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={mobileSheetStyle}>
           <button className="map-sheet-handle" type="button" aria-label="병원 목록 높이 조절" {...sheetDragHandlers} />
           <div className="map-sheet-sort-tabs" aria-label="병원 정렬">
-            {renderSortButtons()}
+            {renderSortMenu('hospital-sort-mobile')}
           </div>
           {filteredHospitals.length === 0 ? (
             <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
@@ -1217,12 +1223,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                 cost={reviewCost}
                 diagnosis={reviewDiagnosis}
                 treatment={reviewTreatment}
-                medicine={reviewMedicine}
                 pets={reviewablePets.map((pet) => ({ id: pet.id, name: pet.name, group: pet.group, species: pet.species }))}
                 selectedPetId={reviewPetId}
-                medicineStartDate={reviewMedicineStartDate}
-                medicineEndDate={reviewMedicineEndDate}
-                medicineDailyCount={reviewMedicineDailyCount}
                 selectedTags={reviewTags}
                 clinicRecords={reviewClinicRecordOptions}
                 selectedClinicRecordId={reviewClinicRecordId}
@@ -1240,14 +1242,10 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                 onCostChange={setReviewCost}
                 onDiagnosisChange={setReviewDiagnosis}
                 onTreatmentChange={setReviewTreatment}
-                onMedicineChange={setReviewMedicine}
                 onPetChange={(petId) => {
                   setReviewPetId(petId)
                   setReviewClinicRecordId('')
                 }}
-                onMedicineStartDateChange={setReviewMedicineStartDate}
-                onMedicineEndDateChange={setReviewMedicineEndDate}
-                onMedicineDailyCountChange={setReviewMedicineDailyCount}
                 onToggleTag={toggleReviewTag}
                 onClinicRecordSelect={selectClinicRecordForReview}
                 onSubmit={submitReview}
