@@ -1678,7 +1678,19 @@ export default function DiaryPage({
         />
       )}
 
-      <DiaryNotice records={petRecords} resolvedInsightIds={resolvedInsightIds} />
+      <DiaryNotice
+        records={petRecords}
+        petName={selectedPet?.name ?? '펫'}
+        resolvedInsightIds={resolvedInsightIds}
+        followedUpInsightIds={followedUpInsightIds}
+        onShedComplete={() => saveShedCheckRecord('탈피 완료')}
+        onShedNotYet={() => saveShedCheckRecord('탈피 확인 · 완료 안됨')}
+        onFollowUpInsight={markDiaryInsightFollowUp}
+        onResolveInsight={resolveDiaryInsight}
+        onKeepInsight={keepDiaryInsight}
+        onCreateQna={selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id) : undefined}
+        onFindHospital={selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id) : undefined}
+      />
 
       {!readOnly && (
         <NotificationOptInNudge
@@ -1686,8 +1698,6 @@ export default function DiaryPage({
           hasActiveRoutines={petCarePlans.some((reminder) => reminder.isActive)}
         />
       )}
-
-      <DiaryInsightBanner records={petRecords} petName={selectedPet?.name ?? '펫'} onShedComplete={() => saveShedCheckRecord('탈피 완료')} onShedNotYet={() => saveShedCheckRecord('탈피 확인 · 완료 안됨')} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={markDiaryInsightFollowUp} onResolveInsight={resolveDiaryInsight} onKeepInsight={keepDiaryInsight} onCreateQna={selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id) : undefined} onFindHospital={selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id) : undefined} />
 
       <div className="diary-content-shell">
         <div className="diary-main-flow">
@@ -3059,9 +3069,65 @@ function DateRecordsScreen({ date, records, mobileActions, onBack, onOpenRecord,
   }) : <p>이 날짜에 작성된 기록이 없어요.</p>}</section>{mobileActions ? <section className="date-records-mobile-actions">{mobileActions}</section> : null}<section className="date-memo-composer"><label>메모<textarea value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="이 날짜에 남길 메모" /></label><button type="button" disabled={!memo.trim()} onClick={saveMemo}>메모 추가</button></section></main>
 }
 
-function DiaryNotice({ records, resolvedInsightIds = [] }: { records: PetRecord[]; resolvedInsightIds?: string[] }) {
-  const notice = buildDiaryNotice(records, resolvedInsightIds)
-  return <p className="diary-notice-line"><strong>NOTICE</strong>{notice.stage ? <b className={`notice-stage stage-${notice.stage}`}>{notice.stage}단계</b> : null}<span>{notice.message}</span></p>
+function DiaryNotice({
+  records,
+  petName,
+  resolvedInsightIds = [],
+  followedUpInsightIds = [],
+  onShedComplete,
+  onShedNotYet,
+  onFollowUpInsight,
+  onResolveInsight,
+  onKeepInsight,
+  onCreateQna,
+  onFindHospital,
+}: {
+  records: PetRecord[]
+  petName: string
+  resolvedInsightIds?: string[]
+  followedUpInsightIds?: string[]
+  onShedComplete?: () => void
+  onShedNotYet?: () => void
+  onFollowUpInsight?: (insightId: string) => void
+  onResolveInsight?: (insightId: string) => void
+  onKeepInsight?: (insightId: string) => void
+  onCreateQna?: () => void
+  onFindHospital?: () => void
+}) {
+  const insights = buildDiaryInsights(records, petName, resolvedInsightIds)
+  if (insights.length === 0) {
+    const notice = buildDiaryNotice(records, resolvedInsightIds)
+    return <div className="diary-notice-line"><strong>NOTICE</strong><span>{notice.message}</span></div>
+  }
+  return (
+    <section className="diary-notice-line diary-notice-alerts" aria-label="다이어리 알림">
+      <strong>NOTICE</strong>
+      <div className="diary-notice-items">
+        {insights.map((insight) => {
+          const stage = noticeStageFromTitle(insight.title)
+          const followedUp = followedUpInsightIds.includes(insight.id)
+          return (
+            <div className="diary-notice-item" key={insight.id}>
+              {stage ? <b className={`notice-stage stage-${stage}`}>{stage}단계</b> : null}
+              <span>{insight.title}</span>
+              <div className="diary-notice-actions">
+                {insight.action === 'shed-check' && onShedComplete && onShedNotYet ? (
+                  <><button type="button" onClick={onShedNotYet}>탈피 중</button><button type="button" onClick={onShedComplete}>탈피 완료</button></>
+                ) : followedUp && onResolveInsight && onKeepInsight ? (
+                  <><b>해결됐나요?</b><button type="button" onClick={() => onResolveInsight(insight.id)}>예</button><button type="button" onClick={() => onKeepInsight(insight.id)}>아니오</button></>
+                ) : (
+                  <>
+                    {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna() }}>Q&amp;A</button>}
+                    {onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾기</button>}
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
 }
 
 function DiaryInsightBanner({

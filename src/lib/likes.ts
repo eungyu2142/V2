@@ -31,13 +31,22 @@ export async function loadLikeStates(targetType: LikeTargetType, targetIds: stri
 }
 
 export async function saveLike(targetType: LikeTargetType, targetId: string, userId: string, liked: boolean) {
-  const request = liked
-    ? supabase.from('likes').upsert(
-      { user_id: userId, target_type: targetType, target_id: targetId },
-      { onConflict: 'user_id,target_type,target_id' },
-    )
-    : supabase.from('likes').delete().eq('user_id', userId).eq('target_type', targetType).eq('target_id', targetId)
+  const { data: authData } = await supabase.auth.getUser()
+  const ownerId = authData.user?.id ?? userId
+  if (!ownerId) throw new Error('로그인이 필요합니다.')
 
-  const { error } = await request
-  if (error) throw error
+  if (!liked) {
+    const { error } = await supabase.from('likes').delete().eq('user_id', ownerId).eq('target_type', targetType).eq('target_id', targetId)
+    if (error) throw error
+    return
+  }
+
+  const row = { user_id: ownerId, target_type: targetType, target_id: targetId }
+  const { error: upsertError } = await supabase.from('likes').upsert(row, { onConflict: 'user_id,target_type,target_id' })
+  if (!upsertError) return
+
+  // Older deployments may not expose the composite conflict constraint to PostgREST.
+  // A plain insert still uses the database uniqueness rule when it exists.
+  const { error: insertError } = await supabase.from('likes').insert(row)
+  if (insertError) throw insertError
 }

@@ -12,7 +12,6 @@ import { buildHospitalSearchQuery, createGoogleHtmlMarker, formatReviewDate, get
 import type { GoogleHtmlMarker, GoogleLatLngLiteral, GoogleMapInstance } from '../../types/map'
 const HOSPITAL_LIST_PAGE_SIZE = 10
 const HOSPITAL_REVIEWS_ENABLED = true
-const HOSPITAL_RATING_ENABLED = true
 const DEFAULT_MAP_CENTER: Coordinates = { lat: 37.5665, lng: 126.978 }
 const MAP_LOCATION_SESSION_KEY = 'exocare-map-location'
 function HospitalAddressIcon() {
@@ -69,32 +68,10 @@ function OpeningStatusIcon({ open }: { open: boolean }) {
   )
 }
 
-type HospitalDisplayReviewSummary = {
-  average: number
-  count: number
-  source: 'google' | 'exocare' | 'combined' | null
-}
-
-function getHospitalDisplayReviewSummary(hospital: Hospital, hospitalReviews: HospitalReview[]): HospitalDisplayReviewSummary {
-  const exocareSummary = getReviewSummary(hospitalReviews.filter((review) => isHospitalCareCategory(review.animalCategory)))
-  const googleRating = typeof hospital.rating === 'number' && hospital.rating > 0 ? hospital.rating : null
-
-  if (googleRating !== null && exocareSummary.count > 0) {
-    return { average: (googleRating + exocareSummary.average) / 2, count: exocareSummary.count, source: 'combined' }
-  }
-  if (googleRating !== null) {
-    return { average: googleRating, count: 0, source: 'google' }
-  }
-  if (exocareSummary.count > 0) {
-    return { average: exocareSummary.average, count: exocareSummary.count, source: 'exocare' }
-  }
-  return { average: 0, count: 0, source: null }
-}
-
 function getHospitalOpeningStatusLabel(hospital: Hospital) {
   if (hospital.isOpenNow === true) return '영업 중'
   if (hospital.isOpenNow === false) return '영업 종료'
-  return '영업정보 없음'
+  return '운영시간 확인 필요'
 }
 
 function getHospitalOpeningStatusClass(hospital: Hospital) {
@@ -296,11 +273,11 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     return sortedHospitals
       .filter((hospital) => hospitalMatchesQuery(hospital, query))
       .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
-      .filter((hospital) => !openNowOnly || hospital.isOpenNow !== false)
+      .filter((hospital) => !openNowOnly || hospital.isOpenNow === true)
       .sort((a, b) => {
         if (selectedSort === 'rating') {
-          const bRating = getHospitalDisplayReviewSummary(b, reviews[b.id] ?? []).average
-          const aRating = getHospitalDisplayReviewSummary(a, reviews[a.id] ?? []).average
+          const bRating = b.rating ?? getReviewSummary(reviews[b.id] ?? []).average
+          const aRating = a.rating ?? getReviewSummary(reviews[a.id] ?? []).average
           return bRating - aRating
         }
         return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
@@ -353,9 +330,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const selectedHospitalOpeningHours = selectedHospital?.openingHours ?? []
   const selectedHospitalTodayHours = getTodayOpeningHoursDescription(selectedHospitalOpeningHours)
   const selectedHospitalTodaySchedule = parseTodayOpeningHours(selectedHospitalTodayHours)
-  const selectedHospitalDisplayReviewSummary = selectedHospital
-    ? getHospitalDisplayReviewSummary(selectedHospital, selectedHospitalReviews)
-    : { average: 0, count: 0, source: null }
   const selectedHospitalOpeningTransition = selectedHospital ? getOpeningTransitionDescription(selectedHospital) : null
 
   useEffect(() => {
@@ -390,7 +364,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     const enrichVisibleHospitals = async () => {
       for (let index = 0; index < candidates.length; index += 2) {
         const batch = candidates.slice(index, index + 2)
-        const details = await Promise.all(batch.map((hospital) => loadGoogleHospitalDetails(hospital)))
+        const details = await Promise.all(batch.map((hospital) => loadGoogleHospitalDetails(hospital, { refreshOpeningStatus: true })))
         if (cancelled) return
         const detailsById = new Map(details.filter((hospital): hospital is Hospital => Boolean(hospital)).map((hospital) => [hospital.id, hospital]))
         if (detailsById.size > 0) {
@@ -976,7 +950,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       <select
         id={id}
         aria-label="병원 정렬"
-        value={selectedSort === 'rating' ? 'rating' : 'distance'}
+        value={selectedSort}
         onChange={(event) => {
           setSelectedSort(event.target.value as HospitalSort)
           setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
@@ -1045,7 +1019,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
               {visibleHospitals.map((hospital) => (
                 <HospitalListRow
                   hospital={hospital}
-                  reviews={reviews[hospital.id] ?? []}
                   key={hospital.id}
                   active={hospital.id === selectedHospitalId}
                   onSelect={() => setSelectedHospitalId(hospital.id)}
@@ -1082,7 +1055,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           </header>
 
           <div className="hospital-detail-summary" aria-label="병원 요약 정보">
-            {HOSPITAL_RATING_ENABLED && <HospitalRatingSummary summary={selectedHospitalDisplayReviewSummary} />}
             <span className="hospital-summary-distance">{selectedHospital.distanceKm === undefined ? '거리 계산 전' : `${selectedHospital.distanceKm.toFixed(1)}km`}</span>
             {getHospitalOpeningStatusLabel(selectedHospital) && (
               <span className={`hospital-open-status ${getHospitalOpeningStatusClass(selectedHospital)}`}>
@@ -1255,32 +1227,12 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   )
 }
 
-function HospitalRatingSummary({ summary, compact = false }: { summary: HospitalDisplayReviewSummary; compact?: boolean }) {
-  if (summary.source === null) return null
-  const sourceLabel = summary.source === 'combined'
-    ? 'Google과 파작파작 방문 리뷰 통합 별점'
-    : summary.source === 'exocare'
-      ? '파작파작 방문 리뷰 별점'
-      : 'Google 별점'
-  return (
-    <span className={`hospital-rating-summary ${compact ? 'compact' : ''}`} aria-label={`${sourceLabel} ${summary.average.toFixed(1)}점`}>
-      <span className="hospital-rating-stars" aria-hidden="true">
-        <span>★★★★★</span>
-        <span style={{ width: `${Math.min(100, Math.max(0, summary.average / 5 * 100))}%` }}>★★★★★</span>
-      </span>
-      <span className="hospital-rating-value">{summary.average.toFixed(1)}</span>
-    </span>
-  )
-}
-
-function HospitalListRow({ hospital, reviews, active, onSelect }: { hospital: Hospital; reviews: HospitalReview[]; active: boolean; onSelect: () => void }) {
-  const reviewSummary = getHospitalDisplayReviewSummary(hospital, reviews)
+function HospitalListRow({ hospital, active, onSelect }: { hospital: Hospital; active: boolean; onSelect: () => void }) {
   return (
     <article className={`map-hospital-row ${active ? 'active' : ''}`}>
       <button className="map-hospital-row-main" type="button" onClick={onSelect}>
         <span>
           <strong>{hospital.name}</strong>
-          {HOSPITAL_RATING_ENABLED && <HospitalRatingSummary summary={reviewSummary} compact />}
           <small>
             <span>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</span>
             <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${getHospitalOpeningStatusClass(hospital)}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>

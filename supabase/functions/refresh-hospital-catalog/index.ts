@@ -17,8 +17,38 @@ type SeedHospital = {
   link?: string
 }
 
+type VerifiedWebFallback = {
+  address: string
+  phone: string
+  weekdayDescriptions: string[]
+  sources: string[]
+}
+
 const NAVER_LOCAL_SEARCH_URL = 'https://openapi.naver.com/v1/search/local.json'
 const SEARCH_SUFFIX = '파충류 동물 병원'
+const PLACES_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
+const DEFAULT_DETAIL_BATCH_SIZE = 3
+const MAX_DETAIL_BATCH_SIZE = 5
+const MAX_DETAIL_ATTEMPTS_PER_RUN = 10
+const VERIFIED_WEB_FALLBACKS: Record<string, VerifiedWebFallback> = {
+  [normalize('닥터강 동물병원')]: {
+    address: '울산광역시 중구 화진길 13-2 리버스위트 상가 1층',
+    phone: '0507-1430-3123',
+    weekdayDescriptions: [
+      '월요일: 오전 9:00~오후 7:00',
+      '화요일: 오전 9:00~오후 7:00',
+      '수요일: 오전 9:00~오후 7:00',
+      '목요일: 휴무',
+      '금요일: 오전 9:00~오후 7:00',
+      '토요일: 오전 9:00~오후 3:00',
+      '일요일: 휴무',
+    ],
+    sources: [
+      'https://hospital.fitpetmall.com/hospitals/3374',
+      'https://pinda.biz/bbs/board.php?bo_table=tl_now_add&wr_id=61364',
+    ],
+  },
+}
 const REGIONS = [
   '서울 강남구', '서울 강동구', '서울 강북구', '서울 강서구', '서울 관악구', '서울 광진구', '서울 구로구', '서울 금천구', '서울 노원구', '서울 도봉구', '서울 동대문구', '서울 동작구', '서울 마포구', '서울 서대문구', '서울 서초구', '서울 성동구', '서울 성북구', '서울 송파구', '서울 양천구', '서울 영등포구', '서울 용산구', '서울 은평구', '서울 종로구', '서울 중구', '서울 중랑구',
   '부산 강서구', '부산 금정구', '부산 기장군', '부산 남구', '부산 동구', '부산 동래구', '부산 부산진구', '부산 북구', '부산 사상구', '부산 사하구', '부산 서구', '부산 수영구', '부산 연제구', '부산 영도구', '부산 중구', '부산 해운대구',
@@ -56,9 +86,22 @@ Deno.serve(async (request) => {
   })
 
   try {
-    const body = await request.json().catch(() => ({})) as { seedHospitals?: SeedHospital[] }
+    const body = await request.json().catch(() => ({})) as {
+      seedHospitals?: SeedHospital[]
+      detailsOnly?: boolean
+      detailBatchSize?: number
+    }
     const seeded = await seedCatalogIfEmpty(supabase, body.seedHospitals ?? [])
     const catalogCount = await readCatalogCount(supabase)
+    const detailRefresh = await refreshStalePlacesDetails(
+      supabase,
+      supabaseUrl,
+      serviceRoleKey,
+      clampInteger(body.detailBatchSize, 1, MAX_DETAIL_BATCH_SIZE, DEFAULT_DETAIL_BATCH_SIZE),
+    )
+    if (body.detailsOnly) {
+      return json({ status: 'details-refreshed', seeded, catalogCount, detailRefresh })
+    }
     const cycle = new Date().toISOString().slice(0, 7)
     const { data: claimedIndex, error: claimError } = await supabase.rpc('claim_hospital_collection_region', {
       p_cycle: cycle,
@@ -66,7 +109,7 @@ Deno.serve(async (request) => {
     })
     if (claimError) throw claimError
     if (typeof claimedIndex !== 'number') {
-      return json({ status: 'idle', cycle, seeded, catalogCount, regionCount: REGIONS.length })
+      return json({ status: 'idle', cycle, seeded, catalogCount, regionCount: REGIONS.length, detailRefresh })
     }
 
     const region = REGIONS[claimedIndex]
@@ -79,7 +122,7 @@ Deno.serve(async (request) => {
         if (upsertError) throw upsertError
       }
       await supabase.rpc('finish_hospital_collection_region', { p_region_index: claimedIndex, p_error: null })
-      return json({ status: 'collected', cycle, seeded, catalogCount, region, regionIndex: claimedIndex, saved: rows.length })
+      return json({ status: 'collected', cycle, seeded, catalogCount, region, regionIndex: claimedIndex, saved: rows.length, detailRefresh })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown collection error'
       await supabase.rpc('finish_hospital_collection_region', { p_region_index: claimedIndex, p_error: message.slice(0, 500) })
@@ -136,6 +179,126 @@ async function readCatalogCount(supabase: ReturnType<typeof createClient>) {
   const { count, error } = await supabase.from('hospitals').select('id', { count: 'exact', head: true })
   if (error) throw error
   return count ?? 0
+}
+
+async function refreshStalePlacesDetails(
+  supabase: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  batchSize: number,
+) {
+  const staleBefore = new Date(Date.now() - PLACES_CACHE_TTL_MS).toISOString()
+  const { data, error } = await supabase
+    .from('hospitals')
+    .select('id,external_id,name,address,road_address,phone,lat,lng,payload,places_last_updated')
+    .or(`places_last_updated.is.null,places_last_updated.lt.${staleBefore}`)
+    .order('places_last_updated', { ascending: true, nullsFirst: true })
+    .limit(200)
+  if (error) throw error
+
+  const staleHospitals = data ?? []
+  const rotationOffset = staleHospitals.length > 0
+    ? (Math.floor(Date.now() / 60_000) * MAX_DETAIL_ATTEMPTS_PER_RUN) % staleHospitals.length
+    : 0
+  const targets = [
+    ...staleHospitals.slice(rotationOffset),
+    ...staleHospitals.slice(0, rotationOffset),
+  ].slice(0, MAX_DETAIL_ATTEMPTS_PER_RUN)
+  const results: Array<{ id: string; name: string; status: 'refreshed' | 'stale' | 'failed' }> = []
+  for (const hospital of targets) {
+    if (results.filter((result) => result.status !== 'failed').length >= batchSize) break
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/search-reptile-amphibian-places`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `${hospital.name} ${hospital.road_address || hospital.address || ''}`.trim(),
+          includeDetails: true,
+          hospitalId: hospital.external_id || hospital.id,
+          hospitalName: hospital.name,
+          hospitalAddress: hospital.road_address || hospital.address || '',
+          latitude: hospital.lat,
+          longitude: hospital.lng,
+        }),
+      })
+      const payload = await response.json().catch(() => ({})) as { count?: number; cache?: string; error?: string }
+      if (!response.ok) throw new Error(payload.error || `Places detail refresh failed (${response.status})`)
+      if (!payload.count) throw new Error('No matching Google Place was found')
+      results.push({
+        id: hospital.id,
+        name: hospital.name,
+        status: payload.cache === 'stale' ? 'stale' : 'refreshed',
+      })
+    } catch (refreshError) {
+      console.error(`Places detail refresh failed for ${hospital.name}:`, refreshError)
+      const fallbackSaved = await persistVerifiedWebFallback(supabase, hospital)
+      results.push({ id: hospital.id, name: hospital.name, status: fallbackSaved ? 'refreshed' : 'failed' })
+    }
+    await delay(350)
+  }
+
+  return {
+    requested: results.length,
+    refreshed: results.filter((result) => result.status === 'refreshed').length,
+    stale: results.filter((result) => result.status === 'stale').length,
+    failed: results.filter((result) => result.status === 'failed').length,
+    results,
+  }
+}
+
+async function persistVerifiedWebFallback(
+  supabase: ReturnType<typeof createClient>,
+  hospital: {
+    id: string
+    name: string
+    address: string | null
+    road_address: string | null
+    phone: string | null
+    payload: Record<string, unknown> | null
+  },
+) {
+  const fallback = VERIFIED_WEB_FALLBACKS[normalize(hospital.name)]
+  if (!fallback) return false
+  const now = new Date().toISOString()
+  const openingHours = { weekdayDescriptions: fallback.weekdayDescriptions }
+  const payload = {
+    ...(hospital.payload ?? {}),
+    verifiedWebDetails: {
+      checkedAt: now,
+      sources: fallback.sources,
+      note: '공개 웹 검색 결과를 교차 확인한 보완 정보이며 방문 전 병원 확인이 필요합니다.',
+    },
+  }
+  const { error } = await supabase
+    .from('hospitals')
+    .update({
+      address: hospital.address || fallback.address,
+      road_address: hospital.road_address || fallback.address,
+      phone: hospital.phone || fallback.phone,
+      opening_hours: openingHours,
+      current_opening_hours: null,
+      is_open_now: null,
+      places_last_updated: now,
+      opening_hours_updated_at: now,
+      last_collected_at: now,
+      payload,
+      updated_at: now,
+    })
+    .eq('id', hospital.id)
+  if (error) throw error
+  return true
+}
+
+function clampInteger(value: number | undefined, min: number, max: number, fallback: number) {
+  if (!Number.isFinite(value)) return fallback
+  return Math.min(max, Math.max(min, Math.trunc(value as number)))
+}
+
+function delay(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
 async function searchNaverHospitals(query: string, clientId: string, clientSecret: string) {

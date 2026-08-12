@@ -58,6 +58,28 @@ function readHospitalSnapshot(payload: unknown): HospitalSnapshot | undefined {
   }
 }
 
+function readCommentHospitalSnapshot(comment: QnaComment): HospitalSnapshot | undefined {
+  return comment.hospitalSnapshot
+    ?? readHospitalSnapshot(comment)
+    ?? readHospitalSnapshot((comment as QnaComment & { hospital_snapshot?: unknown }).hospital_snapshot)
+}
+
+function getLocalCommentHospitalSnapshot(commentId: string): HospitalSnapshot | undefined {
+  try {
+    return readHospitalSnapshot(window.localStorage.getItem(`qna-comment-hospital:${commentId}`))
+  } catch {
+    return undefined
+  }
+}
+
+function setLocalCommentHospitalSnapshot(commentId: string, hospital: HospitalSnapshot) {
+  try {
+    window.localStorage.setItem(`qna-comment-hospital:${commentId}`, JSON.stringify(hospital))
+  } catch {
+    // Storage may be unavailable in private browsing; the in-memory state still renders the card.
+  }
+}
+
 function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalSnapshot[]; onSelect: (hospital: HospitalSnapshot) => void; onClose: () => void }) {
   const [search, setSearch] = useState('')
   const [visibleCount, setVisibleCount] = useState(10)
@@ -98,7 +120,9 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   const selectedBase = posts.find((post) => post.id === selectedId)
   const selected = selectedBase ? { ...selectedBase, ...postLikeOverrides[selectedBase.id] } : undefined
   const withCommentLikes = (items: QnaComment[]) => items.map((item) => {
-    const hospitalSnapshot = item.hospitalSnapshot ?? commentHospitalOverrides[item.id]
+    const hospitalSnapshot = readCommentHospitalSnapshot(item)
+      ?? commentHospitalOverrides[item.id]
+      ?? getLocalCommentHospitalSnapshot(item.id)
     return {
       ...item,
       ...(hospitalSnapshot ? { hospitalSnapshot } : {}),
@@ -140,9 +164,10 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
         Object.entries(grouped).forEach(([postId, remoteComments]) => {
           merged[postId] = remoteComments.map((remoteComment) => {
             const localComment = current[postId]?.find((commentItem) => commentItem.id === remoteComment.id)
-            return localComment?.hospitalSnapshot && !remoteComment.hospitalSnapshot
-              ? { ...remoteComment, hospitalSnapshot: localComment.hospitalSnapshot }
-              : remoteComment
+            const hospitalSnapshot = readCommentHospitalSnapshot(remoteComment)
+              ?? (localComment ? readCommentHospitalSnapshot(localComment) : undefined)
+              ?? getLocalCommentHospitalSnapshot(remoteComment.id)
+            return hospitalSnapshot ? { ...remoteComment, hospitalSnapshot } : remoteComment
           })
         })
         return merged
@@ -275,6 +300,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     const newComment: QnaComment = { id: crypto.randomUUID(), author: displayAuthor, authorAvatarUrl: profile.avatarUrl, body: comment.trim(), createdAt: new Date().toISOString(), mine: true, isAccepted: false, hospitalSnapshot: attachedHospitalSnapshot }
     const hospitalPayload = newComment.hospitalSnapshot ?? null
     if (attachedHospitalSnapshot) {
+      setLocalCommentHospitalSnapshot(newComment.id, attachedHospitalSnapshot)
       setCommentHospitalOverrides((items) => ({ ...items, [newComment.id]: attachedHospitalSnapshot }))
     }
     setCommentsByPost((items) => {
@@ -347,7 +373,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
               <div className="qna-comment-head"><span className="qna-comment-author"><UserAvatar url={item.mine ? profile.avatarUrl : item.authorAvatarUrl} name={item.author} /><span><strong>{item.author} <QnaTrustBadge score={getTrustScoreForAuthor(trustPosts, item.author)} /></strong><time>{formatQnaDate(item.createdAt)}</time></span></span>{item.mine && <div className="qna-comment-menu"><button type="button" aria-label="댓글 관리 메뉴" aria-expanded={commentMenuId === item.id} onClick={() => setCommentMenuId(commentMenuId === item.id ? null : item.id)}>⋮</button>{commentMenuId === item.id && <div><button type="button" onClick={async () => { await supabase.from('post_comments').delete().eq('id', item.id).eq('user_id', userId); setCommentsByPost((items) => ({ ...items, [selected.id]: (items[selected.id] ?? []).filter((commentItem) => commentItem.id !== item.id) })); setCommentMenuId(null) }}>댓글 삭제</button></div>}</div>}</div>
               {selected.selectedAnswerCommentId === item.id && <span className="accepted-answer-chip">채택 답변</span>}
               {item.body && <p>{item.body}</p>}
-              {item.hospitalSnapshot && <HospitalAttachCard hospital={item.hospitalSnapshot} mode="posted" onOpen={() => onOpenHospital(item.hospitalSnapshot!)} />}
+              {readCommentHospitalSnapshot(item) && <HospitalAttachCard hospital={readCommentHospitalSnapshot(item)!} mode="posted" onOpen={() => onOpenHospital(readCommentHospitalSnapshot(item)!)} />}
               <button className={`qna-comment-like ${item.liked ? 'active' : ''}`} type="button" aria-label={item.liked ? '댓글 좋아요 취소' : '댓글 좋아요'} aria-pressed={item.liked} onClick={() => void toggleCommentLike(item)}><span aria-hidden="true">{item.liked ? '♥' : '♡'}</span>{(item.likes ?? 0) > 0 && <span className="qna-comment-like-count">{item.likes}</span>}</button>
               {selected.mine === true && <button className="qna-accept-button" type="button" onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '답변 채택'}</button>}
             </article>
@@ -479,7 +505,7 @@ function QnaFilterChoiceSheet({ scope, status, category, sort, onApply, onClose 
       <button className="qna-sort-sheet-dim" type="button" aria-label="필터 닫기" onClick={onClose} />
       <section className="qna-sort-sheet qna-filter-choice-sheet" role="dialog" aria-modal="true" aria-label="Q&A 필터">
         <span className="hospital-picker-handle" aria-hidden="true" />
-        {showStatus && <fieldset><legend>질문 상태</legend>{([['unresolved', '미해결'], ['waiting', '답변 대기'], ['answered', '답변 있음(미해결)'], ['resolved', '해결']] as const).map(([value, label]) => { const active = draftStatus === value; return <button className={active ? 'active' : ''} type="button" key={value} aria-pressed={active} onClick={() => setDraftStatus(value)}>{label}</button> })}</fieldset>}
+        {showStatus && <fieldset><legend>질문 상태</legend>{([['unresolved', '미해결'], ['resolved', '해결']] as const).map(([value, label]) => { const active = draftStatus === value; return <button className={active ? 'active' : ''} type="button" key={value} aria-pressed={active} onClick={() => setDraftStatus(value)}>{label}</button> })}</fieldset>}
         {showCategory && <fieldset><legend>주제</legend>{([['all', '전체'], ...qnaCategoryCards.map((item) => [item, item] as [QnaCategory, string])]).map(([value, label]) => { const active = value === 'all' ? draftCategory.length === 0 : draftCategory.includes(value as QnaCategory); return <button className={active ? 'active' : ''} type="button" key={value} aria-pressed={active} onClick={() => setDraftCategory(value === 'all' ? [] : draftCategory.includes(value as QnaCategory) ? draftCategory.filter((item) => item !== value) : [...draftCategory, value as QnaCategory])}>{label}</button> })}</fieldset>}
         <fieldset><legend>정렬</legend>{(['latest', 'popular', 'comments'] as QnaSort[]).map((value) => <button className={draftSort === value ? 'active' : ''} type="button" key={value} aria-pressed={draftSort === value} onClick={() => setDraftSort(value)}>{qnaSortLabel(value)}</button>)}</fieldset>
         <button className="qna-filter-sheet-done" type="button" onClick={() => onApply(draftStatus, draftCategory, draftSort)}>적용</button>

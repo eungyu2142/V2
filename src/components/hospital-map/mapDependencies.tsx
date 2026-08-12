@@ -301,7 +301,7 @@ export async function searchHospitals(query: string, category: AnimalCategory, l
 async function loadStoredHospitals(query: string, category: AnimalCategory) {
   const { data, error } = await supabase
     .from('hospitals')
-    .select('id, external_id, name, address, road_address, phone, link, google_place_id, lat, lng, categories, supported_animals, source, payload, last_collected_at')
+    .select('id, external_id, name, address, road_address, phone, link, google_place_id, google_rating, google_review_count, google_phone, google_website, opening_hours, current_opening_hours, is_open_now, opening_hours_updated_at, places_last_updated, lat, lng, categories, supported_animals, source, payload, last_collected_at')
     .order('name', { ascending: true })
   if (error) {
     console.error('Stored hospital catalog load failed:', error)
@@ -318,9 +318,18 @@ async function loadStoredHospitals(query: string, category: AnimalCategory) {
       name: row.name,
       address: row.address,
       roadAddress: row.road_address,
-      phone: row.phone,
+      phone: row.google_phone || row.phone,
       link: row.link,
       googlePlaceId: row.google_place_id,
+      rating: row.google_rating,
+      googleReviewCount: row.google_review_count,
+      websiteUri: row.google_website,
+      regularOpeningHours: row.opening_hours,
+      currentOpeningHours: row.current_opening_hours,
+      openingHours: row.current_opening_hours?.weekdayDescriptions ?? row.opening_hours?.weekdayDescriptions ?? [],
+      isOpenNow: row.is_open_now,
+      openingHoursUpdatedAt: row.opening_hours_updated_at,
+      placesLastUpdated: row.places_last_updated,
       lat: row.lat,
       lng: row.lng,
       categories: row.categories,
@@ -478,9 +487,12 @@ function transformHospitalItem(item: Record<string, unknown>, index: number, que
     ? openingHoursSource.filter((value): value is string => typeof value === 'string')
     : []
   const rawIsOpenNow = item.isOpenNow ?? item.is_open_now
-  const isOpenNow = typeof rawIsOpenNow === 'boolean'
-    ? rawIsOpenNow
-    : currentOpeningHours?.openNow ?? regularOpeningHours?.openNow ?? null
+  const inferredIsOpenNow = inferOpeningStatus(openingHours)
+  const isOpenNow = typeof currentOpeningHours?.openNow === 'boolean'
+    ? currentOpeningHours.openNow
+    : typeof rawIsOpenNow === 'boolean'
+      ? rawIsOpenNow
+      : inferredIsOpenNow ?? regularOpeningHours?.openNow ?? null
   const rawOpeningHoursUpdatedAt = item.openingHoursUpdatedAt ?? item.opening_hours_updated_at
   const rating = Number(item.rating)
   const googleReviewCount = Number(item.userRatingCount ?? item.googleReviewCount ?? item.google_review_count)
@@ -731,6 +743,45 @@ export function getTodayOpeningHoursDescription(descriptions: string[], now = ne
     const normalized = description.trim().toLowerCase()
     return aliases.some((alias) => normalized.startsWith(alias))
   }) ?? null
+}
+
+function inferOpeningStatus(descriptions: string[], now = new Date()): boolean | null {
+  const description = getTodayOpeningHoursDescription(descriptions, now)
+  if (!description) return null
+  const normalized = description.toLowerCase()
+  if (/휴무|영업\s*종료|closed/.test(normalized)) return false
+  if (/24\s*시간|24\s*hours|open\s*24/.test(normalized)) return true
+
+  const schedule = description.replace(/^[^:：]+[:：]\s*/, '')
+  const ranges = schedule.split(/\s*,\s*/).flatMap((range) => {
+    const parts = range.split(/\s*(?:~|–|—|-)\s*/)
+    if (parts.length !== 2) return []
+    const open = parseOpeningMinutes(parts[0])
+    const close = parseOpeningMinutes(parts[1])
+    return open === null || close === null ? [] : [{ open, close }]
+  })
+  if (ranges.length === 0) return null
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  return ranges.some(({ open, close }) => {
+    if (open === close) return true
+    if (close > open) return currentMinutes >= open && currentMinutes < close
+    return currentMinutes >= open || currentMinutes < close
+  })
+}
+
+function parseOpeningMinutes(value: string) {
+  const normalized = value.trim().toLowerCase().replace(/\./g, '')
+  const match = normalized.match(/(?:(오전|오후|am|pm)\s*)?(\d{1,2})(?::(\d{2}))?\s*(오전|오후|am|pm)?/)
+  if (!match) return null
+  const period = match[1] || match[4] || ''
+  let hour = Number(match[2])
+  const minute = Number(match[3] || 0)
+  if (hour > 24 || minute > 59) return null
+  if ((period === '오후' || period === 'pm') && hour < 12) hour += 12
+  if ((period === '오전' || period === 'am') && hour === 12) hour = 0
+  if (hour === 24) hour = 0
+  return hour * 60 + minute
 }
 
 export function getReviewSummary(reviews: HospitalReview[]) {
