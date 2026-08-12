@@ -1,4 +1,5 @@
 ﻿import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import './HospitalMap.css'
 import { linkReviewToDiary } from '../../features/diary/diaryService'
 import type { CSSProperties } from 'react'
 import type { PetRecord } from '../../features/diary/diaryTypes'
@@ -971,10 +972,10 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     ['rating', '평점순'],
   ]
   const renderSortMenu = (id: string) => (
-    <label className="map-sort-menu" htmlFor={id}>
-      <span>정렬</span>
+    <div className="map-sort-menu">
       <select
         id={id}
+        aria-label="병원 정렬"
         value={selectedSort === 'rating' ? 'rating' : 'distance'}
         onChange={(event) => {
           setSelectedSort(event.target.value as HospitalSort)
@@ -983,7 +984,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       >
         {sortOptions.map(([sort, label]) => <option value={sort} key={sort}>{label}</option>)}
       </select>
-    </label>
+    </div>
   )
   const renderOpenNowButton = () => (
     <button className={`map-open-now-filter ${openNowOnly ? 'active' : ''}`} type="button" aria-pressed={openNowOnly} disabled={isOpenNowFilterLoading} onClick={() => void toggleOpenNowFilter()}>
@@ -1174,6 +1175,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             </header>
             {selectedHospitalReviews.length > 0 ? (
                 <div className="review-list">
+                  <HospitalReviewTagSummary reviews={selectedHospitalReviews} />
                   {selectedHospitalReviews.map((review) => (
                     <HospitalReviewItem
                       review={review}
@@ -1336,7 +1338,12 @@ function HospitalReviewItem({ review, fallbackAuthor, fallbackAvatarUrl, onDelet
         </div>
       </div>
       {body && <p className="review-item-body">{body}</p>}
-      {review.tags && review.tags.length > 0 && <div className="review-item-tags" aria-label="리뷰 태그">{review.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+      {review.tags && review.tags.length > 0 && (
+        <div className="review-item-tags" aria-label={`리뷰 태그 ${review.tags.length}개`}>
+          {review.tags.slice(0, 2).map((tag) => <span key={tag}>{tag}</span>)}
+          {review.tags.length > 2 && <span className="review-item-tag-more" aria-label={`태그 ${review.tags.length - 2}개 더 있음`}>+{review.tags.length - 2}</span>}
+        </div>
+      )}
       {review.images && review.images.length > 0 && <div className="review-image-row">{review.images.map((image) => <img src={image} alt="" key={image} />)}</div>}
       <footer className="review-item-footer">
         <div className="review-item-actions">
@@ -1344,6 +1351,55 @@ function HospitalReviewItem({ review, fallbackAuthor, fallbackAvatarUrl, onDelet
         </div>
       </footer>
     </article>
+  )
+}
+
+function HospitalReviewTagSummary({ reviews }: { reviews: HospitalReview[] }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const tagCounts = new Map<string, number>()
+  const participantKeys = new Set<string>()
+
+  reviews.forEach((review) => {
+    const selectedTags = Array.from(new Set(review.tags?.filter(Boolean) ?? []))
+    if (selectedTags.length === 0) return
+    selectedTags.forEach((tag) => tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1))
+    participantKeys.add(review.userId || review.author || review.id)
+  })
+
+  const rows = Array.from(tagCounts.entries())
+    .map(([tag, count], index) => ({ tag, count, index }))
+    .sort((a, b) => b.count - a.count || a.index - b.index)
+  if (rows.length === 0) return null
+
+  const maxCount = Math.max(...rows.map((item) => item.count), 1)
+  const visibleRows = isExpanded ? rows : rows.slice(0, 6)
+  const totalSelections = rows.reduce((sum, item) => sum + item.count, 0)
+
+  return (
+    <section className="hospital-review-tag-summary" aria-labelledby="hospital-review-tag-summary-title">
+      <header>
+        <strong id="hospital-review-tag-summary-title">이런 점이 좋았어요</strong>
+        <span>{totalSelections}회 선택 · {participantKeys.size}명 참여</span>
+      </header>
+      <div className="hospital-review-tag-bars">
+        {visibleRows.map(({ tag, count }) => (
+          <div className="hospital-review-tag-row" key={tag}>
+            <span className="hospital-review-tag-fill" style={{ width: `${Math.max(8, count / maxCount * 100)}%` }} aria-hidden="true" />
+            <span className="hospital-review-tag-label">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 3.5 3.5L16 5" /></svg>
+              <b>{tag}</b>
+            </span>
+            <strong>{count}</strong>
+          </div>
+        ))}
+      </div>
+      {rows.length > 6 && (
+        <button className="hospital-review-tag-more" type="button" aria-expanded={isExpanded} onClick={() => setIsExpanded((expanded) => !expanded)}>
+          <span>{isExpanded ? '접기' : `${rows.length - 6}개 더보기`}</span>
+          <svg className={isExpanded ? 'is-expanded' : ''} viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg>
+        </button>
+      )}
+    </section>
   )
 }
 

@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from 'react'
+import './account/AuthScreen.css'
 import {
   findUsernameByNicknameAndPet,
   resetPasswordByUsernameAndPet,

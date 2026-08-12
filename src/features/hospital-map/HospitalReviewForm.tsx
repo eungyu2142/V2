@@ -1,5 +1,7 @@
 ﻿import { type FormEvent } from 'react'
 
+import { specialistReviewTags } from './reviewTagOptions'
+
 export type ReviewAnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
 
 type ReviewPetOption = {
@@ -78,27 +80,6 @@ const text = {
   submit: '\uB4F1\uB85D',
   point: '\uC810',
 }
-
-const specialistReviewTags = [
-  '파충류 진료 경험이 풍부해요',
-  '양서류 진료 경험이 풍부해요',
-  '희귀종도 진료해요',
-  '종 특성을 잘 이해해요',
-  '사육환경까지 확인해줘요',
-  '온도·습도 관리를 알려줘요',
-  'UVB 관리를 알려줘요',
-  '먹이·영양 관리를 알려줘요',
-  '칼슘·영양 관리를 알려줘요',
-  '탈피 문제를 잘 봐줘요',
-  '산란·에그바인딩 진료 경험이 있어요',
-  'MBD 관련 진료 경험이 있어요',
-  '기생충 검사가 가능해요',
-  '분변검사가 가능해요',
-  '엑스레이 검사가 가능해요',
-  '응급 상황에 대응해줘요',
-  '집에서 관리하는 방법을 자세히 알려줘요',
-  '약 투여 방법을 자세히 알려줘요',
-]
 
 const generalReviewTags = [
   '\uC218\uC758\uC0AC\uB2D8\uC774 \uCE5C\uC808\uD574\uC694',

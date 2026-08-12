@@ -672,7 +672,8 @@ function dedupeHospitals(hospitals: Hospital[]) {
 export function hospitalMarkerContent(hospital: Hospital, active: boolean, reviewCount: number, liked: boolean) {
   const trusted = reviewCount >= 5
   const reviewLabel = reviewCount > 99 ? '99+' : String(reviewCount)
-  return `<button class="exo-hospital-marker${active ? ' is-selected' : ''}${trusted ? ' is-reviewed' : ''}${liked ? ' is-liked' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}, 리뷰 ${reviewCount}개"><span class="exo-marker-pin" aria-hidden="true"><b>H</b></span><span class="exo-marker-review" aria-hidden="true">${reviewLabel}</span>${liked ? '<span class="exo-marker-like" aria-hidden="true"></span>' : ''}</button>`
+  const openingClass = hospital.isOpenNow === true ? ' is-open' : ''
+  return `<button class="exo-hospital-marker${openingClass}${active ? ' is-selected' : ''}${trusted ? ' is-reviewed' : ''}${liked ? ' is-liked' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}, 리뷰 ${reviewCount}개"><span class="exo-marker-pin" aria-hidden="true"><b>H</b></span><span class="exo-marker-review" aria-hidden="true">${reviewLabel}</span>${liked ? '<span class="exo-marker-like" aria-hidden="true"></span>' : ''}</button>`
 }
 
 export function readStoredReviews() {

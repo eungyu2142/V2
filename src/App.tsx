@@ -1,8 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import './App.css'
+import './styles/feature-layout.css'
 import './components/ui/ui.css'
+import { AppNavigation } from './components/navigation/AppNavigation'
+import { appTabs } from './components/navigation/navigationConfig'
 import { deleteAppData, loadAppData, saveAppData } from './lib/appData'
+import { readInitialUrlState, syncAppUrl } from './lib/appUrl'
+import { readLocalDrafts, writeLocalDrafts } from './lib/draftStorage'
 import { supabase } from './lib/supabase'
 import { dataUrlToImageFile, removeUploadedImage, uploadImageFile } from './lib/imageStorage'
 import { deleteHospitalLike, getHospitalLikeKey, mergeLocalHospitalLikes, saveHospitalLike } from './lib/hospitalLikes'
@@ -24,148 +29,8 @@ function AppLoading() {
   return <main className="app-loading" role="status" aria-live="polite"><span className="app-loading-spinner" aria-hidden="true" /><span>불러오는 중</span></main>
 }
 
-const LOCAL_DRAFTS_KEY_PREFIX = 'exocare:drafts'
-
-function localDraftsKey(userId: string) {
-  return `${LOCAL_DRAFTS_KEY_PREFIX}:${userId}`
-}
-
-function readLocalDrafts(userId: string) {
-  try {
-    const value = JSON.parse(localStorage.getItem(localDraftsKey(userId)) ?? '[]')
-    return Array.isArray(value) ? value as DraftItem[] : []
-  } catch {
-    return []
-  }
-}
-
-function writeLocalDrafts(userId: string, items: DraftItem[]) {
-  localStorage.setItem(localDraftsKey(userId), JSON.stringify(items))
-}
-
-const tabs: Array<{ id: Tab; label: string }> = [
-  { id: 'pets', label: '\uB9C8\uC774 \uD3AB' },
-  { id: 'diary', label: '\uB2E4\uC774\uC5B4\uB9AC' },
-  { id: 'map', label: '\uBCD1\uC6D0 \uCC3E\uAE30' },
-  { id: 'qna', label: 'Q&A' },
-]
-
-function NavigationIcon({ tab, mobile = false }: { tab: Tab; mobile?: boolean }) {
-  const className = `${mobile ? 'bottom-nav-icon ' : ''}side-nav-icon nav-icon-vector ${tab}`
-
-  if (tab === 'pets') {
-    return (
-      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-        <ellipse cx="6.4" cy="7.2" rx="2" ry="2.7" />
-        <ellipse cx="10.2" cy="4.6" rx="2" ry="2.7" />
-        <ellipse cx="14.3" cy="4.6" rx="2" ry="2.7" />
-        <ellipse cx="18" cy="7.3" rx="2" ry="2.7" />
-        <path d="M6.7 16.3c.2-3.9 2.3-6.5 5.3-6.5s5.1 2.6 5.3 6.5c.1 2.1-1.7 3.5-3.6 2.7a4.5 4.5 0 0 0-3.4 0c-1.9.8-3.7-.6-3.6-2.7Z" />
-      </svg>
-    )
-  }
-
-  if (tab === 'diary') {
-    return (
-      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6.5 3.5h9a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" />
-        <path d="M2.8 7h3.4M2.8 11h3.4M2.8 15h3.4" />
-        <path d="m12.2 15.8.8-3.2 5.6-5.6 2.4 2.4-5.6 5.6-3.2.8Zm5.2-7.6 2.4 2.4" />
-      </svg>
-    )
-  }
-
-  if (tab === 'map') {
-    return (
-      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M19 10.2c0 5.2-7 11-7 11s-7-5.8-7-11a7 7 0 1 1 14 0Z" />
-        <path d="M12 6.8v6.4M8.8 10h6.4" />
-      </svg>
-    )
-  }
-
-  if (tab === 'qna') {
-    return (
-      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3.2 14.8 2.5 19l4-1.9a8.5 8.5 0 0 0 3.5.7c4.4 0 8-3 8-6.7s-3.6-6.6-8-6.6-8 3-8 6.6c0 1.4.4 2.6 1.2 3.7Z" />
-        <path d="M15.4 8.2c3.5.3 6.1 2.7 6.1 5.7 0 1.2-.4 2.3-1 3.2l.6 3.5-3.4-1.6a7.5 7.5 0 0 1-5.4.2" />
-        <circle cx="7.2" cy="11.1" r=".7" fill="currentColor" stroke="none" />
-        <circle cx="10" cy="11.1" r=".7" fill="currentColor" stroke="none" />
-        <circle cx="12.8" cy="11.1" r=".7" fill="currentColor" stroke="none" />
-      </svg>
-    )
-  }
-
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="7" r="4" />
-      <path d="M4.5 20c.2-5 3-8 7.5-8s7.3 3 7.5 8c-2.2 1-4.7 1.5-7.5 1.5S6.7 21 4.5 20Z" />
-    </svg>
-  )
-}
-
-function SidebarBotanicalDecoration() {
-  const sprigs = [
-    'side-nav-leaves-upper-left',
-    'side-nav-leaves-top',
-    'side-nav-leaves-middle-left',
-    'side-nav-leaves-middle-right',
-    'side-nav-leaves-bottom',
-    'side-nav-leaves-lower-right',
-  ]
-
-  return (
-    <div className="side-nav-botanical" aria-hidden="true">
-      {sprigs.map((className) => (
-        <svg className={`side-nav-leaves ${className}`} viewBox="0 0 96 150" key={className}>
-          <path className="leaf-stem" d="M88 4C72 30 74 61 55 83 39 101 20 113 8 145" />
-          <path className="leaf-shape" d="M73 39c-15-1-24-9-26-24 15 1 24 9 26 24Z" />
-          <path className="leaf-shape" d="M67 61c10-12 21-15 34-9-9 12-21 15-34 9Z" />
-          <path className="leaf-shape" d="M45 93c-14 2-24-4-30-17 14-2 24 4 30 17Z" />
-          <path className="leaf-shape" d="M34 110c11-9 22-10 33-2-11 9-22 10-33 2Z" />
-        </svg>
-      ))}
-    </div>
-  )
-}
-
 const qnaTable = ['comm', 'unity_posts'].join('')
 const qnaDatabaseCategory = ['Q', '&A'].join('')
-
-function readInitialUrlState() {
-  if (window.location.pathname === '/profile') {
-    return {
-      tab: 'profile' as Tab,
-      petId: null,
-    }
-  }
-  const params = new URLSearchParams(window.location.search)
-  const tab = params.get('tab') as Tab | null
-  const petId = params.get('petId')
-  const allowedTabs: Tab[] = ['pets', 'diary', 'map', 'qna', 'profile']
-  return {
-    tab: tab && allowedTabs.includes(tab) ? tab : petId ? 'diary' as Tab : 'pets' as Tab,
-    petId,
-  }
-}
-
-function syncAppUrl(tab: Tab, petId?: string | null) {
-  if (tab === 'profile') {
-    const currentProfileTab = new URLSearchParams(window.location.search).get('tab')
-    const profileTabs = ['posts', 'drafts', 'likes', 'reviews', 'settings']
-    const nextProfileTab = currentProfileTab && profileTabs.includes(currentProfileTab) ? currentProfileTab : 'posts'
-    window.history.replaceState(window.history.state, '', `/profile?tab=${nextProfileTab}${window.location.hash}`)
-    return
-  }
-
-  const params = new URLSearchParams(window.location.search)
-  params.set('tab', tab)
-  if (petId) params.set('petId', petId)
-  else params.delete('petId')
-  const pathname = window.location.pathname === '/profile' ? '/' : window.location.pathname
-  const next = `${pathname}?${params.toString()}${window.location.hash}`
-  window.history.replaceState(window.history.state, '', next)
-}
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -755,52 +620,24 @@ function AuthenticatedApp({ session }: { session: Session }) {
   )
   return (
     <div className={`app-shell ${activeTab === 'map' ? 'map-shell' : ''}`}>
-      <button
-        className="menu-trigger"
-        type="button"
-        aria-label="硫붾돱 ?닿린"
-        aria-expanded={sideNavOpen}
-        onClick={() => setSideNavOpen(true)}
-      >
-        <span />
-        <span />
-        <span />
-      </button>
-      {activeTab !== 'map' && (
-        <button
-          className={`mobile-profile-button ${activeTab === 'profile' ? 'active' : ''}`}
-          type="button"
-          aria-label="?꾨줈???닿린"
-          onClick={toggleProfileTab}
-        >
-          {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" /> : <span>{(profile.nickname || profile.username || 'ME').slice(0, 2).toUpperCase()}</span>}
-        </button>
-      )}
-      <button
-        className={`side-nav-dim ${sideNavOpen ? 'open' : ''}`}
-        type="button"
-        aria-label="硫붾돱 ?リ린"
-        onClick={() => setSideNavOpen(false)}
+      <AppNavigation
+        activeTab={activeTab}
+        profile={profile}
+        sideNavOpen={sideNavOpen}
+        onOpenMenu={() => setSideNavOpen(true)}
+        onCloseMenu={() => setSideNavOpen(false)}
+        onMoveTab={moveTab}
+        onToggleProfile={toggleProfileTab}
+        onBottomPointerDown={beginBottomNavDrag}
+        onBottomPointerMove={moveBottomNavDrag}
+        onBottomPointerUp={finishBottomNavDrag}
+        onBottomPointerCancel={() => { bottomNavDragStartRef.current = null }}
+        shouldSuppressBottomClick={() => suppressNextBottomNavClickRef.current}
       />
-      <aside className={`side-nav ${sideNavOpen ? 'open' : ''}`}>
-        <SidebarBotanicalDecoration />
-        <nav>
-          {tabs.map((tab) => (
-            <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={() => { moveTab(tab.id); setSideNavOpen(false) }}>
-              <NavigationIcon tab={tab.id} />
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-        <button className={`side-nav-profile ${activeTab === 'profile' ? 'active' : ''}`} type="button" onClick={() => { toggleProfileTab(); setSideNavOpen(false) }}>
-          <NavigationIcon tab="profile" />
-          <span>&#54532;&#47196;&#54596;</span>
-        </button>
-      </aside>
 
       {activeTab === 'map' && <header className="top-bar">
         <div>
-           <h1>{tabs.find((tab) => tab.id === activeTab)?.label}</h1>
+           <h1>{appTabs.find((tab) => tab.id === activeTab)?.label}</h1>
         </div>
       </header>}
 
@@ -840,21 +677,6 @@ function AuthenticatedApp({ session }: { session: Session }) {
           )}
         </main>
       )}
-
-      <nav
-        className={`bottom-nav ${activeTab === 'map' ? 'map-bottom-nav' : ''}`}
-        onPointerDown={beginBottomNavDrag}
-        onPointerMove={moveBottomNavDrag}
-        onPointerUp={finishBottomNavDrag}
-        onPointerCancel={() => { bottomNavDragStartRef.current = null }}
-      >
-        {tabs.map((tab) => (
-          <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} type="button" onClick={(event) => { if (suppressNextBottomNavClickRef.current) { event.preventDefault(); return } moveTab(tab.id) }}>
-            <NavigationIcon tab={tab.id} mobile />
-            <span className="bottom-nav-label">{tab.label}</span>
-          </button>
-        ))}
-      </nav>
 
       {dataError && <button className="data-error" type="button" onClick={() => setDataError('')}>{dataError}</button>}
     </div>

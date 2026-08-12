@@ -3,6 +3,12 @@ import { PurgeCSS } from 'purgecss'
 
 const cssFiles = [
   'src/App.css',
+  'src/styles/feature-layout.css',
+  'src/components/account/AuthScreen.css',
+  'src/components/my-pet/MyPet.css',
+  'src/components/hospital-map/HospitalMap.css',
+  'src/components/qna/Qna.css',
+  'src/components/profile/Profile.css',
   'src/features/diary/DiaryPage.css',
 ]
 

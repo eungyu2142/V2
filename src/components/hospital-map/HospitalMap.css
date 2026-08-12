@@ -1,0 +1,6528 @@
+/* map screen styles. Shared colors and controls belong to styles/tokens.css and components/ui. */
+
+.map-page .current-location-marker {
+  --current-location-marker-size: 2.75rem;
+  position: relative !important;
+  display: block !important;
+  width: var(--current-location-marker-size) !important;
+  min-width: var(--current-location-marker-size) !important;
+  max-width: var(--current-location-marker-size) !important;
+  height: var(--current-location-marker-size) !important;
+  min-height: var(--current-location-marker-size) !important;
+  max-height: var(--current-location-marker-size) !important;
+  aspect-ratio: 1 / 1 !important;
+  flex: 0 0 var(--current-location-marker-size) !important;
+  line-height: 0 !important;
+  border: 2px solid var(--color-surface) !important;
+  border-radius: 50% !important;
+  background: var(--color-primary-100) !important;
+  box-shadow:
+    0 0 0 0.3rem color-mix(in srgb, var(--color-primary-100) 62%, transparent),
+    0 0.3rem 0.8rem color-mix(in srgb, var(--color-primary-900) 18%, transparent) !important;
+  transform: translate(-50%, -50%) !important;
+  contain: layout paint !important;
+}
+
+.map-page .current-location-marker::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -0.35rem !important;
+  border-radius: 50% !important;
+  background: color-mix(in srgb, var(--color-primary-300) 34%, transparent) !important;
+  animation: current-location-pulse 2s ease-out infinite !important;
+}
+
+.map-page .current-location-marker::after {
+  display: none !important;
+  content: none !important;
+}
+
+.map-page .current-location-marker > span {
+  position: absolute !important;
+  z-index: 1 !important;
+  inset: 0.55rem !important;
+  display: block !important;
+  aspect-ratio: 1 / 1 !important;
+  border: 0.27rem solid var(--color-surface) !important;
+  border-radius: 50% !important;
+  background: var(--color-primary-600) !important;
+  box-shadow:
+    0 0 0 0.12rem var(--color-primary-700),
+    0 0.2rem 0.45rem color-mix(in srgb, var(--color-primary-900) 20%, transparent) !important;
+  transform: none !important;
+}
+
+.map-page .current-location-marker > span::before {
+  display: none !important;
+  content: none !important;
+}
+
+.hospital-review-modal .review-clinical-field {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.hospital-review-modal .review-clinical-field textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.hospital-review-modal .review-next-visit-fields {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.hospital-review-modal .review-next-visit-summary {
+  margin: 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.hospital-review-modal .review-next-visit-summary strong {
+  color: var(--color-primary-700);
+}
+
+.hospital-review-modal .review-tag-group {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.hospital-review-modal .review-tag-group:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.hospital-review-modal .review-tag-group > strong {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.hospital-review-modal .review-tag-group.is-specialist > strong {
+  color: var(--color-primary-700);
+}
+
+.hospital-review-modal .review-tag-group.is-specialist .review-chip-grid button {
+  border-color: var(--color-primary-300);
+}
+
+.hospital-review-modal .review-tag-group.is-specialist .review-chip-grid button.active {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-100);
+  color: var(--color-primary-800);
+}
+
+@media (max-width: 760px) {
+  .hospital-review-modal .review-chip-grid {
+    flex-wrap: nowrap;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .hospital-review-modal .review-chip-grid::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .hospital-review-modal .review-chip-grid button {
+    flex: 0 0 auto;
+    max-width: min(18rem, calc(100vw - 3rem));
+    white-space: normal;
+  }
+}
+
+.map-shell .map-page {
+  background: var(--ui-primary-soft) !important;
+}
+
+.map-side-panel {
+  width: min(430px, calc(100vw - 32px)) !important;
+  padding: 12px !important;
+  border: 1px solid rgba(15, 39, 66, .12) !important;
+  border-radius: 22px !important;
+  background: rgba(255, 255, 255, .94) !important;
+  box-shadow: 0 14px 34px rgba(15, 39, 66, .14) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.map-search-panel {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 52px 104px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.map-search-panel label {
+  min-width: 0 !important;
+}
+
+.map-search-panel label > :first-child:not(input) {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+}
+
+.map-search-panel input {
+  width: 100% !important;
+  height: 52px !important;
+  padding: 0 18px !important;
+  border: 1px solid rgba(15, 39, 66, .14) !important;
+  border-radius: 16px !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  font-size: .95rem !important;
+  font-weight: 800 !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5) !important;
+}
+
+.map-search-panel input:focus {
+  border-color: var(--ui-primary) !important;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, .14) !important;
+}
+
+.map-search-panel button[type="submit"] {
+  width: 52px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--ui-primary) !important;
+  color: var(--color-surface) !important;
+  box-shadow: 0 10px 20px rgba(29, 78, 216, .22) !important;
+}
+
+.map-search-panel .secondary-button {
+  width: 104px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  padding: 0 12px !important;
+  border: 1px solid rgba(29, 78, 216, .24) !important;
+  border-radius: 16px !important;
+  background: var(--ui-primary-soft) !important;
+  color: var(--ui-primary) !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+
+.map-hospital-list {
+  margin-top: 12px !important;
+  padding: 14px 4px 4px !important;
+  border-top: 1px solid rgba(15, 39, 66, .1) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.map-hospital-row {
+  margin: 0 0 8px !important;
+  border: 1px solid rgba(15, 39, 66, .1) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, .96) !important;
+  box-shadow: 0 4px 14px rgba(15, 39, 66, .05) !important;
+}
+
+.map-hospital-row:hover,
+.map-hospital-row:focus-within,
+.map-hospital-row.active {
+  border-color: rgba(29, 78, 216, .5) !important;
+  box-shadow: 0 8px 24px rgba(29, 78, 216, .12) !important;
+}
+
+.map-hospital-row-main {
+  display: grid !important;
+  grid-template-columns: 46px minmax(0, 1fr) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  padding: 13px !important;
+  text-align: left !important;
+}
+
+.map-hospital-row strong {
+  color: var(--ui-text) !important;
+  font-size: .98rem !important;
+  line-height: 1.25 !important;
+}
+
+.map-hospital-row small {
+  overflow: hidden !important;
+  color: var(--ui-text-muted) !important;
+  font-size: .8rem !important;
+  line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock {
+  display: grid !important;
+  gap: 14px !important;
+  width: min(462px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 32px) !important;
+  padding: 22px 18px 18px !important;
+  border: 1px solid rgba(15, 39, 66, .12) !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, .97) !important;
+  box-shadow: 0 18px 44px rgba(15, 39, 66, .18) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+
+.map-detail-dock .panel-close {
+  top: 14px !important;
+  right: 14px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--ui-primary-soft) !important;
+  color: var(--ui-primary) !important;
+}
+
+.map-detail-dock .review-item-tags {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 7px !important;
+  min-height: 36px !important;
+  padding: 2px 0 9px !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+}
+
+.map-detail-dock .review-item-tags span {
+  flex: 0 0 auto !important;
+  min-height: 28px !important;
+  padding: 5px 10px !important;
+  border-radius: 999px !important;
+  background: var(--ui-primary-soft) !important;
+  color: var(--ui-primary) !important;
+  font-size: .78rem !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock .hospital-review-panel {
+  display: grid !important;
+  gap: 12px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid rgba(15, 39, 66, .1) !important;
+}
+
+.review-item {
+  border: 1px solid rgba(15, 39, 66, .1) !important;
+  border-radius: 16px !important;
+  background: var(--ui-surface) !important;
+  box-shadow: 0 4px 14px rgba(15, 39, 66, .04) !important;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel {
+    top: calc(env(safe-area-inset-top) + 10px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-height: none !important;
+    padding: 10px !important;
+    border-radius: 20px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 48px 92px !important;
+    gap: 7px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel input,
+  .map-search-panel button[type="submit"],
+  .map-search-panel .secondary-button {
+    height: 48px !important;
+    min-height: 48px !important;
+    border-radius: 15px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel .secondary-button {
+    width: 92px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-hospital-list {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: var(--bottom-nav-height, 74px) !important;
+    max-height: min(48vh, 420px) !important;
+    margin: 0 !important;
+    padding: 16px 14px calc(12px + env(safe-area-inset-bottom)) !important;
+    border-radius: 22px 22px 0 0 !important;
+    border: 1px solid rgba(15, 39, 66, .12) !important;
+    background: rgba(255, 255, 255, .96) !important;
+    box-shadow: 0 -14px 32px rgba(15, 39, 66, .16) !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: var(--bottom-nav-height, 74px) !important;
+    width: auto !important;
+    max-height: min(72vh, 660px) !important;
+    padding: 22px 18px calc(18px + env(safe-area-inset-bottom)) !important;
+    border-radius: 24px 24px 0 0 !important;
+    transform: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .map-page.has-selected-hospital .map-side-panel {
+    z-index: 38 !important;
+    width: clamp(360px, 31vw, 430px) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    z-index: 48 !important;
+    top: 24px !important;
+    right: calc(18px + clamp(360px, 31vw, 430px) + 24px) !important;
+    bottom: auto !important;
+    width: clamp(310px, 26vw, 360px) !important;
+    max-height: min(72vh, 620px) !important;
+    overflow: auto !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-hospital-list {
+    max-height: calc(100vh - 330px) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .map-shell .bottom-nav {
+    z-index: 100 !important;
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .map-page.has-selected-hospital .map-detail-dock,
+  .map-detail-dock {
+    max-height: calc(100vh - 32px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-gutter: stable !important;
+  }
+}
+
+.map-detail-dock .review-item-tags {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  max-width: 100% !important;
+  min-height: 34px !important;
+  padding: 2px 0 8px !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  scrollbar-width: thin !important;
+}
+
+.map-detail-dock .review-item-tags span {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+.map-page .map-detail-dock .hospital-section-header .hospital-review-write-action {
+  border: 1px solid var(--color-primary-600) !important;
+  background: var(--color-primary-600) !important;
+  color: var(--color-surface) !important;
+  box-shadow: none !important;
+  outline-offset: 2px !important;
+  transform: none !important;
+}
+
+.map-page .map-detail-dock .hospital-section-header .hospital-review-write-action:hover:not(:disabled),
+.map-page .map-detail-dock .hospital-section-header .hospital-review-write-action:active {
+  border: 1px solid var(--color-primary-700) !important;
+  background: var(--color-primary-700) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.app-shell:not(.map-shell) { background: var(--color-background) !important; }
+
+.hospital-review-panel {
+  gap: 12px !important;
+}
+
+.review-item {
+  padding: 14px !important;
+  border-radius: 16px !important;
+}
+
+.review-item-tags {
+  gap: 6px !important;
+}
+
+.review-item-tags span {
+  padding: 5px 9px !important;
+  font-size: .72rem !important;
+}
+
+.review-item p {
+  margin: 6px 0 0 !important;
+  line-height: 1.55 !important;
+}
+
+.review-form {
+  gap: 12px !important;
+}
+
+.review-input-section {
+  padding: 16px !important;
+  border-radius: 18px !important;
+}
+
+.review-form-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.review-form-row label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: .75rem;
+  font-weight: 850;
+}
+
+@media (max-width: 760px) {
+
+  .review-form-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .review-input-section {
+    padding: 14px !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1240px) {
+  .map-page.has-selected-hospital .map-side-panel {
+    transform: translateX(calc(100% + 32px)) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1240px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    right: 18px !important;
+    width: min(390px, calc(100vw - var(--side-nav-width) - 54px)) !important;
+    max-height: min(76vh, 640px) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .map-page.has-selected-hospital .map-side-panel {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    z-index: 52 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-height: min(72vh, 620px) !important;
+  }
+}
+
+.app-shell:not(.map-shell) {
+  width: 100% !important;
+  min-height: 100svh !important;
+  padding-right: clamp(16px, 2.4vw, 32px) !important;
+  padding-left: calc(var(--side-nav-width) + clamp(16px, 2.4vw, 32px)) !important;
+}
+
+.app-shell:not(.map-shell) .top-bar,
+.app-shell:not(.map-shell) .app-main {
+  width: min(100%, 1280px) !important;
+  max-width: 1280px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+
+@media (max-width: 900px) {
+  .app-shell:not(.map-shell) {
+    padding-right: clamp(14px, 4vw, 20px) !important;
+    padding-left: clamp(14px, 4vw, 20px) !important;
+  }
+}
+
+.app-shell:not(.map-shell) {
+  width: 100% !important;
+  min-height: 100svh !important;
+  padding-right: var(--layout-gutter) !important;
+  padding-left: calc(var(--side-nav-width) + var(--layout-gutter)) !important;
+}
+
+.app-shell:not(.map-shell) .top-bar,
+.app-shell:not(.map-shell) .app-main {
+  width: var(--layout-container) !important;
+  max-width: 1280px !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+
+.app-shell:not(.map-shell) .app-main {
+  display: grid !important;
+  gap: var(--layout-gap) !important;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom)) !important;
+}
+
+.app-shell:not(.map-shell) .top-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: var(--layout-gap-sm) !important;
+  min-height: 64px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.app-shell:not(.map-shell) .top-bar h1 {
+  margin: 0 !important;
+  color: var(--ui-primary-strong) !important;
+  line-height: 1.1 !important;
+}
+
+@media (max-width: 900px) {
+  .app-shell:not(.map-shell) {
+    padding-right: var(--layout-gutter) !important;
+    padding-left: var(--layout-gutter) !important;
+  }
+}
+
+@media (max-width: 900px) {
+
+  .app-shell:not(.map-shell) .top-bar {
+    min-height: 56px !important;
+  }
+}
+
+.app-shell:not(.map-shell) {
+  padding-right: var(--layout-gutter);
+  padding-left: calc(var(--side-nav-width) + var(--layout-gutter));
+}
+
+.app-shell:not(.map-shell) .top-bar,
+.app-shell:not(.map-shell) .app-main {
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+@media (max-width: 760px) {
+
+  .app-shell:not(.map-shell) {
+    padding-right: var(--layout-gutter);
+    padding-left: var(--layout-gutter);
+  }
+}
+
+.map-overscroll-lock {
+  overscroll-behavior: none;
+}
+
+.map-search-panel button,
+.step-primary {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-primary-600);
+  color: white;
+  font-weight: 900;
+}
+
+.map-search-panel .secondary-button {
+  border: 1px solid rgba(31, 158, 133, 0.24);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+.app-shell.map-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  height: 100svh;
+  overflow: hidden;
+  padding: 0;
+  background: var(--color-background);
+}
+
+.map-shell .top-bar {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  left: auto;
+  z-index: 24;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.map-shell .top-bar > div {
+  display: none;
+}
+
+.map-shell .menu-trigger {
+  pointer-events: auto;
+}
+
+.map-shell .app-main {
+  position: fixed;
+  inset: 0 0 0 calc(var(--side-nav-width) + 18px);
+  max-width: none;
+  width: auto;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+.map-shell .map-search-panel {
+  left: calc(var(--side-nav-width) + 34px);
+}
+
+.map-page {
+  position: fixed;
+  inset: 0;
+  display: block;
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden;
+}
+
+.map-area {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hospital-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  align-items: end;
+}
+
+.hospital-picker-handle {
+  width: 44px;
+  height: 4px;
+  margin: 0 auto 4px;
+  border-radius: 999px;
+  background: rgba(11, 63, 53, 0.16);
+}
+
+.map-search-panel {
+  position: fixed;
+  top: 16px;
+  right: 112px;
+  left: 16px;
+  z-index: 23;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 58px 108px;
+  align-items: center;
+  gap: 6px;
+  max-width: 760px;
+  padding: 6px;
+  border: 1px solid rgba(11, 63, 53, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 32px rgba(11, 63, 53, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.map-side-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  left: auto;
+  z-index: 24;
+  display: grid;
+  width: min(420px, calc(100vw - var(--side-nav-width) - 58px));
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 10px;
+  pointer-events: none;
+}
+
+.map-side-panel > * {
+  pointer-events: auto;
+}
+
+.map-side-collapse-toggle {
+  position: absolute;
+  top: 50%;
+  left: -18px;
+  z-index: 2;
+  display: grid;
+  width: 34px;
+  min-height: 88px;
+  place-items: center;
+  gap: 5px;
+  padding: 8px 0;
+  border: 1px solid rgba(31, 158, 133, 0.18);
+  border-radius: 999px 0 0 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--color-primary-600);
+  box-shadow: -8px 10px 24px rgba(11, 63, 53, 0.12);
+  font-size: 0.68rem;
+  font-weight: 900;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+}
+
+.map-side-collapse-toggle span {
+  display: block;
+  width: 4px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-primary-600);
+  opacity: 0.7;
+}
+
+.map-side-panel.collapsed {
+  width: 0;
+  gap: 0;
+}
+
+.map-side-panel.collapsed > :not(.map-side-collapse-toggle) {
+  display: none;
+}
+
+.map-side-panel.collapsed .map-side-collapse-toggle {
+  left: -52px;
+  border-radius: 999px;
+}
+
+.map-search-panel label {
+  display: block;
+  font-size: 0;
+}
+
+.map-search-panel input,
+.map-search-panel select,
+.map-search-panel button {
+  font-size: 0.9rem;
+  min-height: 38px;
+  border-radius: 10px;
+}
+
+.map-search-panel input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+
+.map-search-panel button:disabled,
+.step-primary:disabled {
+  opacity: 0.5;
+}
+
+.map-side-panel .map-search-panel {
+  position: static;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr) 54px 92px;
+}
+
+.map-hospital-list {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
+  border: 1px solid rgba(31, 158, 133, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 16px 44px rgba(11, 63, 53, 0.14);
+  backdrop-filter: blur(16px);
+}
+
+.map-sheet-handle {
+  display: none;
+}
+
+.map-side-empty {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.map-side-empty {
+  margin: 12px 2px;
+}
+
+.map-hospital-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-height: 86px;
+  padding: 10px;
+  border: 1px solid rgba(31, 158, 133, 0.1);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: inherit;
+  text-align: left;
+}
+
+.map-hospital-row-main {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.map-hospital-row.active {
+  border-color: rgba(18, 184, 166, 0.55);
+  background: var(--color-primary-50);
+}
+
+.map-hospital-row:hover,
+.map-hospital-row:focus-visible {
+  border-color: rgba(31, 158, 133, 0.32);
+  background: var(--color-primary-50);
+}
+
+.map-hospital-row span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.map-hospital-row strong,
+.map-hospital-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-hospital-row strong {
+  color: var(--color-text-primary);
+  font-size: 0.92rem;
+}
+
+.map-hospital-row small {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.map-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: 100vw;
+  height: 100svh;
+  min-height: 0;
+  contain: layout paint;
+  overflow: hidden;
+  overscroll-behavior: none;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, rgba(31, 158, 133, 0.09) 1px, transparent 1px),
+    linear-gradient(rgba(31, 158, 133, 0.09) 1px, transparent 1px),
+    var(--color-background);
+  background-size: 52px 52px;
+}
+
+.map-area {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  min-height: 100svh;
+  overscroll-behavior: none;
+}
+
+.map-canvas > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  font-weight: 900;
+}
+
+.map-hospital-panel {
+  position: fixed;
+  right: 14px;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  left: 14px;
+  z-index: 19;
+  max-width: 760px;
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(31, 158, 133, 0.12);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: 0 10px 28px rgba(11, 63, 53, 0.07);
+}
+
+.map-detail-dock {
+  top: 16px;
+  right: calc(16px + min(420px, calc(100vw - var(--side-nav-width) - 58px)) + 14px);
+  bottom: 16px;
+  left: auto;
+  width: min(430px, calc(100vw - var(--side-nav-width) - 500px));
+  max-width: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 18px 48px rgba(11, 63, 53, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.map-side-panel.collapsed + .map-detail-dock {
+  right: 24px;
+}
+
+.map-side-panel .map-hospital-panel {
+  position: static;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  max-width: none;
+  margin: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 44px rgba(11, 63, 53, 0.14);
+  backdrop-filter: blur(16px);
+}
+
+.map-hospital-panel strong {
+  display: block;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.map-hospital-panel p,
+.map-hospital-panel small {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.hospital-review-panel {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(31, 158, 133, 0.12);
+}
+
+.review-form {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(31, 158, 133, 0.12);
+  border-radius: 14px;
+  background: var(--color-background);
+}
+
+.review-form-row {
+  display: grid;
+  grid-template-columns: 1fr 84px;
+  gap: 8px;
+}
+
+.review-form input,
+.review-form select,
+.review-form textarea {
+  width: 100%;
+  border: 1px solid rgba(11, 63, 53, 0.12);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-primary-700);
+  font: inherit;
+  font-weight: 800;
+}
+
+.review-form input,
+.review-form select {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.review-form textarea {
+  min-height: 76px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.review-form button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-primary-600);
+  color: white;
+  font-weight: 900;
+}
+
+.review-form button:disabled {
+  opacity: 0.48;
+}
+
+.review-next-visit {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.review-next-visit-choice {
+  display: flex;
+  gap: 8px;
+}
+
+.review-next-visit-choice button {
+  min-width: 72px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.review-next-visit-choice button.active {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: var(--color-on-primary, white);
+}
+
+.review-required-star {
+  color: var(--color-error-600);
+}
+
+.review-list {
+  display: grid;
+  max-height: 180px;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.review-item {
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border: 1px solid rgba(31, 158, 133, 0.1);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.review-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-item strong {
+  font-size: 0.9rem;
+}
+
+.review-item span {
+  color: var(--color-primary-600);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.review-item p {
+  margin: 0;
+  color: var(--color-primary-700);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.review-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-item time {
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.review-like-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(31, 158, 133, 0.18);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-primary-600);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.review-like-button.active {
+  border-color: rgba(226, 87, 100, 0.28);
+  background: var(--color-error-100);
+  color: var(--color-error-500);
+}
+
+.review-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.review-item small {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.review-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.review-item-tags span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.review-composer {
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.review-input-section {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(31, 158, 133, 0.1);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.review-input-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.review-input-head strong {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.review-input-head span {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--color-text-primary);
+  color: var(--ui-surface);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.review-input-section > p {
+  margin: -4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.review-rating-picker {
+  display: flex;
+  gap: 8px;
+}
+
+.review-rating-picker button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+}
+
+.review-rating-picker span {
+  position: absolute;
+  inset: 8px;
+  background: var(--color-background);
+  clip-path: polygon(50% 0, 62% 34%, 98% 34%, 68% 55%, 80% 92%, 50% 70%, 20% 92%, 32% 55%, 2% 34%, 38% 34%);
+}
+
+.review-rating-picker button.active span {
+  background: var(--color-primary-600);
+}
+
+.review-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-chip-grid.compact {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.review-chip-grid button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid rgba(11, 63, 53, 0.1);
+  border-radius: 999px;
+  background: var(--ui-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.review-chip-grid button.active {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+.review-chip-grid button:disabled {
+  opacity: 0.45;
+}
+
+.map-bottom-nav {
+  touch-action: none;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy,
+.map-detail-dock .hospital-address-row .hospital-address-copy:hover:not(:disabled),
+.map-detail-dock .hospital-address-row .hospital-address-copy:focus-visible,
+.map-detail-dock .hospital-address-row .hospital-address-copy:active:not(:disabled) {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  max-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+  flex: 0 0 2rem !important;
+  align-self: flex-start !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  line-height: 1 !important;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy:hover:not(:disabled),
+.map-detail-dock .hospital-address-row .hospital-address-copy:focus-visible {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
+}
+
+.map-detail-dock .hospital-address-row > p {
+  align-self: flex-start !important;
+  margin: 0 !important;
+}
+
+.map-side-panel.collapsed {
+  overflow: visible !important;
+}
+
+.map-side-panel.collapsed > :not(.map-side-collapse-toggle) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.map-side-panel.collapsed .map-search-panel,
+.map-side-panel.collapsed .map-hospital-list {
+  display: none !important;
+}
+
+.map-side-panel:not(.collapsed) {
+  overflow: hidden !important;
+}
+
+.map-side-panel:not(.collapsed) .map-hospital-list {
+  max-width: 100% !important;
+}
+
+.map-panel-close-button {
+  position: absolute !important;
+  top: -12px !important;
+  right: -12px !important;
+  z-index: 8 !important;
+  display: inline-grid !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 1px solid rgba(31, 158, 133, 0.18) !important;
+  border-radius: 50% !important;
+  background: rgba(227, 244, 239, 0.96) !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: 0 8px 18px rgba(11, 63, 53, 0.1) !important;
+  transform: none !important;
+}
+
+.map-panel-close-button span,
+.map-panel-close-button::before,
+.map-panel-close-button::after {
+  position: absolute !important;
+  display: block !important;
+  width: 15px !important;
+  height: 2px !important;
+  content: "" !important;
+  border-radius: 999px !important;
+  background: var(--color-primary-600) !important;
+}
+
+.map-panel-close-button span {
+  opacity: 0 !important;
+}
+
+.map-panel-close-button::before {
+  transform: rotate(45deg) !important;
+}
+
+.map-panel-close-button::after {
+  transform: rotate(-45deg) !important;
+}
+
+.map-panel-close-button:hover:not(:disabled),
+.map-panel-close-button:focus-visible {
+  border-color: rgba(31, 158, 133, 0.18) !important;
+  background: rgba(227, 244, 239, 0.96) !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: 0 8px 18px rgba(11, 63, 53, 0.1) !important;
+  transform: none !important;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel.collapsed {
+    left: auto !important;
+    width: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel.collapsed .map-side-collapse-toggle {
+    display: inline-grid !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-panel-close-button {
+    top: -8px !important;
+    right: -8px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-detail-dock::after {
+    position: absolute;
+    top: 18px;
+    right: -12px;
+    bottom: 18px;
+    width: 1px;
+    content: "";
+    background: rgba(31, 158, 133, 0.14);
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    z-index: 52 !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .map-side-panel {
+    width: clamp(380px, 34vw, 500px) !important;
+    right: 18px !important;
+    top: 18px !important;
+    bottom: 18px !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 52px 98px !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-search-panel input {
+    min-height: 46px !important;
+    font-size: 0.94rem !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-search-panel .secondary-button,
+  .map-side-panel .map-search-panel .secondary-button {
+    width: 98px !important;
+    min-width: 98px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-detail-dock {
+    top: 22px !important;
+    right: calc(18px + clamp(380px, 34vw, 500px) + 14px) !important;
+    bottom: auto !important;
+    width: clamp(320px, 28vw, 390px) !important;
+    max-height: calc(100vh - 44px) !important;
+    padding: 18px !important;
+    border-radius: 18px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 18px 44px rgba(11, 63, 53, 0.16) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel.collapsed + .map-detail-dock {
+    right: 22px !important;
+  }
+}
+
+.map-detail-dock .hospital-review-panel {
+  margin-top: 12px !important;
+  padding-top: 12px !important;
+}
+
+.map-hospital-list {
+  padding: 14px !important;
+}
+
+.map-hospital-row {
+  min-height: 72px !important;
+  padding: 10px 12px !important;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel {
+    left: max(10px, env(safe-area-inset-left)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    top: max(10px, env(safe-area-inset-top)) !important;
+    gap: 7px !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel > * {
+    pointer-events: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 50px 50px !important;
+    gap: 7px !important;
+    padding: 7px !important;
+    border-radius: 17px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel input {
+    min-height: 46px !important;
+    padding: 0 14px !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  
+  .map-search-panel .secondary-button,
+  .map-side-panel .map-search-panel .secondary-button {
+    width: 50px !important;
+    min-width: 50px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-hospital-list {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+    max-height: min(42vh, 360px) !important;
+    padding: 18px 12px 12px !important;
+    border-radius: 22px 22px 0 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+    max-height: min(72vh, 620px) !important;
+    width: auto !important;
+    padding: 18px 18px 20px !important;
+    border-radius: 24px 24px 0 0 !important;
+  }
+}
+
+.map-side-panel .map-search-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 44px;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(31, 158, 133, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 38px rgba(11, 63, 53, 0.13);
+  backdrop-filter: blur(16px);
+}
+
+.map-side-panel .map-search-panel input,
+.map-side-panel .map-search-panel button {
+  min-height: 42px;
+  border-radius: 14px;
+}
+
+.map-side-panel .map-search-panel .secondary-button {
+  border: 1px solid rgba(31, 158, 133, 0.2);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+@media (max-width: 760px) {
+
+  .app-shell.map-shell {
+    padding: 0;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .app-main {
+    inset: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .map-search-panel {
+    left: 10px;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel {
+    top: 10px;
+    right: 10px;
+    bottom: calc(62px + env(safe-area-inset-bottom));
+    left: 10px;
+    width: auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    gap: 8px;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-collapse-toggle {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel.collapsed {
+    width: auto;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel.collapsed > :not(.map-side-collapse-toggle) {
+    display: grid;
+  }
+}
+
+@media (max-width: 760px) {
+
+  
+  .map-search-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    grid-template-columns: minmax(0, 1fr) 52px 86px;
+    gap: 6px;
+    max-width: none;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel label {
+    font-size: 0;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel input,
+  .map-search-panel select,
+  .map-search-panel button {
+    font-size: 0.86rem;
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-hospital-panel {
+    align-self: end;
+    max-height: min(48vh, 430px);
+    border-radius: 22px 22px 0 0;
+    padding-top: 22px;
+    transition: transform 120ms ease;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock {
+    top: auto;
+    right: 10px;
+    bottom: calc(62px + env(safe-area-inset-bottom));
+    left: 10px;
+    width: auto;
+    max-height: min(60vh, 540px);
+    border-radius: 22px 22px 0 0;
+    z-index: 25;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-hospital-list {
+    align-self: end;
+    max-height: min(36vh, 310px);
+    padding: 18px 10px 10px;
+    border-radius: 22px 22px 0 0;
+    transition: transform 120ms ease;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-sheet-handle {
+    display: block;
+    width: 42px;
+    height: 5px;
+    justify-self: center;
+    margin: -8px 0 6px;
+    border-radius: 999px;
+    background: var(--color-primary-600);
+    opacity: 0.55;
+    cursor: grab;
+    touch-action: none;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-sheet-handle:active {
+    cursor: grabbing;
+    opacity: 0.85;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-hospital-row {
+    min-height: 60px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .top-bar {
+    top: auto;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    left: auto;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .map-search-panel {
+    padding: 6px;
+  }
+}
+
+.step-progress-fill,
+.step-primary,
+.map-search-panel button[type="submit"] { background: var(--color-primary-600) !important; color: var(--ui-surface) !important; }
+
+.map-search-panel .secondary-button,
+.map-side-panel .map-search-panel .secondary-button {
+  border-color: var(--color-primary-100) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-600) !important;
+}
+
+.map-search-panel .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.map-search-panel .secondary-button:hover:not(:disabled) {
+  background: var(--color-primary-100) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.map-side-panel button:hover:not(:disabled),
+.map-detail-dock button:hover:not(:disabled),
+.map-hospital-row:hover,
+.map-hospital-row:focus-within {
+  border-color: rgba(31, 158, 133, 0.38) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+.review-chip-grid button {
+  box-shadow: none !important;
+}
+
+.map-side-panel .map-side-collapse-toggle:hover:not(:disabled),
+.map-side-panel .map-side-collapse-toggle:focus-visible,
+.map-side-panel.collapsed .map-side-collapse-toggle:hover:not(:disabled),
+.map-side-panel.collapsed .map-side-collapse-toggle:focus-visible {
+  border-color: rgba(31, 158, 133, 0.18) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: -8px 10px 24px rgba(11, 63, 53, 0.12) !important;
+  transform: translateY(-50%) !important;
+}
+
+.map-side-panel .map-side-collapse-toggle:hover span,
+.map-side-panel .map-side-collapse-toggle:focus-visible span {
+  background: var(--color-primary-600) !important;
+  opacity: 0.7 !important;
+}
+
+.map-load-state {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  max-width: none;
+  place-content: center;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-primary-100);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .94);
+  color: var(--color-text-primary);
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(11, 63, 53, .12);
+  pointer-events: none;
+}
+
+.map-load-state small {
+  color: var(--color-text-secondary);
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.map-side-panel {
+  width: min(560px, calc(100vw - var(--side-nav-width) - 48px)) !important;
+  gap: 10px !important;
+}
+
+.map-side-panel.collapsed {
+  width: 0 !important;
+}
+
+.map-side-panel .map-search-panel {
+  grid-template-columns: minmax(0, 1fr) 56px 104px !important;
+  gap: 8px !important;
+  padding: 8px !important;
+  border-color: rgba(31, 158, 133, 0.14) !important;
+  border-radius: 18px !important;
+  background: rgba(247, 249, 248, 0.96) !important;
+  box-shadow: 0 12px 34px rgba(11, 63, 53, 0.12) !important;
+}
+
+.map-side-panel .map-search-panel input {
+  min-height: 48px !important;
+  padding: 0 18px !important;
+  border-radius: 14px !important;
+  font-size: 0.98rem !important;
+  font-weight: 850 !important;
+}
+
+.map-search-panel .secondary-button,
+.map-side-panel .map-search-panel .secondary-button {
+  display: inline-flex !important;
+  width: 104px !important;
+  min-width: 104px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  padding: 0 12px !important;
+  border-radius: 14px !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+}
+
+.map-search-panel .secondary-button span:last-child {
+  display: inline !important;
+  white-space: nowrap !important;
+  writing-mode: horizontal-tb !important;
+}
+
+.map-hospital-list {
+  gap: 10px !important;
+  padding: 18px !important;
+  border-color: rgba(31, 158, 133, 0.14) !important;
+  border-radius: 18px !important;
+  background: rgba(247, 249, 248, 0.96) !important;
+  box-shadow: 0 16px 40px rgba(11, 63, 53, 0.12) !important;
+}
+
+.map-hospital-row {
+  min-height: 82px !important;
+  padding: 12px 14px !important;
+  border-color: rgba(31, 158, 133, 0.18) !important;
+  border-radius: 14px !important;
+  background: var(--ui-surface) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.map-hospital-row-main {
+  align-items: center !important;
+}
+
+.map-hospital-row:hover,
+.map-hospital-row:focus-within,
+.map-hospital-row.active {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: 0 8px 20px rgba(31, 158, 133, 0.12) !important;
+  transform: none !important;
+}
+
+.map-hospital-row strong {
+  color: var(--color-text-primary) !important;
+  font-size: 0.98rem !important;
+  line-height: 1.25 !important;
+}
+
+.map-hospital-row small {
+  color: var(--color-text-secondary) !important;
+  font-size: 0.83rem !important;
+  line-height: 1.35 !important;
+}
+
+.map-side-collapse-toggle,
+.map-side-panel .map-side-collapse-toggle:hover:not(:disabled),
+.map-side-panel .map-side-collapse-toggle:focus-visible {
+  left: -12px !important;
+  width: 24px !important;
+  min-height: 76px !important;
+  padding: 0 !important;
+  border-color: rgba(31, 158, 133, 0.16) !important;
+  border-radius: 999px 0 0 999px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: -6px 8px 18px rgba(11, 63, 53, 0.1) !important;
+  transform: translateY(-50%) !important;
+}
+
+.map-side-collapse-toggle b {
+  display: none !important;
+}
+
+.map-side-collapse-toggle span,
+.map-side-panel .map-side-collapse-toggle:hover span,
+.map-side-panel .map-side-collapse-toggle:focus-visible span {
+  width: 4px !important;
+  height: 28px !important;
+  background: var(--color-primary-600) !important;
+  opacity: 0.75 !important;
+}
+
+.map-side-panel.collapsed .map-side-collapse-toggle,
+.map-side-panel.collapsed .map-side-collapse-toggle:hover:not(:disabled),
+.map-side-panel.collapsed .map-side-collapse-toggle:focus-visible {
+  left: -38px !important;
+  border-radius: 999px !important;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel {
+    width: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 54px 54px !important;
+    padding: 7px !important;
+    border-radius: 16px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel .secondary-button,
+  .map-side-panel .map-search-panel .secondary-button {
+    width: 54px !important;
+    min-width: 54px !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-search-panel .secondary-button span:last-child {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-hospital-list {
+    padding: 18px 14px 12px !important;
+    border-radius: 22px 22px 0 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .map-shell .map-side-panel:not(.collapsed) {
+    top: max(10px, env(safe-area-inset-top)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .map-side-panel:not(.collapsed) > * {
+    pointer-events: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .map-side-panel:not(.collapsed) .map-search-panel {
+    position: relative !important;
+    z-index: 34 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .map-side-panel:not(.collapsed) .map-hospital-list {
+    position: fixed !important;
+    z-index: 35 !important;
+    right: 0 !important;
+    bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+    left: 0 !important;
+    max-height: min(42vh, 360px) !important;
+    border-radius: 22px 22px 0 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .bottom-nav {
+    z-index: 40 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell:not(.map-shell) .bottom-nav button.active {
+    border-color: var(--feature-accent) !important;
+    background: var(--feature-accent) !important;
+    color: var(--ui-surface) !important;
+  }
+}
+
+body,
+.app-shell:not(.map-shell) {
+  background: var(--color-background) !important;
+  color: var(--ui-text) !important;
+}
+
+.side-nav,
+.bottom-nav,
+.map-shell .bottom-nav {
+  border-color: var(--color-primary-700) !important;
+  background: var(--ui-primary-strong) !important;
+  box-shadow: 0 16px 42px rgba(62, 72, 37, 0.22) !important;
+}
+
+@media (min-width: 761px) {
+
+  .side-nav,
+  .map-shell .side-nav {
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    border-radius: 0 8px 8px 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell:not(.map-shell) {
+    padding-left: calc(var(--side-nav-width-ratio) + var(--content-gap-ratio)) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell {
+    --map-nav-left: 0%;
+  }
+}
+
+.side-nav button.active,
+.bottom-nav button.active,
+.map-shell .bottom-nav button.active {
+  border-color: var(--ui-primary) !important;
+  background: var(--ui-primary) !important;
+  color: var(--ui-surface) !important;
+}
+
+.side-nav,
+.bottom-nav,
+.map-shell .bottom-nav {
+  border-color: var(--color-primary-900) !important;
+  background: var(--color-primary-900) !important;
+}
+
+.side-nav button.active,
+.bottom-nav button.active,
+.map-shell .bottom-nav button.active {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-600) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.map-page {
+  --map-blue: var(--color-primary-600);
+  --map-blue-dark: var(--color-primary-900);
+  --map-blue-soft: var(--color-primary-50);
+  --map-border: var(--color-border);
+  --map-text: var(--color-text-primary);
+  --map-muted: var(--color-text-secondary);
+}
+
+.map-side-panel {
+  width: min(430px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 40px) !important;
+  padding: 16px !important;
+  border: 1px solid rgba(183, 207, 248, 0.82) !important;
+  border-radius: 22px !important;
+  background: rgba(248, 251, 255, 0.94) !important;
+  box-shadow: 0 18px 42px rgba(15, 39, 66, 0.16) !important;
+  backdrop-filter: blur(18px) saturate(1.12);
+  overflow: hidden !important;
+  gap: 14px !important;
+}
+
+.map-side-panel.collapsed {
+  width: 46px !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.map-side-panel .map-side-collapse-toggle,
+.map-side-panel .map-side-collapse-toggle:hover:not(:disabled),
+.map-side-panel .map-side-collapse-toggle:focus-visible {
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 84px !important;
+  border: 1px solid rgba(183, 207, 248, 0.82) !important;
+  border-radius: 999px !important;
+  background: rgba(248, 251, 255, 0.96) !important;
+  color: var(--map-blue) !important;
+  box-shadow: 0 12px 26px rgba(15, 39, 66, 0.12) !important;
+  transform: none !important;
+}
+
+.map-side-panel .map-search-panel {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 52px 104px !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.map-side-panel .map-search-panel label {
+  min-width: 0 !important;
+  font-size: 0 !important;
+}
+
+.map-side-panel .map-search-panel input,
+.map-side-panel .map-search-panel button {
+  height: 52px !important;
+  border-radius: 16px !important;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.map-side-panel .map-search-panel input {
+  width: 100% !important;
+  border: 1px solid var(--map-border) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: var(--map-text) !important;
+  padding: 0 18px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88) !important;
+}
+
+.map-side-panel .map-search-panel .secondary-button {
+  border: 1px solid var(--map-border) !important;
+  background: var(--map-blue-soft) !important;
+  color: var(--map-blue) !important;
+}
+
+.map-side-panel .map-hospital-list {
+  min-height: 0 !important;
+  border-top: 1px solid rgba(183, 207, 248, 0.78) !important;
+  padding: 14px 4px 4px !important;
+  overflow-y: auto !important;
+  scrollbar-gutter: stable !important;
+}
+
+.map-side-panel .map-hospital-list h2 {
+  margin: 0 !important;
+  color: var(--map-text) !important;
+  font-size: 1.15rem !important;
+  line-height: 1.2 !important;
+}
+
+.map-side-panel .map-hospital-list > p {
+  margin: 4px 0 14px !important;
+  color: var(--map-muted) !important;
+  font-size: 0.92rem !important;
+}
+
+.map-side-panel .map-hospital-row {
+  display: grid !important;
+  grid-template-columns: 48px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-height: 86px !important;
+  margin: 0 0 10px !important;
+  padding: 14px !important;
+  border: 1px solid rgba(183, 207, 248, 0.72) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  box-shadow: none !important;
+  color: var(--map-text) !important;
+  text-align: left !important;
+}
+
+.map-side-panel .map-hospital-row-main {
+  display: grid !important;
+  grid-column: 1 / -1 !important;
+  grid-template-columns: 48px minmax(0, 1fr) !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 56px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--map-text) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  text-align: left !important;
+}
+
+.map-side-panel .map-hospital-row-main > span {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 4px !important;
+  color: var(--map-text) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.map-side-panel .map-hospital-row:hover,
+.map-side-panel .map-hospital-row:focus-visible,
+.map-side-panel .map-hospital-row.active {
+  border-color: var(--map-blue) !important;
+  background: var(--ui-surface) !important;
+  transform: none !important;
+  box-shadow: 0 10px 26px rgba(29, 78, 216, 0.12) !important;
+}
+
+.map-side-panel .map-hospital-row strong {
+  display: block !important;
+  overflow: hidden !important;
+  color: var(--map-text) !important;
+  font-size: 1.02rem !important;
+  line-height: 1.25 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.map-side-panel .map-hospital-row p,
+.map-side-panel .map-hospital-row small {
+  display: block !important;
+  overflow: hidden !important;
+  margin: 4px 0 0 !important;
+  color: var(--map-muted) !important;
+  font-size: 0.88rem !important;
+  line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.map-detail-dock {
+  width: min(480px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 32px) !important;
+  padding: 18px !important;
+  border: 1px solid rgba(183, 207, 248, 0.78) !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 22px 52px rgba(15, 39, 66, 0.2) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-gutter: stable !important;
+}
+
+.map-detail-dock .panel-close {
+  width: 40px !important;
+  height: 40px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--map-blue-soft) !important;
+  color: var(--map-blue) !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .review-item-tags {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  margin: 16px 0 0 !important;
+  padding: 2px 2px 8px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.map-detail-dock .review-item-tags span {
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--map-border) !important;
+  border-radius: 999px !important;
+  background: var(--map-blue-soft) !important;
+  color: var(--map-blue) !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock .hospital-review-panel {
+  margin: 18px -18px -18px !important;
+  padding: 18px !important;
+  border-top: 1px solid rgba(183, 207, 248, 0.74) !important;
+  background: var(--ui-bg) !important;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel {
+    left: 10px !important;
+    right: 10px !important;
+    top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
+    width: auto !important;
+    max-height: none !important;
+    padding: 10px !important;
+    border-radius: 20px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 48px 92px !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel input,
+  .map-side-panel .map-search-panel button {
+    height: 48px !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: var(--bottom-nav-height, 74px) !important;
+    max-height: min(48vh, 420px) !important;
+    padding: 18px 14px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    border: 1px solid rgba(183, 207, 248, 0.78) !important;
+    border-bottom: 0 !important;
+    border-radius: 24px 24px 0 0 !important;
+    background: rgba(248, 251, 255, 0.96) !important;
+    box-shadow: 0 -18px 42px rgba(15, 39, 66, 0.18) !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-row {
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    min-height: 76px !important;
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: var(--bottom-nav-height, 74px) !important;
+    width: auto !important;
+    max-height: min(72vh, 660px) !important;
+    border-radius: 24px 24px 0 0 !important;
+    padding: 18px !important;
+  }
+}
+
+.map-side-panel .map-hospital-list {
+  display: block !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+.map-side-panel .map-hospital-row,
+.map-side-panel .map-hospital-row:hover,
+.map-side-panel .map-hospital-row:focus-within,
+.map-side-panel .map-hospital-row.active {
+  display: block !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.map-side-panel .map-hospital-row.active {
+  border-bottom-color: var(--color-primary-100) !important;
+  box-shadow: inset 0.26rem 0 0 var(--color-primary-600) !important;
+}
+
+.map-side-panel .map-hospital-row-main,
+.map-side-panel .map-hospital-row:hover .map-hospital-row-main,
+.map-side-panel .map-hospital-row:focus-within .map-hospital-row-main,
+.map-side-panel .map-hospital-row.active .map-hospital-row-main {
+  display: grid !important;
+  grid-template-columns: minmax(2.5rem, 9%) minmax(0, 1fr) !important;
+  gap: 3.2% !important;
+  min-height: 0 !important;
+  padding: 3.2% 2.4% !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-text-primary) !important;
+  transform: none !important;
+}
+
+.map-side-panel .map-hospital-row-main:hover,
+.map-side-panel .map-hospital-row-main:focus-visible {
+  background: color-mix(in srgb, var(--color-primary-50) 42%, transparent) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.map-hospital-more-button,
+.map-hospital-more-button:hover:not(:disabled),
+.map-hospital-more-button:focus-visible {
+  display: flex !important;
+  width: 100% !important;
+  min-height: 2.75rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 2.8% 0 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: none !important;
+  font-weight: 900 !important;
+  transform: none !important;
+}
+
+.map-hospital-more-button:hover:not(:disabled),
+.map-hospital-more-button:focus-visible {
+  background: color-mix(in srgb, var(--color-primary-50) 54%, transparent) !important;
+}
+
+@media (max-width: 760px) {
+  .map-hospital-list,
+  .map-detail-dock {
+    transition:
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      max-height 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 180ms ease,
+      box-shadow 220ms ease !important;
+    will-change: transform, max-height !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-hospital-list.is-dragging,
+  .map-detail-dock.is-dragging {
+    transition: none !important;
+    cursor: grabbing !important;
+  }
+}
+
+.map-detail-dock {
+  color: var(--color-text-primary) !important;
+  background: color-mix(in srgb, var(--color-surface) 96%, var(--color-primary-50)) !important;
+  border-color: color-mix(in srgb, var(--color-border) 82%, var(--color-primary-300)) !important;
+}
+
+.map-detail-dock .map-sheet-handle {
+  width: 36px !important;
+  height: 4px !important;
+  margin: 0 auto 12px !important;
+  border-radius: 999px !important;
+  background: var(--color-primary-300) !important;
+}
+
+.map-detail-dock .panel-close {
+  top: 14px !important;
+  right: 14px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 0 !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.map-detail-dock .panel-close::before,
+.map-detail-dock .panel-close::after {
+  background: currentColor !important;
+}
+
+.map-detail-dock .hospital-review-panel {
+  margin: 0 -18px -18px !important;
+  padding: 16px 18px 18px !important;
+  border-top: 1px solid var(--color-border) !important;
+  background: var(--color-background) !important;
+}
+
+.map-detail-dock .review-item-tags span {
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+}
+
+.map-detail-dock .review-list {
+  display: grid !important;
+  gap: 10px !important;
+  margin-top: 12px !important;
+}
+
+.map-detail-dock .review-item {
+  display: grid !important;
+  gap: 10px !important;
+  padding: 14px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 14px !important;
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .review-item-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+}
+
+.map-detail-dock .review-item-head > div {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.map-detail-dock .review-author-avatar {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+.map-detail-dock .review-item-head strong {
+  display: block !important;
+  color: var(--color-text-primary) !important;
+  font-size: 0.92rem !important;
+  line-height: 1.3 !important;
+}
+
+.map-detail-dock .review-item-head small {
+  display: block !important;
+  margin-top: 3px !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.76rem !important;
+  line-height: 1.35 !important;
+}
+
+.map-detail-dock .review-item-body {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 0.88rem !important;
+  line-height: 1.55 !important;
+  word-break: keep-all !important;
+}
+
+.map-detail-dock .review-item-tags {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  padding: 0 0 4px !important;
+  overflow-x: auto !important;
+}
+
+.map-detail-dock .review-item-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding-top: 2px !important;
+  color: var(--color-text-placeholder) !important;
+  font-size: 0.74rem !important;
+}
+
+.map-detail-dock .review-item-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.map-detail-dock .review-item-actions button {
+  min-height: 30px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 999px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+}
+
+.map-detail-dock .review-item-actions .review-like-button.active {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+}
+
+@media (max-width: 760px) {
+  .map-detail-dock {
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock .hospital-review-panel {
+    margin: 0 -16px -16px !important;
+    padding: 14px 16px 18px !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock .review-item-footer {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .app-shell:not(.map-shell) {
+    padding-left: calc(var(--side-nav-width) + clamp(16px, 2.4vw, 32px)) !important;
+    padding-right: clamp(16px, 2.4vw, 32px) !important;
+  }
+}
+
+.app-shell:not(.map-shell) > .top-bar {
+  display: flex !important;
+  width: min(100%, 1280px) !important;
+  min-width: 0 !important;
+  min-height: clamp(48px, 7vw, 72px) !important;
+  margin: 0 auto clamp(8px, 1.6vw, 18px) !important;
+  padding: clamp(6px, 1vw, 12px) 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-shell:not(.map-shell) > .top-bar h1 {
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: var(--color-text-primary) !important;
+  font-size: clamp(1.35rem, 3vw, 2rem) !important;
+  line-height: 1.2 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 760px) {
+  .app-shell:not(.map-shell) > .top-bar {
+    min-height: 44px !important;
+    margin-bottom: 8px !important;
+    padding: 4px 0 !important;
+  }
+}
+
+.app-shell:not(.map-shell) {
+  --page-gutter-ratio: 2.5%;
+  padding-right: var(--page-gutter-ratio) !important;
+  padding-left: calc(var(--side-nav-width) + var(--page-gutter-ratio)) !important;
+}
+
+.app-shell:not(.map-shell) .app-main {
+  width: 100% !important;
+  max-width: none !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .app-shell:not(.map-shell) {
+    --page-gutter-ratio: 4%;
+    padding-left: var(--page-gutter-ratio) !important;
+  }
+}
+
+.map-page .map-side-panel,
+.map-page .map-hospital-list,
+.map-page .map-detail-dock,
+.map-page .hospital-review-panel,
+.map-page .review-list,
+.map-page .review-item-tags {
+  scrollbar-width: none !important;
+}
+
+.map-page .map-side-panel::-webkit-scrollbar,
+.map-page .map-hospital-list::-webkit-scrollbar,
+.map-page .map-detail-dock::-webkit-scrollbar,
+.map-page .hospital-review-panel::-webkit-scrollbar,
+.map-page .review-list::-webkit-scrollbar,
+.map-page .review-item-tags::-webkit-scrollbar {
+  display: none !important;
+}
+
+.map-page .review-like-button,
+.map-page .review-chip-grid button {
+  border-color: var(--color-primary-100) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.map-page .review-like-button:hover:not(:disabled),
+.map-page .review-chip-grid button:hover:not(:disabled) {
+  border-color: var(--color-primary-300) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: 0 4px 12px rgba(11, 63, 53, 0.1) !important;
+  transform: none !important;
+}
+
+.map-page .review-chip-grid button.active,
+.map-page .review-like-button.active {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-600) !important;
+  color: var(--ui-surface) !important;
+  box-shadow: 0 6px 14px rgba(31, 158, 133, 0.18) !important;
+}
+
+.map-page .hospital-review-write-action,
+.map-page .review-form-actions .step-primary {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-600) !important;
+  color: var(--ui-surface) !important;
+}
+
+.map-page .hospital-review-write-action:hover:not(:disabled),
+.map-page .review-form-actions .step-primary:hover:not(:disabled) {
+  border-color: var(--color-primary-700) !important;
+  background: var(--color-primary-700) !important;
+  color: var(--ui-surface) !important;
+  box-shadow: 0 8px 18px rgba(31, 158, 133, 0.22) !important;
+}
+
+.map-page .review-rating-picker {
+  display: flex !important;
+  gap: 6px !important;
+}
+
+.map-page .review-rating-picker button {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--color-border) !important;
+  box-shadow: none !important;
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  transform: none !important;
+}
+
+.map-page .review-rating-picker button.active,
+.map-page .review-rating-picker button:hover:not(:disabled) {
+  background: transparent !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.map-page .review-rating-picker button span,
+.map-page .review-rating-picker button::before,
+.map-page .review-rating-picker button::after {
+  display: none !important;
+}
+
+@media (min-width: 761px) {
+
+  .app-shell:not(.map-shell) {
+    padding-right: 4% !important;
+    padding-left: 15% !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell:not(.map-shell) .top-bar,
+  .app-shell:not(.map-shell) .app-main {
+    width: 100% !important;
+    max-width: none !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell:not(.map-shell) .app-main {
+    justify-items: stretch !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 900px) {
+
+  .app-shell:not(.map-shell) {
+    padding-right: 3.5% !important;
+    padding-left: 17% !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell:not(.map-shell) {
+    padding-left: calc(var(--side-nav-left-ratio) + var(--side-nav-width-ratio) + var(--content-gap-ratio)) !important;
+    padding-right: var(--content-right-ratio) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell:not(.map-shell) .top-bar,
+  .app-shell:not(.map-shell) .app-main {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .map-shell {
+    --map-nav-left: 1.8%;
+    --map-nav-width: 8.6%;
+    --map-edge-gap: 2.2%;
+    --map-panel-width: 38%;
+    --map-panel-top: 3%;
+    --map-panel-bottom: 3%;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .side-nav {
+    left: var(--map-nav-left) !important;
+    width: var(--map-nav-width) !important;
+    top: var(--map-panel-top) !important;
+    bottom: var(--map-panel-bottom) !important;
+    height: auto !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-page,
+  .map-shell .map-area,
+  .map-shell .map-canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel:not(.collapsed) {
+    top: var(--map-panel-top) !important;
+    right: var(--map-edge-gap) !important;
+    bottom: var(--map-panel-bottom) !important;
+    left: auto !important;
+    width: var(--map-panel-width) !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    transform: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel.collapsed {
+    right: var(--map-edge-gap) !important;
+    width: 0 !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel .map-search-panel {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 9% 18% !important;
+    gap: 1.8% !important;
+    width: 100% !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel .map-search-panel label,
+  .map-shell .map-side-panel .map-search-panel input {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  
+  .map-shell .map-side-panel .map-search-panel button[type="submit"],
+  .map-shell .map-side-panel .map-search-panel .secondary-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel .map-hospital-list {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel .map-hospital-row {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    top: var(--map-panel-top) !important;
+    right: calc(var(--map-edge-gap) + var(--map-panel-width) + 1.4%) !important;
+    bottom: var(--map-panel-bottom) !important;
+    left: auto !important;
+    width: 32% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1040px) {
+  .map-shell {
+    --map-nav-left: 2.4%;
+    --map-nav-width: 11.6%;
+    --map-edge-gap: 2.4%;
+    --map-panel-width: 44%;
+    --map-panel-top: 3%;
+    --map-panel-bottom: 3%;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1040px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    width: 38% !important;
+    right: calc(var(--map-edge-gap) + var(--map-panel-width) + 1.4%) !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .map-shell {
+    --map-nav-left: 1.4%;
+    --map-nav-width: 6.6%;
+    --map-edge-gap: 2%;
+    --map-panel-width: 31%;
+  }
+}
+
+@media (min-width: 1280px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    width: 28% !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .map-shell .map-side-panel:not(.collapsed) {
+    left: 4% !important;
+    right: 4% !important;
+    width: 92% !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 14% 26% !important;
+    gap: 2% !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  
+  .map-shell .map-side-panel .map-search-panel button[type="submit"],
+  .map-shell .map-side-panel .map-search-panel .secondary-button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .app-shell.map-shell {
+    --map-nav-left: var(--side-nav-left-ratio) !important;
+    --map-nav-width: var(--side-nav-width-ratio) !important;
+    --map-edge-gap: 2% !important;
+    --map-panel-width: clamp(360px, 31%, 430px) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell.map-shell .side-nav {
+    left: var(--side-nav-left-ratio) !important;
+    width: var(--side-nav-width-ratio) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    transition: background 160ms ease, box-shadow 160ms ease !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell.map-shell .side-nav button {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel:not(.collapsed),
+  .map-page.has-selected-hospital .map-side-panel:not(.collapsed) {
+    top: var(--map-panel-top) !important;
+    right: var(--map-edge-gap) !important;
+    bottom: var(--map-panel-bottom) !important;
+    left: auto !important;
+    display: flex !important;
+    width: var(--map-panel-width) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    transition: background 160ms ease, box-shadow 160ms ease !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-hospital-list {
+    max-height: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    right: calc(var(--map-edge-gap) + var(--map-panel-width) + 1.4%) !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .app-shell.map-shell {
+    --map-panel-top: 3% !important;
+    --map-panel-bottom: 3% !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel:not(.collapsed),
+  .map-page.has-selected-hospital .map-side-panel:not(.collapsed) {
+    top: var(--map-panel-top) !important;
+    bottom: var(--map-panel-bottom) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    align-content: stretch !important;
+    overflow: hidden !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel .map-hospital-list,
+  .map-page.has-selected-hospital .map-hospital-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    top: var(--map-panel-top) !important;
+    bottom: var(--map-panel-bottom) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .app-shell.map-shell {
+    --map-panel-top: 2vh !important;
+    --map-panel-bottom: 2vh !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell.map-shell .side-nav,
+  .app-shell.map-shell .side-nav.open {
+    top: 2vh !important;
+    bottom: 2vh !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    align-self: stretch !important;
+    transform: none !important;
+    transition: background 160ms ease, box-shadow 160ms ease !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel:not(.collapsed),
+  .map-page.has-selected-hospital .map-side-panel:not(.collapsed),
+  .map-page.has-selected-hospital .map-detail-dock {
+    top: 2vh !important;
+    bottom: 2vh !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    transform: none !important;
+    transition: background 160ms ease, box-shadow 160ms ease !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell {
+    --map-nav-left: 0% !important;
+  }
+}
+
+.side-nav,
+.bottom-nav,
+.map-shell .bottom-nav {
+  border-color: color-mix(in srgb, var(--color-navigation-background) 82%, var(--color-primary-900)) !important;
+  background: var(--color-navigation-background) !important;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--color-navigation-background) 22%, transparent) !important;
+}
+
+.map-page.has-selected-hospital .map-side-collapse-toggle {
+  display: none !important;
+}
+
+.map-detail-dock .hospital-address-row {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+}
+
+.map-detail-dock .hospital-address-row p {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.map-detail-dock .hospital-address-row button,
+.map-detail-dock .hospital-address-row button:hover:not(:disabled),
+.map-detail-dock .hospital-address-row button:focus-visible {
+  flex: 0 0 auto !important;
+  min-width: 3rem !important;
+  min-height: 2rem !important;
+  padding: 0 0.65rem !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 0.5rem !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: none !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  transform: none !important;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 2.875rem !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel .secondary-button {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel label,
+  .map-side-panel .map-search-panel input {
+    background: var(--color-surface) !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel input {
+    min-width: 0 !important;
+    padding-right: 0.65rem !important;
+    padding-left: 0.65rem !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list,
+  .map-page .map-detail-dock {
+    padding-top: 1.5rem !important;
+  }
+}
+
+.map-side-panel .map-hospital-row-main {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.map-side-panel .map-hospital-row,
+.map-side-panel .map-hospital-row:hover,
+.map-side-panel .map-hospital-row:focus-within,
+.map-side-panel .map-hospital-row.active {
+  display: block !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  transform: none !important;
+}
+
+.map-side-panel .map-hospital-row-main,
+.map-side-panel .map-hospital-row:hover .map-hospital-row-main,
+.map-side-panel .map-hospital-row:focus-within .map-hospital-row-main,
+.map-side-panel .map-hospital-row.active .map-hospital-row-main {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  transform: none !important;
+}
+
+.map-side-panel .map-hospital-row-main > span {
+  grid-column: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.map-side-panel .map-hospital-row-main,
+.map-side-panel .map-hospital-row:hover .map-hospital-row-main,
+.map-side-panel .map-hospital-row:focus-within .map-hospital-row-main,
+.map-side-panel .map-hospital-row.active .map-hospital-row-main {
+  min-height: 4rem !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.map-side-panel .map-hospital-row-main > span {
+  gap: 0.25rem !important;
+}
+
+.exo-hospital-marker,
+.exo-hospital-marker:hover:not(:disabled),
+.exo-hospital-marker:active:not(:disabled),
+.exo-hospital-marker:focus,
+.exo-hospital-marker:focus-visible,
+.exo-hospital-marker.is-selected,
+.exo-hospital-marker.is-selected:hover:not(:disabled) {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.exo-hospital-marker::before,
+.exo-hospital-marker::after {
+  display: none !important;
+  content: none !important;
+}
+
+.exo-hospital-marker:hover:not(:disabled) {
+  transform: translate(-50%, -100%) scale(1.05) !important;
+}
+
+.exo-hospital-marker.is-selected,
+.exo-hospital-marker.is-selected:hover:not(:disabled) {
+  transform: translate(-50%, -100%) scale(1.12) !important;
+}
+
+.exo-hospital-marker.is-selected .exo-marker-pin,
+.exo-hospital-marker:hover:not(:disabled) .exo-marker-pin,
+.exo-hospital-marker:focus-visible .exo-marker-pin {
+  outline: 0 !important;
+  box-shadow: 0 0.25rem 0.75rem color-mix(in srgb, var(--color-primary-900) 24%, transparent) !important;
+}
+
+.map-detail-dock .hospital-opening-hours {
+  display: grid;
+  gap: 0.625rem;
+  min-width: 0;
+  padding: 0.875rem 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-detail-dock .hospital-opening-current {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+
+.map-detail-dock .hospital-opening-current strong {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.map-detail-dock .hospital-opening-current strong.is-open {
+  color: var(--color-primary-700);
+}
+
+.map-detail-dock .hospital-opening-current strong.is-closed {
+  color: var(--color-text-primary);
+}
+
+.map-detail-dock .hospital-opening-current span,
+.map-detail-dock .hospital-opening-empty {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.map-detail-dock .hospital-opening-current .hospital-today-hours {
+  display: inline-grid;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  justify-items: center;
+  gap: 0;
+  text-align: center;
+}
+
+.map-detail-dock .hospital-opening-current .hospital-today-hours > span {
+  display: block;
+  white-space: nowrap;
+}
+
+.map-detail-dock .hospital-opening-hours details {
+  min-width: 0;
+}
+
+.map-detail-dock .hospital-opening-hours summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-primary-700);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.map-detail-dock .hospital-opening-hours ul {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0.625rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-detail-dock .hospital-opening-hours li {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .map-detail-dock .hospital-opening-current {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
+@media (min-width: 761px) {
+  .app-shell.map-shell .map-side-panel:not(.collapsed),
+  .app-shell.map-shell .map-page.has-selected-hospital .map-side-panel:not(.collapsed) {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    align-content: stretch !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell.map-shell .map-side-panel:not(.collapsed) > .map-search-panel {
+    position: static !important;
+    display: grid !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .app-shell.map-shell .map-side-panel:not(.collapsed) > .map-hospital-list {
+    position: relative !important;
+    display: block !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+}
+
+.map-page {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  background: var(--color-background) !important;
+}
+
+.map-page .map-area,
+.map-page .map-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-page .map-load-state {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--color-background) !important;
+}
+
+@media (min-width: 761px) {
+  .app-shell.map-shell .side-nav,
+  .app-shell.map-shell .side-nav.open {
+    top: 2vh !important;
+    bottom: auto !important;
+    height: 96vh !important;
+    min-height: 96vh !important;
+    max-height: 96vh !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel,
+  .map-shell .map-side-panel:not(.collapsed),
+  .map-page.has-selected-hospital .map-side-panel:not(.collapsed) {
+    position: fixed !important;
+    z-index: 90 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: auto !important;
+    display: flex !important;
+    width: clamp(22.5rem, 30vw, 26.25rem) !important;
+    min-width: 22.5rem !important;
+    max-width: 26.25rem !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border: 0 !important;
+    border-left: 1px solid var(--color-border) !important;
+    border-radius: 0 !important;
+    background: var(--color-surface) !important;
+    box-shadow: -0.75rem 0 2rem color-mix(in srgb, var(--color-primary-900) 10%, transparent) !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-shell .map-side-panel.collapsed {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: auto !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    height: 100dvh !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-panel-close-button {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-side-collapse-toggle,
+  .map-side-panel .map-side-collapse-toggle:hover:not(:disabled),
+  .map-side-panel .map-side-collapse-toggle:focus-visible,
+  .map-side-panel.collapsed .map-side-collapse-toggle,
+  .map-side-panel.collapsed .map-side-collapse-toggle:hover:not(:disabled),
+  .map-side-panel.collapsed .map-side-collapse-toggle:focus-visible {
+    position: absolute !important;
+    z-index: 3 !important;
+    top: 50% !important;
+    right: auto !important;
+    left: -2rem !important;
+    display: grid !important;
+    width: 2rem !important;
+    min-width: 2rem !important;
+    height: 4.25rem !important;
+    min-height: 4.25rem !important;
+    place-items: center !important;
+    padding: 0 !important;
+    border: 1px solid var(--color-border) !important;
+    border-right: 0 !important;
+    border-radius: 0.75rem 0 0 0.75rem !important;
+    background: var(--color-surface) !important;
+    color: var(--color-primary-700) !important;
+    box-shadow: -0.4rem 0 1rem color-mix(in srgb, var(--color-primary-900) 8%, transparent) !important;
+    transform: translateY(-50%) !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel.collapsed .map-side-collapse-toggle {
+    left: -2rem !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-side-collapse-toggle b {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-side-collapse-toggle span {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+    border: 0 !important;
+    border-right: 2px solid currentColor !important;
+    border-bottom: 2px solid currentColor !important;
+    background: transparent !important;
+    transform: rotate(-45deg) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel.collapsed .map-side-collapse-toggle span {
+    transform: rotate(135deg) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-search-panel {
+    flex: 0 0 auto !important;
+    grid-template-columns: minmax(0, 1fr) 3rem 6.25rem !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    padding: 1rem !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    border-radius: 0 !important;
+    background: var(--color-surface) !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-search-panel input,
+  .map-side-panel .map-search-panel button {
+    height: 3rem !important;
+    min-height: 3rem !important;
+    border-radius: 0.5rem !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-hospital-list,
+  .map-page.has-selected-hospital .map-hospital-list {
+    position: relative !important;
+    inset: auto !important;
+    display: block !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--color-surface) !important;
+    box-shadow: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    transform: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-hospital-list::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-sheet-handle {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-hospital-row,
+  .map-side-panel .map-hospital-row:hover,
+  .map-side-panel .map-hospital-row:focus-within,
+  .map-side-panel .map-hospital-row.active {
+    border-bottom: 1px solid var(--color-border) !important;
+    background: var(--color-surface) !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-hospital-row.active {
+    background: var(--color-primary-50) !important;
+    box-shadow: inset 0.22rem 0 0 var(--color-primary-600) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-hospital-row-main,
+  .map-side-panel .map-hospital-row:hover .map-hospital-row-main,
+  .map-side-panel .map-hospital-row:focus-within .map-hospital-row-main,
+  .map-side-panel .map-hospital-row.active .map-hospital-row-main {
+    min-height: 5.25rem !important;
+    padding: 0.9rem 1rem !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-side-panel .map-hospital-row-main:hover,
+  .map-side-panel .map-hospital-row-main:focus-visible {
+    background: var(--color-primary-50) !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-detail-dock {
+    position: fixed !important;
+    z-index: 89 !important;
+    top: 0 !important;
+    right: clamp(22.5rem, 30vw, 26.25rem) !important;
+    bottom: auto !important;
+    left: auto !important;
+    display: block !important;
+    width: clamp(25rem, 31vw, 29rem) !important;
+    min-width: 25rem !important;
+    max-width: 29rem !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: 1.25rem !important;
+    border: 0 !important;
+    border-left: 1px solid var(--color-border) !important;
+    border-right: 1px solid var(--color-border) !important;
+    border-radius: 0 !important;
+    background: var(--color-surface) !important;
+    box-shadow: -0.75rem 0 2rem color-mix(in srgb, var(--color-primary-900) 9%, transparent) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    transform: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-page.has-selected-hospital .map-detail-dock::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .map-detail-dock .map-sheet-handle {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .map-page.has-selected-hospital .map-side-panel .map-hospital-list {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-shell .map-side-panel,
+  .map-shell .map-side-panel:not(.collapsed),
+  .map-shell .map-side-panel.collapsed {
+    position: fixed !important;
+    z-index: 90 !important;
+    inset: 0 !important;
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel.collapsed > :not(.map-side-collapse-toggle) {
+    display: initial !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel.collapsed > .map-search-panel {
+    display: grid !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel.collapsed > .map-hospital-list {
+    display: block !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-side-collapse-toggle,
+  .map-side-panel .map-panel-close-button {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel {
+    position: fixed !important;
+    z-index: 3 !important;
+    top: calc(env(safe-area-inset-top, 0px) + 0.625rem) !important;
+    right: 0.75rem !important;
+    left: 0.75rem !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 2.875rem 5.5rem !important;
+    gap: 0.5rem !important;
+    width: auto !important;
+    padding: 0.4rem !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 0.875rem !important;
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent) !important;
+    box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--color-primary-900) 12%, transparent) !important;
+    backdrop-filter: blur(0.75rem) !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel input,
+  .map-side-panel .map-search-panel button {
+    height: 2.875rem !important;
+    min-height: 2.875rem !important;
+    border-radius: 0.625rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel input {
+    padding: 0 0.75rem !important;
+    font-size: 0.86rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel .secondary-button {
+    padding: 0 0.55rem !important;
+    font-size: 0.78rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list,
+  .map-page .map-detail-dock {
+    position: fixed !important;
+    z-index: 95 !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: calc(var(--bottom-nav-height, 4.625rem) + env(safe-area-inset-bottom, 0px)) !important;
+    left: 0 !important;
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 1rem 0 0 !important;
+    border: 0 !important;
+    border-top: 1px solid var(--color-border) !important;
+    border-radius: 1.125rem 1.125rem 0 0 !important;
+    background: var(--color-surface) !important;
+    box-shadow: 0 -0.75rem 2rem color-mix(in srgb, var(--color-primary-900) 12%, transparent) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+    pointer-events: auto !important;
+    transition:
+      height 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 180ms ease !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list::-webkit-scrollbar,
+  .map-page .map-detail-dock::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list.is-dragging,
+  .map-page .map-detail-dock.is-dragging {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-handle,
+  .map-detail-dock .map-sheet-handle {
+    position: sticky !important;
+    z-index: 4 !important;
+    top: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: 1.5rem !important;
+    margin: -1rem 0 0 !important;
+    background: var(--color-surface) !important;
+    cursor: grab !important;
+    touch-action: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-handle::after,
+  .map-detail-dock .map-sheet-handle::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 0.5rem !important;
+    left: 50% !important;
+    width: 2.25rem !important;
+    height: 0.25rem !important;
+    border-radius: 999px !important;
+    background: var(--color-border) !important;
+    transform: translateX(-50%) !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-row,
+  .map-side-panel .map-hospital-row:hover,
+  .map-side-panel .map-hospital-row:focus-within,
+  .map-side-panel .map-hospital-row.active {
+    border-bottom: 1px solid var(--color-border) !important;
+    background: var(--color-surface) !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-row.active {
+    background: var(--color-primary-50) !important;
+    box-shadow: inset 0.2rem 0 0 var(--color-primary-600) !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-row-main,
+  .map-side-panel .map-hospital-row:hover .map-hospital-row-main,
+  .map-side-panel .map-hospital-row:focus-within .map-hospital-row-main,
+  .map-side-panel .map-hospital-row.active .map-hospital-row-main {
+    min-height: 4.75rem !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-page .map-detail-dock {
+    padding: 1.5rem 1rem 0 !important;
+    border-radius: 1.125rem 1.125rem 0 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock .panel-close {
+    position: absolute !important;
+    z-index: 5 !important;
+    top: 1.4rem !important;
+    right: 0.75rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock .hospital-review-panel {
+    margin: 0 !important;
+    padding: 1rem 0 0 !important;
+    border-top: 1px solid var(--color-border) !important;
+    background: transparent !important;
+  }
+}
+
+.exo-hospital-marker,
+.exo-hospital-marker:hover,
+.exo-hospital-marker:focus-visible,
+.exo-hospital-marker.is-selected {
+  position: relative !important;
+  display: block !important;
+  width: 2.85rem !important;
+  min-width: 2.85rem !important;
+  height: 3.5rem !important;
+  min-height: 3.5rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: translate(-50%, -100%) !important;
+  transform-origin: 50% 100% !important;
+  overflow: visible !important;
+  cursor: pointer !important;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.exo-hospital-marker.is-selected {
+  transform: translate(-50%, -100%) scale(1.12) !important;
+}
+
+.exo-hospital-marker .exo-marker-pin {
+  position: absolute !important;
+  top: 0.2rem !important;
+  left: 50% !important;
+  display: grid !important;
+  width: 2.45rem !important;
+  height: 2.45rem !important;
+  place-items: center !important;
+  border: 0.18rem solid var(--color-surface) !important;
+  border-radius: 50% !important;
+  background: var(--color-primary-600) !important;
+  color: var(--color-surface) !important;
+  box-shadow:
+    0 0.25rem 0.75rem color-mix(in srgb, var(--color-primary-900) 24%, transparent),
+    0 0 0 0.12rem color-mix(in srgb, var(--color-primary-600) 32%, transparent) !important;
+  transform: translateX(-50%) !important;
+}
+
+.exo-hospital-marker .exo-marker-pin::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: -1 !important;
+  bottom: -0.55rem !important;
+  left: 50% !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  border-radius: 0 0.18rem 0 0.18rem !important;
+  background: inherit !important;
+  transform: translateX(-50%) rotate(45deg) !important;
+}
+
+.exo-hospital-marker.is-reviewed .exo-marker-pin {
+  background: var(--color-primary-900) !important;
+}
+
+.exo-hospital-marker.is-open .exo-marker-pin,
+.exo-hospital-marker.is-open.is-reviewed .exo-marker-pin {
+  background: var(--color-map-open-marker) !important;
+  box-shadow:
+    0 0.25rem 0.75rem color-mix(in srgb, var(--color-map-open-marker) 28%, transparent),
+    0 0 0 0.12rem color-mix(in srgb, var(--color-map-open-marker) 42%, transparent) !important;
+}
+
+.exo-hospital-marker.is-selected .exo-marker-pin {
+  outline: 0.2rem solid color-mix(in srgb, var(--color-primary-100) 80%, transparent) !important;
+}
+
+.exo-hospital-marker.is-open.is-selected .exo-marker-pin {
+  outline-color: color-mix(in srgb, var(--color-map-open-marker) 32%, transparent) !important;
+}
+
+.exo-hospital-marker .exo-marker-pin b {
+  display: block !important;
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: 1.05rem !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+}
+
+.exo-hospital-marker .exo-marker-review {
+  position: absolute !important;
+  z-index: 3 !important;
+  top: -0.3rem !important;
+  right: -0.7rem !important;
+  display: grid !important;
+  min-width: 1.45rem !important;
+  height: 1.45rem !important;
+  place-items: center !important;
+  padding: 0 0.3rem !important;
+  border: 2px solid var(--color-primary-600) !important;
+  border-radius: 999px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-900) !important;
+  box-shadow: 0 0.2rem 0.55rem color-mix(in srgb, var(--color-primary-900) 16%, transparent) !important;
+  font-size: 0.64rem !important;
+  font-weight: 1000 !important;
+  line-height: 1 !important;
+}
+
+.exo-hospital-marker.is-open .exo-marker-review {
+  border-color: var(--color-map-open-marker) !important;
+  color: color-mix(in srgb, var(--color-map-open-marker) 72%, var(--color-text-primary)) !important;
+}
+
+.exo-hospital-marker .exo-marker-like {
+  position: absolute !important;
+  z-index: 4 !important;
+  right: -0.45rem !important;
+  bottom: 0.3rem !important;
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  border: 2px solid var(--color-surface) !important;
+  border-radius: 999px !important;
+  background: var(--color-primary-600) !important;
+}
+
+.exo-hospital-marker .exo-marker-like::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 0.58rem !important;
+  height: 0.52rem !important;
+  background: var(--color-surface) !important;
+  clip-path: polygon(50% 100%, 5% 55%, 0 30%, 8% 10%, 27% 0, 50% 17%, 73% 0, 92% 10%, 100% 30%, 95% 55%) !important;
+  transform: translate(-50%, -47%) !important;
+}
+
+.map-detail-dock .hospital-review-panel,
+.map-detail-dock .review-item {
+  border-right: 0 !important;
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .review-item {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  background: transparent !important;
+}
+
+.map-detail-dock .hospital-detail-header {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  padding: 0.125rem 0 1rem !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.map-detail-dock .hospital-detail-header > strong {
+  min-width: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 1.25rem !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+.map-detail-dock .hospital-detail-tools {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+}
+
+.map-detail-dock .hospital-detail-like,
+.map-detail-dock .hospital-detail-header .panel-close {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  width: 2.625rem !important;
+  min-width: 2.625rem !important;
+  height: 2.625rem !important;
+  min-height: 2.625rem !important;
+  flex: 0 0 2.625rem !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: pointer !important;
+}
+
+.map-detail-dock .hospital-detail-like span {
+  color: inherit !important;
+}
+
+.map-detail-dock .hospital-detail-header .panel-close::before,
+.map-detail-dock .hospital-detail-header .panel-close::after {
+  top: 50% !important;
+  left: 50% !important;
+  width: 0.875rem !important;
+  height: 0.125rem !important;
+  margin: 0 !important;
+  transform-origin: center !important;
+}
+
+.map-detail-dock .hospital-detail-header .panel-close::before {
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+.map-detail-dock .hospital-detail-header .panel-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+
+.map-detail-dock .hospital-detail-like:hover,
+.map-detail-dock .hospital-detail-like:focus-visible,
+.map-detail-dock .hospital-detail-like.active {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.map-detail-dock .hospital-basic-info,
+.map-detail-dock .hospital-contact-info,
+.map-detail-dock .hospital-review-panel {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 1rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .hospital-basic-info {
+  display: grid !important;
+  gap: 0.625rem !important;
+}
+
+.map-detail-dock .hospital-address-row {
+  align-items: center !important;
+}
+
+.map-detail-dock .hospital-address-row p {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.55 !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+.map-detail-dock .hospital-detail-meta-icon {
+  display: block;
+  width: 1.25rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.0625rem;
+  flex: 0 0 1.25rem;
+  color: var(--color-primary-600);
+  overflow: visible;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy {
+  display: grid !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.map-detail-dock .hospital-copy-svg {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 1.25rem;
+}
+
+.map-detail-dock .hospital-basic-info .hospital-opening-hours {
+  gap: 0.5rem !important;
+  padding: 0.25rem 0 0 !important;
+  border: 0 !important;
+}
+
+.map-detail-dock .hospital-opening-current {
+  align-items: baseline !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+}
+
+.map-detail-dock .hospital-primary-actions {
+  display: grid !important;
+  width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.625rem !important;
+  margin: 0 !important;
+  padding: 1rem 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.map-detail-dock .hospital-primary-actions a,
+.map-detail-dock .hospital-primary-actions button {
+  display: inline-flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 2.875rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 0.75rem !important;
+  border: 1px solid var(--color-primary-600) !important;
+  border-radius: 0.625rem !important;
+  background: var(--color-primary-600) !important;
+  color: var(--color-surface) !important;
+  box-shadow: none !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  transform: none !important;
+  cursor: pointer !important;
+}
+
+.map-detail-dock .hospital-primary-actions > :last-child {
+  background: var(--color-surface) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.map-detail-dock .hospital-primary-actions a:hover,
+.map-detail-dock .hospital-primary-actions a:focus-visible,
+.map-detail-dock .hospital-primary-actions button:hover:not(:disabled),
+.map-detail-dock .hospital-primary-actions button:focus-visible {
+  border-color: var(--color-primary-700) !important;
+  background: var(--color-primary-700) !important;
+  color: var(--color-surface) !important;
+}
+
+.map-detail-dock .hospital-primary-actions button:disabled {
+  border-color: var(--color-border) !important;
+  background: var(--color-background) !important;
+  color: var(--color-text-placeholder) !important;
+  cursor: not-allowed !important;
+}
+
+.map-detail-dock .hospital-contact-info h3,
+.map-detail-dock .hospital-section-header h3 {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+}
+
+.map-detail-dock .hospital-contact-info dl {
+  display: grid !important;
+  gap: 0.625rem !important;
+  margin: 0.875rem 0 0 !important;
+}
+
+.map-detail-dock .hospital-contact-info dl > div {
+  display: grid !important;
+  grid-template-columns: minmax(4.5rem, 28%) minmax(0, 1fr) !important;
+  gap: 0.75rem !important;
+}
+
+.map-detail-dock .hospital-contact-info dt,
+.map-detail-dock .hospital-contact-info dd {
+  min-width: 0 !important;
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+.map-detail-dock .hospital-contact-info dd,
+.map-detail-dock .hospital-contact-info a {
+  color: var(--color-text-primary) !important;
+  overflow-wrap: anywhere !important;
+}
+
+.map-detail-dock .hospital-section-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  margin-bottom: 0.875rem !important;
+}
+
+.map-detail-dock .hospital-section-header > div {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: baseline !important;
+  gap: 0.375rem !important;
+}
+
+.map-detail-dock .hospital-section-header span {
+  color: var(--color-text-secondary) !important;
+  font-size: 0.8125rem !important;
+}
+
+.map-detail-dock .hospital-section-header .hospital-review-write-action {
+  width: auto !important;
+  min-width: 5.5rem !important;
+  min-height: 2.5rem !important;
+  flex: 0 0 auto !important;
+  padding: 0 0.875rem !important;
+  border-radius: 0.5rem !important;
+}
+
+.map-detail-dock .hospital-review-empty {
+  display: grid !important;
+  gap: 0.375rem !important;
+  padding: 1rem 0 0 !important;
+}
+
+.map-detail-dock .hospital-review-empty strong {
+  color: var(--color-text-primary) !important;
+  font-size: 0.9rem !important;
+}
+
+.map-detail-dock .hospital-review-empty span {
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.5 !important;
+}
+
+@media (max-width: 420px) {
+  .map-detail-dock .hospital-detail-header > strong {
+    font-size: 1.125rem !important;
+  }
+}
+
+.hospital-review-modal-layer {
+  position: fixed !important;
+  z-index: 320 !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 1.5rem !important;
+}
+
+.hospital-review-modal-backdrop,
+.hospital-review-modal-backdrop:hover:not(:disabled),
+.hospital-review-modal-backdrop:active:not(:disabled),
+.hospital-review-modal-backdrop:focus,
+.hospital-review-modal-backdrop:focus-visible {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: color-mix(in srgb, var(--color-primary-900) 34%, transparent) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.hospital-review-modal {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  width: min(42rem, calc(100vw - 3rem)) !important;
+  max-height: calc(100dvh - 3rem) !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 1rem !important;
+  background: var(--color-surface) !important;
+  box-shadow: 0 1.25rem 3.5rem color-mix(in srgb, var(--color-primary-900) 24%, transparent) !important;
+}
+
+.hospital-review-modal-head {
+  display: flex !important;
+  min-height: 4.5rem !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  padding: 0.85rem 1.25rem !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  background: var(--color-surface) !important;
+}
+
+.hospital-review-modal-head > div {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.15rem !important;
+}
+
+.hospital-review-modal-head strong {
+  color: var(--color-text-primary) !important;
+  font-size: 1.1rem !important;
+}
+
+.hospital-review-modal-head span {
+  overflow: hidden !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.hospital-review-modal-close,
+.hospital-review-modal-close:hover:not(:disabled),
+.hospital-review-modal-close:active:not(:disabled),
+.hospital-review-modal-close:focus-visible {
+  position: relative !important;
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: var(--color-primary-50) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.hospital-review-modal-close::before,
+.hospital-review-modal-close::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 1rem !important;
+  height: 0.12rem !important;
+  border-radius: 999px !important;
+  background: var(--color-primary-700) !important;
+}
+
+.hospital-review-modal-close::before {
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+.hospital-review-modal-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+
+.hospital-review-modal-body {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  scrollbar-width: none !important;
+}
+
+.hospital-review-modal-body::-webkit-scrollbar {
+  display: none !important;
+}
+
+.hospital-review-modal .review-composer {
+  gap: 0 !important;
+}
+
+.hospital-review-modal .review-input-section {
+  padding: 1.25rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: var(--color-surface) !important;
+}
+
+.hospital-review-modal .review-form-actions {
+  position: sticky !important;
+  z-index: 2 !important;
+  bottom: 0 !important;
+  padding: 0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom, 0px)) !important;
+  border-top: 1px solid var(--color-border) !important;
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent) !important;
+  backdrop-filter: blur(0.75rem) !important;
+}
+
+.hospital-review-modal .review-form-actions .step-primary {
+  width: 100% !important;
+  min-height: 3rem !important;
+  border-radius: 0.7rem !important;
+}
+
+@media (max-width: 760px) {
+  .hospital-review-modal-layer {
+    align-items: end !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .hospital-review-modal {
+    width: 100% !important;
+    max-width: none !important;
+    height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    border-radius: 1rem 1rem 0 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .hospital-review-modal-head {
+    padding-right: 1rem !important;
+    padding-left: 1rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .hospital-review-modal .review-input-section {
+    padding: 1rem !important;
+  }
+}
+
+.hospital-picker-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 70 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 20px !important;
+  background: color-mix(in srgb, var(--color-text-primary) 24%, transparent) !important;
+}
+
+.hospital-picker-overlay .hospital-picker {
+  position: relative !important;
+  width: min(100%, 520px) !important;
+  max-height: min(76vh, 620px) !important;
+  overflow-y: auto !important;
+  padding: 22px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 16px !important;
+  background: var(--color-surface) !important;
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--color-text-primary) 18%, transparent) !important;
+}
+
+@media (max-width: 760px) {
+
+  .app-shell,
+  .app-shell.map-shell {
+    padding-left: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .bottom-nav,
+  .map-shell .bottom-nav {
+    display: grid !important;
+    position: fixed !important;
+    z-index: 220 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media (min-width: 761px) {
+  .bottom-nav,
+  .map-shell .bottom-nav {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) {
+
+  .side-nav,
+  .side-nav.open,
+  .map-shell .side-nav,
+  .map-shell .side-nav.open,
+  .app-shell.map-shell .side-nav,
+  .app-shell.map-shell .side-nav.open {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: 0 !important;
+    width: var(--side-nav-width-ratio) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 0 8px 8px 0 !important;
+    transform: none !important;
+  }
+}
+
+:where( .hospital-detail-like, .review-like-button) {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:where( .hospital-detail-like, .review-like-button).active {
+  border-color: var(--color-like-500) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-like-500) !important;
+  box-shadow: none !important;
+}
+
+:where( .hospital-detail-like, .review-like-button) .heart-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:where( .hospital-detail-like, .review-like-button) .heart-icon.is-filled {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+:where( .review-like-button) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+}
+
+.map-detail-dock .hospital-detail-header .hospital-detail-like {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.map-detail-dock .hospital-detail-header .hospital-detail-like:hover:not(:disabled),
+.map-detail-dock .hospital-detail-header .hospital-detail-like:focus-visible {
+  border-color: var(--color-like-500) !important;
+  background: var(--color-like-100) !important;
+  color: var(--color-like-600) !important;
+}
+
+.map-detail-dock .hospital-detail-header .hospital-detail-like.active,
+.map-detail-dock .hospital-detail-header .hospital-detail-like.active:hover,
+.map-detail-dock .hospital-detail-header .hospital-detail-like.active:focus-visible {
+  border-color: var(--color-like-500) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-like-500) !important;
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--color-like-600) 18%, transparent) !important;
+}
+
+.exo-hospital-marker .exo-marker-like {
+  background: var(--color-like-500) !important;
+}
+
+.review-rating-picker button.active {
+  border-color: var(--color-rating-500) !important;
+  background: var(--color-rating-100) !important;
+  color: var(--color-rating-600) !important;
+}
+
+@media (max-width: 760px) {
+  .bottom-nav,
+  .map-shell .bottom-nav {
+    height: var(--mobile-bottom-nav-height) !important;
+    min-height: var(--mobile-bottom-nav-height) !important;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .app-shell,
+  .app-shell.map-shell {
+    padding-bottom: var(--mobile-bottom-nav-height) !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list,
+  .map-page .map-detail-dock {
+    bottom: var(--mobile-bottom-nav-height) !important;
+  }
+}
+
+.map-page .review-rating-picker button.active,
+.map-page .review-rating-picker button:hover:not(:disabled),
+.map-page .review-rating-picker button:focus-visible {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--color-rating-500) !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .hospital-visit-record-action {
+  display: flex;
+  width: 100%;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-primary-700);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-detail-dock .hospital-visit-record-action::after {
+  content: "›";
+  color: var(--color-text-secondary);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.map-detail-dock .hospital-visit-record-action:hover,
+.map-detail-dock .hospital-visit-record-action:focus-visible {
+  color: var(--color-primary-600);
+  background: var(--color-primary-50);
+}
+
+.map-side-panel .map-hospital-row-main > span {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.375rem !important;
+}
+
+.map-side-panel .map-hospital-row-main strong {
+  overflow: hidden !important;
+  color: var(--color-text-primary) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.map-side-panel .map-hospital-row-main small {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.4 !important;
+}
+
+.map-side-panel .map-hospital-row,
+.map-side-panel .map-hospital-row:hover,
+.map-side-panel .map-hospital-row:focus-within {
+  border-left: 0.25rem solid transparent !important;
+}
+
+.map-side-panel .map-hospital-row.active {
+  border-left: 0.25rem solid var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+  box-shadow: none !important;
+}
+
+.map-side-panel .map-hospital-row.active .map-hospital-row-main {
+  background: var(--color-primary-50) !important;
+}
+
+.hospital-rating-summary {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.hospital-rating-summary strong {
+  color: var(--color-text-primary) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.hospital-rating-stars {
+  position: relative;
+  display: inline-block;
+  width: 4.8rem;
+  color: var(--color-border);
+  font-size: 1rem;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hospital-rating-stars > span:last-child {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  color: var(--color-rating-500);
+}
+
+.hospital-rating-summary.compact {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+}
+
+.hospital-rating-summary.compact .hospital-rating-stars {
+  width: 4.2rem;
+  font-size: 0.875rem;
+}
+
+.hospital-list-open-status.is-open,
+.hospital-open-status.is-open {
+  color: var(--color-status-open);
+  font-weight: 800;
+}
+
+.hospital-list-open-status.is-closed,
+.hospital-open-status.is-closed {
+  color: var(--color-error-600);
+  font-weight: 800;
+}
+
+.hospital-list-open-status.is-unknown,
+.hospital-open-status.is-unknown {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+}
+
+.map-detail-dock .hospital-detail-header {
+  padding-bottom: 1.5rem !important;
+}
+
+.map-detail-dock .hospital-detail-header > strong {
+  font-size: 1.875rem !important;
+  line-height: 1.25 !important;
+}
+
+.map-detail-dock .hospital-detail-like,
+.map-detail-dock .hospital-detail-header .panel-close,
+.map-detail-dock .hospital-address-row .hospital-address-copy {
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  border-radius: 0.625rem !important;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy {
+  position: relative !important;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy::after {
+  display: none !important;
+  content: none !important;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy:hover::after,
+.map-detail-dock .hospital-address-row .hospital-address-copy:focus-visible::after {
+  display: none !important;
+}
+
+.map-detail-dock .hospital-detail-summary {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-detail-dock .hospital-summary-distance,
+.map-detail-dock .hospital-open-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.map-detail-dock .hospital-open-status i {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.map-detail-dock .hospital-status-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 1.125rem;
+  overflow: visible;
+}
+
+.map-detail-dock .hospital-status-icon > circle:first-child {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.map-detail-dock .hospital-status-icon-mark {
+  fill: var(--color-surface);
+  stroke: var(--color-surface);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+
+.map-detail-dock .hospital-open-status.is-closed {
+  color: var(--color-error-600) !important;
+}
+
+.map-detail-dock .hospital-opening-transition {
+  margin: 0;
+  padding: 0.75rem 0 0;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.map-detail-dock .hospital-basic-info,
+.map-detail-dock .hospital-contact-info,
+.map-detail-dock .hospital-review-panel {
+  padding: 1.5rem 0 !important;
+}
+
+.map-detail-dock .hospital-address-row p,
+.map-detail-dock .hospital-opening-current,
+.map-detail-dock .hospital-opening-empty,
+.map-detail-dock .hospital-contact-info dt,
+.map-detail-dock .hospital-contact-info dd {
+  font-size: 1rem !important;
+}
+
+.map-detail-dock .hospital-contact-info h3,
+.map-detail-dock .hospital-section-header h3 {
+  font-size: 1.375rem !important;
+  line-height: 1.3 !important;
+}
+
+.map-detail-dock .hospital-primary-actions {
+  gap: 0.75rem !important;
+  padding: 1.5rem 0 !important;
+}
+
+.map-detail-dock .hospital-primary-actions a,
+.map-detail-dock .hospital-primary-actions button,
+.map-detail-dock .hospital-section-header .hospital-review-write-action {
+  min-height: 2.75rem !important;
+  border-radius: 0.625rem !important;
+}
+
+.hospital-action-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 1.125rem;
+}
+
+.map-detail-dock .hospital-primary-actions a,
+.map-detail-dock .hospital-primary-actions button,
+.map-detail-dock .hospital-phone-link {
+  gap: 0.5rem !important;
+}
+
+.map-detail-dock .hospital-phone-link {
+  display: inline-flex !important;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0;
+  border-radius: 0;
+  color: var(--color-primary-700) !important;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.2rem;
+  background: transparent !important;
+}
+
+.map-detail-dock .hospital-phone-link:hover,
+.map-detail-dock .hospital-phone-link:focus-visible {
+  background: transparent !important;
+  color: var(--color-primary-700) !important;
+  text-decoration-color: currentColor;
+}
+
+.map-detail-dock .hospital-contact-empty {
+  color: var(--color-text-placeholder);
+}
+
+.map-detail-dock .hospital-review-empty {
+  gap: 0.75rem !important;
+}
+
+.map-detail-dock .hospital-review-empty span {
+  max-width: 28rem;
+  font-size: 0.875rem !important;
+}
+
+.map-action-toast {
+  position: fixed;
+  z-index: 220;
+  bottom: calc(var(--mobile-bottom-nav-height, 4.625rem) + 1.25rem + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  padding: 0.75rem 1rem;
+  border-radius: 0.625rem;
+  background: var(--color-primary-900);
+  color: var(--color-surface);
+  box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--color-primary-900) 22%, transparent);
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.4;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock .hospital-detail-header > strong {
+    font-size: 1.375rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock .hospital-contact-info h3,
+  .map-detail-dock .hospital-section-header h3 {
+    font-size: 1.125rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-detail-dock .hospital-basic-info,
+  .map-detail-dock .hospital-contact-info,
+  .map-detail-dock .hospital-review-panel {
+    padding: 1.25rem 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .hospital-rating-summary.compact .hospital-rating-stars {
+    width: 3.9rem;
+    font-size: 0.8125rem;
+  }
+}
+
+.map-sheet-sort-tabs {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 5.5rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list,
+  .map-page .map-detail-dock {
+    height: min(
+      var(--mobile-sheet-height, 35dvh),
+      calc(100dvh - var(--mobile-bottom-nav-height, 4.625rem) - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px) - 7.25rem)
+    ) !important;
+    max-height: min(
+      var(--mobile-sheet-height, 35dvh),
+      calc(100dvh - var(--mobile-bottom-nav-height, 4.625rem) - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px) - 7.25rem)
+    ) !important;
+    transform: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-handle,
+  .map-page .map-detail-dock .map-sheet-handle {
+    position: sticky !important;
+    z-index: 4 !important;
+    top: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: 1.5rem !important;
+    margin: -1rem 0 0 !important;
+    border-radius: 0 !important;
+    background: var(--color-surface) !important;
+    cursor: ns-resize !important;
+    touch-action: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-handle::after,
+  .map-page .map-detail-dock .map-sheet-handle::after {
+    content: "";
+    position: absolute;
+    top: 0.6rem;
+    left: 50%;
+    width: 2.5rem;
+    height: 0.25rem;
+    border-radius: 999px;
+    background: var(--color-border);
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs {
+    position: sticky;
+    z-index: 3;
+    top: 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs button {
+    min-width: max-content;
+    min-height: 2.5rem;
+    padding: 0 0.875rem;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-primary-700);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs button.active {
+    border-color: var(--color-primary-600);
+    background: var(--color-primary-600);
+    color: var(--color-surface);
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs button:focus-visible {
+    outline: 3px solid var(--color-primary-200);
+    outline-offset: 2px;
+  }
+}
+
+.map-detail-dock .review-rating-stars {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 0.125rem !important;
+  color: var(--color-border) !important;
+}
+
+.map-detail-dock .review-rating-stars svg {
+  display: block !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  fill: currentColor !important;
+}
+
+.map-detail-dock .review-rating-stars svg.is-filled {
+  color: var(--color-rating-500) !important;
+}
+
+.map-detail-dock .review-item-tags {
+  align-items: center !important;
+  justify-content: flex-start !important;
+  min-height: 2rem !important;
+  gap: 0.5rem !important;
+  padding: 0 !important;
+}
+
+.map-detail-dock .review-item-tags > span {
+  display: inline-flex !important;
+  min-height: 2rem !important;
+  height: 2rem !important;
+  align-items: center !important;
+  padding: 0 0.75rem !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock .review-item-tags > .review-item-tag-more {
+  min-width: 2rem !important;
+  justify-content: center !important;
+  padding: 0 0.625rem !important;
+  background: var(--color-background) !important;
+  color: var(--color-text-secondary) !important;
+  font-weight: 800 !important;
+}
+
+.map-detail-dock .review-item-footer {
+  align-items: center !important;
+  justify-content: flex-end !important;
+}
+
+.map-detail-dock .review-item-actions {
+  position: relative !important;
+  flex-wrap: nowrap !important;
+}
+
+.map-detail-dock .review-item-actions .review-like-button:hover:not(:disabled),
+.map-detail-dock .review-item-actions .review-like-button:focus-visible {
+  border-color: var(--color-like-500) !important;
+  background: var(--color-like-100) !important;
+  color: var(--color-like-600) !important;
+}
+
+.map-detail-dock .review-item-actions .review-like-button.active {
+  border-color: var(--color-like-500) !important;
+  background: var(--color-like-100) !important;
+  color: var(--color-like-600) !important;
+}
+
+.map-detail-dock .review-manage-menu {
+  position: relative !important;
+  display: block !important;
+}
+
+.map-detail-dock .review-item-actions .review-manage-trigger {
+  display: grid !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.map-detail-dock .review-manage-trigger svg {
+  width: 1.125rem !important;
+  height: 1.125rem !important;
+  fill: currentColor !important;
+}
+
+.map-detail-dock .review-manage-popover {
+  position: absolute !important;
+  z-index: 4 !important;
+  right: 0 !important;
+  bottom: calc(100% + 0.375rem) !important;
+  display: grid !important;
+  min-width: 5.5rem !important;
+  padding: 0.25rem !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 0.5rem !important;
+  background: var(--color-surface) !important;
+  box-shadow: 0 0.5rem 1.25rem color-mix(in srgb, var(--color-primary-900) 14%, transparent) !important;
+}
+
+.map-detail-dock .review-item-actions .review-manage-popover > button {
+  width: 100% !important;
+  min-height: 2.25rem !important;
+  justify-content: flex-start !important;
+  padding: 0 0.75rem !important;
+  border: 0 !important;
+  border-radius: 0.375rem !important;
+  text-align: left !important;
+}
+
+.map-detail-dock .review-item-actions .review-manage-popover > button.danger {
+  color: var(--color-error-600) !important;
+}
+
+@media (max-width: 760px) {
+  .map-detail-dock .review-item-footer {
+    align-items: center !important;
+    flex-direction: row !important;
+  }
+}
+
+.map-detail-dock .review-item-actions .review-like-button,
+.map-detail-dock .review-item-actions .review-like-button:hover:not(:disabled),
+.map-detail-dock .review-item-actions .review-like-button:focus-visible,
+.map-detail-dock .review-item-actions .review-like-button.active {
+  color: var(--color-like-600) !important;
+}
+
+.map-detail-dock .review-item-actions .review-like-button > span {
+  color: inherit !important;
+}
+
+.map-detail-dock .hospital-opening-hours {
+  display: block !important;
+  padding: 1rem !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 0.5rem !important;
+  background: var(--color-surface) !important;
+}
+
+.map-detail-dock .hospital-opening-current {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+}
+
+.map-detail-dock .hospital-opening-title {
+  display: flex !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.5rem !important;
+}
+
+.map-detail-dock .hospital-opening-title > strong {
+  color: var(--color-text-primary) !important;
+  font-size: 0.875rem !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock .hospital-opening-badge {
+  display: inline-flex !important;
+  min-height: 1.5rem !important;
+  align-items: center !important;
+  padding: 0 0.5rem !important;
+  border-radius: 999px !important;
+  font-size: 0.6875rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock .hospital-opening-badge.is-open {
+  background: color-mix(in srgb, var(--color-status-open) 12%, var(--color-surface)) !important;
+  color: var(--color-status-open) !important;
+}
+
+.map-detail-dock .hospital-opening-badge.is-closed {
+  background: var(--color-error-100) !important;
+  color: var(--color-error-600) !important;
+}
+
+.map-detail-dock .hospital-today-hours {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: baseline !important;
+  justify-content: flex-end !important;
+  gap: 0.375rem !important;
+  color: var(--color-text-primary) !important;
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock .hospital-opening-schedule {
+  display: flex !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  align-items: flex-end !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important;
+}
+
+.map-detail-dock .hospital-opening-break {
+  display: block !important;
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.75rem !important;
+  line-height: 1.5 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.map-detail-dock .hospital-weekly-hours {
+  min-width: 0 !important;
+  margin-top: 1rem !important;
+  padding-top: 0.75rem !important;
+  border-top: 1px solid var(--color-border) !important;
+}
+
+.map-detail-dock .hospital-weekly-hours-toggle {
+  display: inline-flex !important;
+  width: auto !important;
+  min-height: 2.25rem !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: none !important;
+  font-size: 0.8125rem !important;
+  font-weight: 800 !important;
+  transform: none !important;
+}
+
+.map-detail-dock .hospital-hours-chevron {
+  width: 0 !important;
+  height: 0 !important;
+  border-top: 0.3rem solid transparent !important;
+  border-bottom: 0.3rem solid transparent !important;
+  border-left: 0.4rem solid currentColor !important;
+  transition: transform 180ms ease !important;
+}
+
+.map-detail-dock .hospital-weekly-hours-toggle[aria-expanded="true"] .hospital-hours-chevron {
+  transform: rotate(90deg) !important;
+}
+
+.map-detail-dock .hospital-weekly-hours-panel {
+  display: grid !important;
+  grid-template-rows: 0fr !important;
+  opacity: 0 !important;
+  transition: grid-template-rows 220ms ease, opacity 180ms ease !important;
+}
+
+.map-detail-dock .hospital-weekly-hours-panel.is-open {
+  grid-template-rows: 1fr !important;
+  opacity: 1 !important;
+}
+
+.map-detail-dock .hospital-weekly-hours-panel > div {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.map-detail-dock .hospital-weekly-hours-panel ul {
+  margin: 0.75rem 0 0 !important;
+}
+
+@media (max-width: 480px) {
+  .map-detail-dock .hospital-opening-hours {
+    padding: 0.875rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .map-detail-dock .hospital-opening-current {
+    gap: 0.75rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .map-detail-dock .hospital-opening-title {
+    max-width: 7.5rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .map-detail-dock .hospital-today-hours {
+    font-size: 0.8125rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-detail-dock .hospital-weekly-hours-panel,
+  .map-detail-dock .hospital-hours-chevron {
+    transition: none !important;
+  }
+}
+
+.map-detail-dock .review-item-head > .review-item-head-tools {
+  display: inline-flex !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+  align-items: flex-start !important;
+  justify-content: flex-end !important;
+  gap: 0.375rem !important;
+}
+
+.map-detail-dock .review-item-head-tools .review-manage-menu {
+  flex: 0 0 auto !important;
+}
+
+.map-detail-dock .review-item .review-manage-trigger {
+  display: grid !important;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .review-item .review-manage-trigger:hover:not(:disabled),
+.map-detail-dock .review-item .review-manage-trigger:focus-visible {
+  background: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.map-detail-dock .review-item .review-manage-popover > button {
+  width: 100% !important;
+  min-height: 2.25rem !important;
+  justify-content: flex-start !important;
+  padding: 0 0.75rem !important;
+  border: 0 !important;
+  border-radius: 0.375rem !important;
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  text-align: left !important;
+}
+
+.map-detail-dock .review-item .review-manage-popover > button.danger {
+  color: var(--color-error-600) !important;
+}
+
+.map-detail-dock .review-item-actions .review-like-button {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 2.75rem !important;
+  padding: 0.5rem 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+.map-detail-dock .review-item-actions .review-like-button:hover:not(:disabled),
+.map-detail-dock .review-item-actions .review-like-button:focus-visible {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--color-like-600) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.map-detail-dock .review-item-actions .review-like-button.active {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--color-like-600) !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 480px) {
+  .map-detail-dock .review-item-head {
+    flex-wrap: wrap !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .map-detail-dock .review-item-head > .review-item-head-tools {
+    margin-left: auto !important;
+  }
+}
+
+.map-detail-dock .review-list,
+.map-detail-dock .review-item,
+.map-detail-dock .review-item-head,
+.map-detail-dock .review-item-head-tools,
+.map-detail-dock .review-manage-menu {
+  overflow: visible !important;
+}
+
+.map-detail-dock .review-item {
+  position: relative !important;
+}
+
+.map-detail-dock .review-item.is-manage-menu-open {
+  z-index: 20 !important;
+}
+
+.map-detail-dock .review-item-head-tools .review-manage-popover {
+  top: calc(100% + 0.375rem) !important;
+  right: 0 !important;
+  bottom: auto !important;
+  z-index: 30 !important;
+  min-width: 6rem !important;
+}
+
+.map-side-panel .map-search-panel,
+.map-shell .map-side-panel .map-search-panel {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.map-side-panel .map-search-panel .secondary-button {
+  position: static !important;
+  inset: auto !important;
+  display: inline-flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 0.5rem !important;
+  border-radius: 0.625rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  transform: none !important;
+}
+
+.map-side-panel .map-search-panel .map-search-field {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 1.5rem minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 0 !important;
+  height: 2.75rem !important;
+  min-width: 0 !important;
+  padding: 0 0.75rem !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 0.625rem !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-700) !important;
+  box-shadow: none !important;
+}
+
+.map-side-panel .map-search-panel .map-search-field:focus-within {
+  border-color: var(--color-primary-600) !important;
+  box-shadow: 0 0 0 0.1875rem color-mix(in srgb, var(--color-primary-100) 72%, transparent) !important;
+}
+
+.map-side-panel .map-search-panel .map-search-field > label {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+}
+
+.map-side-panel .map-search-panel .map-search-leading-icon,
+.map-side-panel .map-search-panel .secondary-button svg {
+  display: grid !important;
+  place-items: center !important;
+}
+
+.map-side-panel .map-search-panel .map-search-leading-icon svg,
+.map-side-panel .map-search-panel .secondary-button svg {
+  display: block !important;
+  width: 1.125rem !important;
+  height: 1.125rem !important;
+  flex: 0 0 auto !important;
+}
+
+.map-side-panel .map-search-panel .secondary-button {
+  width: auto !important;
+  min-width: 5.5rem !important;
+  gap: 0.375rem !important;
+  border: 1px solid var(--color-primary-200) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.map-side-panel .map-search-panel label,
+.map-side-panel .map-search-panel input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.map-side-panel .map-search-panel input {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--color-text-primary) !important;
+}
+
+@media (max-width: 480px) {
+  .map-side-panel .map-search-panel,
+  .map-shell .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 0.375rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .map-side-panel .map-search-panel .secondary-button {
+    min-width: 4.75rem !important;
+    padding: 0 0.5rem !important;
+    font-size: 0.6875rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .map-side-panel .map-search-panel input {
+    padding: 0 !important;
+    font-size: 0.8125rem !important;
+  }
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy,
+.map-detail-dock .hospital-address-row .hospital-address-copy:hover:not(:disabled),
+.map-detail-dock .hospital-address-row .hospital-address-copy:focus-visible,
+.map-detail-dock .hospital-address-row .hospital-address-copy:active:not(:disabled),
+.map-detail-dock .hospital-address-row .hospital-address-copy.copied {
+  box-sizing: border-box !important;
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  max-width: 2.75rem !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  max-height: 2.75rem !important;
+  flex: 0 0 2.75rem !important;
+  padding: 0 !important;
+  border-radius: 0.625rem !important;
+  transform: none !important;
+  scale: 1 !important;
+  line-height: 1 !important;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease !important;
+}
+
+.map-detail-dock .hospital-address-row .hospital-address-copy:hover:not(:disabled),
+.map-detail-dock .hospital-address-row .hospital-address-copy:focus-visible {
+  border-color: var(--color-primary-300) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+}
+
+.required-mark,
+.review-required-star,
+.required-label > span[aria-hidden="true"] {
+  display: inline-block;
+  margin-left: 0.2rem;
+  color: var(--color-error-600) !important;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list > .map-sheet-handle,
+  .map-page .map-detail-dock > .map-sheet-handle,
+  .map-side-panel .map-hospital-list > .map-sheet-handle:hover,
+  .map-page .map-detail-dock > .map-sheet-handle:hover,
+  .map-side-panel .map-hospital-list > .map-sheet-handle:active,
+  .map-page .map-detail-dock > .map-sheet-handle:active {
+    position: sticky !important;
+    z-index: 10 !important;
+    top: 0 !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    height: 2.75rem !important;
+    min-height: 2.75rem !important;
+    max-height: 2.75rem !important;
+    margin: -1rem 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 1.125rem 1.125rem 0 0 !important;
+    background: var(--color-surface) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    cursor: ns-resize !important;
+    touch-action: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list > .map-sheet-handle::after,
+  .map-page .map-detail-dock > .map-sheet-handle::after {
+    top: 1.15rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs {
+    top: 2.75rem !important;
+  }
+}
+
+.map-side-panel .map-desktop-sort-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-side-panel .map-desktop-sort-tabs button,
+.map-side-panel .map-mobile-open-filter button {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0.375rem;
+  border: 1px solid var(--color-primary-300);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-primary-700);
+  font: inherit;
+  font-size: clamp(0.75rem, 0.8vw, 0.875rem);
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.map-side-panel .map-sort-menu {
+  display: inline-flex;
+  min-width: 6.5rem;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0 0.375rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.map-side-panel .map-sort-menu select {
+  width: 100%;
+  min-width: 5.5rem;
+  min-height: 2.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.map-side-panel .map-sort-menu:focus-within {
+  border-color: var(--color-primary-600);
+  outline: 2px solid var(--color-primary-100);
+  outline-offset: 1px;
+}
+
+.map-detail-dock .hospital-review-tag-summary {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0 0 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-detail-dock .hospital-review-tag-summary > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.map-detail-dock .hospital-review-tag-summary > header strong {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.map-detail-dock .hospital-review-tag-summary > header span {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.map-detail-dock .hospital-review-tag-bars {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.map-detail-dock .hospital-review-tag-row {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: 2.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.map-detail-dock .hospital-review-tag-fill {
+  position: absolute;
+  z-index: -1;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--color-primary-100);
+  transition: width 220ms ease;
+}
+
+.map-detail-dock .hospital-review-tag-label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.map-detail-dock .hospital-review-tag-label svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  fill: none;
+  stroke: var(--color-primary-700);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+}
+
+.map-detail-dock .hospital-review-tag-label b {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-detail-dock .hospital-review-tag-row > strong {
+  color: var(--color-primary-700);
+  font-size: 0.8125rem;
+}
+
+.map-detail-dock .hospital-review-tag-more {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  justify-self: center;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.map-detail-dock .hospital-review-tag-more:hover,
+.map-detail-dock .hospital-review-tag-more:focus-visible {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.map-detail-dock .hospital-review-tag-more:focus-visible {
+  outline: 2px solid var(--color-primary-300);
+  outline-offset: 2px;
+}
+
+.map-detail-dock .hospital-review-tag-more svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  transition: transform 180ms ease;
+}
+
+.map-detail-dock .hospital-review-tag-more svg.is-expanded {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 430px) {
+  .map-detail-dock .hospital-review-tag-summary > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .map-detail-dock .hospital-review-tag-label b {
+    white-space: normal;
+  }
+}
+
+.map-side-panel .map-desktop-sort-tabs button.active,
+.map-side-panel .map-mobile-open-filter button.active {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: var(--color-surface);
+}
+
+.map-side-panel .map-desktop-sort-tabs button:focus-visible,
+.map-side-panel .map-mobile-open-filter button:focus-visible {
+  outline: 3px solid var(--color-primary-200);
+  outline-offset: 2px;
+}
+
+.map-side-panel .map-mobile-open-filter {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .map-side-panel .map-desktop-sort-tabs {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-mobile-open-filter {
+    position: fixed !important;
+    z-index: 93 !important;
+    top: calc(env(safe-area-inset-top, 0px) + 4.45rem) !important;
+    right: auto !important;
+    left: 0.75rem !important;
+    display: block !important;
+    width: auto !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-mobile-open-filter button {
+    width: auto !important;
+    min-width: 5rem !important;
+    min-height: 2.5rem !important;
+    padding: 0 1rem !important;
+    font-size: 0.8125rem !important;
+    box-shadow: 0 0.3rem 0.9rem color-mix(in srgb, var(--color-primary-900) 8%, transparent) !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel {
+    grid-template-columns: minmax(0, 1fr) 5.75rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel .secondary-button {
+    display: inline-flex !important;
+    min-width: 5.75rem !important;
+    padding: 0 0.625rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.375rem !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel .secondary-button svg {
+    width: 1rem !important;
+    height: 1rem !important;
+    flex: 0 0 1rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-search-panel .secondary-button span {
+    display: inline !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list,
+  .map-page .map-detail-dock {
+    min-height: 2.75rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-list > .map-sheet-handle,
+  .map-page .map-detail-dock > .map-sheet-handle,
+  .map-side-panel .map-hospital-list > .map-sheet-handle:hover,
+  .map-page .map-detail-dock > .map-sheet-handle:hover,
+  .map-side-panel .map-hospital-list > .map-sheet-handle:active,
+  .map-page .map-detail-dock > .map-sheet-handle:active {
+    position: sticky !important;
+    top: 0 !important;
+    margin: 0 !important;
+    border-radius: 1.125rem 1.125rem 0 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs {
+    top: 2.75rem !important;
+    min-height: 3.5rem;
+    align-items: center;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs .map-sort-menu {
+    width: 100%;
+    justify-content: space-between;
+    min-height: 2.5rem;
+    border: 0;
+    border-radius: 0;
+    padding: 0 0.25rem;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-sort-tabs .map-sort-menu select {
+    min-height: 2.5rem;
+    text-align: right;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-page .map-detail-dock .hospital-detail-header {
+    position: relative;
+    z-index: 1;
+    min-height: 3.5rem;
+    padding-top: 0.5rem;
+    background: var(--color-surface);
+  }
+}

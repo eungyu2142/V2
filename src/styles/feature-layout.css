@@ -1,0 +1,846 @@
+/* Shared feature layout only. Component visuals belong to each screen stylesheet. */
+
+.qna-record-preview-overlay {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--color-primary-900) 48%, transparent);
+}
+.qna-record-preview-dialog {
+  width: min(720px, 100%);
+  max-height: min(82vh, 760px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--color-primary-900) 22%, transparent);
+}
+.qna-record-preview-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--color-text-primary);
+  font-size: 18px;
+}
+.qna-record-preview-dialog > header button {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .qna-record-preview-overlay { align-items: end; padding: 0; }
+}
+@media (max-width: 640px) {
+  .qna-record-preview-dialog { width: 100%; max-height: 86vh; border-radius: 16px 16px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+}
+.review-pet-meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.app-shell:not(.map-shell) .app-main,
+.my-pet-dashboard,
+.qna-feed-page {
+  display: grid !important;
+  gap: 24px !important;
+}
+.my-pet-dashboard-panel,
+.qna-feed-section,
+.qna-detail-post,
+.qna-comments {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: clamp(18px, 2.2vw, 28px) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 16px !important;
+  background: rgba(247, 249, 248, 0.94) !important;
+  box-shadow: 0 12px 32px rgba(11, 63, 53, 0.08) !important;
+}
+.pet-list-toolbar,
+.section-title,
+.qna-feed-head,
+.qna-detail-header {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  min-width: 0 !important;
+}
+.my-pet-dashboard .pet-list,
+.qna-feed-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 24px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+.my-pet-dashboard .pet-card,
+.qna-help-card {
+  display: flex !important;
+  min-width: 0 !important;
+  min-height: 100% !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 16px !important;
+  background: var(--ui-surface) !important;
+  box-shadow: 0 10px 26px rgba(11, 63, 53, 0.07) !important;
+}
+@media (min-width: 720px) {
+  .my-pet-dashboard .pet-list,
+  .qna-feed-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 1120px) {
+  .my-pet-dashboard .pet-list,
+  .qna-feed-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 900px) {
+
+  
+  .pet-list-toolbar,
+  .section-title,
+  .qna-feed-head,
+  .qna-detail-header {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+}
+@media (max-width: 640px) {
+  .app-shell:not(.map-shell) .app-main,
+  .my-pet-dashboard,
+  .qna-feed-page {
+    gap: 16px !important;
+  }
+}
+@media (max-width: 640px) {
+
+  
+  .my-pet-dashboard-panel,
+  .qna-feed-section,
+  .qna-detail-post,
+  .qna-comments {
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+}
+.my-pet-dashboard,
+.qna-feed-page,
+.qna-detail {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+.my-pet-dashboard-panel,
+.qna-feed-section,
+.qna-detail-post,
+.qna-comments,
+.step-card,
+.pet-complete-card {
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--layout-card-radius) !important;
+  background: rgba(247, 249, 248, 0.94) !important;
+  box-shadow: 0 12px 32px rgba(11, 63, 53, 0.08) !important;
+}
+.my-pet-dashboard-panel,
+.qna-feed-section,
+.qna-detail-post,
+.qna-comments {
+  padding: clamp(18px, 2.2vw, 28px) !important;
+}
+.my-pet-dashboard,
+.qna-feed-page {
+  display: grid !important;
+  gap: var(--layout-gap) !important;
+}
+.pet-list-toolbar,
+.section-title,
+.qna-feed-head,
+.qna-detail-header {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: var(--layout-gap-sm) !important;
+  min-width: 0 !important;
+}
+.pet-list-toolbar > *,
+.section-title > *,
+.qna-feed-head > *,
+.qna-detail-header > * {
+  min-width: 0 !important;
+}
+.my-pet-dashboard .my-pet-tools,
+.qna-feed-search {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+.my-pet-dashboard .my-pet-search,
+.qna-feed-search {
+  width: 100% !important;
+  min-width: min(100%, 280px) !important;
+}
+.my-pet-dashboard .filter-tags button,
+.qna-load-more {
+  min-height: 42px !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+}
+.my-pet-dashboard .pet-list,
+.qna-feed-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: var(--layout-gap) !important;
+  width: 100% !important;
+  align-items: stretch !important;
+}
+.my-pet-dashboard .pet-card,
+.qna-help-card {
+  display: flex !important;
+  min-width: 0 !important;
+  min-height: 100% !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: var(--layout-gap-sm) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--layout-card-radius) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: 0 10px 26px rgba(11, 63, 53, 0.07) !important;
+}
+.my-pet-dashboard .pet-card > *,
+.qna-help-card > * {
+  min-width: 0 !important;
+}
+@media (max-width: 640px) {
+
+  
+  .my-pet-dashboard-panel,
+  .qna-feed-section,
+  .qna-detail-post,
+  .qna-comments {
+    padding: 16px !important;
+  }
+}
+@media (max-width: 640px) {
+
+  .my-pet-dashboard .pet-list,
+  .qna-feed-list {
+    grid-template-columns: 1fr !important;
+  }
+}
+.app-shell:not(.map-shell) .app-main,
+.page-stack,
+.qna-feed-page,
+.qna-detail,
+.my-pet-dashboard,
+.step-screen {
+  min-width: 0;
+}
+.page-stack,
+.qna-feed-section,
+.qna-detail,
+.qna-comments,
+.my-pet-dashboard {
+  gap: var(--layout-gap) !important;
+}
+.my-pet-dashboard .pet-list.card-view,
+.qna-feed-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch;
+  gap: var(--layout-gap) !important;
+}
+.my-pet-dashboard .pet-list.card-view .pet-card,
+.qna-help-card {
+  display: flex !important;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px !important;
+  margin: 0 !important;
+  padding: var(--layout-card-padding) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius) !important;
+  background: var(--ui-surface) !important;
+}
+.my-pet-dashboard .pet-list.card-view .pet-card > *,
+.qna-help-card > * {
+  width: 100%;
+  min-width: 0;
+}
+.qna-feed-list > :only-child,
+.pet-list > :only-child {
+  grid-column: 1 / -1;
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .my-pet-dashboard .pet-list.card-view,
+  .qna-feed-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 760px) {
+
+  .my-pet-dashboard .pet-list.card-view,
+  .qna-feed-list,
+  .choice-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+@media (max-width: 760px) {
+
+  .pet-list-toolbar,
+  .section-title,
+  .qna-feed-head,
+  .qna-detail-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+.qna-pet-select .qna-pet-grid > button {
+  position: relative;
+}
+.qna-pet-select .qna-pet-grid > button.active {
+  border-color: var(--color-primary-600) !important;
+  box-shadow: 0 0 0 1px var(--color-primary-600) inset !important;
+}
+.qna-pet-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  color: var(--color-surface);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+.map-hospital-row .category-tag-icon {
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+.review-pet-select{display:grid;gap:6px;color:var(--color-text-secondary);font-size:.78rem;font-weight:800}
+.page-stack > section,
+.section-block,
+.qna-feed-section,
+.qna-detail,
+.qna-comments,
+.my-pet-dashboard-panel,
+.map-search-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.my-pet-dashboard .pet-list,
+.qna-feed-list {
+  gap: 0;
+}
+.my-pet-dashboard .pet-card,
+.qna-help-card,
+.qna-detail-post {
+  min-height: 0;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.my-pet-dashboard .pet-card + .pet-card,
+.qna-help-card + .qna-help-card {
+  border-top: 1px solid rgba(11, 63, 53, 0.08);
+}
+.map-hospital-row .category-tag-icon {
+  width: 38px !important;
+  height: 38px !important;
+  padding: 8px !important;
+}
+.my-pet-section .pet-card,
+.qna-detail-post,
+.qna-comments article {
+  border-width: 0 0 1px;
+  border-color: rgba(11, 63, 53, 0.12);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.my-pet-dashboard .pet-card-icon,
+.qna-category,
+.qna-status.resolved {
+  border-color: var(--color-primary-100) !important;
+  background: var(--color-background) !important;
+  color: var(--color-primary-700) !important;
+}
+.qna-feed-page input,
+.qna-feed-page textarea,
+.qna-help-card,
+.qna-detail-post,
+.qna-comments,
+.map-side-panel,
+.map-side-panel .map-search-panel,
+.map-side-panel .map-hospital-list,
+.hospital-review-panel {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
+}
+.my-pet-dashboard .pet-card-icon .category-tag-icon,
+.qna-category {
+  color: var(--color-primary-600) !important;
+}
+.map-hospital-row .category-tag-icon {
+  color: var(--color-primary-600) !important;
+  stroke: currentColor !important;
+}
+button:hover:not(:disabled),
+button:active:not(:disabled),
+.pet-card:hover,
+.qna-help-card:hover {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: 0 8px 18px rgba(11, 63, 53, 0.16) !important;
+  transform: translateY(-2px);
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+.map-hospital-row .category-tag-icon {
+  color: var(--color-primary-600) !important;
+}
+.map-hospital-row .category-tag-icon {
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: none !important;
+}
+:where(.choice-grid button,
+.filter-tags button,
+.review-chip-grid button,
+.qna-category,
+.qna-status) {
+  min-height: 34px;
+  border: 1px solid var(--ui-primary);
+  border-radius: var(--ui-pill);
+  background: var(--ui-surface) !important;
+  color: var(--ui-primary) !important;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+:where(.choice-grid button.active,
+.filter-tags button.active,
+.review-chip-grid button.selected,
+.review-chip-grid button.active,
+.qna-category.active,
+.qna-status.active) {
+  border-color: var(--ui-primary-strong) !important;
+  background: var(--ui-primary-strong) !important;
+  color: var(--ui-surface) !important;
+}
+:where(.step-field input,
+.step-field textarea,
+.step-field select,
+.qna-feed-page input,
+.qna-feed-page textarea,
+.map-search-panel input,
+.review-form input,
+.review-form textarea,
+.review-form select) {
+  min-height: var(--ui-control-height);
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius) !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: inset 0 1px 2px rgba(11, 63, 53, 0.04);
+}
+:where(.pet-card,
+.qna-help-card,
+.qna-detail-post,
+.map-hospital-row,
+.hospital-review-panel,
+.review-item,
+.step-card,
+.pet-complete-card) {
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: 0 6px 18px rgba(11, 63, 53, 0.07) !important;
+}
+.map-hospital-row .category-tag-icon {
+  width: 42px !important;
+  height: 42px !important;
+  padding: 9px !important;
+  border-radius: 12px !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-600) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.map-hospital-row:hover .category-tag-icon,
+.map-hospital-row:focus-within .category-tag-icon,
+.map-hospital-row.active .category-tag-icon {
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-600) !important;
+}
+:where(
+  .pet-card-icon,
+  .category-tag-icon,
+  .qna-category,
+  .qna-status) {
+  border-color: var(--ui-border) !important;
+  background-color: var(--ui-primary-soft) !important;
+  color: var(--ui-primary-strong) !important;
+}
+:where(
+  .pet-card,
+  .qna-help-card,
+  .qna-detail-post,
+  .review-item,
+  .step-card
+) {
+  border-color: var(--ui-border) !important;
+}
+:where(
+  .step-primary,
+  .create-submit,
+  .smart-save-button,
+  .qna-create-button,
+  .qna-mobile-fab,
+  .map-search-panel button[type="submit"]
+) {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-600) !important;
+  color: var(--color-text-primary) !important;
+}
+.qna-detail-pet-meta {
+  width: 100% !important;
+  margin: 0 0 18px !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.84rem !important;
+  line-height: 1.4 !important;
+  text-align: left !important;
+}
+.qna-hospital-attachment {
+  display: block !important;
+  width: 100% !important;
+  margin: 12px 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  background: var(--color-surface) !important;
+  overflow: hidden !important;
+}
+.qna-hospital-attachment-main {
+  display: grid !important;
+  width: 100% !important;
+  gap: 5px !important;
+  min-height: 72px !important;
+  padding: 14px 16px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  text-align: left !important;
+}
+button.qna-hospital-attachment-main { cursor: pointer !important; }
+button.qna-hospital-attachment-main:hover,
+button.qna-hospital-attachment-main:focus-visible { background: var(--color-primary-50) !important; }
+.qna-hospital-attachment-main strong { font-size: 15px !important; font-weight: 700 !important; }
+.qna-hospital-attachment-main span { color: var(--color-text-secondary) !important; font-size: 13px !important; }
+.qna-hospital-attachment-remove { margin: 0 12px 12px !important; }
+.map-side-panel .map-hospital-row .category-tag-icon,
+.map-detail-dock .category-tag-icon {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--map-blue-soft) !important;
+  color: var(--map-blue) !important;
+}
+@media (max-width: 760px) {
+
+  .map-side-panel .map-hospital-row .category-tag-icon {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+  }
+}
+.map-side-panel .map-hospital-row .category-tag-icon {
+  width: 100% !important;
+  max-width: 2.75rem !important;
+  height: auto !important;
+  aspect-ratio: 1 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border-radius: 28% !important;
+}
+.qna-create-screen .step-card,
+.qna-create-screen .qna-compose-fields,
+.qna-create-screen .qna-pet-grid {
+  overflow-x: hidden !important;
+}
+.qna-pet-select {
+  display: grid !important;
+  gap: 14px !important;
+}
+.qna-pet-select h2 {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 17px !important;
+}
+.qna-pet-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+.qna-pet-grid > button {
+  display: flex !important;
+  min-width: 0 !important;
+  min-height: 78px !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  text-align: left !important;
+}
+.qna-pet-grid > button.active {
+  border-color: var(--color-primary-600) !important;
+  background: var(--color-primary-50) !important;
+}
+.qna-pet-avatar {
+  display: grid !important;
+  width: 46px !important;
+  height: 46px !important;
+  flex: 0 0 46px !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border-radius: 50% !important;
+  background: var(--color-primary-100) !important;
+  color: var(--color-primary-700) !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+}
+.qna-pet-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+.qna-pet-none {
+  background: var(--color-background) !important;
+  color: var(--color-text-secondary) !important;
+}
+.qna-pet-copy {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+}
+.qna-pet-copy strong,
+.qna-pet-copy small {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.qna-pet-copy strong { font-size: 14px !important; }
+.qna-pet-copy small { color: var(--color-text-secondary) !important; font-size: 11px !important; }
+@media (max-width: 560px) {
+  .qna-pet-grid { grid-template-columns: 1fr !important; }
+}
+.category-tag-icon,
+.map-hospital-row .category-tag-icon,
+.map-detail-dock .category-tag-icon,
+.my-pet-dashboard .category-tag-icon,
+.pet-card-icon .category-tag-icon,
+.pet-complete-summary .category-tag-icon,
+.pet-confirm-photo-card .category-tag-icon {
+  color: var(--color-primary-600) !important;
+  stroke: currentColor !important;
+  fill: none !important;
+}
+.map-hospital-row .category-tag-icon,
+.map-detail-dock .category-tag-icon,
+.my-pet-dashboard .pet-card-icon .category-tag-icon,
+.pet-complete-summary .category-tag-icon,
+.pet-confirm-photo-card .category-tag-icon {
+  background: var(--color-primary-50) !important;
+  border-color: color-mix(in srgb, var(--color-primary-300) 45%, var(--color-border)) !important;
+}
+.map-hospital-row.active .category-tag-icon,
+.map-hospital-row:hover .category-tag-icon,
+.map-hospital-row:focus-within .category-tag-icon {
+  color: var(--color-primary-900) !important;
+  background: var(--color-primary-100) !important;
+}
+:where( .qna-sort-sheet-overlay, .hospital-picker-overlay, .record-picker-overlay, .diary-overlay) {
+  background: transparent !important;
+  pointer-events: none !important;
+}
+:where( .qna-sort-sheet-overlay > section, .hospital-picker-overlay > section, .record-picker-overlay > section, .diary-overlay > section) {
+  pointer-events: auto !important;
+}
+.qna-hospital-picker-list {
+  display: grid !important;
+  gap: 8px !important;
+  margin: 16px 0 !important;
+}
+.qna-hospital-picker-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+.qna-hospital-picker-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  width: 36px !important;
+  height: 36px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 50% !important;
+  background: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+.qna-hospital-picker-item {
+  display: grid !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-height: 72px !important;
+  padding: 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 10px !important;
+  background: var(--color-surface) !important;
+  text-align: left !important;
+}
+.qna-hospital-picker-item span,
+.qna-hospital-picker-item small {
+  color: var(--color-text-secondary) !important;
+  font-size: 12px !important;
+}
+.qna-hospital-picker-item span {
+  font-size: 12px !important;
+}
+.qna-hospital-picker-more {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--color-primary-600);
+  border-radius: var(--ui-radius);
+  background: var(--color-surface);
+  color: var(--color-primary-700);
+  font-weight: 800;
+}
+:where( .qna-sort-sheet-overlay, .hospital-picker-overlay, .record-picker-overlay, .diary-overlay) {
+  pointer-events: auto !important;
+  background: transparent !important;
+}
+.qna-hospital-search {
+  display: grid !important;
+  grid-template-columns: 22px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 44px !important;
+  margin: 14px 0 10px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 10px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-600) !important;
+}
+.qna-hospital-search input {
+  width: 100% !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+}
+.qna-hospital-picker-item span { color: var(--color-text-secondary) !important; }
+.profile-review-kicker,
+.profile-rating-stars {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.qna-detail-post > .qna-detail-pet-meta { order: 4 !important; }
+.qna-comments > article .qna-hospital-attachment {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+:where(.review-rating-picker button, .profile-rating-stars) {
+  color: var(--color-rating-600) !important;
+}
+.qna-pet-more {
+  display: grid !important;
+  min-height: 86px !important;
+  place-items: center !important;
+  border: 1px dashed var(--color-primary-300) !important;
+  border-radius: 12px !important;
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-700) !important;
+  font-weight: 700 !important;
+}
+@media (max-width: 760px) {
+
+  :where(
+    .qna-sort-sheet-overlay,
+    .hospital-picker-overlay,
+    .record-picker-overlay,
+    .diary-overlay,
+    .hospital-review-modal-layer
+  ) {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: var(--mobile-bottom-nav-height) !important;
+    left: 0 !important;
+    height: auto !important;
+  }
+}
+.map-detail-dock .review-item-head .review-pet-info {
+  display: grid !important;
+  align-items: start !important;
+  justify-content: stretch !important;
+  gap: 0.1875rem !important;
+}
+.map-detail-dock .review-item-head .review-species-label {
+  margin: 0 !important;
+  color: var(--color-text-primary) !important;
+  font-size: 0.8125rem !important;
+  font-weight: 800 !important;
+  line-height: 1.4 !important;
+}
+.map-detail-dock .review-pet-info > small:last-child {
+  white-space: nowrap !important;
+}

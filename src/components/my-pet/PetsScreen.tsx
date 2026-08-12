@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import './MyPet.css'
 import { listCarePlans, listDailyTasks } from '../../features/diary/diaryService'
 import type { CarePlan, DailyTask } from '../../features/diary/diaryTypes'
 

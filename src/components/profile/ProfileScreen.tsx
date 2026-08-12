@@ -1,4 +1,5 @@
 import { type ChangeEvent, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import './Profile.css'
 import {
   disablePushNotifications,
   enablePushNotifications,

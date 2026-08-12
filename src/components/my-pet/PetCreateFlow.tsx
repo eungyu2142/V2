@@ -1,4 +1,5 @@
 import { type ChangeEvent, type PointerEvent, type ReactNode, useEffect, useRef, useState } from 'react'
+import './MyPet.css'
 import StepShell from '../account/StepShell'
 import type { AnimalCategory, DraftItem, Pet } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'

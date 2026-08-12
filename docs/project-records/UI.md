@@ -5174,3 +5174,63 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 핵심 변경 내용: 중복 `qna-filter-bar` 렌더링을 제거하고 컴팩트 필터만 유지했다. 작성 화면의 선택 버튼 활성 스타일을 명시적으로 고정하고 주제 아이콘 배경을 투명 처리했다.
 - 검증 결과: TypeScript와 lint 검증 예정.
 - 남은 작업: 실제 모바일에서 필터 행이 한 번만 보이는지 확인.
+## 2026-08-12 전문 리뷰 태그 막대 요약
+
+- 요청 요약: 리뷰에서 선택된 양서·파충류 전문 태그를 선택 횟수와 함께 막대형 통계로 표시한다.
+- 분석·판단 이유: 칩만 나열하면 어떤 강점이 반복해서 언급됐는지 비교하기 어렵다. 전문 태그만 별도로 집계하면 병원의 진료 전문성을 빠르게 파악할 수 있다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/features/hospital-map/reviewTagOptions.ts`, `src/components/hospital-map/MapAndReview.ts`, `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 전문 태그를 공통 목록으로 내보내 작성 폼과 상세 통계가 같은 기준을 사용한다. 선택된 태그를 횟수순으로 정렬하고 상대 비율 막대, 참여 인원, 선택 횟수 및 접기·펼치기를 제공한다.
+- 검증 결과: 빌드와 린트로 확인한다.
+- 남은 작업: 실제 리뷰가 여러 개 쌓인 운영 환경에서 긴 태그 문구와 막대 비율을 확인한다.
+## 2026-08-12 정렬 선택창 문구 간소화
+
+- 요청 요약: 정렬 선택창에서 별도 `정렬` 문구를 제거하고 처음에는 `거리순`, 변경 시에는 `평점순`만 표시한다.
+- 분석·판단 이유: 선택 항목 자체가 기능을 설명하므로 작은 화면에서 별도 라벨은 중복이며 두 줄 줄바꿈을 유발했다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/App.css`, `docs/project-records/UI.md`
+- 핵심 변경 내용: 기본 정렬은 기존 `distance`를 유지하고 화면 라벨만 제거했다. 접근성 이름 `병원 정렬`은 유지하며 옵션이 한 줄로 보이도록 너비와 패딩을 고정했다.
+- 검증 결과: 빌드와 린트로 확인한다.
+- 남은 작업: 없음.
+## 2026-08-12 화면 및 공통 UI 구조 리팩터링
+
+- 요청 요약: `App.tsx`와 `App.css`에 집중된 화면 코드와 스타일을 기능별로 분리하고, 중복 UI와 하드코딩 색상을 공통 라이브러리 기준으로 정리했다.
+- 분석 및 판단: React는 중복을 자동으로 제거하지 않으므로 재사용 컴포넌트, 조합, 훅, 서비스 계층으로 책임을 직접 분리해야 한다. 화면 스타일도 해당 화면 폴더가 소유하도록 구성했다.
+- 수정 파일: `src/App.tsx`, `src/App.css`, `src/components/navigation/*`, `src/components/account/AuthScreen.css`, `src/components/my-pet/MyPet.css`, `src/components/hospital-map/HospitalMap.css`, `src/components/qna/Qna.css`, `src/components/profile/Profile.css`, `src/styles/feature-layout.css`, `src/styles/tokens.css`, `src/lib/appUrl.ts`, `src/lib/draftStorage.ts`, `src/components/ui/README.md`, `scripts/check-ui-architecture.mjs`, `scripts/purge-unused-css.mjs`.
+- 핵심 변경: 내비게이션과 URL·로컬 저장소 로직을 `App.tsx`에서 분리했다. 인증, 마이 펫, 지도, Q&A, 프로필 스타일을 화면별 CSS로 이동했다. 색상 원본은 `tokens.css` 한 곳에서만 선언하고 화면 CSS는 의미 기반 변수만 사용하도록 검사 규칙을 추가했다. 임의 문자열과 깨진 문자열도 소스 전체에서 검사했다.
+- 검증 결과: 린트와 프로덕션 빌드를 통과했으며, 화면별 CSS가 별도 번들로 분리되는 것을 확인했다.
+- 남은 작업: 화면 기능이 추가될 때 `components/ui/README.md`와 공통 UI 컴포넌트를 먼저 확인하고, 화면 전용 스타일은 해당 화면 CSS에만 추가한다.
+## 2026-08-12 - Q&A·마이 펫 프로필 사진 크기 고정
+
+- 요청 요약: Q&A와 마이 펫 화면에서 프로필 사진이 원본 크기로 크게 표시되는 문제를 수정했다.
+- 분석·판단 이유: 공통 내비게이션의 프로필 버튼 스타일이 지연 로딩되는 프로필 화면 CSS에 들어 있어, 프로필 화면을 열기 전에는 이미지 크기 제한이 적용되지 않았다.
+- 수정 파일: `src/components/navigation/AppNavigation.tsx`, `src/components/navigation/Navigation.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 프로필 버튼의 표시 여부, 44px 크기, 원형 자르기, `object-fit: cover` 규칙을 내비게이션 전용 CSS에 추가하고 내비게이션 컴포넌트에서 직접 불러온다. 데스크톱에서는 버튼과 내부 이미지를 숨기고 모바일에서만 고정 크기로 표시한다.
+- 검증 결과: 내비게이션 컴포넌트 ESLint와 UI 구조 검사를 통과했다. 전체 빌드는 기존 `src/components/hospital-map/mapDependencies.tsx`의 미사용 변수 `openingClass` 오류로 중단됐다.
+- 남은 작업: Q&A와 마이 펫을 각각 새로고침한 상태에서 모바일 프로필 버튼을 확인한다.
+
+## 2026-08-12 - Q&A 기본 질문 상태 필터 정리
+
+- 요청 요약: 처음에는 답변 대기와 미해결 질문만 보이고, 해결된 질문은 별도 필터에서 확인하도록 수정.
+- 분석·판단 이유: 기본 상태가 전체라 해결된 글이 초기 목록에 섞였으므로 미해결 상태를 기본값으로 분리함.
+- 수정 파일: `src/types/app.ts`, `src/components/qna/QnaScreen.tsx`.
+- 핵심 변경 내용: 미해결 기본 필터와 답변 대기·답변 있음(미해결)·해결 선택지를 적용함.
+- 검증 결과: TypeScript와 lint 검증 예정.
+- 남은 작업: 모바일 필터 시트에서 해결 선택 시 목록이 정상 전환되는지 확인.
+
+## 2026-08-12 - 영업 중 병원 마커 색상 구분
+
+- 요청 요약: 영업 중인 병원 마커를 밝은 파란색으로 표시하고 영업 종료 병원은 기존 마커 색상을 유지한다.
+- 분석·판단 이유: 현재 위치 마커와 혼동하지 않으면서 지도에서 영업 중인 병원을 빠르게 구분할 수 있어야 한다. 영업정보가 없는 병원을 종료 상태로 오해하지 않도록 기본 민트색을 유지한다.
+- 수정 파일: `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/HospitalMap.css`, `src/styles/tokens.css`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: `isOpenNow === true`인 마커에 `is-open` 상태를 연결하고 밝은 파란색 토큰을 적용했다. 리뷰가 많은 마커의 진한 색상보다 영업 중 색상이 우선하며, 선택 테두리와 리뷰 수 배지도 같은 파란 계열로 통일했다.
+- 검증 결과: 빌드와 린트로 확인한다.
+- 남은 작업: 실제 지도에서 영업 중·영업 종료·영업정보 없음 마커를 함께 비교한다.
+
+## 2026-08-12 - 리뷰 태그 요약과 영업 상태 색상 정리
+
+- 요청 요약: 선택된 리뷰 태그를 횟수와 비율 막대로 요약하고, 개별 리뷰에는 태그 두 개와 나머지 개수만 표시한다. 영업 중 문구는 파란색, 영업 종료 문구는 빨간색으로 구분한다.
+- 분석·판단 이유: 리뷰마다 태그를 모두 나열하면 본문이 밀리고 병원 간 장점을 비교하기 어렵다. 집계 요약과 개별 리뷰의 축약 표시를 분리하고 영업 상태 색상을 일관되게 적용한다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/HospitalMap.css`, `src/styles/tokens.css`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 전문·일반·직접 입력 태그를 모두 중복 없이 집계해 선택 횟수순 막대로 표시한다. 개별 리뷰는 최대 두 태그와 `+N`을 보여준다. 목록·상세·운영시간 배지의 영업 중은 파란색, 영업 종료는 오류 색상, 영업정보 없음은 중립색으로 통일했다.
+- 검증 결과: 빌드와 린트로 확인한다.
+- 남은 작업: 여러 사용자의 리뷰가 쌓인 환경에서 태그 집계 수와 참여자 수를 확인한다.
+- 추가 검증 결과: TypeScript와 lint 통과.

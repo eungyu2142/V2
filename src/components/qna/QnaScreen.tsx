@@ -1,4 +1,5 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import './Qna.css'
 import { supabase } from '../../lib/supabase'
 import { loadAppData } from '../../lib/appData'
 import { saveLike } from '../../lib/likes'
@@ -221,7 +222,9 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   const scopedPosts = searchedPosts.filter((post) => {
     const matchesCategory = categoryFilter.length === 0 || categoryFilter.includes(normalizeQnaCategory(post.category))
     const listStatus = qnaListStatus(post, getCommentCount(post))
-    const matchesStatus = statusFilter === 'all' || listStatus === statusFilter
+    const matchesStatus = statusFilter === 'unresolved'
+      ? listStatus !== 'resolved'
+      : statusFilter === 'all' || listStatus === statusFilter
     return matchesCategory && matchesStatus
   })
   const feedPosts = sortQnaPosts(scopedPosts, sort, getCommentCount)
@@ -386,7 +389,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
       {feedPosts.length === 0 ? <div className="qna-empty-state">
         <div className="qna-empty-icon" aria-hidden="true">⌕</div>
         <strong>{query ? '검색 결과가 없습니다.' : statusFilter !== 'all' || categoryFilter.length > 0 ? '선택한 조건에 맞는 질문이 없습니다.' : '아직 등록된 질문이 없습니다.'}</strong>
-        {(query || statusFilter !== 'all' || categoryFilter.length > 0) && <button type="button" onClick={() => { setSearchInput(''); setQuery(''); setStatusFilter('all'); setCategoryFilter([]); setVisibleCount(6) }}>필터 초기화</button>}
+        {(query || statusFilter !== 'unresolved' || categoryFilter.length > 0) && <button type="button" onClick={() => { setSearchInput(''); setQuery(''); setStatusFilter('unresolved'); setCategoryFilter([]); setVisibleCount(6) }}>필터 초기화</button>}
       </div> : (
         <section className="qna-feed-section">
           <div className="qna-feed-list">
@@ -476,7 +479,7 @@ function QnaFilterChoiceSheet({ scope, status, category, sort, onApply, onClose 
       <button className="qna-sort-sheet-dim" type="button" aria-label="필터 닫기" onClick={onClose} />
       <section className="qna-sort-sheet qna-filter-choice-sheet" role="dialog" aria-modal="true" aria-label="Q&A 필터">
         <span className="hospital-picker-handle" aria-hidden="true" />
-        {showStatus && <fieldset><legend>질문 상태</legend>{([['all', '전체'], ['waiting', '답변 대기'], ['answered', '답변 있음(미해결)'], ['resolved', '해결']] as const).map(([value, label]) => { const active = draftStatus === value; return <button className={active ? 'active' : ''} type="button" key={value} aria-pressed={active} onClick={() => setDraftStatus(value)}>{label}</button> })}</fieldset>}
+        {showStatus && <fieldset><legend>질문 상태</legend>{([['unresolved', '미해결'], ['waiting', '답변 대기'], ['answered', '답변 있음(미해결)'], ['resolved', '해결']] as const).map(([value, label]) => { const active = draftStatus === value; return <button className={active ? 'active' : ''} type="button" key={value} aria-pressed={active} onClick={() => setDraftStatus(value)}>{label}</button> })}</fieldset>}
         {showCategory && <fieldset><legend>주제</legend>{([['all', '전체'], ...qnaCategoryCards.map((item) => [item, item] as [QnaCategory, string])]).map(([value, label]) => { const active = value === 'all' ? draftCategory.length === 0 : draftCategory.includes(value as QnaCategory); return <button className={active ? 'active' : ''} type="button" key={value} aria-pressed={active} onClick={() => setDraftCategory(value === 'all' ? [] : draftCategory.includes(value as QnaCategory) ? draftCategory.filter((item) => item !== value) : [...draftCategory, value as QnaCategory])}>{label}</button> })}</fieldset>}
         <fieldset><legend>정렬</legend>{(['latest', 'popular', 'comments'] as QnaSort[]).map((value) => <button className={draftSort === value ? 'active' : ''} type="button" key={value} aria-pressed={draftSort === value} onClick={() => setDraftSort(value)}>{qnaSortLabel(value)}</button>)}</fieldset>
         <button className="qna-filter-sheet-done" type="button" onClick={() => onApply(draftStatus, draftCategory, draftSort)}>적용</button>
@@ -865,7 +868,7 @@ function qnaStatusLabel(status: QnaStatus) {
 }
 
 function parseQnaStatusFilter(value: string | null): QnaListStatus {
-  return value === 'waiting' || value === 'answered' || value === 'resolved' ? value : 'all'
+  return value === 'waiting' || value === 'answered' || value === 'resolved' || value === 'unresolved' ? value : 'unresolved'
 }
 
 function parseQnaCategoryFilters(value: string | null): QnaCategory[] {
@@ -883,6 +886,7 @@ function qnaListStatus(post: QnaPost, commentCount = post.comments.length): QnaL
 }
 
 function qnaListStatusLabel(status: QnaListStatus) {
+  if (status === 'unresolved') return '미해결'
   if (status === 'resolved') return '해결'
   if (status === 'answered') return '답변 있음(미해결)'
   return '답변 대기'

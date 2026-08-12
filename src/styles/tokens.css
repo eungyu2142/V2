@@ -1,4 +1,39 @@
 :root {
+  /* Brand and state colors: this file is the single source of truth. */
+  --color-primary-50: #e3f4ef;
+  --color-primary-100: #bfe6dc;
+  --color-primary-300: #6ec4af;
+  --color-primary-500: #2fab90;
+  --color-primary-600: #1f9e85;
+  --color-primary-700: #157a67;
+  --color-primary-900: #0b3f35;
+  --color-navigation-background: #145f52;
+  --color-accent-100: #f5e3c2;
+  --color-accent-500: #e0a03d;
+  --color-accent-600: #d98f2b;
+  --color-accent-700: #b06f1d;
+  --color-error-100: #f2dcd7;
+  --color-error-500: #cc6a55;
+  --color-error-600: #c1503f;
+  --color-like-100: #fde8ea;
+  --color-like-500: #e5484d;
+  --color-like-600: #cc2f3a;
+  --color-rating-100: #fff5cc;
+  --color-rating-500: #f5b800;
+  --color-rating-600: #d99a00;
+  --color-map-open-marker: #55b8f3;
+  --color-status-open: #2389c7;
+  --color-text-primary: #1b2421;
+  --color-text-secondary: #5c6b67;
+  --color-text-placeholder: #8b9a96;
+  --color-border: #dce5e2;
+  --color-background: #f7f9f8;
+  --color-surface: #fff;
+
+  --mobile-bottom-nav-height: calc(68px + env(safe-area-inset-bottom, 0px));
+  --radius-md: 8px;
+  --radius-pill: 9999px;
+
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -18,4 +53,17 @@
   --card-radius: 1rem;
   --motion-fast: 160ms;
   --motion-normal: 220ms;
+
+  /* Components may only consume these semantic aliases. */
+  --ui-bg: var(--color-background);
+  --ui-surface: var(--color-surface);
+  --ui-text: var(--color-text-primary);
+  --ui-text-muted: var(--color-text-secondary);
+  --ui-border: var(--color-border);
+  --ui-primary: var(--color-primary-600);
+  --ui-primary-hover: var(--color-primary-700);
+  --ui-primary-soft: var(--color-primary-50);
+  --ui-danger: var(--color-error-600);
+  --ui-like: var(--color-like-500);
+  --ui-rating: var(--color-rating-500);
 }

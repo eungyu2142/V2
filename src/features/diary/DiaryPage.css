@@ -29,7 +29,7 @@
 .notice-stage.stage-4{background:color-mix(in srgb,var(--color-accent-500) 22%,var(--color-surface));color:var(--color-accent-700)}
 .notice-stage.stage-5{background:color-mix(in srgb,var(--color-error-500) 18%,var(--color-surface));color:var(--color-error-500)}
 .diary-insight-banner{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:6px 0 18px;padding:12px;border:1px solid var(--color-primary-100);border-radius:12px;background:var(--color-surface)}
-.diary-insight-card{display:grid;gap:4px;padding:10px 12px;border-left:4px solid var(--color-primary-300);border-radius:10px;background:#fff}
+.diary-insight-card{display:grid;gap:4px;padding:10px 12px;border-left:4px solid var(--color-primary-300);border-radius:10px;background:var(--ui-surface)}
 .diary-insight-card small{color:var(--color-text-secondary);font-size:.72rem;font-weight:900}
 .diary-insight-card strong{font-size:.92rem}
 .diary-insight-card span{color:var(--color-text-secondary);font-size:.78rem;line-height:1.45}
@@ -109,22 +109,22 @@
 .daily-plan-task strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
 .daily-plan-task small{color:var(--color-text-secondary);font-size:.75rem}
 .daily-plan-task.overdue strong,.daily-plan-task.overdue small{color:var(--color-error-500)}
-.daily-plan-task input{width:19px;height:19px;margin:0;accent-color:var(--color-primary-600);justify-self:end}.daily-plan-check-input{position:absolute!important;right:0;opacity:0;cursor:pointer}.daily-plan-check{display:grid;position:absolute;right:0;width:22px;height:22px;place-items:center;border:1.5px solid var(--color-primary-300);border-radius:5px;background:#fff;color:transparent;font-size:.82rem;font-weight:900;pointer-events:none}.daily-plan-check.checked{border-color:var(--color-text-primary);background:var(--color-text-primary);color:#fff}
+.daily-plan-task input{width:19px;height:19px;margin:0;accent-color:var(--color-primary-600);justify-self:end}.daily-plan-check-input{position:absolute!important;right:0;opacity:0;cursor:pointer}.daily-plan-check{display:grid;position:absolute;right:0;width:22px;height:22px;place-items:center;border:1.5px solid var(--color-primary-300);border-radius:5px;background:var(--ui-surface);color:transparent;font-size:.82rem;font-weight:900;pointer-events:none}.daily-plan-check.checked{border-color:var(--color-text-primary);background:var(--color-text-primary);color:var(--ui-surface)}
 .daily-plan-empty{margin:0;color:var(--color-text-secondary);font-size:.82rem}
 .daily-plan-first-empty{display:grid;gap:8px;padding:16px 0;color:var(--color-text-secondary);font-size:.84rem}
 .daily-plan-first-empty strong{color:var(--color-text-primary);font-size:.95rem}
 .daily-plan-first-empty span{line-height:1.45}
-.daily-plan-first-empty button{justify-self:start;min-height:38px;padding:0 14px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-primary-600);color:#fff;font-size:.82rem;font-weight:900;cursor:pointer}
+.daily-plan-first-empty button{justify-self:start;min-height:38px;padding:0 14px;border:1px solid var(--color-border);border-radius:999px;background:var(--color-primary-600);color:var(--ui-surface);font-size:.82rem;font-weight:900;cursor:pointer}
 .incident-add-panel{display:grid;gap:10px;padding-bottom:4px;border-bottom:1px solid var(--color-border)}
 .incident-add-panel header{display:grid;gap:3px}
 .incident-add-panel h2{margin:0;font-size:1rem}
 .incident-add-panel p{margin:0;color:var(--color-text-secondary);font-size:.78rem}
 .incident-add-actions{display:flex;flex-wrap:wrap;gap:7px}
-.incident-add-actions button{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:1px solid var(--color-border);border-radius:999px;background:#fff;color:var(--color-text-primary);font-size:.82rem;font-weight:800}
+.incident-add-actions button{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:1px solid var(--color-border);border-radius:999px;background:var(--ui-surface);color:var(--color-text-primary);font-size:.82rem;font-weight:800}
 .incident-add-actions button:disabled{opacity:.45}
 .incident-add-actions button span{margin-right:4px}
 .incident-add-icon{width:27px;height:27px;object-fit:contain;flex:0 0 auto}
-.smart-choice-list button{min-height:40px;padding:0 12px;border:1px solid var(--color-border);border-radius:999px;background:#fff;color:var(--color-text-primary);font-weight:800}
+.smart-choice-list button{min-height:40px;padding:0 12px;border:1px solid var(--color-border);border-radius:999px;background:var(--ui-surface);color:var(--color-text-primary);font-weight:800}
 .smart-add-sheet{display:grid;gap:14px;padding:10px 18px calc(20px + env(safe-area-inset-bottom))}
 .smart-add-sheet h2{margin:0;font-size:1.15rem}
 .smart-add-sheet-pet{margin:-8px 0 0;color:var(--color-text-secondary);font-size:.85rem}
@@ -133,15 +133,15 @@
 .smart-choice-list{display:flex;flex-wrap:wrap;gap:8px}
 .smart-choice-list button.selected{border-color:var(--color-primary-600);background:var(--color-primary-50);color:var(--color-primary-600)}
 .smart-inline-input{display:block}
-.smart-inline-input input,.smart-add-sheet textarea,.smart-quantity-row input{min-height:40px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;background:#fff;font:inherit;box-sizing:border-box}
+.smart-inline-input input,.smart-add-sheet textarea,.smart-quantity-row input{min-height:40px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;background:var(--ui-surface);font:inherit;box-sizing:border-box}
 .smart-inline-input input{width:104px}
 .smart-quantity-row{display:flex;align-items:end;gap:16px}
 .smart-quantity-row label,.smart-quantity-row>div{display:grid;gap:6px;font-size:.85rem;font-weight:800}
 .smart-quantity-row input{width:90px}
 .smart-unit-list{display:flex;gap:6px}
-.smart-unit-list button{min-height:38px;padding:0 10px;border:1px solid var(--color-border);border-radius:999px;background:#fff;color:var(--color-text-primary);font-weight:800}
+.smart-unit-list button{min-height:38px;padding:0 10px;border:1px solid var(--color-border);border-radius:999px;background:var(--ui-surface);color:var(--color-text-primary);font-weight:800}
 .smart-unit-list button.selected{border-color:var(--color-primary-600);background:var(--color-primary-50);color:var(--color-primary-600)}
-.smart-save-button{min-height:46px;border:0;border-radius:8px;background:var(--color-primary-600);color:#fff;font-weight:900}
+.smart-save-button{min-height:46px;border:0;border-radius:8px;background:var(--color-primary-600);color:var(--ui-surface);font-weight:900}
 .smart-add-sheet textarea{min-height:90px;resize:vertical}
 .smart-pair-fields{display:grid;gap:10px}
 .smart-pair-fields label{display:grid;gap:6px;color:var(--color-text-primary);font-size:.86rem;font-weight:900}
@@ -151,9 +151,9 @@
 .smart-duplicate-dialog h2,.smart-duplicate-dialog p{margin:0}
 .smart-duplicate-dialog p{color:var(--color-text-secondary)}
 .smart-duplicate-dialog>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.smart-duplicate-dialog button{min-height:44px;border:1px solid var(--color-border);border-radius:8px;background:#fff;color:var(--color-primary-600);font-weight:900}
-.smart-duplicate-dialog button:last-child{border-color:var(--color-primary-600);background:var(--color-primary-600);color:#fff}
-.smart-toast{position:fixed;right:18px;bottom:calc(88px + env(safe-area-inset-bottom));left:18px;z-index:220;max-width:480px;margin:auto;padding:12px 16px;border-radius:999px;background:var(--color-text-primary);color:#fff;text-align:center;font-size:.88rem;font-weight:800;box-shadow:0 10px 24px var(--color-text-primary)40}
+.smart-duplicate-dialog button{min-height:44px;border:1px solid var(--color-border);border-radius:8px;background:var(--ui-surface);color:var(--color-primary-600);font-weight:900}
+.smart-duplicate-dialog button:last-child{border-color:var(--color-primary-600);background:var(--color-primary-600);color:var(--ui-surface)}
+.smart-toast{position:fixed;right:18px;bottom:calc(88px + env(safe-area-inset-bottom));left:18px;z-index:220;max-width:480px;margin:auto;padding:12px 16px;border-radius:999px;background:var(--color-text-primary);color:var(--ui-surface);text-align:center;font-size:.88rem;font-weight:800;box-shadow:0 10px 24px var(--color-text-primary)40}
 
 .feeding-food-dialog,
 .environment-input-dialog,
@@ -210,7 +210,7 @@
   padding: 0 12px;
   border: 1px solid var(--color-primary-100);
   border-radius: 999px;
-  background: #fff;
+  background: var(--ui-surface);
   color: var(--color-text-primary);
   font-size: .84rem;
   font-weight: 850;
@@ -220,7 +220,7 @@
 .feeding-food-options button[aria-pressed="true"] {
   border-color: var(--color-primary-600);
   background: var(--color-primary-600);
-  color: #fff;
+  color: var(--ui-surface);
 }
 
 .feeding-food-options button:focus-visible,
@@ -242,7 +242,7 @@
   padding: 9px 11px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--ui-surface);
   font: inherit;
 }
 
@@ -378,11 +378,11 @@
 .sheet-handle{display:block;width:42px;height:5px;margin:0 auto 14px;border-radius:9px;background:var(--color-border)}
 .warning-dialog{display:grid;gap:18px;padding:28px 20px calc(24px + env(safe-area-inset-bottom))}
 .warning-dialog h2{margin:0;font-size:1.2rem}
-.warning-dialog button{min-height:48px;border:0;border-radius:8px;background:var(--color-primary-600);color:#fff;font-weight:900}
+.warning-dialog button{min-height:48px;border:0;border-radius:8px;background:var(--color-primary-600);color:var(--ui-surface);font-weight:900}
 
 .diary-create-screen{position:fixed;inset:0;z-index:200;overflow:auto;padding:18px 18px 96px;background:var(--color-background);color:var(--color-text-primary)}
 .diary-create-screen>header{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;max-width:760px;margin:0 auto 18px}
-.diary-create-screen>header button{width:44px;height:44px;border:0;border-radius:8px;background:#fff;color:var(--color-primary-600);font-size:1.35rem}
+.diary-create-screen>header button{width:44px;height:44px;border:0;border-radius:8px;background:var(--ui-surface);color:var(--color-primary-600);font-size:1.35rem}
 .diary-create-screen>header strong{visibility:hidden;text-align:center}
 .diary-create-screen .create-title{display:none}
 .diary-create-screen form{display:grid;gap:16px;max-width:760px;margin:auto}
@@ -393,17 +393,17 @@
 .create-title p{margin:5px 0 0;color:var(--color-text-secondary);font-weight:700}
 .create-content{display:grid;align-content:center;gap:20px;min-height:min(430px,calc(100svh - 280px))}
 .create-content label,.choice-field>label,.photo-picker{display:grid;gap:12px;font-size:1.2rem;font-weight:900}
-.create-content input,.create-content textarea,.choice-field input{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:#fff;font:inherit;font-size:1rem;box-sizing:border-box}
+.create-content input,.create-content textarea,.choice-field input{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--ui-surface);font:inherit;font-size:1rem;box-sizing:border-box}
 .create-content textarea{min-height:180px;resize:vertical}
 .choice-field{display:grid;gap:12px}
 .choice-field>div{display:flex;flex-wrap:wrap;gap:8px}
-.choice-field button,.weekday-picker button{min-height:42px;padding:0 14px;border:1px solid var(--color-border);border-radius:999px;background:#fff;color:var(--color-text-primary);font-weight:800}
+.choice-field button,.weekday-picker button{min-height:42px;padding:0 14px;border:1px solid var(--color-border);border-radius:999px;background:var(--ui-surface);color:var(--color-text-primary);font-weight:800}
 .choice-field button.selected,.weekday-picker button.selected{border-color:var(--color-primary-600);background:var(--color-primary-50);color:var(--color-primary-600)}
 .weight-step-field{display:grid;gap:12px}
 .weight-input-dialog .weight-step-field label{display:grid;gap:7px;color:var(--color-text-primary);font-size:.88rem;font-weight:900}
 .weight-input-dialog .weight-step-field input{min-height:48px;padding:8px 12px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text-primary);font-size:1.2rem;font-weight:900;text-align:center}
 .weight-step-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.weight-step-buttons button{min-height:42px;border:1px solid var(--color-border);border-radius:999px;background:#fff;color:var(--color-primary-600);font-weight:900}
+.weight-step-buttons button{min-height:42px;border:1px solid var(--color-border);border-radius:999px;background:var(--ui-surface);color:var(--color-primary-600);font-weight:900}
 .weight-step-buttons button:nth-child(n+3){border-color:var(--color-primary-600);background:var(--color-primary-50)}
 .weekday-picker{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .weekday-picker button{padding:0}
@@ -412,10 +412,10 @@
 .repeat-interval-field{grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:4px!important}
 .repeat-interval-input{display:flex;grid-column:1/-1;align-items:center;gap:10px;font-size:.9rem;font-weight:800}
 .repeat-interval-input input{width:110px!important}
-.photo-picker span{position:relative;display:grid;min-height:56px;place-items:center;border:1px dashed var(--color-primary-300);border-radius:8px;background:#fff;color:var(--color-primary-600)}
+.photo-picker span{position:relative;display:grid;min-height:56px;place-items:center;border:1px dashed var(--color-primary-300);border-radius:8px;background:var(--ui-surface);color:var(--color-primary-600)}
 .photo-picker input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .photo-picker small{color:var(--color-text-secondary);font-size:.85rem}
-.create-submit{position:fixed;right:18px;bottom:calc(14px + env(safe-area-inset-bottom));left:18px;max-width:760px;min-height:52px;margin:auto;border:0;border-radius:8px;background:var(--color-primary-600);color:#fff;font-size:1rem;font-weight:900}
+.create-submit{position:fixed;right:18px;bottom:calc(14px + env(safe-area-inset-bottom));left:18px;max-width:760px;min-height:52px;margin:auto;border:0;border-radius:8px;background:var(--color-primary-600);color:var(--ui-surface);font-size:1rem;font-weight:900}
 .create-submit:disabled{opacity:.45}
 .step-actions{display:flex;align-items:stretch;gap:8px;width:100%;margin:16px 0 0}
 .step-actions .create-submit{position:static;inset:auto;flex:1;min-width:0;height:46px;min-height:46px;margin:0;max-width:none}
@@ -494,7 +494,7 @@
 .step-progress-selectable button{position:relative;z-index:1;display:grid;flex:1;height:24px;min-width:0;place-items:center;padding:0;border:0;background:transparent;color:rgba(11, 63, 53,.58);cursor:pointer}
 .step-progress-selectable button span{display:grid;width:18px;height:18px;place-items:center;border:2px solid currentColor;border-radius:50%;background:var(--color-surface);font-size:.65rem;font-weight:900;line-height:1}
 .step-progress-selectable button.active,.step-progress-selectable button:hover,.step-progress-selectable button:focus-visible{color:var(--color-primary-600)}
-.step-progress-selectable button.active span{background:var(--color-primary-600);color:#fff}
+.step-progress-selectable button.active span{background:var(--color-primary-600);color:var(--ui-surface)}
 
 /* Keep diary and writing screens on one compact surface. */
 .diary-page,
@@ -572,8 +572,8 @@
 .care-plan-menu summary{display:grid;width:30px;height:30px;place-items:center;border-radius:6px;color:var(--color-text-secondary);font-size:1.35rem;font-weight:900;line-height:1;cursor:pointer;list-style:none}
 .care-plan-menu summary::-webkit-details-marker{display:none}
 .care-plan-menu summary:hover,.care-plan-menu[open] summary{background:var(--color-primary-50);color:var(--color-primary-700)}
-.care-plan-menu>div{position:absolute;top:34px;right:0;z-index:5;display:grid;min-width:72px;padding:4px;border:1px solid var(--color-border);border-radius:8px;background:#fff;box-shadow:0 8px 20px var(--color-text-primary)18}
-.care-plan-menu button{min-height:32px;padding:0 9px;border:0;border-radius:5px;background:#fff;color:var(--color-primary-700);font-size:.76rem;text-align:left;white-space:nowrap}
+.care-plan-menu>div{position:absolute;top:34px;right:0;z-index:5;display:grid;min-width:72px;padding:4px;border:1px solid var(--color-border);border-radius:8px;background:var(--ui-surface);box-shadow:0 8px 20px var(--color-text-primary)18}
+.care-plan-menu button{min-height:32px;padding:0 9px;border:0;border-radius:5px;background:var(--ui-surface);color:var(--color-primary-700);font-size:.76rem;text-align:left;white-space:nowrap}
 .care-plan-menu button:hover{background:var(--color-primary-50);color:var(--color-primary-700)}
 .care-plan-empty{display:grid;gap:8px;padding:14px 0;color:var(--color-text-secondary);font-size:.8rem}
 .care-plan-empty strong{color:var(--color-primary-700);font-size:.88rem}
@@ -631,13 +631,13 @@
 .data-visualization header{display:grid;gap:3px}.data-visualization-heading{display:flex!important;align-items:center;justify-content:space-between;gap:12px}.data-visualization h2{margin:0;color:var(--color-text-primary);font-size:1.1rem}.data-visualization p{margin:0;color:var(--color-text-secondary);font-size:.78rem}
 .record-collection-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .record-collection-tabs button{display:flex;min-width:0;min-height:42px;align-items:center;justify-content:center;gap:6px;padding:0 8px;overflow:hidden;border:1px solid var(--color-primary-100);border-radius:999px;background:var(--color-surface);color:var(--color-text-secondary);font-size:.82rem;font-weight:900;line-height:1;white-space:nowrap}
-.record-collection-tabs button.active{border-color:var(--color-primary-600);background:var(--color-primary-600);color:#fff}
+.record-collection-tabs button.active{border-color:var(--color-primary-600);background:var(--color-primary-600);color:var(--ui-surface)}
 .record-collection-tabs span{display:grid;min-width:20px;height:20px;place-items:center;border-radius:999px;background:var(--color-primary-50);color:var(--color-primary-700);font-size:.68rem}
-.record-collection-tabs button.active span{background:#fff;color:var(--color-primary-700)}
+.record-collection-tabs button.active span{background:var(--ui-surface);color:var(--color-primary-700)}
 .shed-cycle-status{min-height:68px;align-content:center}
 .shed-cycle-status header span{color:var(--color-primary-700);font-weight:900;white-space:nowrap}
 .record-collection-qna{min-height:44px;padding:0 22px;border:1px solid var(--color-primary-600);border-radius:999px;background:var(--color-primary-600);color:var(--color-surface);font-size:.9rem;font-weight:900;white-space:nowrap;box-shadow:0 16px 30px color-mix(in srgb,var(--color-primary-600) 18%,transparent)}
-.line-chart{width:100%;height:auto;min-height:190px;overflow:visible}.line-chart line{stroke:var(--color-border);stroke-width:1}.line-chart-path{fill:none;stroke:var(--color-primary-600);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.line-chart circle{fill:#fff;stroke:var(--color-primary-600);stroke-width:3}
+.line-chart{width:100%;height:auto;min-height:190px;overflow:visible}.line-chart line{stroke:var(--color-border);stroke-width:1}.line-chart-path{fill:none;stroke:var(--color-primary-600);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.line-chart circle{fill:var(--ui-surface);stroke:var(--color-primary-600);stroke-width:3}
 .line-chart-scale{position:absolute;left:0;top:8px;bottom:27px;display:flex;flex-direction:column;justify-content:space-between;color:var(--color-text-secondary);font-size:.68rem}.data-visualization-summary{display:flex;justify-content:space-between;color:var(--color-text-secondary);font-size:.78rem}.data-visualization-summary strong{color:var(--color-text-primary)}.data-visualization-empty{padding:35px 10px;color:var(--color-text-secondary);font-size:.86rem;text-align:center}
 .environment-chart{display:grid;gap:9px;padding-top:12px;border-top:1px solid var(--color-border)}
 .environment-chart header{display:flex!important;align-items:end;justify-content:space-between;gap:10px}
@@ -665,11 +665,11 @@
 .daily-task-menu summary{display:grid;width:28px;height:28px;place-items:center;border-radius:6px;color:var(--color-text-secondary);font-size:1.25rem;font-weight:900;line-height:1;cursor:pointer;list-style:none}
 .daily-task-menu summary::-webkit-details-marker{display:none}
 .daily-task-menu summary:hover,.daily-task-menu[open] summary{background:var(--color-primary-50);color:var(--color-primary-700)}
-.daily-task-menu>div{position:absolute;top:31px;right:0;display:grid;min-width:62px;padding:4px;border:1px solid var(--color-border);border-radius:8px;background:#fff;box-shadow:0 8px 20px var(--color-text-primary)18}
-.daily-task-menu button{min-height:30px;padding:0 8px;border:0;border-radius:5px;background:#fff;color:var(--color-primary-700);font-size:.75rem;text-align:left;white-space:nowrap}
+.daily-task-menu>div{position:absolute;top:31px;right:0;display:grid;min-width:62px;padding:4px;border:1px solid var(--color-border);border-radius:8px;background:var(--ui-surface);box-shadow:0 8px 20px var(--color-text-primary)18}
+.daily-task-menu button{min-height:30px;padding:0 8px;border:0;border-radius:5px;background:var(--ui-surface);color:var(--color-primary-700);font-size:.75rem;text-align:left;white-space:nowrap}
 .daily-task-menu button:hover{background:var(--color-primary-50);color:var(--color-primary-700)}
 .daily-plan-task-actions{display:flex;gap:6px;padding:0 0 9px}
-.daily-plan-task-actions button{min-height:28px;padding:0 9px;border:1px solid var(--color-border);border-radius:6px;background:#fff;color:var(--color-primary-600);font-size:.72rem;font-weight:800}
+.daily-plan-task-actions button{min-height:28px;padding:0 9px;border:1px solid var(--color-border);border-radius:6px;background:var(--ui-surface);color:var(--color-primary-600);font-size:.72rem;font-weight:800}
 .daily-plan-task-row.overdue{border-left:3px solid var(--color-accent-500);padding-left:8px}
 
 @media(max-width:1100px) and (min-width:901px){
@@ -689,7 +689,7 @@
   .diary-notice-line span{flex:1 1 auto}
   .diary-mobile-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:4px 0 12px;padding:4px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-background)}
   .diary-mobile-tabs button{min-height:38px;border:0;border-radius:7px;background:transparent;color:var(--color-text-secondary);font-weight:900}
-  .diary-mobile-tabs button.active{background:var(--color-primary-600);color:#fff}
+  .diary-mobile-tabs button.active{background:var(--color-primary-600);color:var(--ui-surface)}
   .diary-workspace{display:block}
   .care-plan-panel{border:0;padding:0;margin-bottom:18px}
 }
@@ -710,7 +710,7 @@
 .care-plan-panel header button,
 .care-plan-empty button {
   background: var(--color-primary-600) !important;
-  color: #fff !important;
+  color: var(--ui-surface) !important;
 }
 .daily-plan-task input { accent-color: var(--color-primary-600) !important; }
 .calendar-day.selected { box-shadow: inset 0 0 0 2px var(--color-primary-600) !important; background: var(--color-background) !important; }
@@ -855,7 +855,7 @@
 .calendar-day.selected {
   border-color: var(--color-text-primary) !important;
   background: var(--color-text-primary) !important;
-  color: #fff !important;
+  color: var(--ui-surface) !important;
 }
 
 .create-keyword {
@@ -886,7 +886,7 @@
 .smart-unit-list button.selected {
   border-color: var(--color-text-primary);
   background: var(--color-text-primary);
-  color: #fff;
+  color: var(--ui-surface);
 }
 
 .routine-recommendation-field {
@@ -925,7 +925,7 @@
   padding: 4px 6px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--ui-surface);
   color: var(--color-text-primary);
   font-weight: 900;
   text-align: center;
@@ -950,8 +950,8 @@
 }
 
 .routine-recommendation-field button.selected > span:first-child {
-  background: color-mix(in srgb, #fff 18%, transparent);
-  color: #fff;
+  background: color-mix(in srgb, var(--ui-surface) 18%, transparent);
+  color: var(--ui-surface);
 }
 
 .routine-recommendation-field button:not(.routine-more-button) strong {
@@ -1036,7 +1036,7 @@
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--ui-surface);
   color: var(--color-text-primary);
   font: inherit;
   box-sizing: border-box;
@@ -1070,7 +1070,7 @@
   border: 0;
   border-radius: 10px;
   background: var(--color-text-primary);
-  color: #fff;
+  color: var(--ui-surface);
   font-weight: 900;
 }
 
@@ -1089,7 +1089,7 @@
   min-height: 48px;
   border-radius: 10px;
   background: var(--color-primary-600);
-  color: #fff;
+  color: var(--ui-surface);
 }
 
 .step-actions .create-submit.secondary {
@@ -1172,7 +1172,7 @@
     padding: 0 10px !important;
     border-color: var(--color-text-primary) !important;
     background: var(--color-text-primary) !important;
-    color: #fff !important;
+    color: var(--ui-surface) !important;
     box-shadow: none !important;
     transform: none !important;
   }
@@ -1279,7 +1279,7 @@
 .diary-create-screen .diary-step-back {
   width: auto;
   min-width: 34%;
-  background: #fff;
+  background: var(--ui-surface);
   color: var(--color-text-primary);
 }
 
@@ -1294,19 +1294,19 @@
 
 .diary-page .diary-pet-avatar {
   background: var(--diary-accent) !important;
-  color: #fff !important;
+  color: var(--ui-surface) !important;
 }
 
 .diary-page .diary-mobile-tabs button.active {
   border-color: var(--diary-accent) !important;
   background: var(--diary-accent) !important;
-  color: #fff !important;
+  color: var(--ui-surface) !important;
 }
 
 .diary-page .daily-plan-panel header button,
 .diary-page .care-plan-panel header > button {
   border-color: var(--diary-accent) !important;
-  background: #fff !important;
+  background: var(--ui-surface) !important;
   color: var(--diary-accent-ink) !important;
 }
 
@@ -1345,7 +1345,7 @@
 .diary-page .daily-plan-panel header button,
 .diary-page .care-plan-panel header > button {
   background: var(--diary-accent) !important;
-  color: #fff !important;
+  color: var(--ui-surface) !important;
 }
 
 .diary-page .daily-plan-panel header button:hover:not(:disabled),
@@ -1404,7 +1404,7 @@
   padding: 0 26px !important;
   border-color: var(--diary-accent) !important;
   background: var(--diary-accent) !important;
-  color: #fff !important;
+  color: var(--ui-surface) !important;
   font-size: .98rem !important;
   box-shadow: 0 16px 30px color-mix(in srgb,var(--diary-accent) 18%,transparent) !important;
 }
@@ -1608,7 +1608,7 @@
 }
 
 .diary-page .diary-gender-mark.male {
-  color: #2563eb !important;
+  color: var(--ui-primary) !important;
 }
 
 .diary-page .diary-gender-mark.female {
@@ -1617,7 +1617,7 @@
 
 .diary-page .diary-pet-avatar {
   overflow: hidden !important;
-  color: #fff !important;
+  color: var(--ui-surface) !important;
   font-size: 1.45rem !important;
 }
 
