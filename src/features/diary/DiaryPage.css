@@ -52,6 +52,7 @@
 .diary-insight-card.notice{border-left-color:var(--color-primary-300)}
 .diary-insight-card.caution{border-left-color:var(--color-accent-500)}
 .diary-insight-card.urgent{border-left-color:var(--color-error-500)}
+.diary-page>.diary-insight-banner{display:none!important}
 
 .diary-content-shell{display:grid;gap:18px}
 .diary-main-flow{min-width:0}
@@ -471,6 +472,7 @@
 .record-detail-delete{min-height:46px;border:0;border-radius:8px;background:var(--color-background);color:var(--color-primary-600);font-weight:900}
 
 @media(max-width:900px){
+  .diary-page>.diary-insight-banner{display:none!important}
   .diary-page{min-height:calc(100svh - 130px)}
   .diary-workspace{grid-template-columns:1fr;gap:20px}
   .diary-detail-panel{border:0;padding:0}

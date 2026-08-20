@@ -1,60 +1,69 @@
-export type GoogleLatLngLiteral = {
+export type MapLatLngLiteral = {
   lat: number
   lng: number
 }
 
-export type GoogleMapsListener = {
-  remove: () => void
-}
-
-export type GoogleMapInstance = {
-  setCenter: (center: GoogleLatLngLiteral) => void
-  setZoom: (zoom: number) => void
-  getZoom: () => number | undefined
-  panTo: (center: GoogleLatLngLiteral) => void
-  addListener: (eventName: string, listener: () => void) => GoogleMapsListener
-}
-
-export type GoogleOverlayViewInstance = {
-  setMap: (map: GoogleMapInstance | null) => void
-  getPanes: () => { overlayMouseTarget: Element } | null
-  getProjection: () => {
-    fromLatLngToDivPixel: (position: GoogleLatLng) => { x: number; y: number } | null
-  } | null
-}
-
-export type GoogleLatLng = {
+export type NaverLatLng = {
   lat: () => number
   lng: () => number
 }
 
-export type GoogleMapApi = {
-  maps: {
-    Map: new (element: HTMLElement, options: {
-      center: GoogleLatLngLiteral
-      zoom: number
-      clickableIcons?: boolean
-      disableDefaultUI?: boolean
-      fullscreenControl?: boolean
-      gestureHandling?: string
-      mapTypeControl?: boolean
-      streetViewControl?: boolean
-      zoomControl?: boolean
-    }) => GoogleMapInstance
-    LatLng: new (latitude: number, longitude: number) => GoogleLatLng
-    OverlayView: new () => GoogleOverlayViewInstance
-  }
+export type NaverPoint = {
+  x: number
+  y: number
 }
 
-export type GoogleHtmlMarker = {
-  setMap: (map: GoogleMapInstance | null) => void
+export type NaverMapListener = object
+
+export type NaverMapInstance = {
+  setCenter: (center: MapLatLngLiteral | NaverLatLng) => void
+  setZoom: (zoom: number, effect?: boolean) => void
+  getZoom: () => number
+  panTo: (center: MapLatLngLiteral | NaverLatLng, options?: { duration?: number; easing?: string }) => void
+  morph?: (center: MapLatLngLiteral | NaverLatLng, zoom: number, options?: { duration?: number; easing?: string }) => void
+}
+
+export type NaverMarker = {
+  setMap: (map: NaverMapInstance | null) => void
   setZIndex: (zIndex: number) => void
+}
+
+export type NaverMapApi = {
+  maps: {
+    Map: new (element: HTMLElement, options: {
+      center: MapLatLngLiteral | NaverLatLng
+      zoom: number
+      mapTypeControl?: boolean
+      scaleControl?: boolean
+      logoControl?: boolean
+      mapDataControl?: boolean
+      zoomControl?: boolean
+      zoomControlOptions?: { position: unknown }
+    }) => NaverMapInstance
+    LatLng: new (latitude: number, longitude: number) => NaverLatLng
+    Point: new (x: number, y: number) => NaverPoint
+    Marker: new (options: {
+      position: MapLatLngLiteral | NaverLatLng
+      map: NaverMapInstance
+      title?: string
+      zIndex?: number
+      icon?: {
+        content: string
+        anchor?: NaverPoint
+      }
+    }) => NaverMarker
+    Event: {
+      addListener: (target: object, eventName: string, listener: () => void) => NaverMapListener
+      removeListener: (listener: NaverMapListener) => void
+    }
+    Position: {
+      TOP_RIGHT: unknown
+    }
+  }
 }
 
 declare global {
   interface Window {
-    google?: GoogleMapApi
-    __exoGoogleMapsReady?: () => void
-    gm_authFailure?: () => void
+    naver?: NaverMapApi
   }
 }

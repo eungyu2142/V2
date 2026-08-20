@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "prebuild": "node scripts/guard-qna-label.mjs && node scripts/check-ui-architecture.mjs",
-    "dev": "vite",
+    "dev": "vite --configLoader native",
     "dev:chrome": "start \"\" chrome \"http://localhost:5173/\" && vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "css:purge": "node scripts/purge-unused-css.mjs",

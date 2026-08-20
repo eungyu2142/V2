@@ -12,6 +12,29 @@
 .ui-stepper__desktop-number,
 .ui-stepper__desktop-label-number { display: none; }
 
+/* Keep the progress track, marker hit areas, and labels in separate rows. */
+.ui-stepper__track {
+  isolation: isolate;
+  overflow: visible;
+}
+.ui-stepper__track button {
+  align-self: center;
+  height: 2rem;
+  min-height: 2rem;
+  line-height: 1;
+}
+.ui-stepper__labels {
+  position: relative;
+  z-index: 2;
+  min-height: 1.25rem;
+  align-items: start;
+}
+.ui-stepper__labels span {
+  display: block;
+  min-width: 0;
+  line-height: 1.25rem;
+}
+
 @media (min-width: 768px) {
   .step-screen .ui-stepper__track button,
   .step-screen .ui-stepper__track button:hover:not(:disabled),
@@ -29,6 +52,44 @@
   .step-screen .ui-stepper__track button::after,
   .diary-page .ui-stepper__track button::before,
   .diary-page .ui-stepper__track button::after { content: none !important; }
+}
+
+@media (max-width: 767px) {
+  .step-screen .ui-stepper {
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .step-screen .ui-stepper__track {
+    height: 0.5rem;
+    margin-top: 0;
+  }
+
+  .step-screen .ui-stepper__track button,
+  .step-screen .ui-stepper__track button:hover,
+  .step-screen .ui-stepper__track button:focus-visible {
+    z-index: 2;
+    min-height: 2rem;
+    height: 2rem;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .step-screen .ui-stepper__labels {
+    gap: 0.25rem;
+    min-height: 1.25rem;
+  }
+
+  .step-screen .ui-stepper__labels span {
+    overflow: hidden;
+    padding-inline: 2px;
+    font-size: 0.72rem;
+    line-height: 1.25rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .app-loading {

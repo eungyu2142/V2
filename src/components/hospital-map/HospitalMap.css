@@ -6467,19 +6467,54 @@ body,
 
   .map-side-panel .map-hospital-list,
   .map-page .map-detail-dock {
+    display: flex !important;
+    flex-direction: column !important;
     min-height: 2.75rem !important;
+    padding-top: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  .map-side-panel .map-sheet-fixed-header {
+    position: relative !important;
+    z-index: 12 !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    border-radius: 1.125rem 1.125rem 0 0 !important;
+    background: var(--color-surface) !important;
+  }
+
+  .map-side-panel .map-sheet-scroll-content {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none !important;
+    touch-action: pan-y !important;
+  }
+
+  .map-side-panel .map-sheet-scroll-content::-webkit-scrollbar {
+    display: none !important;
   }
 }
 
 @media (max-width: 760px) {
 
   .map-side-panel .map-hospital-list > .map-sheet-handle,
+  .map-side-panel .map-sheet-fixed-header > .map-sheet-handle,
   .map-page .map-detail-dock > .map-sheet-handle,
   .map-side-panel .map-hospital-list > .map-sheet-handle:hover,
+  .map-side-panel .map-sheet-fixed-header > .map-sheet-handle:hover,
   .map-page .map-detail-dock > .map-sheet-handle:hover,
   .map-side-panel .map-hospital-list > .map-sheet-handle:active,
+  .map-side-panel .map-sheet-fixed-header > .map-sheet-handle:active,
   .map-page .map-detail-dock > .map-sheet-handle:active {
-    position: sticky !important;
+    position: relative !important;
     top: 0 !important;
     margin: 0 !important;
     border-radius: 1.125rem 1.125rem 0 0 !important;
@@ -6489,7 +6524,8 @@ body,
 @media (max-width: 760px) {
 
   .map-side-panel .map-sheet-sort-tabs {
-    top: 2.75rem !important;
+    position: relative !important;
+    top: auto !important;
     min-height: 3.5rem;
     align-items: center;
     overflow: visible;

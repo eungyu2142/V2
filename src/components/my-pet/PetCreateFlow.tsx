@@ -38,15 +38,35 @@ function isSupportedCategory(value?: AnimalCategory | ''): value is SupportedPet
 }
 
 function StepText({ label, value, onChange, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean }) {
-  return <TextField className="step-field" label={label} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} />
+  return <TextField className="w-full" label={label} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} />
 }
 
 function StepSelect({ label, value, options, labels, onChange, required = false }: { label: string; value: string; options: string[]; labels?: Record<string, string>; onChange: (value: string) => void; required?: boolean }) {
-  return <ChoiceGroup className="step-choice-group" label={label} value={value} options={options.map((option) => ({ value: option, label: labels?.[option] ?? option }))} onChange={(nextValue) => onChange(String(nextValue))} required={required} />
+  return <ChoiceGroup className="w-full" label={label} value={value} options={options.map((option) => ({ value: option, label: labels?.[option] ?? option }))} onChange={(nextValue) => onChange(String(nextValue))} required={required} />
 }
 
 function ChipGroup({ label, value, options, onChange, required = false }: { label: string; value: string; options: string[]; onChange: (value: string) => void; required?: boolean }) {
-  return <fieldset className="step-choice-group compact"><legend>{label}{required && <RequiredMark />}</legend><div className="step-chip-grid">{options.map((option) => <button className={value === option ? 'active' : ''} type="button" key={option} onClick={() => onChange(option)}>{option}</button>)}</div></fieldset>
+  return (
+    <fieldset className="m-0 min-w-0 border-0 p-0">
+      <legend className="mb-2 p-0 text-sm font-bold text-app-ink">{label}{required ? <RequiredMark /> : null}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const selected = value === option
+          return (
+            <button
+              className={`min-h-9 max-w-full rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${selected ? 'border-brand-600 bg-brand-600 text-white' : 'border-app-border bg-app-surface text-app-ink hover:bg-brand-50'}`}
+              type="button"
+              key={option}
+              aria-pressed={selected}
+              onClick={() => onChange(option)}
+            >
+              {option}
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
 }
 
 export default function PetCreateFlow({ initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave }: PetCreateFlowProps) {

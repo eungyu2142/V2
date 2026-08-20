@@ -1,15 +1,15 @@
 ﻿import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import './HospitalMap.css'
 import { linkReviewToDiary } from '../../features/diary/diaryService'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { PetRecord } from '../../features/diary/diaryTypes'
 import { loadAppData } from '../../lib/appData'
 import { loadLikeStates, saveLike } from '../../lib/likes'
 import HospitalReviewForm from './MapAndReview'
 import HeartIcon from '../common/HeartIcon'
 import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
-import { buildHospitalSearchQuery, createGoogleHtmlMarker, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadGoogleMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory } from './mapDependencies'
-import type { GoogleHtmlMarker, GoogleLatLngLiteral, GoogleMapInstance } from '../../types/map'
+import { buildHospitalSearchQuery, createNaverHtmlMarker, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadNaverMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory } from './mapDependencies'
+import type { MapLatLngLiteral, NaverMapInstance, NaverMapListener, NaverMarker } from '../../types/map'
 const HOSPITAL_LIST_PAGE_SIZE = 10
 const HOSPITAL_REVIEWS_ENABLED = true
 const DEFAULT_MAP_CENTER: Coordinates = { lat: 37.5665, lng: 126.978 }
@@ -124,8 +124,7 @@ function getOpeningTransitionDescription(hospital: Hospital, now = new Date()) {
 
 function buildHospitalDirectionsUrl(hospital: Hospital) {
   const query = encodeURIComponent(`${hospital.name} ${hospital.address}`.trim())
-  const placeId = hospital.googlePlaceId ? `&destination_place_id=${encodeURIComponent(hospital.googlePlaceId)}` : ''
-  return `https://www.google.com/maps/dir/?api=1&destination=${query}${placeId}`
+  return `https://map.naver.com/p/search/${query}`
 }
 
 function formatOpeningTime(value: string) {
@@ -183,21 +182,25 @@ function readSessionMapLocation(): Coordinates | null {
 }
 
 function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onCreateClinicRecord, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onCreateClinicRecord: (hospital: HospitalSnapshot) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+  const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
   const [initialMapLocation] = useState<Coordinates | null>(readSessionMapLocation)
   const [query, setQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<Array<Exclude<AnimalCategory, 'all'>>>([])
   const [selectedSort, setSelectedSort] = useState<HospitalSort>('distance')
   const [openNowOnly, setOpenNowOnly] = useState(false)
-  const [isOpenNowFilterLoading, setIsOpenNowFilterLoading] = useState(false)
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null)
   const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(initialMapLocation)
-  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>(googleMapsApiKey ? 'loading' : 'error')
-  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(googleMapsApiKey ? 'loading' : 'idle')
+  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'error')
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>(naverMapClientId ? 'loading' : 'idle')
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState(googleMapsApiKey ? '' : '빌드 환경의 VITE_GOOGLE_MAPS_API_KEY를 확인해주세요.')
+  const [message, setMessage] = useState(naverMapClientId ? '' : '빌드 환경의 VITE_NAVER_MAP_CLIENT_ID를 확인해주세요.')
   const reviewIdsKey = useMemo(() => Object.values(reviews).flat().map((review) => review.id).sort().join(','), [reviews])
+  const hasRatedHospitalReviews = useMemo(
+    () => Object.values(reviews).some((items) => items.some((review) => isHospitalCareCategory(review.animalCategory) && review.rating > 0)),
+    [reviews],
+  )
+  const effectiveSelectedSort: HospitalSort = selectedSort === 'rating' && !hasRatedHospitalReviews ? 'distance' : selectedSort
 
   useEffect(() => {
     let active = true
@@ -243,25 +246,30 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [visibleHospitalCount, setVisibleHospitalCount] = useState(HOSPITAL_LIST_PAGE_SIZE)
   const mapElementRef = useRef<HTMLDivElement | null>(null)
-  const mapInstanceRef = useRef<GoogleMapInstance | null>(null)
-  const markersRef = useRef<GoogleHtmlMarker[]>([])
-  const currentLocationMarkerRef = useRef<GoogleHtmlMarker | null>(null)
+  const mapInstanceRef = useRef<NaverMapInstance | null>(null)
+  const mapClickListenerRef = useRef<NaverMapListener | null>(null)
+  const markersRef = useRef<NaverMarker[]>([])
+  const currentLocationMarkerRef = useRef<NaverMarker | null>(null)
   const initialLocationRequestRef = useRef(false)
   const lastHospitalSearchKeyRef = useRef('')
   const sheetDragStartRef = useRef<number | null>(null)
   const sheetDragStartHeightRef = useRef(35)
   const mobileSheetHeightRef = useRef(35)
+  const sheetDragPointerIdRef = useRef<number | null>(null)
 
-  function moveMapSmoothly(position: GoogleLatLngLiteral, zoom: number) {
+  function moveMapSmoothly(position: MapLatLngLiteral, zoom: number) {
     const map = mapInstanceRef.current
     if (!map) return
 
     try {
-      map.panTo(position)
-      if (map.getZoom() !== zoom) window.setTimeout(() => map.setZoom(zoom), 180)
+      if (map.morph) map.morph(position, zoom, { duration: 420, easing: 'easeOutCubic' })
+      else {
+        map.panTo(position, { duration: 420, easing: 'easeOutCubic' })
+        if (map.getZoom() !== zoom) window.setTimeout(() => map.setZoom(zoom, true), 180)
+      }
       return
     } catch (error) {
-      console.error('Google map smooth move error:', error)
+      console.error('NAVER map smooth move error:', error)
     }
 
     map.setCenter(position)
@@ -275,14 +283,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
       .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
       .filter((hospital) => !openNowOnly || hospital.isOpenNow === true)
       .sort((a, b) => {
-        if (selectedSort === 'rating') {
-          const bRating = b.rating ?? getReviewSummary(reviews[b.id] ?? []).average
-          const aRating = a.rating ?? getReviewSummary(reviews[a.id] ?? []).average
+        if (effectiveSelectedSort === 'rating') {
+          const bRating = getReviewSummary((reviews[b.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).average
+          const aRating = getReviewSummary((reviews[a.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).average
           return bRating - aRating
         }
         return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
       })
-  }, [openNowOnly, query, reviews, selectedCategories, selectedSort, sortedHospitals])
+  }, [effectiveSelectedSort, openNowOnly, query, reviews, selectedCategories, sortedHospitals])
   const visibleHospitals = filteredHospitals.slice(0, visibleHospitalCount)
   const visibleHospitalDetailIds = visibleHospitals
     .filter((hospital) => !hospital.googleDetailsLoaded)
@@ -331,7 +339,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const selectedHospitalTodayHours = getTodayOpeningHoursDescription(selectedHospitalOpeningHours)
   const selectedHospitalTodaySchedule = parseTodayOpeningHours(selectedHospitalTodayHours)
   const selectedHospitalOpeningTransition = selectedHospital ? getOpeningTransitionDescription(selectedHospital) : null
-
   useEffect(() => {
     let cancelled = false
     loadAppData<PetRecord>('care_records', { userId, scope: 'mine' })
@@ -434,60 +441,53 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   }, [pets, reviewDraftPayload, reviews])
 
   useEffect(() => {
-    const handleGoogleMapsAuthFailure = () => {
-      setMapStatus('error')
-      setMessage('Google Cloud에서 Maps JavaScript API를 활성화해 주세요.')
-    }
-    window.addEventListener('exocare-google-maps-auth-failure', handleGoogleMapsAuthFailure)
-    return () => window.removeEventListener('exocare-google-maps-auth-failure', handleGoogleMapsAuthFailure)
-  }, [])
-
-  useEffect(() => {
-    if (!googleMapsApiKey) return
+    if (!naverMapClientId) return
 
     let mounted = true
 
-    loadGoogleMaps(googleMapsApiKey)
-      .then((google) => {
+    loadNaverMaps(naverMapClientId)
+      .then((naver) => {
         if (!mounted || !mapElementRef.current) return
 
         try {
           const centerLocation = initialMapLocation ?? DEFAULT_MAP_CENTER
-          if (!google.maps) throw new Error('Google Maps JavaScript API authentication failed.')
-          mapInstanceRef.current = new google.maps.Map(mapElementRef.current, {
-            center: centerLocation,
+          if (!naver.maps) throw new Error('NAVER Maps JavaScript API authentication failed.')
+          mapInstanceRef.current = new naver.maps.Map(mapElementRef.current, {
+            center: new naver.maps.LatLng(centerLocation.lat, centerLocation.lng),
             zoom: initialMapLocation ? 14 : 12,
-            clickableIcons: false,
-            fullscreenControl: false,
-            gestureHandling: 'greedy',
             mapTypeControl: false,
-            streetViewControl: false,
+            scaleControl: true,
+            logoControl: true,
+            mapDataControl: false,
             zoomControl: true,
+            zoomControlOptions: { position: naver.maps.Position.TOP_RIGHT },
           })
-          mapInstanceRef.current.addListener('click', () => {
+          mapClickListenerRef.current = naver.maps.Event.addListener(mapInstanceRef.current, 'click', () => {
             setSelectedHospitalId(null)
             setIsReviewFormOpen(false)
           })
           setMapStatus('ready')
         } catch (error) {
-          console.error('Google map initialization error:', error)
+          console.error('NAVER map initialization error:', error)
           setMapStatus('error')
-          setMessage('Google Maps JavaScript API 설정과 웹사이트 제한을 확인해주세요.')
+          setMessage('네이버 지도 SDK 설정과 웹 서비스 URL 등록을 확인해주세요.')
         }
       })
       .catch((error) => {
-        console.error('Google map load error:', error)
+        console.error('NAVER map load error:', error)
         if (!mounted) return
         setMapStatus('error')
-        setMessage('Google Maps JavaScript API 키와 허용된 웹사이트 주소를 확인해주세요.')
+        setMessage('네이버 지도 Client ID와 웹 서비스 URL 등록을 확인해주세요.')
       })
 
     return () => {
       mounted = false
+      if (window.naver && mapClickListenerRef.current) window.naver.maps.Event.removeListener(mapClickListenerRef.current)
+      mapClickListenerRef.current = null
       markersRef.current.forEach((marker) => marker.setMap(null))
       currentLocationMarkerRef.current?.setMap(null)
     }
-  }, [googleMapsApiKey, initialMapLocation])
+  }, [naverMapClientId, initialMapLocation])
 
   useEffect(() => {
     if (initialLocationRequestRef.current) return
@@ -508,14 +508,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   }, [])
 
   useEffect(() => {
-    const google = window.google
+    const naver = window.naver
     const map = mapInstanceRef.current
-    if (!google?.maps?.OverlayView || !map || !currentLocation) return
+    if (!naver?.maps?.Marker || !map || !currentLocation) return
 
     const position = currentLocation
     currentLocationMarkerRef.current?.setMap(null)
-    currentLocationMarkerRef.current = createGoogleHtmlMarker({
-      api: google,
+    currentLocationMarkerRef.current = createNaverHtmlMarker({
+      api: naver,
       position,
       map,
       title: '내 위치',
@@ -526,18 +526,18 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   }, [currentLocation, mapStatus])
 
   useEffect(() => {
-    const google = window.google
+    const naver = window.naver
     const map = mapInstanceRef.current
     const hospital = selectedHospital
-    if (!google?.maps?.Map || !map || !hospital) return
+    if (!naver?.maps?.Map || !map || !hospital) return
     const position = { lat: hospital.lat, lng: hospital.lng }
     moveMapSmoothly(position, 16)
   }, [selectedHospital])
 
   useEffect(() => {
-    const google = window.google
+    const naver = window.naver
     const map = mapInstanceRef.current
-    if (!google?.maps?.OverlayView || !map) return
+    if (!naver?.maps?.Marker || !map) return
 
     markersRef.current.forEach((marker) => marker.setMap(null))
     markersRef.current = []
@@ -548,8 +548,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         (reviews[hospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory)),
       ).count
       const hospitalIsLiked = likedHospitals.some((likedHospital) => isSameHospitalIdentity(likedHospital, hospital))
-      const marker = createGoogleHtmlMarker({
-        api: google,
+      const marker = createNaverHtmlMarker({
+        api: naver,
         position,
         map,
         title: hospital.name,
@@ -824,9 +824,11 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     mobileSheetHeightRef.current = mobileSheetHeight
   }, [mobileSheetHeight])
 
-  const beginSheetDrag = (event: { clientY: number; preventDefault: () => void; stopPropagation: () => void }) => {
+  const beginSheetDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
     sheetDragStartRef.current = event.clientY
     sheetDragStartHeightRef.current = mobileSheetHeightRef.current
+    sheetDragPointerIdRef.current = event.pointerId
+    event.currentTarget.setPointerCapture(event.pointerId)
     setIsSheetDragging(true)
     event.preventDefault()
     event.stopPropagation()
@@ -834,6 +836,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
 
   const finishSheetDrag = () => {
     sheetDragStartRef.current = null
+    sheetDragPointerIdRef.current = null
     setIsSheetDragging(false)
   }
 
@@ -846,12 +849,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
 
     const handlePointerMove = (event: PointerEvent) => {
       if (sheetDragStartRef.current === null) return
+      if (sheetDragPointerIdRef.current !== null && event.pointerId !== sheetDragPointerIdRef.current) return
       event.preventDefault()
       const dragDistance = event.clientY - sheetDragStartRef.current
       const viewportHeight = Math.max(window.innerHeight, 1)
       updateMobileSheetHeight(sheetDragStartHeightRef.current - (dragDistance / viewportHeight * 100))
     }
-    const handlePointerEnd = () => {
+    const handlePointerEnd = (event: PointerEvent) => {
+      if (sheetDragPointerIdRef.current !== null && event.pointerId !== sheetDragPointerIdRef.current) return
       const height = mobileSheetHeightRef.current
       setMobileSheetState(height < 48 ? 'collapsed' : height < 78 ? 'middle' : 'expanded')
       finishSheetDrag()
@@ -913,29 +918,9 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     }
   }
 
-  const toggleOpenNowFilter = async () => {
-    if (openNowOnly) {
-      setOpenNowOnly(false)
-      return
-    }
-    if (isOpenNowFilterLoading) return
-
-    setIsOpenNowFilterLoading(true)
-    try {
-      for (let index = 0; index < hospitals.length; index += 2) {
-        const batch = hospitals.slice(index, index + 2)
-        const details = await Promise.all(batch.map((hospital) => loadGoogleHospitalDetails(hospital, { refreshOpeningStatus: true })))
-        const detailsById = new Map(details.filter((hospital): hospital is Hospital => Boolean(hospital)).map((hospital) => [hospital.id, hospital]))
-        setHospitals((items) => items.map((hospital) => detailsById.get(hospital.id) ?? hospital))
-      }
-      setOpenNowOnly(true)
-      setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
-    } catch (error) {
-      console.error('Hospital opening status refresh failed:', error)
-      setMessage('영업 상태를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.')
-    } finally {
-      setIsOpenNowFilterLoading(false)
-    }
+  const toggleOpenNowFilter = () => {
+    setOpenNowOnly((enabled) => !enabled)
+    setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
   }
 
   const mobileSheetStyle = {
@@ -943,14 +928,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   } as CSSProperties
   const sortOptions: Array<[HospitalSort, string]> = [
     ['distance', '거리순'],
-    ['rating', '평점순'],
+    ...(hasRatedHospitalReviews ? [['rating', '평점순'] as [HospitalSort, string]] : []),
   ]
   const renderSortMenu = (id: string) => (
     <div className="map-sort-menu">
       <select
         id={id}
         aria-label="병원 정렬"
-        value={selectedSort}
+        value={effectiveSelectedSort}
         onChange={(event) => {
           setSelectedSort(event.target.value as HospitalSort)
           setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
@@ -961,8 +946,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
     </div>
   )
   const renderOpenNowButton = () => (
-    <button className={`map-open-now-filter ${openNowOnly ? 'active' : ''}`} type="button" aria-pressed={openNowOnly} disabled={isOpenNowFilterLoading} onClick={() => void toggleOpenNowFilter()}>
-      {isOpenNowFilterLoading ? '영업 확인 중' : '영업 중'}
+    <button className={`map-open-now-filter ${openNowOnly ? 'active' : ''}`} type="button" aria-pressed={openNowOnly} onClick={toggleOpenNowFilter}>
+      영업 중
     </button>
   )
 
@@ -972,8 +957,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         <div className="map-canvas" ref={mapElementRef} />
         {mapStatus !== 'ready' && (
           <div className="map-load-state">
-            <strong>{mapStatus === 'error' ? '지도를 불러오지 못했습니다' : 'Google 지도를 불러오는 중입니다'}</strong>
-            {mapStatus === 'error' && <small>{message || 'VITE_GOOGLE_MAPS_API_KEY와 Google Cloud의 웹사이트 제한을 확인해 주세요.'}</small>}
+            <strong>{mapStatus === 'error' ? '지도를 불러오지 못했습니다' : '네이버 지도를 불러오는 중입니다'}</strong>
+            {mapStatus === 'error' && <small>{message || 'VITE_NAVER_MAP_CLIENT_ID와 네이버 클라우드의 웹 서비스 URL을 확인해 주세요.'}</small>}
           </div>
         )}
       </section>
@@ -1008,29 +993,33 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         </div>
 
         <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={mobileSheetStyle}>
-          <button className="map-sheet-handle" type="button" aria-label="병원 목록 높이 조절" {...sheetDragHandlers} />
-          <div className="map-sheet-sort-tabs" aria-label="병원 정렬">
-            {renderSortMenu('hospital-sort-mobile')}
+          <div className="map-sheet-fixed-header">
+            <button className="map-sheet-handle" type="button" aria-label="병원 목록 높이 조절" {...sheetDragHandlers} />
+            <div className="map-sheet-sort-tabs" aria-label="병원 정렬">
+              {renderSortMenu('hospital-sort-mobile')}
+            </div>
           </div>
-          {filteredHospitals.length === 0 ? (
-            <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
-          ) : (
-            <>
-              {visibleHospitals.map((hospital) => (
-                <HospitalListRow
-                  hospital={hospital}
-                  key={hospital.id}
-                  active={hospital.id === selectedHospitalId}
-                  onSelect={() => setSelectedHospitalId(hospital.id)}
-                />
-              ))}
-              {hasMoreHospitals && (
-                <button className="map-hospital-more-button" type="button" onClick={() => setVisibleHospitalCount((count) => count + HOSPITAL_LIST_PAGE_SIZE)}>
-                  더보기
-                </button>
-              )}
-            </>
-          )}
+          <div className="map-sheet-scroll-content">
+            {filteredHospitals.length === 0 ? (
+              <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
+            ) : (
+              <>
+                {visibleHospitals.map((hospital) => (
+                  <HospitalListRow
+                    hospital={hospital}
+                    key={hospital.id}
+                    active={hospital.id === selectedHospitalId}
+                    onSelect={() => setSelectedHospitalId(hospital.id)}
+                  />
+                ))}
+                {hasMoreHospitals && (
+                  <button className="map-hospital-more-button" type="button" onClick={() => setVisibleHospitalCount((count) => count + HOSPITAL_LIST_PAGE_SIZE)}>
+                    더보기
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </section>
 
       </aside>

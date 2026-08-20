@@ -30,28 +30,30 @@ function readHospitalSnapshot(payload: unknown): HospitalSnapshot | undefined {
   if (typeof value === 'string') {
     try { value = JSON.parse(value) as unknown } catch { return undefined }
   }
+  if (Array.isArray(value)) return readHospitalSnapshot(value[0])
   if (!value || typeof value !== 'object') return undefined
   const record = value as Record<string, unknown>
-  const candidate = record.hospitalSnapshot ?? record.hospital_snapshot ?? record.hospital ?? (typeof record.name === 'string' ? record : undefined)
+  const candidate = record.hospitalSnapshot ?? record.hospital_snapshot ?? record.hospital ?? (typeof record.name === 'string' ? record : undefined) ?? (typeof record.place_name === 'string' ? record : undefined)
   if (!candidate || typeof candidate !== 'object') return undefined
   const hospital = candidate as Record<string, unknown>
-  if (typeof hospital.name !== 'string') return undefined
+  const name = typeof hospital.name === 'string' ? hospital.name : typeof hospital.place_name === 'string' ? hospital.place_name : ''
+  if (!name) return undefined
   const address = typeof hospital.address === 'string'
     ? hospital.address
     : typeof hospital.roadAddress === 'string'
       ? hospital.roadAddress
       : typeof hospital.road_address === 'string'
         ? hospital.road_address
-        : typeof hospital.shortAddress === 'string' ? hospital.shortAddress : ''
+        : typeof hospital.shortAddress === 'string' ? hospital.shortAddress : typeof hospital.road_address === 'string' ? hospital.road_address : ''
   const animalTags = hospital.animalTags ?? hospital.animal_tags ?? hospital.categories
   const naverLink = hospital.naverLink ?? hospital.naver_link ?? hospital.link
   return {
     id: typeof hospital.id === 'string' ? hospital.id : undefined,
-    name: hospital.name,
+    name,
     address,
     phone: typeof hospital.phone === 'string' ? hospital.phone : '',
-    lat: typeof hospital.lat === 'number' ? hospital.lat : 0,
-    lng: typeof hospital.lng === 'number' ? hospital.lng : 0,
+    lat: typeof hospital.lat === 'number' ? hospital.lat : typeof hospital.y === 'number' ? hospital.y : 0,
+    lng: typeof hospital.lng === 'number' ? hospital.lng : typeof hospital.x === 'number' ? hospital.x : 0,
     animalTags: Array.isArray(animalTags) ? animalTags.filter((tag): tag is string => typeof tag === 'string') : [],
     naverLink: typeof naverLink === 'string' ? naverLink : '',
     source: hospital.source === 'local_hospital_data' ? 'local_hospital_data' : 'naver_local_search',
@@ -60,6 +62,7 @@ function readHospitalSnapshot(payload: unknown): HospitalSnapshot | undefined {
 
 function readCommentHospitalSnapshot(comment: QnaComment): HospitalSnapshot | undefined {
   return comment.hospitalSnapshot
+    ?? comment.hospital_snapshot ?? readHospitalSnapshot(comment.payload)
     ?? readHospitalSnapshot(comment)
     ?? readHospitalSnapshot((comment as QnaComment & { hospital_snapshot?: unknown }).hospital_snapshot)
 }
@@ -80,18 +83,35 @@ function setLocalCommentHospitalSnapshot(commentId: string, hospital: HospitalSn
   }
 }
 
+function isMissingHospitalSnapshotColumn(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) return false
+  const message = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase()
+  return error.code === '42703' || error.code === 'PGRST204' || (message.includes('hospital_snapshot') && (message.includes('column') || message.includes('schema cache')))
+}
+
 function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalSnapshot[]; onSelect: (hospital: HospitalSnapshot) => void; onClose: () => void }) {
   const [search, setSearch] = useState('')
   const [visibleCount, setVisibleCount] = useState(10)
+  const [fallbackHospitals, setFallbackHospitals] = useState<HospitalSnapshot[]>([])
+  const [loadError, setLoadError] = useState('')
+  useEffect(() => {
+    if (hospitals.length > 0) return
+    let active = true
+    void loadCollectedHospitals('', 'all')
+      .then((items) => { if (active) setFallbackHospitals(items.map(toHospitalSnapshot)) })
+      .catch(() => { if (active) setLoadError('병원 목록을 불러오지 못했어요.') })
+    return () => { active = false }
+  }, [hospitals])
+  const availableHospitals = hospitals.length > 0 ? hospitals : fallbackHospitals
   const normalizedSearch = search.trim().toLowerCase()
-  const filteredHospitals = hospitals.filter((hospital) => !normalizedSearch || `${hospital.name} ${hospital.address}`.toLowerCase().includes(normalizedSearch))
+  const filteredHospitals = availableHospitals.filter((hospital) => !normalizedSearch || `${hospital.name} ${hospital.address}`.toLowerCase().includes(normalizedSearch))
   const visibleHospitals = filteredHospitals.slice(0, visibleCount)
   const hasMore = visibleCount < filteredHospitals.length
 
-  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true" aria-label="병원 선택"><div className="qna-hospital-picker-heading"><strong>병원 선택</strong><button className="qna-hospital-picker-close" type="button" aria-label="닫기" onClick={onClose}>×</button></div><label className="qna-hospital-search"><span aria-hidden="true">⌕</span><input value={search} onChange={(event) => { setSearch(event.target.value); setVisibleCount(10) }} placeholder="병원 이름이나 주소 검색" aria-label="병원 검색" /></label>{filteredHospitals.length > 0 ? <><div className="qna-hospital-picker-list">{visibleHospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? `${hospital.name}-${hospital.lat}-${hospital.lng}`} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.address}</span></button>)}</div>{hasMore && <button className="qna-hospital-picker-more" type="button" onClick={() => setVisibleCount((count) => count + 10)}>더보기</button>}</> : <p>검색 결과가 없습니다.</p>}</section></div>
+  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true" aria-label="병원 선택"><div className="qna-hospital-picker-heading"><strong>병원 선택</strong><button className="qna-hospital-picker-close" type="button" aria-label="닫기" onClick={onClose}>×</button></div><label className="qna-hospital-search"><span aria-hidden="true">⌕</span><input value={search} onChange={(event) => { setSearch(event.target.value); setVisibleCount(10) }} placeholder="병원 이름이나 주소 검색" aria-label="병원 검색" /></label>{loadError ? <p role="alert">{loadError}</p> : filteredHospitals.length > 0 ? <><div className="qna-hospital-picker-list">{visibleHospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? `${hospital.name}-${hospital.lat}-${hospital.lng}`} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.address}</span></button>)}</div>{hasMore && <button className="qna-hospital-picker-more" type="button" onClick={() => setVisibleCount((count) => count + 10)}>더보기</button>}</> : <p>검색 결과가 없습니다.</p>}</section></div>
 }
 import type { PetRecord, PetRecordType } from '../../features/diary/diaryTypes'
-import { animalCategoryLabels, CategoryTagIcon } from '../hospital-map/mapDependencies'
+import { animalCategoryLabels, CategoryTagIcon, loadCollectedHospitals, toHospitalSnapshot } from '../hospital-map/mapDependencies'
 function StepText({ label, value, onChange, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean }) { return <TextField className="step-field" label={label} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} /> }
 
 export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, onChange, onDeletePost, onEditPost, onCreate, onOpenHospital, onOpenDiary, hospitals = [] }: { userId: string; profile: AppProfile; posts: QnaPost[]; openPostId?: string | null; onOpenHandled?: () => void; onChange: (posts: QnaPost[]) => void; onDeletePost: (postId: string) => void; onEditPost: (post: QnaPost) => void; onCreate: (petId?: string | null) => void; onOpenHospital: (hospital: HospitalSnapshot) => void; onOpenDiary: (petId: string, readOnly: boolean) => void; hospitals?: HospitalSnapshot[] }) {
@@ -108,12 +128,14 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [attachedHospital, setAttachedHospital] = useState<HospitalSnapshot | null>(null)
+  const attachedHospitalRef = useRef<HospitalSnapshot | null>(null)
   const [hospitalPickerOpen, setHospitalPickerOpen] = useState(false)
   const [commentsByPost, setCommentsByPost] = useState<Record<string, QnaComment[]>>({})
   const [commentHospitalOverrides, setCommentHospitalOverrides] = useState<Record<string, HospitalSnapshot>>({})
   const [postLikeOverrides, setPostLikeOverrides] = useState<Record<string, { liked: boolean; likes: number }>>({})
   const [commentLikeOverrides, setCommentLikeOverrides] = useState<Record<string, { liked: boolean; likes: number }>>({})
   const [likeError, setLikeError] = useState('')
+  const [commentError, setCommentError] = useState('')
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null)
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
   const previousSelectedIdRef = useRef<string | null>(null)
@@ -155,20 +177,30 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
         const hospitalSnapshot = readHospitalSnapshot((row as typeof row & { hospital_snapshot?: unknown }).hospital_snapshot) ?? readHospitalSnapshot(row.payload)
         const author = payload.author && payload.author !== '작성자' ? payload.author : mine ? displayAuthor : '사용자'
         const likedBy = Array.isArray(payload.likedBy) ? payload.likedBy : Array.isArray(payload.liked_by) ? payload.liked_by : []
-        const item: QnaComment = { id: row.id, author, authorAvatarUrl: payload.authorAvatarUrl, body: row.body, createdAt: row.created_at, mine, isAccepted: payload.isAccepted === true || payload.is_accepted === true, liked: likedBy.includes(userId), likes: Number(payload.likes ?? 0), hospitalSnapshot: payload.hospitalSnapshot }
+        const item: QnaComment = { id: row.id, author, authorAvatarUrl: payload.authorAvatarUrl, body: row.body, createdAt: row.created_at, mine, isAccepted: payload.isAccepted === true || payload.is_accepted === true, liked: likedBy.includes(userId), likes: Number(payload.likes ?? 0), hospitalSnapshot, hospital_snapshot: hospitalSnapshot ?? null, payload: { hospitalSnapshot: hospitalSnapshot ?? null, hospital_snapshot: hospitalSnapshot ?? null } }
         item.hospitalSnapshot = hospitalSnapshot
         grouped[row.post_id] = [...(grouped[row.post_id] ?? []), item]
       }
       setCommentsByPost((current) => {
         const merged: Record<string, QnaComment[]> = { ...current }
         Object.entries(grouped).forEach(([postId, remoteComments]) => {
-          merged[postId] = remoteComments.map((remoteComment) => {
-            const localComment = current[postId]?.find((commentItem) => commentItem.id === remoteComment.id)
+          const localComments = current[postId] ?? []
+          const matchedLocalIds = new Set<string>()
+          const hydratedComments = remoteComments.map((remoteComment) => {
+            const localComment = localComments.find((commentItem) => {
+              if (commentItem.id === remoteComment.id) return true
+              return commentItem.body === remoteComment.body
+            })
+            if (localComment) matchedLocalIds.add(localComment.id)
             const hospitalSnapshot = readCommentHospitalSnapshot(remoteComment)
               ?? (localComment ? readCommentHospitalSnapshot(localComment) : undefined)
               ?? getLocalCommentHospitalSnapshot(remoteComment.id)
-            return hospitalSnapshot ? { ...remoteComment, hospitalSnapshot } : remoteComment
+            return hospitalSnapshot
+              ? { ...remoteComment, hospitalSnapshot, hospital_snapshot: hospitalSnapshot, payload: { hospitalSnapshot, hospital_snapshot: hospitalSnapshot } }
+              : remoteComment
           })
+          const pendingLocalComments = localComments.filter((commentItem) => !matchedLocalIds.has(commentItem.id))
+          merged[postId] = [...hydratedComments, ...pendingLocalComments]
         })
         return merged
       })
@@ -178,7 +210,12 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   useEffect(() => {
     let active = true
     supabase.from('likes').select('target_type, target_id, user_id').in('target_type', ['community_post', 'question']).then(({ data, error }) => {
-      if (!active || error) return
+      if (!active) return
+      if (error) {
+        console.error('Q&A like state load failed.', error)
+        setLikeError('좋아요 정보를 불러오지 못했어요. Supabase 권한 설정을 확인해 주세요.')
+        return
+      }
       const postCounts: Record<string, number> = {}
       const commentCounts: Record<string, number> = {}
       const postMine: Record<string, boolean> = {}
@@ -270,11 +307,13 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     } catch (error) {
       console.error('Q&A like save failed.', error)
       setPostLikeOverrides((items) => ({ ...items, [post.id]: current }))
-      setLikeError('좋아요를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+      setLikeError('좋아요를 저장하지 못했어요. Supabase의 likes 권한 설정을 확인해 주세요.')
     }
   }
   const toggleStatus = (post: QnaPost) => updatePost({ ...post, status: qnaStatus(post) === 'resolved' ? 'unresolved' : 'resolved' })
   const selectAnswer = (post: QnaPost, commentId: string) => {
+    const comment = (commentsByPost[post.id] ?? post.comments).find((item) => item.id === commentId)
+    if (post.mine !== true || comment?.mine === true) return
     const nextAcceptedId = post.selectedAnswerCommentId === commentId ? undefined : commentId
     updatePost(nextAcceptedId ? { ...post, status: 'resolved', selectedAnswerCommentId: nextAcceptedId } : { ...post, status: 'unresolved', selectedAnswerCommentId: undefined })
     setCommentsByPost((items) => ({ ...items, [post.id]: (items[post.id] ?? post.comments).map((item) => ({ ...item, isAccepted: item.id === nextAcceptedId })) }))
@@ -290,13 +329,16 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     } catch (error) {
       console.error('Q&A comment like save failed.', error)
       setCommentLikeOverrides((items) => ({ ...items, [comment.id]: current }))
-      setLikeError('좋아요를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+      setLikeError('좋아요를 저장하지 못했어요. Supabase의 likes 권한 설정을 확인해 주세요.')
     }
   }
   const addComment = async (event: FormEvent) => {
     event.preventDefault()
     if (!selected || !comment.trim()) return
-    const attachedHospitalSnapshot = attachedHospital ? { ...attachedHospital } : undefined
+    setCommentError('')
+    const attachedHospitalSnapshot = attachedHospitalRef.current ?? attachedHospital
+      ? { ...(attachedHospitalRef.current ?? attachedHospital)! }
+      : undefined
     const newComment: QnaComment = { id: crypto.randomUUID(), author: displayAuthor, authorAvatarUrl: profile.avatarUrl, body: comment.trim(), createdAt: new Date().toISOString(), mine: true, isAccepted: false, hospitalSnapshot: attachedHospitalSnapshot }
     const hospitalPayload = newComment.hospitalSnapshot ?? null
     if (attachedHospitalSnapshot) {
@@ -314,8 +356,8 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
       .select('payload, hospital_snapshot')
       .single()
 
-    // Allow existing environments to keep working until the new nullable column is migrated.
-    if (insertResult.error) {
+    // 컬럼 누락일 때만 하위 호환 재시도한다. 권한/네트워크 오류를 삼키면 첨부가 조용히 사라진다.
+    if (isMissingHospitalSnapshotColumn(insertResult.error)) {
       insertResult = await supabase
         .from('post_comments')
         .insert({ id: newComment.id, post_id: selected.id, user_id: userId, body: newComment.body, payload: { author: newComment.author, authorAvatarUrl: newComment.authorAvatarUrl, isAccepted: false, is_accepted: false, hospitalSnapshot: hospitalPayload, hospital_snapshot: hospitalPayload } })
@@ -327,6 +369,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
 
     if (error) {
       console.error('Q&A 댓글 저장 실패:', error)
+      setCommentError('댓글을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
       return
     }
 
@@ -334,12 +377,13 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     if (savedHospitalSnapshot) {
       setCommentHospitalOverrides((items) => ({ ...items, [newComment.id]: savedHospitalSnapshot }))
     }
-    const savedComment = { ...newComment, hospitalSnapshot: savedHospitalSnapshot }
+    const savedComment = { ...newComment, hospitalSnapshot: savedHospitalSnapshot, hospital_snapshot: savedHospitalSnapshot ?? null, payload: { hospitalSnapshot: savedHospitalSnapshot ?? null, hospital_snapshot: savedHospitalSnapshot ?? null } }
     setCommentsByPost((items) => ({
       ...items,
       [selected.id]: (items[selected.id] ?? selected.comments).map((item) => item.id === newComment.id ? savedComment : item),
     }))
     setComment('')
+    attachedHospitalRef.current = null
     setAttachedHospital(null)
   }
 
@@ -354,7 +398,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
           <strong>Q&A</strong>
           {selected.mine === true && <QnaOwnerMenu post={selected} onEdit={() => onEditPost(selected)} onToggleResolve={() => toggleStatus(selected)} onDelete={() => { if (window.confirm(`‘${selected.title || '제목 없는 질문'}’ 질문을 삭제할까요?`)) { onDeletePost(selected.id); setSelectedId(null) } }} />}
         </header>
-        {likeError && <button className="data-error" type="button" onClick={() => setLikeError('')}>{likeError}</button>}
+        {(likeError || commentError) && <button className="data-error" type="button" onClick={() => { setLikeError(''); setCommentError('') }}>{likeError || commentError}</button>}
         <article className="qna-detail-post">
           <div className="qna-detail-badges"><span className="qna-category" data-category={normalizeQnaCategory(selected.category)}>{normalizeQnaCategory(selected.category)}</span><button className={`qna-detail-like ${selected.liked ? 'active' : ''}`} type="button" aria-label={selected.liked ? '좋아요 취소' : '좋아요'} aria-pressed={selected.liked} onClick={() => toggleLike(selected)}><HeartIcon filled={selected.liked} /><span>{selected.likes}</span></button>{selected.mine === true ? <button className={`qna-detail-resolve-button ${qnaStatus(selected) === 'resolved' ? 'resolved' : ''}`} type="button" onClick={() => toggleStatus(selected)}>{qnaStatus(selected) === 'resolved' ? '해결 완료' : '해결'}</button> : <span className={`qna-status ${qnaStatus(selected)}`}>{qnaStatusLabel(qnaStatus(selected))}</span>}</div>
           <h2>{selected.title}</h2>
@@ -375,11 +419,11 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
               {item.body && <p>{item.body}</p>}
               {readCommentHospitalSnapshot(item) && <HospitalAttachCard hospital={readCommentHospitalSnapshot(item)!} mode="posted" onOpen={() => onOpenHospital(readCommentHospitalSnapshot(item)!)} />}
               <button className={`qna-comment-like ${item.liked ? 'active' : ''}`} type="button" aria-label={item.liked ? '댓글 좋아요 취소' : '댓글 좋아요'} aria-pressed={item.liked} onClick={() => void toggleCommentLike(item)}><span aria-hidden="true">{item.liked ? '♥' : '♡'}</span>{(item.likes ?? 0) > 0 && <span className="qna-comment-like-count">{item.likes}</span>}</button>
-              {selected.mine === true && <button className="qna-accept-button" type="button" onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '답변 채택'}</button>}
+              {selected.mine === true && item.mine !== true && <button className="qna-accept-button" type="button" onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '답변 채택'}</button>}
             </article>
           ))}
           <form onSubmit={addComment}>
-            {attachedHospital && <HospitalAttachCard hospital={attachedHospital} mode="draft" onRemove={() => setAttachedHospital(null)} />}
+            {attachedHospital && <HospitalAttachCard hospital={attachedHospital} mode="draft" onRemove={() => { attachedHospitalRef.current = null; setAttachedHospital(null) }} />}
             <div className="qna-comment-tools">
               <button type="button" onClick={() => setHospitalPickerOpen((open) => !open)}>병원 첨부</button>
             </div>
@@ -389,7 +433,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
             </div>
           </form>
         </section>
-        {hospitalPickerOpen && <HospitalPicker hospitals={hospitals} onSelect={(hospital) => { setAttachedHospital(hospital); setHospitalPickerOpen(false) }} onClose={() => setHospitalPickerOpen(false)} />}
+        {hospitalPickerOpen && <HospitalPicker hospitals={hospitals} onSelect={(hospital) => { attachedHospitalRef.current = hospital; setAttachedHospital(hospital); setHospitalPickerOpen(false) }} onClose={() => setHospitalPickerOpen(false)} />}
         {lightboxImage && <div className="qna-lightbox" role="dialog" aria-modal="true" aria-label="이미지 확대 보기" onClick={() => setLightboxImage(null)} onKeyDown={(event) => { if (event.key === 'Escape') setLightboxImage(null) }} tabIndex={-1}><button type="button" className="qna-lightbox-close" aria-label="이미지 닫기" onClick={() => setLightboxImage(null)}>×</button><img src={lightboxImage} alt="확대된 첨부 이미지" onClick={(event) => event.stopPropagation()} /></div>}
       </section>
     )
@@ -397,7 +441,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
 
   return (
     <section className="qna-feed-page">
-      {likeError && <button className="data-error" type="button" onClick={() => setLikeError('')}>{likeError}</button>}
+      {(likeError || commentError) && <button className="data-error" type="button" onClick={() => { setLikeError(''); setCommentError('') }}>{likeError || commentError}</button>}
       <header className="qna-feed-head">
         <div>
           <h2>Q&A</h2>

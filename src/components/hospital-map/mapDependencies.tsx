@@ -1,15 +1,31 @@
 /* This module intentionally groups the map feature's pure helpers and its small map icon. */
 /* eslint-disable react-refresh/only-export-components */
 import type { AnimalCategory, Coordinates, Hospital, HospitalGoogleReview, HospitalOpeningHours, HospitalReview, HospitalSnapshot, Pet } from '../../types/app'
-import type { GoogleHtmlMarker, GoogleLatLngLiteral, GoogleMapApi, GoogleMapInstance, GoogleOverlayViewInstance } from '../../types/map'
+import type { MapLatLngLiteral, NaverMapApi, NaverMapInstance, NaverMarker } from '../../types/map'
 import { supabase } from '../../lib/supabase'
 
 const savedHospitalStorageKey = 'exocare-saved-hospitals'
 const savedHospitalDetailsStorageKey = 'exocare-liked-hospitals'
 const savedHospitalLegacyOwnerKey = 'exocare-liked-hospitals-legacy-owner'
-let googleMapsLoader: Promise<GoogleMapApi> | null = null
+let naverMapsLoader: Promise<NaverMapApi> | null = null
 const googleHospitalDetailsCache = new Map<string, Promise<Hospital | null>>()
+let verifiedWebDetailsCache: Promise<VerifiedWebDetailsFile> | null = null
 const hospitalCareCategories = ['reptile', 'amphibian'] as const
+
+type VerifiedWebHospital = {
+  name: string
+  phone: string | null
+  openingHours: string[]
+  sources: string[]
+}
+
+type VerifiedWebDetailsFile = {
+  checkedAt: string
+  refreshAfterDays: number
+  method: string
+  notice: string
+  hospitals: VerifiedWebHospital[]
+}
 
 export const animalCategoryOptions: AnimalCategory[] = ['all', 'reptile', 'amphibian', 'rodent', 'bird', 'other']
 export const hospitalAnimalCategoryOptions: AnimalCategory[] = ['all', ...hospitalCareCategories]
@@ -162,46 +178,35 @@ export function CategoryTagIcon({ category }: { category: AnimalCategory }) {
 }
 
 
-export function loadGoogleMaps(apiKey: string) {
-  if (window.google?.maps?.Map) return Promise.resolve(window.google)
-  if (googleMapsLoader) return googleMapsLoader
+export function loadNaverMaps(clientId: string) {
+  if (window.naver?.maps?.Map) return Promise.resolve(window.naver)
+  if (naverMapsLoader) return naverMapsLoader
 
-  googleMapsLoader = new Promise<GoogleMapApi>((resolve, reject) => {
-    window.gm_authFailure = () => {
-      window.dispatchEvent(new Event('exocare-google-maps-auth-failure'))
-    }
+  naverMapsLoader = new Promise<NaverMapApi>((resolve, reject) => {
     const finish = () => {
-      if (window.google?.maps?.Map) resolve(window.google)
-      else reject(new Error('Google Maps JavaScript API namespace is unavailable.'))
+      if (window.naver?.maps?.Map) resolve(window.naver)
+      else reject(new Error('NAVER Maps JavaScript API namespace is unavailable.'))
     }
-    const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-map-sdk="true"]')
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-naver-map-sdk="true"]')
     if (existingScript) {
       existingScript.addEventListener('load', finish, { once: true })
-      existingScript.addEventListener('error', () => reject(new Error('Google Maps JavaScript API failed to load.')), { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('NAVER Maps JavaScript API failed to load.')), { once: true })
       return
     }
 
-    window.__exoGoogleMapsReady = finish
     const script = document.createElement('script')
-    const params = new URLSearchParams({
-      key: apiKey,
-      loading: 'async',
-      callback: '__exoGoogleMapsReady',
-      v: 'weekly',
-      language: 'ko',
-      region: 'KR',
-    })
-    script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}`
     script.async = true
-    script.dataset.googleMapSdk = 'true'
-    script.addEventListener('error', () => reject(new Error('Google Maps JavaScript API failed to load.')), { once: true })
+    script.dataset.naverMapSdk = 'true'
+    script.addEventListener('load', finish, { once: true })
+    script.addEventListener('error', () => reject(new Error('NAVER Maps JavaScript API failed to load.')), { once: true })
     document.head.appendChild(script)
   })
 
-  return googleMapsLoader
+  return naverMapsLoader
 }
 
-export function createGoogleHtmlMarker({
+export function createNaverHtmlMarker({
   api,
   map,
   position,
@@ -210,55 +215,25 @@ export function createGoogleHtmlMarker({
   zIndex,
   onClick,
 }: {
-  api: GoogleMapApi
-  map: GoogleMapInstance
-  position: GoogleLatLngLiteral
+  api: NaverMapApi
+  map: NaverMapInstance
+  position: MapLatLngLiteral
   html: string
   title: string
   zIndex: number
   onClick?: () => void
-}): GoogleHtmlMarker {
-  const BaseOverlay = api.maps.OverlayView
-
-  class HtmlMarker extends BaseOverlay {
-    private container: HTMLDivElement | null = null
-    private currentZIndex = zIndex
-    private readonly markerPosition = new api.maps.LatLng(position.lat, position.lng)
-
-    onAdd() {
-      const container = document.createElement('div')
-      container.className = 'google-html-marker'
-      container.innerHTML = html
-      container.title = title
-      container.style.zIndex = String(this.currentZIndex)
-      container.addEventListener('click', (event) => {
-        event.preventDefault()
-        event.stopPropagation()
-        onClick?.()
-      })
-      this.container = container
-      this.getPanes()?.overlayMouseTarget.appendChild(container)
-    }
-
-    draw() {
-      const pixel = this.getProjection()?.fromLatLngToDivPixel(this.markerPosition)
-      if (!pixel || !this.container) return
-      this.container.style.transform = `translate3d(${pixel.x}px, ${pixel.y}px, 0)`
-    }
-
-    onRemove() {
-      this.container?.remove()
-      this.container = null
-    }
-
-    setZIndex(nextZIndex: number) {
-      this.currentZIndex = nextZIndex
-      if (this.container) this.container.style.zIndex = String(nextZIndex)
-    }
-  }
-
-  const marker = new HtmlMarker() as HtmlMarker & GoogleOverlayViewInstance
-  marker.setMap(map)
+}): NaverMarker {
+  const marker = new api.maps.Marker({
+    position: new api.maps.LatLng(position.lat, position.lng),
+    map,
+    title,
+    zIndex,
+    icon: {
+      content: html,
+      anchor: new api.maps.Point(0, 0),
+    },
+  })
+  if (onClick) api.maps.Event.addListener(marker, 'click', onClick)
   return marker
 }
 
@@ -289,13 +264,51 @@ export async function searchHospitals(query: string, category: AnimalCategory, l
       window.setTimeout(() => resolve([]), 2_500)
     }),
   ])
-  const hospitals = storedHospitals.length > 0
-    ? storedHospitals
-    : await loadCollectedHospitals(query, category).catch((error: unknown) => {
-        console.error('Collected hospital fallback load failed.', error)
-        return []
+  const collectedHospitals = await loadCollectedHospitals(query, category).catch((error: unknown) => {
+    console.error('Collected hospital fallback load failed.', error)
+    return []
+  })
+  // DB 상세 캐시가 일부 병원에만 있어도 전체 수집 목록이 사라지지 않도록 병합한다.
+  const hospitals = dedupeHospitals([...collectedHospitals, ...storedHospitals])
+  const verifiedHospitals = await applyVerifiedWebDetails(hospitals)
+  return sortHospitalsByDistance(verifiedHospitals, location)
+}
+
+async function applyVerifiedWebDetails(hospitals: Hospital[]) {
+  if (!verifiedWebDetailsCache) {
+    verifiedWebDetailsCache = fetch('/data/hospital-web-details.json', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Web hospital details ${response.status}`)
+        return response.json() as Promise<VerifiedWebDetailsFile>
       })
-  return sortHospitalsByDistance(hospitals, location)
+      .catch((error) => {
+        verifiedWebDetailsCache = null
+        throw error
+      })
+  }
+
+  try {
+    const details = await verifiedWebDetailsCache
+    const byName = new Map(details.hospitals.map((hospital) => [normalizeText(hospital.name), hospital]))
+    return hospitals.map((hospital) => {
+      const verified = byName.get(normalizeText(hospital.name))
+      if (!verified) return hospital
+      const openingHours = verified.openingHours.length > 0 ? verified.openingHours : hospital.openingHours ?? []
+      return {
+        ...hospital,
+        phone: verified.phone || hospital.phone,
+        regularOpeningHours: openingHours.length > 0 ? { weekdayDescriptions: openingHours } : hospital.regularOpeningHours,
+        currentOpeningHours: null,
+        openingHours,
+        isOpenNow: inferOpeningStatus(openingHours),
+        openingHoursUpdatedAt: details.checkedAt,
+        googleDetailsLoaded: true,
+      }
+    })
+  } catch (error) {
+    console.error('Verified web hospital details load failed:', error)
+    return hospitals
+  }
 }
 
 async function loadStoredHospitals(query: string, category: AnimalCategory) {

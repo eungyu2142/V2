@@ -42,11 +42,7 @@ export async function saveLike(targetType: LikeTargetType, targetId: string, use
   }
 
   const row = { user_id: ownerId, target_type: targetType, target_id: targetId }
-  const { error: upsertError } = await supabase.from('likes').upsert(row, { onConflict: 'user_id,target_type,target_id' })
-  if (!upsertError) return
-
-  // Older deployments may not expose the composite conflict constraint to PostgREST.
-  // A plain insert still uses the database uniqueness rule when it exists.
-  const { error: insertError } = await supabase.from('likes').insert(row)
-  if (insertError) throw insertError
+  const { error } = await supabase.from('likes').insert(row)
+  if (!error || error.code === '23505') return
+  throw error
 }
