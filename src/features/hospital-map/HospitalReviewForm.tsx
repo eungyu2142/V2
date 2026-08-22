@@ -11,13 +11,6 @@ type ReviewPetOption = {
   species?: string
 }
 
-export type ReviewClinicRecordOption = {
-  id: string
-  hospitalName: string
-  visitDate: string
-  disabled: boolean
-}
-
 type HospitalReviewFormProps = {
   rating: number
   body: string
@@ -31,8 +24,6 @@ type HospitalReviewFormProps = {
   pets: ReviewPetOption[]
   selectedPetId: string
   selectedTags: string[]
-  clinicRecords: ReviewClinicRecordOption[]
-  selectedClinicRecordId: string
   canSubmit: boolean
   submitLabel?: string
   onRatingChange: (value: number) => void
@@ -46,7 +37,6 @@ type HospitalReviewFormProps = {
   onTreatmentChange: (value: string) => void
   onPetChange: (value: string) => void
   onToggleTag: (value: string) => void
-  onClinicRecordSelect: (value: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 const text = {
@@ -135,8 +125,6 @@ export default function HospitalReviewForm({
   pets,
   selectedPetId,
   selectedTags,
-  clinicRecords,
-  selectedClinicRecordId,
   canSubmit,
   submitLabel,
   onRatingChange,
@@ -150,7 +138,6 @@ export default function HospitalReviewForm({
   onTreatmentChange,
   onPetChange,
   onToggleTag,
-  onClinicRecordSelect,
   onSubmit,
 }: HospitalReviewFormProps) {
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
@@ -187,24 +174,6 @@ export default function HospitalReviewForm({
           </select>
         </label>
         {selectedPetMeta && <p className="review-pet-meta">{selectedPetMeta}</p>}
-      </section>
-
-      <section className="review-input-section review-clinic-import">
-        <div className="review-input-head">
-          <strong>진료 기록에서 불러오기</strong>
-          <span className="optional-badge">{text.optional}</span>
-        </div>
-        <select value={selectedClinicRecordId} disabled={!selectedPetId || clinicRecords.length === 0} onChange={(event) => onClinicRecordSelect(event.target.value)}>
-          <option value="">직접 작성</option>
-          {clinicRecords.map((record) => (
-            <option key={record.id} value={record.id} disabled={record.disabled}>
-              {record.visitDate} · {record.hospitalName}{record.disabled ? ' · 이미 리뷰에 연결됨' : ''}
-            </option>
-          ))}
-        </select>
-        {!selectedPetId && <p>먼저 함께 방문한 반려동물을 선택해 주세요.</p>}
-        {selectedPetId && clinicRecords.length === 0 && <p>이 반려동물과 현재 병원의 진료 기록이 아직 없습니다.</p>}
-        {selectedClinicRecordId && <p>불러온 내용은 아래에서 자유롭게 수정할 수 있어요.</p>}
       </section>
 
       <section className="review-input-section">

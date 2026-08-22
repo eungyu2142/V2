@@ -70,31 +70,31 @@
 .qna-feed-page .qna-help-card footer { order: 3 !important; display: flex !important; flex-wrap: wrap !important; align-items: center !important; justify-content: space-between !important; gap: 8px !important; margin: 14px 0 0 !important; color: var(--color-text-secondary) !important; font-size: 12px !important; }
 @media (min-width: 761px) { .qna-feed-page .qna-mobile-fab { top: 112px !important; right: 0 !important; bottom: auto !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page { width: 100% !important; padding: 16px 0 calc(112px + env(safe-area-inset-bottom)) !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head { min-height: 34px !important; margin-bottom: 10px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head h2 { font-size: 21px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-summary { font-size: 12px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card { padding: 15px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card .qna-card-main { gap: 10px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card .qna-card-media { width: 72px !important; height: 72px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card h3 { font-size: 17px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card footer { align-items: flex-start !important; }
 }
 .qna-feed-page .qna-feed-summary { margin: 0 !important; color: var(--color-text-secondary) !important; font-size: 13px !important; }
@@ -120,7 +120,7 @@
 .qna-feed-page .qna-help-card .qna-card-visualization { display: flex !important; align-items: flex-end !important; justify-content: center !important; gap: 5px !important; height: 100% !important; padding: 15px !important; }
 .qna-feed-page .qna-help-card .qna-card-visualization span { position: absolute !important; margin-top: -58px !important; color: var(--color-text-secondary) !important; font-size: 11px !important; }
 .qna-feed-page .qna-help-card .qna-card-visualization i { display: block !important; width: 8px !important; min-height: 12px !important; border-radius: 5px 5px 2px 2px !important; background: var(--color-primary-600) !important; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head { display: flex !important; min-height: 34px !important; margin-bottom: 10px !important; }
 }
 .qna-feed-page {
@@ -139,7 +139,7 @@
 .qna-feed-page .qna-filter-compact { display: flex !important; align-items: center !important; gap: 8px !important; margin: 0 0 20px !important; overflow-x: auto !important; scrollbar-width: none !important; }
 .qna-feed-page .qna-filter-bar { display: none !important; }
 .qna-feed-page .qna-help-card footer { order: 3 !important; display: flex !important; flex-wrap: wrap !important; justify-content: space-between !important; gap: 8px !important; margin: 14px 0 0 !important; color: var(--color-text-secondary) !important; font-size: 12px !important; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page { width: 100% !important; padding: 16px 0 calc(120px + env(safe-area-inset-bottom)) !important; }
 }
 .qna-feed-page .qna-card-main { display: grid !important; grid-template-columns: minmax(0, 1fr) 92px !important; gap: 14px !important; align-items: start !important; }
@@ -265,37 +265,37 @@
 .qna-feed-page .qna-empty-icon { color: var(--color-primary-600) !important; }
 .qna-feed-page .qna-empty-state strong { color: var(--color-text-primary) !important; }
 .qna-feed-page .qna-empty-state button { margin-top: 14px !important; border: 0 !important; background: transparent !important; color: var(--color-primary-600) !important; font-weight: 700 !important; }
-@media (max-width: 760px) {
-  .qna-feed-page { padding: 16px 16px 92px !important; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .qna-feed-page { padding: 16px 0 92px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head { align-items: center !important; margin-bottom: 14px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head h2 { font-size: 22px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head p { display: none !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-create-button { display: none !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-filter-bar { align-items: flex-start !important; flex-wrap: wrap !important; gap: 8px !important; overflow: visible !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-filter-row { max-width: 100% !important; overflow-x: auto !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-filter-row + .qna-filter-row { padding-left: 0 !important; border-left: 0 !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-sort-trigger { margin-left: auto !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-list { grid-template-columns: 1fr !important; gap: 12px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card { padding: 16px !important; }
 }
 .qna-feed-page { max-width: 900px !important; background: var(--color-background) !important; color: var(--color-text-primary) !important; }
@@ -309,13 +309,13 @@
 .qna-feed-page .qna-filter-row button[aria-pressed="true"], .qna-feed-page .qna-feed-sort-trigger { background: var(--color-primary-600) !important; border-color: var(--color-primary-600) !important; color: var(--ui-surface) !important; }
 .qna-feed-page .qna-feed-sort-trigger { border-radius: 8px !important; }
 .qna-mobile-fab { display: none !important; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page { max-width: none !important; padding-bottom: 112px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head h2 { color: var(--color-text-primary) !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-mobile-fab {
     position: fixed !important;
     z-index: 40 !important;
@@ -333,7 +333,7 @@
     box-shadow: 0 8px 20px rgba(31, 158, 133, 0.24) !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-mobile-fab {
     right: 16px !important;
     bottom: calc(var(--bottom-nav-height, 74px) + 24px + env(safe-area-inset-bottom)) !important;
@@ -342,14 +342,14 @@
     border-radius: 14px !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-write-icon {
     width: 28px !important;
     height: 28px !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-write-icon::before {
     top: 10px !important;
@@ -362,7 +362,7 @@
     transform-origin: left center !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-write-icon::after {
     top: 8px !important;
@@ -1367,7 +1367,7 @@ button[aria-pressed="true"]:not(.danger),
 @media (max-width: 560px) {
   .qna-filter-choice-sheet fieldset { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-write-icon::before {
     top: 10px !important;
     left: 7px !important;
@@ -1380,7 +1380,7 @@ button[aria-pressed="true"]:not(.danger),
     transform-origin: left center !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-write-icon::after {
     top: 8px !important;
@@ -1471,7 +1471,7 @@ button[aria-pressed="true"]:not(.danger),
 .qna-feed-page .qna-mobile-fab {
   display: none !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-mobile-fab {
     position: fixed !important;
@@ -1495,7 +1495,7 @@ button[aria-pressed="true"]:not(.danger),
     box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary-900) 18%, transparent) !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-write-icon {
     position: relative !important;
@@ -1505,7 +1505,7 @@ button[aria-pressed="true"]:not(.danger),
     transform: none !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-write-icon::before {
     position: absolute !important;
@@ -1520,7 +1520,7 @@ button[aria-pressed="true"]:not(.danger),
     transform-origin: left center !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-write-icon::after {
     position: absolute !important;
@@ -1536,7 +1536,7 @@ button[aria-pressed="true"]:not(.danger),
     transform-origin: center !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
 .qna-feed-page .qna-mobile-fab:hover:not(:disabled) {
     background: var(--color-primary-700) !important;
@@ -1701,7 +1701,7 @@ button.diary-dim:focus-visible {
 @media (min-width: 761px) {
   .qna-feed-page .qna-feed-head .qna-create-button { margin-left: auto !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-head { display: none !important; }
 }
 @media (min-width: 761px) {
@@ -1790,7 +1790,7 @@ button.diary-dim:focus-visible {
     transform: rotate(-45deg) !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-write-icon::before {
     top: 8px !important;
     left: 5px !important;
@@ -1803,7 +1803,7 @@ button.diary-dim:focus-visible {
     transform-origin: left center !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-write-icon::after {
     top: 2px !important;
@@ -1889,13 +1889,13 @@ button.diary-dim:focus-visible {
 .qna-feed-page .qna-help-card .qna-card-media { width: 88px !important; height: 88px !important; overflow: hidden !important; border-radius: 10px !important; }
 .qna-feed-page .qna-help-card .qna-card-media > img { width: 100% !important; height: 100% !important; object-fit: cover !important; }
 .qna-feed-page .qna-help-card footer { display: flex !important; flex-wrap: wrap !important; justify-content: space-between !important; gap: 8px !important; margin: 14px 0 0 !important; color: var(--color-text-secondary) !important; font-size: 12px !important; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page { padding: 16px 0 calc(120px + env(safe-area-inset-bottom)) !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page { padding-top: 16px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-feed-search { width: calc(100% - 58px) !important; max-width: calc(100% - 58px) !important; }
 }
 @media (min-width: 761px) {
@@ -1940,12 +1940,12 @@ button.diary-dim:focus-visible {
   height: 104px !important;
   justify-self: end !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card {
     min-height: 220px !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-help-card .qna-card-main {
     grid-template-columns: minmax(0, 1fr) 72px !important;
@@ -1994,10 +1994,10 @@ button.diary-dim:focus-visible {
 .qna-feed-page .qna-help-card .qna-help-card-animal { margin-top: 10px !important; }
 .qna-feed-page .qna-card-media:has(.qna-card-visualization) { display: none !important; }
 .qna-feed-page .qna-card-media-count { display: none !important; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card { padding: 16px !important; grid-template-rows: auto auto minmax(104px, auto) auto !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card .qna-card-main { min-height: 104px !important; }
 }
 .qna-feed-page .qna-help-card .qna-card-main {
@@ -2032,13 +2032,13 @@ button.diary-dim:focus-visible {
   justify-self: end !important;
 }
 .qna-feed-page .qna-help-card .qna-card-main { position: static !important; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card .qna-card-main { min-height: 96px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card .qna-card-copy { padding-right: 108px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card .qna-card-media { top: 92px !important; right: 16px !important; width: 96px !important; height: 96px !important; }
 }
 .qna-detail-post {
@@ -2115,16 +2115,16 @@ button.diary-dim:focus-visible {
   color: var(--color-surface) !important;
   font-size: 26px !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-detail-image-grid { grid-template-columns: minmax(0, 1fr) !important; width: 100% !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-detail-image-button, .qna-detail-image-button img { width: 100% !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-detail-image-button img { max-height: 360px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-lightbox { padding: 16px !important; }
 }
 .qna-feed-page .qna-help-card footer {
@@ -2201,13 +2201,13 @@ button.diary-dim:focus-visible {
   overflow: hidden !important;
 }
 .qna-feed-page .qna-help-card > .qna-help-card-top { order: 3 !important; display: flex !important; visibility: visible !important; min-height: 28px !important; margin-top: 12px !important; align-items: center !important; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card { min-height: 196px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card > .qna-card-main { min-height: 104px !important; }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 .qna-feed-page .qna-help-card .qna-card-media { top: 76px !important; right: 16px !important; width: 96px !important; height: 96px !important; }
 }
 .qna-detail-post > .qna-detail-author-meta { order: 3 !important; }
@@ -2368,7 +2368,7 @@ button.diary-dim:focus-visible {
   gap: 6px !important;
   z-index: 4 !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card > .qna-help-card-top {
     top: 6px !important;
     right: 48px !important;
@@ -2517,7 +2517,7 @@ button.diary-dim:focus-visible {
 .qna-feed-page .qna-help-card .qna-card-copy .qna-card-animal-row .qna-card-record-link {
   max-width: 50% !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card > .qna-card-main .qna-card-media {
     width: 80px !important;
     max-width: 80px !important;
@@ -2956,12 +2956,12 @@ button.diary-dim:focus-visible {
   background: var(--color-like-100) !important;
   color: var(--color-like-500) !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-compose-upload-item {
     grid-template-columns: 56px minmax(0, 1fr) auto;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-compose-upload-item > img {
     width: 56px;
@@ -3016,13 +3016,13 @@ button.diary-dim:focus-visible {
   margin: 0 !important;
   overflow: hidden !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card > .qna-card-main {
     grid-template-columns: minmax(0, 1fr) 80px !important;
     column-gap: 12px !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .qna-feed-page .qna-help-card > .qna-card-main > .qna-card-media {
     width: 80px !important;
@@ -3080,13 +3080,13 @@ button.diary-dim:focus-visible {
   white-space: nowrap !important;
   line-height: 20px !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card > .qna-card-main .qna-card-media {
     width: 80px !important;
     height: 80px !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .qna-feed-page .qna-help-card > footer .qna-card-meta-line {
     gap: 8px !important;
     font-size: 12px !important;

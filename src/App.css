@@ -221,7 +221,7 @@ html {
   gap: 12px !important;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   :root { --layout-gap: 16px; }
 }
 
@@ -357,7 +357,7 @@ button[data-variant='danger'] {
   color: var(--ui-danger);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .app-shell {
     padding-right: 14px;
     padding-left: 14px;
@@ -1245,7 +1245,7 @@ textarea {
 
 /* Card view stays compact instead of stretching across the dashboard. */
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .bottom-nav {
     display: none !important;
   }
@@ -1312,7 +1312,7 @@ textarea {
   font-weight: 900;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   :root {
     --app-page-padding: 14px;
     --bottom-nav-width: calc(100vw - 20px);
@@ -1456,7 +1456,7 @@ textarea {
 
 .section-title { display: none; }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .section-block { padding-top: 0; padding-bottom: 0; }
   .app-shell { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
   .top-bar { display: none; }
@@ -1599,7 +1599,7 @@ body { background: var(--color-background); color: var(--color-text-primary); }
   color: var(--ui-surface) !important;
   box-shadow: 0 12px 28px rgba(11, 63, 53, 0.34) !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .bottom-nav { background: var(--color-text-primary) !important; }
 }
 
@@ -2405,7 +2405,7 @@ textarea::placeholder {
 /* 2026-07-29 팝업 포커스: 배경은 은은하게 흐리고, 바깥 클릭은 닫힘으로 처리한다. */
 
 /* Final responsive navigation authority. */
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .side-nav,
   .side-nav.open,
   .side-nav-dim,
@@ -2695,7 +2695,7 @@ textarea::placeholder {
   color: var(--color-surface);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .settings-save-row .settings-action-button,
   .settings-action-button.danger {

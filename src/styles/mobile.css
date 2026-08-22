@@ -1,7 +1,7 @@
 /* Mobile layout contract. Screen styles may define visuals, but this file owns
    responsive geometry, safe areas, touch targets, and fixed navigation. */
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   :root {
     --mobile-page-padding: 16px;
     --mobile-header-height: 56px;

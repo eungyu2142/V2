@@ -418,3 +418,20 @@ React, TypeScript, Vite, CSS 디자인 토큰, PWA, Supabase, PostgreSQL, Supaba
 
 - `src/components/hospital-map/MapScreen.tsx`의 미사용 `CSSProperties`, `getHospitalOpeningStatusClass` 정리
 - 다음 공부 단위로 React, TypeScript, Supabase 중 하나를 골라 더 자세히 정리 가능
+# 2026-08-22 핵심 함수 문서화
+
+- 요청 요약: 프로젝트를 개발하면서 사용한 함수들을 기능별 학습 문서로 정리한다.
+- 분석·판단 이유: 프로젝트 전체에는 UI 보조 함수까지 매우 많은 함수가 있으므로, 앱 동작을 설명하는 핵심 사용자 흐름과 재사용 서비스 함수, 주요 SDK·브라우저 API 호출을 중심으로 문서화했다. 사용자가 현재 사용하지 않는다고 확인한 Google·약봉투 관련 코드는 학습 범위에서 제외했다.
+- 수정 파일: `docs/FUNCTION_REFERENCE.md`, `docs/project-records/all.md`.
+- 핵심 변경 내용: 앱 시작, 인증, 공통 데이터, 펫·프로필, 지도·병원, 리뷰·좋아요, Q&A, 다이어리·루틴, 웹 푸시, 로컬 저장 기능의 핵심 함수를 역할·입력·실행 방식과 함께 정리했다. Supabase SDK와 Geolocation·Notifications·Push·Service Worker API 함수도 별도 표로 연결했다.
+- 검증 결과: 문서에 기록한 함수명이 현재 `src` 코드에 존재하는지 검색 결과와 대조했고, 동기·비동기 및 기능 흐름 설명을 실제 호출 구조와 맞췄다.
+- 남은 작업: 특정 기능을 더 깊게 공부할 때 해당 함수의 매개변수, 반환 타입, 오류 처리 사례를 코드 줄 단위로 확장할 수 있다.
+
+# 2026-08-22 모바일 운영 배포 지도·내비게이션 반영
+
+- 요청 요약: 모바일 운영 주소에서도 최신 화면 상태를 유지하고, Google 지도가 아닌 네이버 지도와 정상적인 하단 내비게이션이 나오도록 점검했다.
+- 분석·판단 이유: 운영 배포가 2026-08-11 버전으로 오래되었고 Vercel Production 환경에 `VITE_NAVER_MAP_CLIENT_ID`가 없었다. 또한 Windows 전용 Tailwind 바이너리가 일반 개발 의존성으로 고정되어 Linux 기반 Vercel 빌드가 실패했다.
+- 수정 파일: `package.json`, `package-lock.json`, `docs/project-records/all.md`.
+- 핵심 변경 내용: Vercel Production 환경에 네이버 지도 Client ID를 등록했다. Windows 전용 `@tailwindcss/oxide-win32-x64-msvc` 직접 의존성을 제거해 Tailwind가 운영체제별 선택 패키지를 자동 설치하도록 복구했다.
+- 검증 결과: 로컬 `npm run build`와 Vercel Production 빌드가 성공했다. 운영 별칭 `https://exopet-sage.vercel.app`이 새 배포를 가리키며, 배포 번들에 네이버 지도 SDK와 모바일 4탭 규칙이 포함된 것을 확인했다. 운영 도메인을 Referer로 사용한 네이버 지도 SDK 요청도 HTTP 200으로 인증 실패 없이 응답했다.
+- 남은 작업: 모바일에 설치된 PWA가 이전 서비스 워커 캐시를 표시한다면 앱을 완전히 종료한 뒤 다시 열거나 설치된 앱을 한 번 갱신한다.

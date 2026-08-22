@@ -28,7 +28,7 @@
   font-weight: 900 !important;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   .mobile-profile-button {
     position: fixed !important;
     top: calc(4px + env(safe-area-inset-top)) !important;

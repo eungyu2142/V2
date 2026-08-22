@@ -508,7 +508,6 @@ function environmentRiskLabel(level: RiskLevel) {
 export default function DiaryPage({
   userId,
   pets,
-  hospitalReviews = {},
   hospitals = [],
   initialPetId,
   initialClinicHospital,
@@ -523,7 +522,6 @@ export default function DiaryPage({
 }: {
   userId: string
   pets: DiaryPet[]
-  hospitalReviews?: Record<string, HospitalReview[]>
   hospitals?: HospitalSnapshot[]
   initialPetId?: string
   initialClinicHospital?: HospitalSnapshot | null
@@ -566,7 +564,6 @@ export default function DiaryPage({
   const [visualizationOpen, setVisualizationOpen] = useState(false)
   const [completingReminder, setCompletingReminder] = useState<Reminder | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
-  const [hospitalReviewPickerOpen, setHospitalReviewPickerOpen] = useState(false)
   const [clinicEditorOpen, setClinicEditorOpen] = useState(false)
   const [clinicDraft, setClinicDraft] = useState<ClinicDraft | null>(null)
   const [clinicSaving, setClinicSaving] = useState(false)
@@ -598,13 +595,6 @@ export default function DiaryPage({
   const effectivePetId = selectedPet?.id ?? ''
   const resolvedInsightStorageKey = `exocare:resolved-diary-insights:${userId}:${effectivePetId}`
   const followedUpInsightStorageKey = `exocare:followed-up-diary-insights:${userId}:${effectivePetId}`
-  const selectedPetHospitalReviews = useMemo(
-    () => Object.values(hospitalReviews)
-      .flat()
-      .filter((review) => review.petId === effectivePetId && (review.mine === true || review.userId === userId))
-      .sort((a, b) => (b.visitDate ?? b.createdAt).localeCompare(a.visitDate ?? a.createdAt)),
-    [effectivePetId, hospitalReviews, userId],
-  )
   const activeReminders = reminders.filter((reminder) => reminder.isActive)
   const petCarePlans = reminders.filter((reminder) => reminder.petId === effectivePetId)
   const petRecords = records.filter((record) => record.petId === effectivePetId)
@@ -1006,30 +996,7 @@ export default function DiaryPage({
     showSmartToast(message)
   }
 
-  const openHospitalReviewRecord = (review: HospitalReview) => {
-    if (!selectedPet) return
-    const visitDate = review.visitDate ?? review.createdAt.slice(0, 10)
-    setHospitalReviewPickerOpen(false)
-    setClinicDraft({
-      id: crypto.randomUUID(),
-      reviewId: review.id,
-      hospitalName: review.hospitalName || review.hospitalSnapshot?.name || '병원 진료',
-      hospitalSnapshot: review.hospitalSnapshot,
-      visitDate,
-      cost: review.cost,
-      diagnosis: review.diagnosis,
-      treatment: review.treatment,
-      nextVisit: review.nextVisitDate ? {
-        date: review.nextVisitDate,
-        time: review.nextVisitTime || '09:00',
-      } : undefined,
-    })
-    setClinicError('')
-    setClinicEditorOpen(true)
-  }
-
   const openNewClinicRecord = () => {
-    setHospitalReviewPickerOpen(false)
     setSavedClinicDraft(null)
     setClinicDraft({
       id: crypto.randomUUID(),
@@ -1453,6 +1420,8 @@ export default function DiaryPage({
   const switchPet = (petId: string) => {
     if (petId === selectedPetId) return
     setSelectedPetId(petId)
+    setSelectedDate(today)
+    setVisibleMonth(new Date(`${today}T00:00:00`))
     setPetMenuOpen(false)
     setSelectedRecordId(null)
     setDateDetailsOpen(false)
@@ -1711,6 +1680,7 @@ export default function DiaryPage({
           <div className={`diary-workspace mobile-${mobileView}`}>
             <main className="diary-calendar-area">
               <Calendar
+                key={effectivePetId}
                 month={visibleMonth}
                 selectedDate={selectedDate}
                 records={calendarPetRecords}
@@ -1761,21 +1731,6 @@ export default function DiaryPage({
             onShedSave={saveSmartShed}
             onMatingSave={saveSmartMating}
             onEggSave={saveSmartEgg}
-          />
-        </Overlay>
-      )}
-      {hospitalReviewPickerOpen && selectedPet && (
-        <Overlay onClose={() => setHospitalReviewPickerOpen(false)}>
-          <HospitalReviewPicker
-            petName={selectedPet.name}
-            reviews={selectedPetHospitalReviews}
-            usedReviewIds={new Set([
-              ...petRecords.flatMap((record) => record.reviewId ? [record.reviewId] : []),
-              ...selectedPetHospitalReviews.flatMap((review) => review.clinicRecordId ? [review.id] : []),
-            ])}
-            onCreateNew={openNewClinicRecord}
-            onSelect={openHospitalReviewRecord}
-            onClose={() => setHospitalReviewPickerOpen(false)}
           />
         </Overlay>
       )}
@@ -2225,58 +2180,6 @@ function isReminderVisibleForPet(reminder: Reminder, pet: DiaryPet, speciesProfi
   return true
 }
 
-function HospitalReviewPicker({
-  petName,
-  reviews,
-  usedReviewIds,
-  onCreateNew,
-  onSelect,
-  onClose,
-}: {
-  petName: string
-  reviews: HospitalReview[]
-  usedReviewIds: Set<string>
-  onCreateNew: () => void
-  onSelect: (review: HospitalReview) => void
-  onClose: () => void
-}) {
-  return (
-    <section className="hospital-review-picker" role="dialog" aria-modal="true" aria-labelledby="hospital-review-picker-title">
-      <header>
-        <div>
-          <h2 id="hospital-review-picker-title">진료 기록</h2>
-          <p>{petName}의 진료 내용을 직접 작성하거나 리뷰에서 불러옵니다.</p>
-        </div>
-        <button type="button" aria-label="진료 기록 닫기" onClick={onClose}>×</button>
-      </header>
-      <button className="hospital-review-picker-new" type="button" onClick={onCreateNew}>새 진료 기록 작성</button>
-      {reviews.length > 0 ? (
-        <div className="hospital-review-picker-list">
-          {reviews.map((review) => {
-            const hospitalName = review.hospitalName || review.hospitalSnapshot?.name || '병원 리뷰'
-            const alreadyUsed = usedReviewIds.has(review.id)
-            return (
-              <button key={review.id} type="button" disabled={alreadyUsed} onClick={() => onSelect(review)}>
-                <span>
-                  <strong>{hospitalName}</strong>
-                  <small>{alreadyUsed ? '진료 기록에 연결됨' : review.visitDate ?? review.createdAt.slice(0, 10)}</small>
-                </span>
-                <span>
-                  {review.diagnosis && <small>{review.diagnosis}</small>}
-                  {review.treatment && <small>{review.treatment}</small>}
-                  {!review.diagnosis && !review.treatment && <small>{review.body}</small>}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <p className="hospital-review-picker-empty">불러올 리뷰가 없어도 진료 기록을 직접 작성할 수 있어요.</p>
-      )}
-    </section>
-  )
-}
-
 function ClinicRecordEditor({
   petName,
   hospitals,
@@ -2317,7 +2220,7 @@ function ClinicRecordEditor({
       <header>
         <div>
           <h2 id="clinic-record-editor-title">진료 기록 작성</h2>
-          <p>{petName}{draft.reviewId ? ' · 리뷰에서 불러온 내용' : ''}</p>
+          <p>{petName}</p>
         </div>
         <button type="button" aria-label="진료 기록 닫기" onClick={onCancel}>×</button>
       </header>
@@ -2375,6 +2278,8 @@ function hospitalOptionValue(hospital: HospitalSnapshot) {
 
 function ClinicRecordNextActions({
   hospitalName,
+  reviewDisabled,
+  onCreateReview,
   onCreateMedicineRoutine,
   onClose,
 }: {
@@ -2394,6 +2299,7 @@ function ClinicRecordNextActions({
         <button type="button" aria-label="후속 작업 닫기" onClick={onClose}>×</button>
       </header>
       <div className="clinic-record-next-buttons">
+        <button type="button" onClick={onCreateReview} disabled={reviewDisabled}>리뷰 작성하러 가기</button>
         <button type="button" onClick={onCreateMedicineRoutine}>약 루틴 작성하러 가기</button>
       </div>
     </section>

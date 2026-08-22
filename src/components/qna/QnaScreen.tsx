@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import './Qna.css'
-import { supabase } from '../../lib/supabase'
+import { ensureSupabaseSession, supabase } from '../../lib/supabase'
 import { loadAppData } from '../../lib/appData'
 import { saveLike } from '../../lib/likes'
 import StepShell from '../account/StepShell'
@@ -61,10 +61,10 @@ function readHospitalSnapshot(payload: unknown): HospitalSnapshot | undefined {
 }
 
 function readCommentHospitalSnapshot(comment: QnaComment): HospitalSnapshot | undefined {
-  return comment.hospitalSnapshot
-    ?? comment.hospital_snapshot ?? readHospitalSnapshot(comment.payload)
+  return readHospitalSnapshot(comment.hospitalSnapshot)
+    ?? readHospitalSnapshot(comment.hospital_snapshot)
+    ?? readHospitalSnapshot(comment.payload)
     ?? readHospitalSnapshot(comment)
-    ?? readHospitalSnapshot((comment as QnaComment & { hospital_snapshot?: unknown }).hospital_snapshot)
 }
 
 function getLocalCommentHospitalSnapshot(commentId: string): HospitalSnapshot | undefined {
@@ -163,13 +163,18 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     let active = true
     const loadComments = async () => {
       let result = await supabase.from('post_comments').select('id, post_id, user_id, body, created_at, payload, hospital_snapshot')
-      if (result.error) {
+      if (isMissingHospitalSnapshotColumn(result.error)) {
         result = await supabase.from('post_comments').select('id, post_id, user_id, body, created_at, payload')
       }
       return result
     }
     loadComments().then(({ data, error }) => {
-      if (!active || error) return
+      if (!active) return
+      if (error) {
+        console.error('Q&A 댓글 조회 실패:', error)
+        setCommentError('댓글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+        return
+      }
       const grouped: Record<string, QnaComment[]> = {}
       for (const row of data ?? []) {
         const payload = (row.payload ?? {}) as { author?: string; authorAvatarUrl?: string; isAccepted?: boolean; is_accepted?: boolean; likes?: number; likedBy?: string[]; liked_by?: string[]; hospitalSnapshot?: HospitalSnapshot }
@@ -187,10 +192,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
           const localComments = current[postId] ?? []
           const matchedLocalIds = new Set<string>()
           const hydratedComments = remoteComments.map((remoteComment) => {
-            const localComment = localComments.find((commentItem) => {
-              if (commentItem.id === remoteComment.id) return true
-              return commentItem.body === remoteComment.body
-            })
+            const localComment = localComments.find((commentItem) => commentItem.id === remoteComment.id)
             if (localComment) matchedLocalIds.add(localComment.id)
             const hospitalSnapshot = readCommentHospitalSnapshot(remoteComment)
               ?? (localComment ? readCommentHospitalSnapshot(localComment) : undefined)
@@ -336,6 +338,13 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     event.preventDefault()
     if (!selected || !comment.trim()) return
     setCommentError('')
+    try {
+      await ensureSupabaseSession()
+    } catch (error) {
+      console.error('Q&A 댓글 인증 확인 실패:', error)
+      setCommentError(error instanceof Error ? error.message : '로그인이 만료됐어요. 다시 로그인해 주세요.')
+      return
+    }
     const attachedHospitalSnapshot = attachedHospitalRef.current ?? attachedHospital
       ? { ...(attachedHospitalRef.current ?? attachedHospital)! }
       : undefined

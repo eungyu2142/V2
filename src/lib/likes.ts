@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { ensureSupabaseSession, supabase } from './supabase'
 
 export type LikeTargetType = 'community_post' | 'question' | 'hospital_review'
 
@@ -31,18 +31,21 @@ export async function loadLikeStates(targetType: LikeTargetType, targetIds: stri
 }
 
 export async function saveLike(targetType: LikeTargetType, targetId: string, userId: string, liked: boolean) {
-  const { data: authData } = await supabase.auth.getUser()
-  const ownerId = authData.user?.id ?? userId
-  if (!ownerId) throw new Error('로그인이 필요합니다.')
+  if (!userId) throw new Error('로그인이 필요합니다.')
+  await ensureSupabaseSession()
 
-  if (!liked) {
-    const { error } = await supabase.from('likes').delete().eq('user_id', ownerId).eq('target_type', targetType).eq('target_id', targetId)
-    if (error) throw error
-    return
+  let result = await supabase.rpc('set_app_like', {
+    p_target_type: targetType,
+    p_target_id: targetId,
+    p_liked: liked,
+  })
+  if (result.error?.code === '42501' || result.error?.message?.toLowerCase().includes('jwt')) {
+    await supabase.auth.refreshSession()
+    result = await supabase.rpc('set_app_like', {
+      p_target_type: targetType,
+      p_target_id: targetId,
+      p_liked: liked,
+    })
   }
-
-  const row = { user_id: ownerId, target_type: targetType, target_id: targetId }
-  const { error } = await supabase.from('likes').insert(row)
-  if (!error || error.code === '23505') return
-  throw error
+  if (result.error) throw result.error
 }

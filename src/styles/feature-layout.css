@@ -301,7 +301,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .my-pet-dashboard .pet-list.card-view,
   .qna-feed-list,
@@ -309,7 +309,7 @@
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .pet-list-toolbar,
   .section-title,
@@ -584,7 +584,7 @@ button.qna-hospital-attachment-main:focus-visible { background: var(--color-prim
   background: var(--map-blue-soft) !important;
   color: var(--map-blue) !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   .map-side-panel .map-hospital-row .category-tag-icon {
     width: 44px !important;
@@ -812,7 +812,7 @@ button.qna-hospital-attachment-main:focus-visible { background: var(--color-prim
   color: var(--color-primary-700) !important;
   font-weight: 700 !important;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
 
   :where(
     .qna-sort-sheet-overlay,

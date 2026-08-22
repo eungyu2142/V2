@@ -182,15 +182,18 @@ export default function PetsScreen({
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-[76rem] flex-col gap-5 px-4 pb-24 pt-2 sm:px-6 lg:px-8">
+    <section className="mx-auto flex w-full max-w-[76rem] flex-col gap-5 px-4 pb-24 pt-2 max-[760px]:-mx-4 max-[760px]:w-[calc(100%+2rem)] sm:px-6 max-[760px]:px-4 lg:px-8">
       <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <label className="flex h-11! min-h-11! max-h-11! min-w-0 flex-1 items-center gap-2 rounded-control border border-app-border bg-app-surface px-3 text-app-muted focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-100">
-            <span className="text-lg leading-none" aria-hidden="true">⌕</span>
-            <input className="m-0! h-full! min-h-0! min-w-0 flex-1 rounded-none! border-0! bg-transparent! p-0! text-sm text-app-ink shadow-none! outline-none! placeholder:text-app-muted sm:text-base" aria-label="펫 검색" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="예시) 크레스티드 게코" />
-            {query ? <button className="grid size-8 shrink-0 place-items-center rounded-full text-lg hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" type="button" aria-label="검색어 지우기" onClick={() => setQuery('')}>×</button> : null}
-          </label>
-          {pets.length > 0 ? <button className="grid size-11 shrink-0 place-items-center rounded-control bg-brand-600 text-2xl font-semibold text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" type="button" onClick={onRegisterPet} aria-label="펫 등록">+</button> : null}
+        <div className="relative h-11 w-full">
+          <span className="pointer-events-none absolute left-3 top-1/2 z-10 grid size-5 -translate-y-1/2 place-items-center text-lg leading-none text-app-muted" aria-hidden="true">⌕</span>
+          <input
+            className={`m-0! h-11! min-h-11! w-full! rounded-control! border! border-app-border! bg-app-surface! py-0! pl-10! text-sm! text-app-ink! shadow-none! outline-none! placeholder:text-app-muted focus:border-brand-600! focus:ring-2! focus:ring-brand-100! sm:text-base! ${query ? 'pr-11!' : 'pr-3!'}`}
+            aria-label="펫 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="예시) 크레스티드 게코"
+          />
+          {query ? <button className="absolute right-1.5 top-1/2 z-10 grid size-8 -translate-y-1/2 place-items-center rounded-full text-lg text-app-muted hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600" type="button" aria-label="검색어 지우기" onClick={() => setQuery('')}>×</button> : null}
         </div>
 
         {pets.length === 0 ? (
@@ -228,16 +231,16 @@ export default function PetsScreen({
               const hasRoutineSummary = routinePetIds.has(pet.id) || todayTasks.length > 0
               return (
                 <article className="relative min-w-0 rounded-card border border-app-border bg-app-surface shadow-sm transition-[border-color,box-shadow,transform] hover:border-brand-300 hover:shadow-md focus-within:border-brand-600 motion-reduce:transition-none" key={pet.id}>
-                  <button className={`grid min-h-32 w-full min-w-0 grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-3 rounded-card p-3 pr-10 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 active:scale-[0.99] motion-reduce:transform-none sm:min-h-36 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-4 sm:p-4 sm:pr-12 ${hasRoutineSummary ? 'md:grid-cols-[4.5rem_minmax(0,1fr)_minmax(10rem,0.8fr)]' : ''}`} type="button" aria-label={`${pet.name} 다이어리 열기`} onClick={() => onOpenDiary(pet.id)}>
-                    <div className="size-[3.25rem] shrink-0 overflow-hidden rounded-full bg-brand-100 sm:size-[4.5rem]">
+                  <button className={`grid min-h-36 w-full min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-center gap-2.5 rounded-card px-3 py-5 pr-9 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 active:scale-[0.99] motion-reduce:transform-none sm:min-h-40 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-4 sm:p-5 sm:pr-12 ${hasRoutineSummary ? 'md:grid-cols-[4.5rem_minmax(0,1fr)_minmax(10rem,0.8fr)]' : ''}`} type="button" aria-label={`${pet.name} 다이어리 열기`} onClick={() => onOpenDiary(pet.id)}>
+                    <div className="size-12 shrink-0 overflow-hidden rounded-full bg-brand-100 sm:size-[4.5rem]">
                       {pet.photo ? <img className="size-full object-cover" src={pet.photo} alt={`${pet.name} 사진`} style={{ objectPosition: `${pet.photoPosition?.x ?? 50}% ${pet.photoPosition?.y ?? 50}%` }} /> : <span className="grid size-full place-items-center text-lg font-bold text-brand-900" aria-label="사진 없음">{pet.name.trim().slice(0, 1) || '?'}</span>}
                     </div>
                     <div className="min-w-0 self-center">
-                      <strong className="flex min-w-0 items-center gap-1 text-sm font-bold text-app-ink sm:text-lg">
-                        <span className="line-clamp-2 min-w-0 break-words">{pet.name}</span>
+                      <strong className="flex w-full min-w-0 items-center gap-1 whitespace-nowrap text-sm font-bold text-app-ink sm:text-lg">
+                        <span className="min-w-0 flex-1 truncate" title={pet.name}>{pet.name}</span>
                         {symbol ? <span className={`shrink-0 text-sm ${pet.gender === 'male' ? 'text-blue-600' : 'text-red-500'}`} aria-label={pet.gender === 'male' ? '수컷' : '암컷'}>{symbol}</span> : null}
                       </strong>
-                      {pet.species ? <small className="mt-1 line-clamp-2 block break-words text-xs text-app-muted sm:text-sm">{pet.species}</small> : null}
+                      {pet.species ? <small className="mt-1 block w-full truncate whitespace-nowrap text-xs text-app-muted sm:text-sm" title={pet.species}>{pet.species}</small> : null}
                     </div>
                     {hasRoutineSummary ? (
                       <div className="hidden min-w-0 border-l border-app-border pl-4 md:block">
@@ -272,6 +275,12 @@ export default function PetsScreen({
             })}
           </div>
         )}
+        {pets.length > 0 ? (
+          <button className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-control bg-brand-700 px-5 text-base font-bold text-white transition-colors hover:bg-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" type="button" onClick={onRegisterPet}>
+            <span className="text-xl leading-none" aria-hidden="true">+</span>
+            <span>펫 추가</span>
+          </button>
+        ) : null}
       </section>
     </section>
   )
