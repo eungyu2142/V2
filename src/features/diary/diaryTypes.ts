@@ -91,6 +91,13 @@ export type EggRecordData = {
 
 export type IncidentRecordData = MatingRecordData | EggRecordData
 
+export type StoolStatus = 'normal' | 'diarrhea' | 'constipation' | 'foreign_body' | 'blood'
+
+export type StoolRecordData = {
+  status: StoolStatus
+  statusLabel: string
+}
+
 export type PetRecord = {
   id: string
   userId: string
@@ -105,6 +112,7 @@ export type PetRecord = {
   environmentRecord?: EnvironmentRecord
   clinicDetails?: ClinicRecordDetails
   incidentRecord?: IncidentRecordData
+  stoolRecord?: StoolRecordData
   hospitalId?: string
   reviewId?: string
   createdAt: string

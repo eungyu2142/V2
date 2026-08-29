@@ -284,24 +284,6 @@ function AuthenticatedApp({ session }: { session: Session }) {
     moveTab('map')
   }
 
-  const openHospitalVisitRecord = (hospital: HospitalSnapshot) => {
-    const petId = currentPetId && pets.some((pet) => pet.id === currentPetId)
-      ? currentPetId
-      : pets[0]?.id
-    if (!petId) {
-      window.alert('방문 기록을 남기려면 마이 펫을 먼저 등록해 주세요.')
-      return
-    }
-    setCurrentPetId(petId)
-    setDiaryPetId(petId)
-    setDiaryReadOnly(false)
-    setDiaryClinicHospital(hospital)
-    setEditingDraft(null)
-    setCreateMode(null)
-    syncAppUrl('diary', petId)
-    setActiveTab('diary')
-  }
-
   const openClinicReview = (hospital: HospitalSnapshot, review: HospitalReview) => {
     setCurrentPetId(review.petId ?? currentPetId)
     setEditingDraft({
@@ -680,7 +662,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
         </div>
       </header>}
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={updateLikedHospitals} onCreateClinicRecord={openHospitalVisitRecord} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={updateLikedHospitals} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">

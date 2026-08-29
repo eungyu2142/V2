@@ -166,7 +166,7 @@ function readSessionMapLocation(): Coordinates | null {
   }
 }
 
-function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onCreateClinicRecord, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onCreateClinicRecord: (hospital: HospitalSnapshot) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
+function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
   const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
   const [initialMapLocation] = useState<Coordinates | null>(readSessionMapLocation)
   const [query, setQuery] = useState('')
@@ -896,25 +896,19 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const mobileSheetStyle = {
     '--mobile-sheet-height': `${mobileSheetHeight}dvh`,
   } as CSSProperties
-  const sortOptions: Array<[HospitalSort, string]> = [
-    ['distance', '거리순'],
-    ...(hasRatedHospitalReviews ? [['rating', '평점순'] as [HospitalSort, string]] : []),
-  ]
-  const renderSortMenu = (id: string) => (
-    <div className="map-sort-menu">
-      <select
-        id={id}
-        aria-label="병원 정렬"
-        value={effectiveSelectedSort}
-        onChange={(event) => {
-          setSelectedSort(event.target.value as HospitalSort)
-          setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
-        }}
-      >
-        {sortOptions.map(([sort, label]) => <option value={sort} key={sort}>{label}</option>)}
-      </select>
-    </div>
-  )
+  const renderRatingSortButton = () => hasRatedHospitalReviews ? (
+    <button
+      className={`map-rating-sort ${effectiveSelectedSort === 'rating' ? 'active' : ''}`}
+      type="button"
+      aria-pressed={effectiveSelectedSort === 'rating'}
+      onClick={() => {
+        setSelectedSort((sort) => sort === 'rating' ? 'distance' : 'rating')
+        setVisibleHospitalCount(HOSPITAL_LIST_PAGE_SIZE)
+      }}
+    >
+      평점순
+    </button>
+  ) : null
   const renderOpenNowButton = () => (
     <button className={`map-open-now-filter ${openNowOnly ? 'active' : ''}`} type="button" aria-pressed={openNowOnly} onClick={toggleOpenNowFilter}>
       영업 중
@@ -956,7 +950,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
 
         <div className="map-desktop-sort-tabs" aria-label="병원 정렬과 필터">
           {renderOpenNowButton()}
-          {renderSortMenu('hospital-sort-desktop')}
+          {renderRatingSortButton()}
         </div>
         <div className="map-mobile-open-filter" aria-label="영업 상태 필터">
           {renderOpenNowButton()}
@@ -966,7 +960,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
           <div className="map-sheet-fixed-header">
             <button className="map-sheet-handle" type="button" aria-label="병원 목록 높이 조절" {...sheetDragHandlers} />
             <div className="map-sheet-sort-tabs" aria-label="병원 정렬">
-              {renderSortMenu('hospital-sort-mobile')}
+              {renderRatingSortButton()}
             </div>
           </div>
           <div className="map-sheet-scroll-content">
@@ -1040,11 +1034,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                   <div className="hospital-opening-current">
                     <div className="hospital-opening-title">
                       <strong>오늘 운영시간</strong>
-                      {getHospitalOpeningStatusLabel(selectedHospital) && (
-                        <span className={`hospital-opening-badge ${getHospitalOpeningStatusClass(selectedHospital)}`}>
-                          {getHospitalOpeningStatusLabel(selectedHospital)}
-                        </span>
-                      )}
                     </div>
                     <div className="hospital-opening-schedule">
                       <span className="hospital-today-hours">
@@ -1085,9 +1074,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             )}
             <a href={buildHospitalDirectionsUrl(selectedHospital)} target="_blank" rel="noreferrer">길찾기</a>
           </section>
-          <button className="hospital-visit-record-action" type="button" onClick={() => onCreateClinicRecord(toHospitalSnapshot(selectedHospital))}>
-            <span>이 병원으로 방문 기록 남기기</span>
-          </button>
           <section className="hospital-contact-info" aria-labelledby="hospital-contact-title">
             <h3 id="hospital-contact-title">연락처</h3>
             <dl>

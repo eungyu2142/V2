@@ -2,7 +2,8 @@ import { type ChangeEvent, type FormEvent, type ReactNode, useCallback, useEffec
 import ReactCalendar from 'react-calendar'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
 import { completeDailyTask, deleteCarePlan, listCarePlans, listCareRecords, listDailyTasks, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, settleSupersededOverdueTasks, skipDailyTask } from './diaryService'
-import type { CarePlan, CareTaskType, ClinicRecordDetails, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel } from './diaryTypes'
+import type { CarePlan, CareTaskType, ClinicRecordDetails, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel, StoolStatus } from './diaryTypes'
+import { analyzeRecordedCycle } from './diaryCycleAnalysis'
 import { cancelRoutineNotificationJobs, getFirstRoutineDate, markRoutineNotificationJobCompleted, markRoutineNotificationJobSkipped, upsertRoutineNotificationJob } from './routineNotificationJobs'
 import { customFoodOptionKey, fallbackSpeciesCareProfiles, findSpeciesCareProfile, listSpeciesCareProfiles, type CareEnvironmentProfile, type CareFoodOption, type SpeciesCareProfile } from './speciesCareProfiles'
 import { toDateKey } from './mockDiaryData'
@@ -43,6 +44,7 @@ type DiaryInsight = {
   level: DiaryInsightLevel
   metric: 'shed' | 'environment' | 'weight' | 'poop' | 'mating' | 'egg'
   action?: 'shed-check' | 'shed-cycle-check' | 'environment-resolve'
+  sourceUrl?: string
 }
 type DisplayPetRecord = PetRecord & {
   sourceIds?: string[]
@@ -1116,7 +1118,20 @@ export default function DiaryPage({
   }
 
   const saveSmartFood = (food: string) => makeSmartRecord('food', `${food} 먹이 기록이 저장되었습니다`, undefined, [food])
-  const saveSmartPoop = (status = smartPoopStatus) => makeSmartRecord('poop', `배변 · ${status} 기록이 저장되었습니다`, status)
+  const saveSmartPoop = (statusLabel = smartPoopStatus) => {
+    if (!selectedPet) return
+    const status = stoolStatusFromLabel(statusLabel)
+    saveSmartRecord({
+      id: crypto.randomUUID(),
+      userId,
+      petId: selectedPet.id,
+      type: 'poop',
+      date: selectedDate,
+      memo: statusLabel,
+      stoolRecord: { status, statusLabel },
+      createdAt: new Date().toISOString(),
+    }, `배변 · ${statusLabel} 기록이 저장되었습니다`)
+  }
   const saveSmartShed = (status = smartShedStatus) => {
     if (status === '탈피 완료' && !getOngoingShedRecord(petRecords)) {
       showSmartToast('탈피 시작을 먼저 기록해주세요.')
@@ -1663,7 +1678,7 @@ export default function DiaryPage({
       records={petRecords}
       petName={selectedPet?.name ?? '펫'}
       onBack={() => setVisualizationOpen(false)}
-      onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : undefined) : undefined}
+      onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : metric === 'poop' ? { category: '질병', title: '배변 관련 질문' } : undefined) : undefined}
       onFindHospital={selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id) : undefined}
       onShedComplete={() => saveShedCheckRecord('탈피 완료')}
       onShedNotYet={() => saveShedCheckRecord('탈피 확인 · 완료 안됨')}
@@ -1724,7 +1739,7 @@ export default function DiaryPage({
         onFollowUpInsight={markDiaryInsightFollowUp}
         onResolveInsight={resolveDiaryInsight}
         onKeepInsight={keepDiaryInsight}
-        onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : undefined) : undefined}
+        onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : metric === 'poop' ? { category: '질병', title: '배변 관련 질문' } : undefined) : undefined}
         onFindHospital={selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id) : undefined}
       />
 
@@ -2496,7 +2511,7 @@ function SmartAddSheet({
   onEggSave: () => void
 }) {
   const foodOptions = ['밀웜', '귀뚜라미', '랩사료']
-  const poopOptions = ['평범', '묽음', '딱딱']
+  const poopOptions = ['정상', '설사', '변비', '이물질', '혈변']
   const shedOptions = ['탈피 시작', '탈피 완료', '이상 있음']
   const waterOptions = ['전체 교체', '일부 보충', '물그릇 세척']
   const cleaningOptions = ['부분 청소', '전체 청소', '바닥재 교체', '용품 세척']
@@ -3131,8 +3146,9 @@ function DiaryNotice({
                   <><b>해결됐나요?</b><button type="button" onClick={() => onResolveInsight(insight.id)}>예</button><button type="button" onClick={() => onKeepInsight(insight.id)}>아니오</button></>
                 ) : (
                   <>
-                    {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>Q&amp;A</button>}
-                    {onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾기</button>}
+                    {insight.metric === 'poop' && insight.level === 'urgent' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾기</button>}
+                    {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'poop' ? '배변 질문' : 'Q&A'}</button>}
+                    {!(insight.metric === 'poop' && insight.level === 'urgent') && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾기</button>}
                   </>
                 )}
               </div>
@@ -3178,6 +3194,7 @@ function DiaryInsightBanner({
           <small>{insightLabel(insight.metric)}</small>
           <strong>{insight.title}</strong>
           <span>{insight.body}</span>
+          {insight.sourceUrl && <a href={insight.sourceUrl} target="_blank" rel="noreferrer">참고 자료</a>}
           {(insight.action === 'shed-check' || insight.action === 'shed-cycle-check') && onShedComplete && onShedNotYet && (
             <div className="diary-insight-actions" aria-label="탈피 완료 확인">
               {insight.action === 'shed-cycle-check'
@@ -3196,8 +3213,9 @@ function DiaryInsightBanner({
           )}
           {insight.action !== 'shed-check' && insight.action !== 'shed-cycle-check' && !followedUpInsightIds.includes(insight.id) && (onCreateQna || onFindHospital) && (
             <div className="diary-insight-actions">
-              {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'shed' ? '탈피 질문 작성' : 'Q&A에 도움받기'}</button>}
-              {onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾으러 가기</button>}
+              {insight.metric === 'poop' && insight.level === 'urgent' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾으러 가기</button>}
+              {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'shed' ? '탈피 질문 작성' : insight.metric === 'poop' ? '배변 관련 질문 작성' : 'Q&A에 도움받기'}</button>}
+              {!(insight.metric === 'poop' && insight.level === 'urgent') && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾으러 가기</button>}
             </div>
           )}
         </article>
@@ -3482,28 +3500,73 @@ function shedDelayLevel(days: number) {
 }
 
 function buildPoopInsight(records: PetRecord[], petName: string): DiaryInsight | null {
-  const latestPoops = records.filter((record) => record.type === 'poop').sort(compareRecordTime).slice(-5)
-  const looseCount = latestPoops.filter((record) => normalizePoopStatus(record.memo) === '묽음').length
-  const hardCount = latestPoops.filter((record) => normalizePoopStatus(record.memo) === '딱딱').length
-  if (looseCount >= 2) {
+  const poops = records.filter((record) => record.type === 'poop').sort(compareRecordTime)
+  if (poops.length === 0) return null
+  const latest = poops.at(-1) as PetRecord
+  const latestStatus = getStoolStatus(latest)
+  const latestPoops = poops.slice(-5)
+  const diarrheaCount = latestPoops.filter((record) => getStoolStatus(record) === 'diarrhea').length
+  const constipationCount = latestPoops.filter((record) => getStoolStatus(record) === 'constipation').length
+  const feedingContext = describeRecentFeeding(records, latest.date)
+
+  if (latestStatus === 'blood' || latestStatus === 'foreign_body') {
+    const statusLabel = latestStatus === 'blood' ? '혈변' : '이물질'
     return {
-      id: 'poop-loose',
+      id: `poop-urgent-${latest.id}`,
       metric: 'poop',
-      level: looseCount >= 3 ? 'caution' : 'notice',
-      title: '묽은 배변 기록이 반복됐어요.',
-      body: `${petName}의 최근 배변 중 묽음 기록이 ${looseCount}번 있어요. 사육장 습도가 높게 유지되는지 확인하고 필요하면 조금 더 건조하게 조정해주세요.`,
+      level: 'urgent',
+      title: `${statusLabel} 기록을 확인해주세요.`,
+      body: `${petName}의 최근 배변에 ${statusLabel}이 기록됐어요. 원인을 앱에서 단정할 수 없으므로 정확한 확인을 위해 특수동물 병원 상담을 우선 권장해요.`,
+      sourceUrl: 'https://www.msdvetmanual.com/digestive-system/digestive-system-introduction/the-digestive-system-in-animals',
     }
   }
-  if (hardCount >= 2) {
+  if (latestStatus === 'diarrhea' && diarrheaCount >= 2) {
     return {
-      id: 'poop-hard',
+      id: `poop-diarrhea-${latest.id}`,
       metric: 'poop',
-      level: hardCount >= 3 ? 'caution' : 'notice',
-      title: '딱딱한 배변 기록이 반복됐어요.',
-      body: `${petName}의 최근 배변 중 딱딱함 기록이 ${hardCount}번 있어요. 물그릇과 급수 상태를 확인하고 수분 보충을 신경 써주세요.`,
+      level: diarrheaCount >= 3 ? 'urgent' : 'caution',
+      title: '설사 기록이 반복됐어요.',
+      body: `${petName}의 최근 배변 5회 중 설사가 ${diarrheaCount}회 기록됐어요. ${feedingContext} 반복되거나 다른 변화가 함께 보이면 기록을 첨부해 질문하거나 병원에서 확인해주세요.`,
+      sourceUrl: 'https://www.msdvetmanual.com/all-other-pets/reptiles/disorders-and-diseases-of-reptiles',
+    }
+  }
+  if (latestStatus === 'constipation' || constipationCount >= 2) {
+    return {
+      id: `poop-constipation-${latest.id}`,
+      metric: 'poop',
+      level: constipationCount >= 2 ? 'caution' : 'notice',
+      title: constipationCount >= 2 ? '변비 기록이 반복됐어요.' : '변비 기록을 확인해주세요.',
+      body: `${describeStoolDelayCause(records)} ${feedingContext} 상태가 계속되면 정확한 확인을 위해 기록을 첨부해 질문하거나 병원에 상담해보세요.`,
+    }
+  }
+  const cycle = analyzeRecordedCycle(poops.filter((record) => getStoolStatus(record) === 'normal').map((record) => record.date), toDateKey(new Date()))
+  if (cycle && cycle.daysOverdue > 0) {
+    return {
+      id: `poop-cycle-${cycle.lastDate}`,
+      metric: 'poop',
+      level: cycle.daysOverdue >= 3 ? 'caution' : 'notice',
+      title: `평균 배변 주기보다 ${cycle.daysOverdue}일 지났어요.`,
+      body: `${petName}의 정상 배변 간격은 평균 ${cycle.averageCycleDays}일이에요. ${describeStoolDelayCause(records)} ${describeRecentFeeding(records)} 배변 지연이 계속되면 변비 가능성도 있어 확인이 필요해요.`,
     }
   }
   return null
+}
+
+function describeStoolDelayCause(records: PetRecord[]) {
+  const environment = records.filter((record) => record.environmentRecord).sort(compareRecordTime).at(-1)?.environmentRecord
+  if (environment && environment.riskDirection !== 'normal') {
+    const metric = environment.metricType === 'humidity' ? '습도' : environment.measurementType === 'water' ? '수온' : '온도'
+    return `최근 ${metric}가 기록 당시 적정 범위를 벗어나 있어 환경 영향으로 배변이 지연될 수 있어요.`
+  }
+  return '최근 온습도 기록에서 뚜렷한 원인을 확인하기 어려워요.'
+}
+
+function describeRecentFeeding(records: PetRecord[], referenceDate = toDateKey(new Date())) {
+  const food = records.filter((record) => record.type === 'food' && record.date <= referenceDate).sort(compareRecordTime).at(-1)
+  if (!food) return '최근 급이 기록이 없어 급이 상태도 함께 확인해주세요.'
+  const elapsed = Math.max(0, daysBetween(food.date, referenceDate))
+  const names = food.feedingFoods?.map((item) => item.foodName).filter(Boolean).join(' · ')
+  return `최근 급이는 ${elapsed === 0 ? '같은 날' : `${elapsed}일 전`} 기록됐${names ? `고 먹이는 ${names}였` : ''}어요.`
 }
 
 function insightLabel(metric: DiaryInsight['metric']) {
@@ -3554,12 +3617,16 @@ function daysBetween(from: string, to: string) {
   return Math.round((end.getTime() - start.getTime()) / 86400000)
 }
 
-function normalizePoopStatus(value?: string) {
-  const text = value ?? ''
-  if (text.includes('묽')) return '묽음'
-  if (text.includes('딱딱') || text.includes('단단')) return '딱딱'
-  if (text.includes('평범') || text.includes('정상')) return '평범'
-  return ''
+function stoolStatusFromLabel(value?: string): StoolStatus {
+  if (value?.includes('혈변') || value?.includes('피')) return 'blood'
+  if (value?.includes('이물질')) return 'foreign_body'
+  if (value?.includes('설사') || value?.includes('묽')) return 'diarrhea'
+  if (value?.includes('변비') || value?.includes('딱딱') || value?.includes('단단')) return 'constipation'
+  return 'normal'
+}
+
+function getStoolStatus(record: PetRecord): StoolStatus {
+  return record.stoolRecord?.status ?? stoolStatusFromLabel(record.memo)
 }
 
 function isCompletedShed(record: PetRecord) {
@@ -3719,14 +3786,16 @@ function EggStatusChart({ records }: { records: PetRecord[] }) {
 
 function PoopStatusChart({ records }: { records: PetRecord[] }) {
   const counts = [
-    { label: '평범', count: records.filter((record) => normalizePoopStatus(record.memo) === '평범').length, color: 'var(--color-primary-600)' },
-    { label: '묽음', count: records.filter((record) => normalizePoopStatus(record.memo) === '묽음').length, color: 'var(--color-primary-300)' },
-    { label: '딱딱', count: records.filter((record) => normalizePoopStatus(record.memo) === '딱딱').length, color: 'var(--color-accent-700)' },
-  ]
+    { label: '정상', status: 'normal' as const, color: 'var(--color-primary-600)' },
+    { label: '설사', status: 'diarrhea' as const, color: 'var(--color-primary-300)' },
+    { label: '변비', status: 'constipation' as const, color: 'var(--color-accent-700)' },
+    { label: '이물질', status: 'foreign_body' as const, color: 'var(--color-warning-600)' },
+    { label: '혈변', status: 'blood' as const, color: 'var(--color-error-600)' },
+  ].map((item) => ({ ...item, count: records.filter((record) => getStoolStatus(record) === item.status).length }))
   const max = Math.max(1, ...counts.map((item) => item.count))
   return (
     <section className="poop-status-chart">
-      <header><strong>배변 상태</strong><span>평범 · 묽음 · 딱딱</span></header>
+      <header><strong>배변 상태</strong><span>기록한 상태별 횟수</span></header>
       <div>{counts.map((item) => <span key={item.label}><b>{item.label}</b><i style={{ width: `${(item.count / max) * 100}%`, background: item.color }} /><em>{item.count}회</em></span>)}</div>
     </section>
   )
