@@ -71,6 +71,26 @@ export type ClinicRecordDetails = {
   }
 }
 
+export type MatingRecordData = {
+  kind: 'mating'
+  femalePetId: string
+  malePetId: string
+  femaleName: string
+  maleName: string
+  species: string
+}
+
+export type EggRecordData = {
+  kind: 'egg'
+  fertility: 'unfertilized' | 'fertilized'
+  matingRecordId?: string
+  femaleName?: string
+  maleName?: string
+  species: string
+}
+
+export type IncidentRecordData = MatingRecordData | EggRecordData
+
 export type PetRecord = {
   id: string
   userId: string
@@ -84,6 +104,7 @@ export type PetRecord = {
   feedingFoods?: FeedingFoodItem[]
   environmentRecord?: EnvironmentRecord
   clinicDetails?: ClinicRecordDetails
+  incidentRecord?: IncidentRecordData
   hospitalId?: string
   reviewId?: string
   createdAt: string

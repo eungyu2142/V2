@@ -1,13 +1,13 @@
 :root {
   /* Brand and state colors: this file is the single source of truth. */
-  --color-primary-50: #e3f4ef;
-  --color-primary-100: #bfe6dc;
-  --color-primary-300: #6ec4af;
-  --color-primary-500: #2fab90;
-  --color-primary-600: #1f9e85;
-  --color-primary-700: #157a67;
+  --color-primary-50: #c7ddd7;
+  --color-primary-100: #91c5b8;
+  --color-primary-300: #52ae9a;
+  --color-primary-500: #27957f;
+  --color-primary-600: #167c69;
+  --color-primary-700: #116453;
   --color-primary-900: #0b3f35;
-  --color-navigation-background: #145f52;
+  --color-navigation-background: #176b5c;
   --color-accent-100: #f5e3c2;
   --color-accent-500: #e0a03d;
   --color-accent-600: #d98f2b;
@@ -24,10 +24,10 @@
   --color-map-open-marker: #55b8f3;
   --color-status-open: #2389c7;
   --color-text-primary: #1b2421;
-  --color-text-secondary: #5c6b67;
-  --color-text-placeholder: #8b9a96;
-  --color-border: #dce5e2;
-  --color-background: #f7f9f8;
+  --color-text-secondary: #4f5e59;
+  --color-text-placeholder: #6f7e79;
+  --color-border: #aebfba;
+  --color-background: #fff;
   --color-surface: #fff;
 
   --mobile-bottom-nav-height: calc(68px + env(safe-area-inset-bottom, 0px));

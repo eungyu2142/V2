@@ -1,5 +1,6 @@
-﻿import { type FormEvent } from 'react'
+﻿import { type FormEvent, useState } from 'react'
 
+import { Stepper } from '../../components/ui/Stepper'
 import { specialistReviewTags } from './reviewTagOptions'
 
 export type ReviewAnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
@@ -95,6 +96,8 @@ const prescriptionOptions = [
   '구충제', '항진균제', '점안제', '외용제',
 ]
 
+const reviewSteps = ['방문', '진료', '태그', '후기']
+
 function formatCostInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9)
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -140,11 +143,34 @@ export default function HospitalReviewForm({
   onToggleTag,
   onSubmit,
 }: HospitalReviewFormProps) {
+  const [currentStep, setCurrentStep] = useState(0)
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
   const selectedPetMeta = selectedPet?.species || ''
+  const canMoveNext = currentStep === 0
+    ? rating > 0 && Boolean(selectedPetId)
+    : currentStep === 1
+      ? Boolean(visitDate) && (!hasNextVisit || Boolean(nextVisitDate))
+      : true
+
+  const moveToStep = (step: number) => {
+    if (step <= currentStep) setCurrentStep(step)
+  }
+
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (currentStep < reviewSteps.length - 1) {
+      event.preventDefault()
+      if (canMoveNext) setCurrentStep((step) => Math.min(step + 1, reviewSteps.length - 1))
+      return
+    }
+    onSubmit(event)
+  }
 
   return (
-    <form className="review-form review-composer" onSubmit={onSubmit}>
+    <form className="review-form review-composer review-step-form" onSubmit={handleFormSubmit}>
+      <Stepper currentStep={currentStep} stepCount={reviewSteps.length} labels={reviewSteps} onStepChange={moveToStep} className="review-stepper" />
+
+      {currentStep === 0 && <div className="review-step-content" aria-labelledby="review-step-visit">
+      <h3 id="review-step-visit" className="review-step-title">방문 정보</h3>
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.ratingTitle}</strong>
@@ -175,7 +201,10 @@ export default function HospitalReviewForm({
         </label>
         {selectedPetMeta && <p className="review-pet-meta">{selectedPetMeta}</p>}
       </section>
+      </div>}
 
+      {currentStep === 1 && <div className="review-step-content" aria-labelledby="review-step-treatment">
+      <h3 id="review-step-treatment" className="review-step-title">진료 정보</h3>
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.treatmentTitle}</strong>
@@ -227,12 +256,16 @@ export default function HospitalReviewForm({
           )}
         </div>
       </section>
+      </div>}
 
+      {currentStep === 2 && <div className="review-step-content" aria-labelledby="review-step-tags">
+      <h3 id="review-step-tags" className="review-step-title">경험 태그</h3>
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.tagTitle}</strong>
           <span>{selectedTags.length}/5</span>
         </div>
+        <div className="review-tag-scroll" role="region" aria-label="리뷰 태그 목록" tabIndex={0}>
         <div className="review-tag-group is-specialist">
           <strong>양서·파충류 전문성</strong>
           <div className="review-chip-grid">
@@ -249,8 +282,12 @@ export default function HospitalReviewForm({
             ))}
           </div>
         </div>
+        </div>
       </section>
+      </div>}
 
+      {currentStep === 3 && <div className="review-step-content" aria-labelledby="review-step-body">
+      <h3 id="review-step-body" className="review-step-title">후기 작성</h3>
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.bodyTitle}</strong>
@@ -258,9 +295,13 @@ export default function HospitalReviewForm({
         </div>
         <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} placeholder={text.bodyPlaceholder} required />
       </section>
+      </div>}
 
       <div className="step-actions review-form-actions">
-        <button type="submit" className="step-primary" disabled={!canSubmit}>{submitLabel ?? text.submit}</button>
+        {currentStep > 0 && <button type="button" className="step-secondary" onClick={() => setCurrentStep((step) => step - 1)}>이전</button>}
+        {currentStep < reviewSteps.length - 1
+          ? <button type="submit" className="step-primary" disabled={!canMoveNext}>다음</button>
+          : <button type="submit" className="step-primary" disabled={!canSubmit}>{submitLabel ?? text.submit}</button>}
       </div>
     </form>
   )

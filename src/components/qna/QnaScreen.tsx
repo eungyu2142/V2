@@ -586,13 +586,13 @@ function UserAvatar({ url, name }: { url?: string; name: string }) {
   return <span className="user-avatar user-avatar-fallback" aria-hidden="true">{name.trim().slice(0, 1) || '?'}</span>
 }
 
-export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPetId, initialDraft, onClose, onSave }: { userId: string; pets: Pet[]; author: string; authorAvatarUrl: string; initialPetId?: string; initialDraft?: DraftItem | null; onClose: () => void; onSave: (post: QnaPost) => void | Promise<void> }) {
+export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPetId, initialCategory, initialTitle, initialDraft, onClose, onSave }: { userId: string; pets: Pet[]; author: string; authorAvatarUrl: string; initialPetId?: string; initialCategory?: QnaCategory; initialTitle?: string; initialDraft?: DraftItem | null; onClose: () => void; onSave: (post: QnaPost) => void | Promise<void> }) {
   const initialPost = initialDraft?.draftType === 'question' ? initialDraft.payload as QnaPost : null
   const startedFromDiary = Boolean(initialPetId && pets.some((pet) => pet.id === initialPetId) && !initialDraft && !initialPost)
   const [step, setStep] = useState(initialDraft?.step ?? 0)
   const [petId, setPetId] = useState(initialPost?.petId || (initialPetId && pets.some((pet) => pet.id === initialPetId) ? initialPetId : ''))
-  const [category, setCategory] = useState<QnaCategory | ''>(initialPost ? normalizeQnaCategory(initialPost.category) : '')
-  const [title, setTitle] = useState(initialPost?.title ?? '')
+  const [category, setCategory] = useState<QnaCategory | ''>(initialPost ? normalizeQnaCategory(initialPost.category) : initialCategory ?? '')
+  const [title, setTitle] = useState(initialPost?.title ?? initialTitle ?? '')
   const [body, setBody] = useState(initialPost?.body ?? '')
   const initialImages = initialPost?.images ?? (initialPost?.image ? [initialPost.image] : [])
   const [imageUploads, setImageUploads] = useState<QnaImageUploadItem[]>(() => initialImages.map((url, index) => ({ id: `existing-${index}-${url}`, previewUrl: url, storageUrl: url, status: 'uploaded', progress: 100 })))
@@ -1034,7 +1034,7 @@ function formatRecordDate(value: string) {
 }
 
 function StepTextarea({ label, value, onChange, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean }) {
-  return <label className="step-field"><span>{label}{required && <RequiredMark />}</span><textarea autoFocus value={value} maxLength={500} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} /><small className="qna-character-count">{value.length}/500자</small></label>
+  return <label className="step-field qna-content-field"><span>{label}{required && <RequiredMark />}</span><textarea autoFocus value={value} maxLength={500} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} /><small className="qna-character-count">{value.length}/500자</small></label>
 }
 
 function QnaPetSelect({ pets, value, onChange }: { pets: Pet[]; value: string; onChange: (value: string) => void }) {

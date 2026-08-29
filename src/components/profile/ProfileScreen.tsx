@@ -8,8 +8,6 @@ import {
 } from '../../lib/pushNotifications'
 import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaComment, QnaPost } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
-import { QnaTrustBadge } from '../qna/QnaTrustBadge'
-import { getNextTrustTarget, getTrustLevel, getTrustScoreForMine } from '../qna/qnaTrust'
 
 type ProfileTab = 'posts' | 'drafts' | 'likes' | 'accepted' | 'settings'
 type WrittenFilter = 'qna' | 'reviews'
@@ -202,13 +200,6 @@ function ProfileScreen({
     }),
     [qnaPosts],
   )
-  const trustScore = getTrustScoreForMine(qnaPosts)
-  const trustLevel = getTrustLevel(trustScore)
-  const nextTrust = getNextTrustTarget(trustScore)
-  const trustFloor = trustLevel === 0 ? 0 : trustLevel === 1 ? 5 : trustLevel === 2 ? 15 : 25
-  const trustProgress = nextTrust
-    ? Math.max(0, Math.min(100, ((trustScore - trustFloor) / (nextTrust.target - trustFloor)) * 100))
-    : 100
   const [likeFilter, setLikeFilter] = useState<LikeFilter>(() => (
     likedQnaItems.length > 0
       ? 'posts'
@@ -263,36 +254,6 @@ function ProfileScreen({
         avatarUrl={avatarUrl}
         isLoading={!profile.username && !profile.nickname}
       />
-
-      <section className="profile-trust-summary" aria-label="신뢰 답변자 등급">
-        <div className="profile-trust-heading">
-          <div className="profile-trust-copy">
-            <span className="profile-trust-label">답변 신뢰도</span>
-            <div>
-              <strong>{trustLevel > 0 ? '신뢰 답변자' : '일반 사용자'}</strong>
-              {trustLevel > 0 ? <QnaTrustBadge score={trustScore} /> : <span className="profile-trust-level">Lv.0</span>}
-            </div>
-          </div>
-          <div className="profile-trust-score">
-            <strong>{trustScore}</strong>
-            <span>포인트</span>
-          </div>
-        </div>
-        <div
-          className="profile-trust-progress"
-          role="progressbar"
-          aria-label={nextTrust ? `신뢰 답변자 레벨 ${nextTrust.level} 진행도` : '신뢰 답변자 최고 등급'}
-          aria-valuemin={trustFloor}
-          aria-valuemax={nextTrust?.target ?? 25}
-          aria-valuenow={nextTrust ? trustScore : Math.min(trustScore, 25)}
-        >
-          <span style={{ width: `${trustProgress}%` }} />
-        </div>
-        <div className="profile-trust-footer">
-          <span>{nextTrust ? `다음 등급 Lv.${nextTrust.level}` : '최고 등급 달성'}</span>
-          <strong>{nextTrust ? `${nextTrust.target - trustScore}점 남음` : '완료'}</strong>
-        </div>
-      </section>
 
       <ProfileActivitySummary
         activeId={view}

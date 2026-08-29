@@ -14,7 +14,7 @@ import { dataUrlToImageFile, removeUploadedImage, uploadImageFile } from './lib/
 import { deleteHospitalLike, getHospitalLikeKey, mergeLocalHospitalLikes, saveHospitalLike } from './lib/hospitalLikes'
 import { deactivatePushSubscriptionForLogout, syncCurrentDevicePushSubscription } from './lib/pushNotifications'
 import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
-import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost, Tab } from './types/app'
+import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaCategory, QnaPost, Tab } from './types/app'
 export type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost } from './types/app'
 
 const AuthScreen = lazy(() => import('./components/AuthScreen'))
@@ -82,6 +82,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [diaryPetId, setDiaryPetId] = useState<string | null>(initialUrlState.petId)
   const [diaryReadOnly, setDiaryReadOnly] = useState(false)
   const [qnaInitialPetId, setQnaInitialPetId] = useState<string | null>(initialUrlState.tab === 'qna' ? initialUrlState.petId : null)
+  const [qnaInitialPreset, setQnaInitialPreset] = useState<{ category: QnaCategory; title: string } | null>(null)
   const [editingDraft, setEditingDraft] = useState<DraftItem | null>(null)
   const [mapFocusHospital, setMapFocusHospital] = useState<HospitalSnapshot | null>(null)
   const [diaryClinicHospital, setDiaryClinicHospital] = useState<HospitalSnapshot | null>(null)
@@ -154,7 +155,8 @@ function AuthenticatedApp({ session }: { session: Session }) {
         console.warn('Hospital like synchronization failed:', error)
         return readSavedHospitalSnapshots(session.user.id)
       }),
-    ]).then(([nextPets, nextPosts, nextDrafts, nextHospitals, nextLikedHospitals]) => {
+      loadOptionalAll<HospitalReview>('hospital_reviews'),
+    ]).then(([nextPets, nextPosts, nextDrafts, nextHospitals, nextLikedHospitals, nextHospitalReviews]) => {
       if (!active) return
       setPets(nextPets.map(normalizePet))
       setQnaPosts(nextPosts.map((post) => {
@@ -165,6 +167,40 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setAllHospitals(nextHospitals)
       writeSavedHospitalSnapshots(nextLikedHospitals, session.user.id)
       setLikedHospitals(nextLikedHospitals)
+      const localReviews = readStoredReviews()
+      const groupedReviews = nextHospitalReviews.reduce<Record<string, HospitalReview[]>>((grouped, review) => {
+        if (!review.hospitalId) return grouped
+        const item = { ...review, userId: review.userId || undefined }
+        grouped[review.hospitalId] = [...(grouped[review.hospitalId] ?? []), item]
+        return grouped
+      }, {})
+      Object.entries(localReviews).forEach(([hospitalId, items]) => {
+        const serverIds = new Set((groupedReviews[hospitalId] ?? []).map((review) => review.id))
+        const localOnly = items.filter((review) => !serverIds.has(review.id))
+        if (localOnly.length > 0) groupedReviews[hospitalId] = [...(groupedReviews[hospitalId] ?? []), ...localOnly]
+      })
+      localStorage.setItem(reviewStorageKey, JSON.stringify(groupedReviews))
+      setHospitalReviews(groupedReviews)
+      const unsyncedOwnedReviews = Object.values(localReviews).flat().filter((review) => review.mine === true)
+      void Promise.all(unsyncedOwnedReviews.map((review) => saveAppData('hospital_reviews', session.user.id, {
+        ...review,
+        userId: review.userId || session.user.id,
+      }, {
+        hospital_id: review.hospitalId,
+        hospital_name: review.hospitalName || '',
+        pet_id: review.petId || null,
+        rating: review.rating,
+        visit_date: review.visitDate || null,
+        diagnosis: review.diagnosis || null,
+        treatment: review.treatment || null,
+        cost: review.cost || null,
+        tags: review.tags ?? [],
+        body: review.body || review.content || '',
+        images: review.images ?? [],
+      }))).catch((error) => {
+        console.error('Local review migration failed:', error)
+        setDataError('기존 리뷰를 서버에 동기화하지 못했습니다. 네트워크 연결 후 다시 시도해 주세요.')
+      })
     }).catch((error) => {
       if (!active) return
       console.error('Initial data load failed:', error)
@@ -337,9 +373,10 @@ function AuthenticatedApp({ session }: { session: Session }) {
     setEditingDraft(null)
   }
 
-  const openQnaCreate = (petId?: string | null) => {
+  const openQnaCreate = (petId?: string | null, preset?: { category: QnaCategory; title: string }) => {
     const validPetId = petId && pets.some((pet) => pet.id === petId) ? petId : null
     setQnaInitialPetId(validPetId)
+    setQnaInitialPreset(preset ?? null)
     setEditingPet(null)
     setEditingDraft(null)
     setCreateMode('post')
@@ -472,6 +509,10 @@ function AuthenticatedApp({ session }: { session: Session }) {
       localStorage.setItem(reviewStorageKey, JSON.stringify(next))
       return next
     })
+    void deleteAppData('hospital_reviews', reviewId, session.user.id).catch((error) => {
+      console.error('Profile review deletion synchronization failed.', error)
+      setDataError('리뷰를 서버에서 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    })
   }
 
   const unlikePostFromProfile = (postId: string) => {
@@ -548,12 +589,6 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setProfile(normalized)
       const nextQnaPosts = qnaPosts.map((post) => post.mine === true ? { ...post, author: normalized.nickname || normalized.username || post.author, authorAvatarUrl: normalized.avatarUrl } : post)
       setQnaPosts(nextQnaPosts)
-      const nextHospitalReviews = Object.fromEntries(Object.entries(hospitalReviews).map(([hospitalId, items]) => [
-        hospitalId,
-        items.map((review) => review.mine === true ? { ...review, author: normalized.nickname || normalized.username || review.author, authorAvatarUrl: normalized.avatarUrl } : review),
-      ])) as Record<string, HospitalReview[]>
-      setHospitalReviews(nextHospitalReviews)
-      localStorage.setItem(reviewStorageKey, JSON.stringify(nextHospitalReviews))
       setDataError('')
       void Promise.all(nextQnaPosts.filter((post) => post.mine === true).map((post) => saveAppData(qnaTable, session.user.id, post, {
         category: qnaDatabaseCategory, title: post.title, body: post.body, view_count: post.viewCount ?? 0,
@@ -609,13 +644,16 @@ function AuthenticatedApp({ session }: { session: Session }) {
       author={profile.nickname.trim() || profile.username.trim() || '\uC0AC\uC6A9\uC790'}
       authorAvatarUrl={profile.avatarUrl}
       initialPetId={qnaInitialPetId ?? undefined}
+      initialCategory={qnaInitialPreset?.category}
+      initialTitle={qnaInitialPreset?.title}
       initialDraft={editingDraft?.draftType === 'question' ? editingDraft : null}
-      onClose={() => { setCreateMode(null); setEditingDraft(null); setQnaInitialPetId(null) }}
+      onClose={() => { setCreateMode(null); setEditingDraft(null); setQnaInitialPetId(null); setQnaInitialPreset(null) }}
       onSave={async (post) => {
         await saveQnaPost(post)
         if (editingDraft && drafts.some((draft) => draft.id === editingDraft.id)) await deleteDraft(editingDraft.id)
         setEditingDraft(null)
         setQnaInitialPetId(null)
+        setQnaInitialPreset(null)
       }}
     />
   )
@@ -647,7 +685,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       {activeTab !== 'map' && (
         <main className="app-main">
           {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
-          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitals={allHospitals} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onFindHospital={openPetHospitalSearch} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitals={allHospitals} hospitalReviews={hospitalReviews} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onFindHospital={openPetHospitalSearch} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
           {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={allHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalOnMap} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
           {activeTab === 'profile' && (
             <ProfileScreen

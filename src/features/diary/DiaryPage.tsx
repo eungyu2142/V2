@@ -41,8 +41,8 @@ type DiaryInsight = {
   title: string
   body: string
   level: DiaryInsightLevel
-  metric: 'shed' | 'environment' | 'weight' | 'poop'
-  action?: 'shed-check' | 'environment-resolve'
+  metric: 'shed' | 'environment' | 'weight' | 'poop' | 'mating' | 'egg'
+  action?: 'shed-check' | 'shed-cycle-check' | 'environment-resolve'
 }
 type DisplayPetRecord = PetRecord & {
   sourceIds?: string[]
@@ -509,6 +509,7 @@ export default function DiaryPage({
   userId,
   pets,
   hospitals = [],
+  hospitalReviews = {},
   initialPetId,
   initialClinicHospital,
   readOnly = false,
@@ -523,11 +524,12 @@ export default function DiaryPage({
   userId: string
   pets: DiaryPet[]
   hospitals?: HospitalSnapshot[]
+  hospitalReviews?: Record<string, HospitalReview[]>
   initialPetId?: string
   initialClinicHospital?: HospitalSnapshot | null
   readOnly?: boolean
   onAddPet: () => void
-  onCreateQna?: (petId: string) => void
+  onCreateQna?: (petId: string, preset?: { category: '질병'; title: string }) => void
   onFindHospital?: (petId: string) => void
   onCreateClinicReview?: (hospital: HospitalSnapshot, review: HospitalReview) => void
   onInitialClinicHospitalHandled?: () => void
@@ -582,6 +584,7 @@ export default function DiaryPage({
   const [smartMatingFemaleId, setSmartMatingFemaleId] = useState('')
   const [smartMatingMaleId, setSmartMatingMaleId] = useState('')
   const [smartEggMatingId, setSmartEggMatingId] = useState('')
+  const [smartEggFertility, setSmartEggFertility] = useState<'unfertilized' | 'fertilized'>('unfertilized')
   const [pendingSmartRecord, setPendingSmartRecord] = useState<{ record: PetRecord; message: string } | null>(null)
   const [smartToast, setSmartToast] = useState('')
   const [resolvedInsightIds, setResolvedInsightIds] = useState<string[]>([])
@@ -600,24 +603,58 @@ export default function DiaryPage({
   const petRecords = records.filter((record) => record.petId === effectivePetId)
   const displayPetRecords = useMemo(() => collapseShedRecordsForDisplay(petRecords), [petRecords])
   const calendarPetRecords = useMemo(() => {
-    const scheduledHospitalRecords: PetRecord[] = activeReminders
-      .filter((reminder) => reminder.petId === effectivePetId && reminder.reminderType === 'hospital')
+    const monthStart = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1)
+    const calendarStart = new Date(monthStart)
+    calendarStart.setDate(monthStart.getDate() - monthStart.getDay())
+    const visibleCalendarDates = Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(calendarStart)
+      date.setDate(calendarStart.getDate() + index)
+      return date
+    })
+    const scheduledCareRecords: PetRecord[] = activeReminders
+      .filter((reminder) => reminder.petId === effectivePetId && (reminder.reminderType === 'hospital' || reminder.reminderType === 'medicine'))
       .flatMap((reminder) => {
-        const scheduledDate = reminder.startDate || reminder.reminderDate
-        if (!scheduledDate) return []
-        return [{
-          id: `scheduled-hospital-${reminder.id}-${scheduledDate}`,
+        const scheduledDates = reminder.scheduleType === 'once'
+          ? [reminder.startDate || reminder.reminderDate].filter((date): date is string => Boolean(date))
+          : visibleCalendarDates.filter((date) => reminderOccursOn(reminder, date)).map(toDateKey)
+        return scheduledDates.filter((scheduledDate) => scheduledDate > today).map((scheduledDate) => ({
+          id: `scheduled-${reminder.reminderType}-${reminder.id}-${scheduledDate}`,
           userId,
           petId: reminder.petId,
-          type: 'hospital' as const,
+          type: reminder.reminderType === 'hospital' ? 'hospital' as const : 'other' as const,
           date: scheduledDate,
-          memo: '진료 예정',
+          memo: reminder.reminderType === 'hospital' ? '진료 예정' : '약 예정',
           scheduledFor: scheduledDate,
           createdAt: reminder.createdAt,
+        }))
+      })
+    const reviewVisitRecords: PetRecord[] = Object.values(hospitalReviews)
+      .flat()
+      .flatMap((review) => {
+        const nextVisitDate = review.nextVisitDate
+        if (review.petId !== effectivePetId || !nextVisitDate || nextVisitDate <= today) return []
+        return [{
+          id: `scheduled-review-hospital-${review.id}-${nextVisitDate}`,
+          userId,
+          petId: effectivePetId,
+          type: 'hospital' as const,
+          date: nextVisitDate,
+          memo: '진료 예정',
+          hospitalId: review.hospitalId,
+          reviewId: review.id,
+          clinicDetails: {
+            hospitalName: review.hospitalName ?? review.hospitalSnapshot?.name ?? '병원',
+            visitDate: nextVisitDate,
+          },
+          scheduledFor: nextVisitDate,
+          createdAt: review.createdAt,
         }]
       })
-    return [...displayPetRecords, ...scheduledHospitalRecords]
-  }, [activeReminders, displayPetRecords, effectivePetId, userId])
+    const futurePlans = [...scheduledCareRecords, ...reviewVisitRecords].filter((record, index, items) => (
+      index === items.findIndex((candidate) => candidate.petId === record.petId && candidate.date === record.date && candidate.type === record.type)
+    ))
+    return [...displayPetRecords.filter((record) => record.date <= today), ...futurePlans]
+  }, [activeReminders, displayPetRecords, effectivePetId, hospitalReviews, today, userId, visibleMonth])
   const recentFoods = Array.from(new Set(petRecords.flatMap((record) => record.type === 'food' ? record.foods ?? [] : []))).slice(0, 3)
   const matingPetCandidates = selectedPet ? pets.filter((pet) => sameSpecies(pet, selectedPet)) : []
   const matingOptions = useMemo(() => getMatingOptions(records, pets, selectedPet), [pets, records, selectedPet])
@@ -672,8 +709,9 @@ export default function DiaryPage({
   const legacyPlanReminders = activeReminders
     .filter((reminder) => reminder.petId === effectivePetId && reminder.scheduleType === 'repeat')
     .flatMap((reminder) => {
+      const completedDate = reminder.completedAt?.slice(0, 10)
       if (reminderOccursOn(reminder, parseDateKey(selectedDate))) return [{ reminder, overdue: false }]
-      if (reminderOccursOn(reminder, parseDateKey(previousDate)) && reminder.completedAt?.slice(0, 10) !== previousDate) return [{ reminder, overdue: true }]
+      if (reminderOccursOn(reminder, parseDateKey(previousDate)) && completedDate !== previousDate && completedDate !== selectedDate) return [{ reminder, overdue: true }]
       return []
     })
   const dailyTaskPlanReminderCandidates = usingCarePlans
@@ -914,6 +952,7 @@ export default function DiaryPage({
     }))
     void settleSupersededOverdueTasks(String(userId), dailyTask, today)
       .catch((error) => console.error('Overdue routine consolidation failed; completed record was kept.', error))
+      .finally(() => refreshDailyTasks())
   }
 
   const openSmartAdd = (kind: SmartAddKind) => {
@@ -931,6 +970,7 @@ export default function DiaryPage({
     setSmartMatingFemaleId(selectedPet.gender === 'female' ? selectedPet.id : '')
     setSmartMatingMaleId(selectedPet.gender === 'male' ? selectedPet.id : '')
     setSmartEggMatingId('')
+    setSmartEggFertility('unfertilized')
   }
 
   const openReminderCreate = () => {
@@ -1059,7 +1099,7 @@ export default function DiaryPage({
     }
   }
 
-  const makeSmartRecord = (type: PetRecordType, message: string, memo?: string, foods?: string[], photo?: string) => {
+  const makeSmartRecord = (type: PetRecordType, message: string, memo?: string, foods?: string[], photo?: string, incidentRecord?: PetRecord['incidentRecord']) => {
     if (!selectedPet) return
     saveSmartRecord({
       id: crypto.randomUUID(),
@@ -1070,6 +1110,7 @@ export default function DiaryPage({
       memo,
       foods,
       photoUrl: photo,
+      incidentRecord,
       createdAt: new Date().toISOString(),
     }, message)
   }
@@ -1109,12 +1150,29 @@ export default function DiaryPage({
     const female = pets.find((pet) => pet.id === smartMatingFemaleId)
     const male = pets.find((pet) => pet.id === smartMatingMaleId)
     if (!female || !male || female.id === male.id || !sameSpecies(female, male)) return
-    makeSmartRecord('other', `메이팅 기록이 저장되었습니다`, `메이팅 · 암컷 ${female.name} · 수컷 ${male.name} · ${female.species}`)
+    makeSmartRecord('other', `메이팅 기록이 저장되었습니다`, `메이팅 · 암컷 ${female.name} · 수컷 ${male.name} · ${female.species}`, undefined, undefined, {
+      kind: 'mating',
+      femalePetId: female.id,
+      malePetId: male.id,
+      femaleName: female.name,
+      maleName: male.name,
+      species: female.species,
+    })
   }
   const saveSmartEgg = () => {
     const mating = matingOptions.find((option) => option.id === smartEggMatingId)
-    if (!mating) return
-    makeSmartRecord('other', `산란 기록이 저장되었습니다`, `산란 · ${mating.femaleName} · ${mating.maleName} · ${mating.species}`)
+    if (smartEggFertility === 'fertilized' && !mating) return
+    const fertilityLabel = smartEggFertility === 'fertilized' ? '유정란' : '무정란'
+    const species = mating?.species ?? selectedPet?.species ?? ''
+    const matingMemo = mating ? ` · ${mating.femaleName} · ${mating.maleName}` : ''
+    makeSmartRecord('other', `${fertilityLabel} 산란 기록이 저장되었습니다`, `산란 · ${fertilityLabel}${matingMemo} · ${species}`, undefined, undefined, {
+      kind: 'egg',
+      fertility: smartEggFertility,
+      matingRecordId: mating?.id,
+      femaleName: mating?.femaleName,
+      maleName: mating?.maleName,
+      species,
+    })
   }
 
   const completePlan = async (reminder: Reminder, dailyTask?: DailyTask) => {
@@ -1167,6 +1225,7 @@ export default function DiaryPage({
         setRecords((items) => [storedRecord, ...items.filter((item) => item.dailyTaskId !== dailyTask.id)])
         setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
         consolidateOverdueTasksAfterCompletion(dailyTask)
+        if (dailyTask.scheduledDate >= today) void refreshDailyTasks()
         void markNotificationJobCompletedForTask(dailyTask)
         showSmartToast(`${label} 완료 기록이 저장되었습니다`)
       } catch (error) {
@@ -1247,6 +1306,7 @@ export default function DiaryPage({
         void markNotificationJobCompletedForTask(dailyTask)
         setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
         consolidateOverdueTasksAfterCompletion(dailyTask)
+        if (dailyTask.scheduledDate >= today) void refreshDailyTasks()
       } else {
         markReminderCompleted(reminder)
       }
@@ -1335,6 +1395,7 @@ export default function DiaryPage({
         void markNotificationJobCompletedForTask(dailyTask)
         setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
         consolidateOverdueTasksAfterCompletion(dailyTask)
+        if (dailyTask.scheduledDate >= today) void refreshDailyTasks()
       } else {
         markReminderCompleted(reminder)
       }
@@ -1390,6 +1451,7 @@ export default function DiaryPage({
         void markNotificationJobCompletedForTask(dailyTask)
         setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
         consolidateOverdueTasksAfterCompletion(dailyTask)
+        if (dailyTask.scheduledDate >= today) void refreshDailyTasks()
       } else {
         markReminderCompleted(reminder)
       }
@@ -1407,7 +1469,11 @@ export default function DiaryPage({
     if (!dailyTask || !usingCarePlans) return
     setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'skipped' } : item))
     void skipDailyTask(dailyTask.id)
-      .then(() => markNotificationJobSkippedForTask(dailyTask))
+      .then(() => {
+        void markNotificationJobSkippedForTask(dailyTask)
+        consolidateOverdueTasksAfterCompletion(dailyTask)
+        if (dailyTask.scheduledDate >= today) void refreshDailyTasks()
+      })
       .catch((error) => console.error('Daily task skip sync failed; kept local state.', error))
     showSmartToast('이번 할 일을 건너뛰었어요')
   }
@@ -1485,6 +1551,7 @@ export default function DiaryPage({
               setRecords((items) => [storedRecord, ...items.filter((item) => item.dailyTaskId !== completingDailyTask.id)])
               setDailyTasks((items) => items.map((item) => item.id === completingDailyTask.id ? { ...item, status: 'completed', completedAt } : item))
               consolidateOverdueTasksAfterCompletion(completingDailyTask)
+              if (completingDailyTask.scheduledDate >= today) void refreshDailyTasks()
               void markNotificationJobCompletedForTask(completingDailyTask)
             } catch (error) {
               console.error('Typed routine completion failed.', error)
@@ -1596,7 +1663,7 @@ export default function DiaryPage({
       records={petRecords}
       petName={selectedPet?.name ?? '펫'}
       onBack={() => setVisualizationOpen(false)}
-      onCreateQna={selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id) : undefined}
+      onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : undefined) : undefined}
       onFindHospital={selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id) : undefined}
       onShedComplete={() => saveShedCheckRecord('탈피 완료')}
       onShedNotYet={() => saveShedCheckRecord('탈피 확인 · 완료 안됨')}
@@ -1657,7 +1724,7 @@ export default function DiaryPage({
         onFollowUpInsight={markDiaryInsightFollowUp}
         onResolveInsight={resolveDiaryInsight}
         onKeepInsight={keepDiaryInsight}
-        onCreateQna={selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id) : undefined}
+        onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : undefined) : undefined}
         onFindHospital={selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id) : undefined}
       />
 
@@ -1716,6 +1783,7 @@ export default function DiaryPage({
             matingFemaleId={smartMatingFemaleId}
             matingMaleId={smartMatingMaleId}
             eggMatingId={smartEggMatingId}
+            eggFertility={smartEggFertility}
             onFoodKind={setSmartFoodKind}
             onFoodQuantity={setSmartFoodQuantity}
             onFoodUnit={setSmartFoodUnit}
@@ -1724,6 +1792,7 @@ export default function DiaryPage({
             onMatingFemale={setSmartMatingFemaleId}
             onMatingMale={setSmartMatingMaleId}
             onEggMating={setSmartEggMatingId}
+            onEggFertility={setSmartEggFertility}
             onFoodSave={(food) => saveSmartFood(food)}
             onWaterSave={saveSmartWater}
             onCleaningSave={saveSmartCleaning}
@@ -1900,13 +1969,16 @@ function DailyPlan({
 }) {
   const [listOpen, setListOpen] = useState(false)
   const isFuture = selectedDate > toDateKey(new Date())
-  const overdueTasks = tasks.filter((task) => task.overdue && (!task.dailyTask || task.dailyTask.status === 'pending'))
+  const overdueTasks = tasks.filter((task) => task.overdue && (task.dailyTask
+    ? task.dailyTask.status === 'pending'
+    : task.reminder.completedAt?.slice(0, 10) !== selectedDate))
   const isTaskCompleted = (task: { reminder: Reminder; dailyTask?: DailyTask }) => task.dailyTask
     ? task.dailyTask.status === 'completed'
     : task.reminder.completedAt?.slice(0, 10) === selectedDate
-  const completedTasks = tasks.filter((task) => !task.overdue && isTaskCompleted(task))
-  const todayTasks = tasks.filter((task) => !task.overdue && task.dailyTask?.status !== 'skipped' && !isTaskCompleted(task))
-  const visibleTaskCount = overdueTasks.length + todayTasks.length + completedTasks.length
+  const todayTasks = tasks.filter((task) => !task.overdue && (task.dailyTask
+    ? task.dailyTask.status === 'pending'
+    : !isTaskCompleted(task)))
+  const visibleTaskCount = overdueTasks.length + todayTasks.length
   const listToggle = (
     <button
       className="daily-plan-list-toggle"
@@ -1954,12 +2026,12 @@ function DailyPlan({
           </span>
           {(overdue || checked) && <small>{taskDescription}</small>}
         </span>
-        <label className="daily-plan-check-wrap">
+        {!overdue && <label className="daily-plan-check-wrap">
           <span className={`daily-plan-check ${checked ? 'checked' : ''}`} aria-hidden="true">{checked ? '✓' : ''}</span>
           <input className="daily-plan-check-input" type="checkbox" checked={checked} disabled={isFuture || checked} onChange={() => onComplete(task)} aria-label={`${planLabel(reminder, pet)} ${checked ? '완료됨' : '완료'}`} />
-        </label>
+        </label>}
       </div>
-      {overdue && <div className="daily-plan-task-actions"><button type="button" onClick={() => onComplete(task)}>지금 완료</button><button type="button" onClick={() => onSkip(task)}>건너뛰기</button></div>}
+      {overdue && !checked && <div className="daily-plan-task-actions"><button type="button" onClick={() => onComplete(task)}>지금 완료</button><button type="button" onClick={() => onSkip(task)}>건너뛰기</button></div>}
     </div>
   }
 
@@ -1973,7 +2045,7 @@ function DailyPlan({
             {todayTasks.length > 0 && <div className="daily-plan-list">{todayTasks.map(renderTask)}</div>}
             {overdueTasks.length === 0 && todayTasks.length === 0 && (
               <button className="daily-plan-completed-summary" type="button" onClick={() => setListOpen(true)}>
-                {completedTasks.length > 0 ? '오늘 할 일을 모두 마쳤어요.' : '오늘 예정된 일이 없어요.'}
+                {tasks.some((task) => !task.overdue && isTaskCompleted(task)) ? '오늘 할 일을 모두 마쳤어요.' : '오늘 예정된 일이 없어요.'}
               </button>
             )}
           </div>
@@ -1990,7 +2062,6 @@ function DailyPlan({
             ) : (
               <div className="daily-plan-list-content">
                 {overdueTasks.length > 0 && <section className="daily-task-group overdue-group"><h3>밀린 할 일</h3><div className="daily-plan-list">{overdueTasks.map(renderTask)}</div></section>}
-                {completedTasks.length > 0 && <section className="daily-task-group completed-task-group"><h3>완료한 루틴</h3><div className="daily-plan-list">{completedTasks.map(renderTask)}</div></section>}
                 <section className="daily-task-group today-task-group">{todayTasks.length ? <div className="daily-plan-list">{todayTasks.map(renderTask)}</div> : <p className="daily-plan-empty">오늘 예정된 일이 없어요.</p>}</section>
               </div>
             )}
@@ -2130,8 +2201,18 @@ function getMatingOptions(records: PetRecord[], pets: DiaryPet[], selectedPet?: 
   if (!selectedPet) return []
   const selectedSpecies = normalizeSpecies(selectedPet.species)
   return records
-    .filter((record) => record.type === 'other' && record.memo?.startsWith('메이팅 · ') && pets.some((pet) => pet.id === record.petId && normalizeSpecies(pet.species) === selectedSpecies))
+    .filter((record) => isMatingRecord(record) && pets.some((pet) => pet.id === record.petId && normalizeSpecies(pet.species) === selectedSpecies))
     .map((record) => {
+      if (record.incidentRecord?.kind === 'mating') {
+        const mating = record.incidentRecord
+        return {
+          id: record.id,
+          femaleName: mating.femaleName,
+          maleName: mating.maleName,
+          species: mating.species,
+          label: `${formatDate(record.date)} · ${mating.femaleName} × ${mating.maleName}`,
+        }
+      }
       const memo = record.memo ?? ''
       const femaleName = memo.match(/암컷 ([^·]+)/)?.[1]?.trim() ?? '암컷'
       const maleName = memo.match(/수컷 ([^·]+)/)?.[1]?.trim() ?? '수컷'
@@ -2144,6 +2225,21 @@ function getMatingOptions(records: PetRecord[], pets: DiaryPet[], selectedPet?: 
         label: `${formatDate(record.date)} · ${femaleName} × ${maleName}`,
       }
     })
+}
+
+function isMatingRecord(record: PetRecord) {
+  return record.incidentRecord?.kind === 'mating' || (record.type === 'other' && record.memo?.startsWith('메이팅 · '))
+}
+
+function isEggRecord(record: PetRecord) {
+  return record.incidentRecord?.kind === 'egg' || (record.type === 'other' && record.memo?.startsWith('산란 · '))
+}
+
+function eggFertility(record: PetRecord): 'unfertilized' | 'fertilized' | 'unknown' {
+  if (record.incidentRecord?.kind === 'egg') return record.incidentRecord.fertility
+  if (record.memo?.includes('무정란')) return 'unfertilized'
+  if (record.memo?.includes('유정란')) return 'fertilized'
+  return 'unknown'
 }
 
 function planLabel(reminder: Reminder, pet?: DiaryPet, speciesProfiles: SpeciesCareProfile[] = fallbackSpeciesCareProfiles) {
@@ -2349,6 +2445,7 @@ function SmartAddSheet({
   matingFemaleId,
   matingMaleId,
   eggMatingId,
+  eggFertility,
   onFoodKind,
   onFoodQuantity,
   onFoodUnit,
@@ -2357,6 +2454,7 @@ function SmartAddSheet({
   onMatingFemale,
   onMatingMale,
   onEggMating,
+  onEggFertility,
   onFoodSave,
   onWaterSave,
   onCleaningSave,
@@ -2379,6 +2477,7 @@ function SmartAddSheet({
   matingFemaleId: string
   matingMaleId: string
   eggMatingId: string
+  eggFertility: 'unfertilized' | 'fertilized'
   onFoodKind: (value: string) => void
   onFoodQuantity: (value: string) => void
   onFoodUnit: (value: string) => void
@@ -2387,6 +2486,7 @@ function SmartAddSheet({
   onMatingFemale: (value: string) => void
   onMatingMale: (value: string) => void
   onEggMating: (value: string) => void
+  onEggFertility: (value: 'unfertilized' | 'fertilized') => void
   onFoodSave: (value: string) => void
   onWaterSave: (value: string) => void
   onCleaningSave: (value: string) => void
@@ -2404,7 +2504,7 @@ function SmartAddSheet({
   const femaleCandidates = matingPetCandidates.filter((candidate) => candidate.gender === 'female')
   const maleCandidates = matingPetCandidates.filter((candidate) => candidate.gender === 'male')
   const matingReady = Boolean(matingFemaleId && matingMaleId && matingFemaleId !== matingMaleId)
-  const eggReady = Boolean(eggMatingId)
+  const eggReady = eggFertility === 'unfertilized' || Boolean(eggMatingId)
 
   return (
     <div className="smart-add-sheet">
@@ -2434,7 +2534,13 @@ function SmartAddSheet({
       )}
       {kind === 'egg' && (
         <div className="smart-pair-fields">
-          {matingOptions.length ? <div className="smart-choice-list">{matingOptions.map((option) => <button type="button" className={eggMatingId === option.id ? 'selected' : ''} key={option.id} onClick={() => onEggMating(option.id)}>{option.label}</button>)}</div> : <p className="smart-empty">먼저 같은 종 메이팅 기록을 남겨주세요.</p>}
+          <strong>알 상태</strong>
+          <div className="smart-choice-list" aria-label="산란 상태">
+            <button type="button" aria-pressed={eggFertility === 'unfertilized'} className={eggFertility === 'unfertilized' ? 'selected' : ''} onClick={() => { onEggFertility('unfertilized'); onEggMating('') }}>무정란</button>
+            <button type="button" aria-pressed={eggFertility === 'fertilized'} className={eggFertility === 'fertilized' ? 'selected' : ''} disabled={matingOptions.length === 0} title={matingOptions.length === 0 ? '메이팅 기록이 있어야 선택할 수 있어요' : undefined} onClick={() => onEggFertility('fertilized')}>유정란</button>
+          </div>
+          {matingOptions.length === 0 && <p className="smart-empty">메이팅 기록이 없어 무정란만 기록할 수 있어요.</p>}
+          {eggFertility === 'fertilized' && matingOptions.length > 0 && <><strong>연결할 메이팅</strong><div className="smart-choice-list">{matingOptions.map((option) => <button type="button" className={eggMatingId === option.id ? 'selected' : ''} key={option.id} onClick={() => onEggMating(option.id)}>{option.label}</button>)}</div></>}
           {eggReady && <button className="smart-save-button" type="button" onClick={onEggSave}>산란 기록</button>}
         </div>
       )}
@@ -2997,7 +3103,7 @@ function DiaryNotice({
   onFollowUpInsight?: (insightId: string) => void
   onResolveInsight?: (insightId: string) => void
   onKeepInsight?: (insightId: string) => void
-  onCreateQna?: () => void
+  onCreateQna?: (metric?: DiaryInsight['metric']) => void
   onFindHospital?: () => void
 }) {
   const insights = buildDiaryInsights(records, petName, resolvedInsightIds)
@@ -3017,13 +3123,15 @@ function DiaryNotice({
               {stage ? <b className={`notice-stage stage-${stage}`}>{stage}단계</b> : null}
               <span>{insight.title}</span>
               <div className="diary-notice-actions">
-                {insight.action === 'shed-check' && onShedComplete && onShedNotYet ? (
-                  <><button type="button" onClick={onShedNotYet}>탈피 중</button><button type="button" onClick={onShedComplete}>탈피 완료</button></>
+                {(insight.action === 'shed-check' || insight.action === 'shed-cycle-check') && onShedComplete && onShedNotYet ? (
+                  insight.action === 'shed-cycle-check'
+                    ? <><button type="button" onClick={onShedComplete}>예</button><button type="button" onClick={onShedNotYet}>아니요</button></>
+                    : <><button type="button" onClick={onShedNotYet}>탈피 중</button><button type="button" onClick={onShedComplete}>탈피 완료</button></>
                 ) : followedUp && onResolveInsight && onKeepInsight ? (
                   <><b>해결됐나요?</b><button type="button" onClick={() => onResolveInsight(insight.id)}>예</button><button type="button" onClick={() => onKeepInsight(insight.id)}>아니오</button></>
                 ) : (
                   <>
-                    {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna() }}>Q&amp;A</button>}
+                    {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>Q&amp;A</button>}
                     {onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾기</button>}
                   </>
                 )}
@@ -3058,7 +3166,7 @@ function DiaryInsightBanner({
   onFollowUpInsight?: (insightId: string) => void
   onResolveInsight?: (insightId: string) => void
   onKeepInsight?: (insightId: string) => void
-  onCreateQna?: () => void
+  onCreateQna?: (metric?: DiaryInsight['metric']) => void
   onFindHospital?: () => void
 }) {
   const insights = buildDiaryInsights(records, petName, resolvedInsightIds)
@@ -3070,13 +3178,14 @@ function DiaryInsightBanner({
           <small>{insightLabel(insight.metric)}</small>
           <strong>{insight.title}</strong>
           <span>{insight.body}</span>
-          {insight.action === 'shed-check' && onShedComplete && onShedNotYet && (
+          {(insight.action === 'shed-check' || insight.action === 'shed-cycle-check') && onShedComplete && onShedNotYet && (
             <div className="diary-insight-actions" aria-label="탈피 완료 확인">
-              <button type="button" onClick={onShedNotYet}>탈피 중</button>
-              <button type="button" onClick={onShedComplete}>탈피 완료</button>
+              {insight.action === 'shed-cycle-check'
+                ? <><button type="button" onClick={onShedComplete}>예</button><button type="button" onClick={onShedNotYet}>아니요</button></>
+                : <><button type="button" onClick={onShedNotYet}>탈피 중</button><button type="button" onClick={onShedComplete}>탈피 완료</button></>}
             </div>
           )}
-          {insight.action !== 'shed-check' && followedUpInsightIds.includes(insight.id) && onResolveInsight && onKeepInsight && (
+          {insight.action !== 'shed-check' && insight.action !== 'shed-cycle-check' && followedUpInsightIds.includes(insight.id) && onResolveInsight && onKeepInsight && (
             <div className="diary-insight-resolution">
               <b>해결됐나요?</b>
               <div className="diary-insight-actions" aria-label="경고 해결 여부">
@@ -3085,9 +3194,9 @@ function DiaryInsightBanner({
               </div>
             </div>
           )}
-          {insight.action !== 'shed-check' && !followedUpInsightIds.includes(insight.id) && (onCreateQna || onFindHospital) && (
+          {insight.action !== 'shed-check' && insight.action !== 'shed-cycle-check' && !followedUpInsightIds.includes(insight.id) && (onCreateQna || onFindHospital) && (
             <div className="diary-insight-actions">
-              {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna() }}>Q&amp;A에 도움받기</button>}
+              {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'shed' ? '탈피 질문 작성' : 'Q&A에 도움받기'}</button>}
               {onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital() }}>병원 찾으러 가기</button>}
             </div>
           )}
@@ -3112,7 +3221,7 @@ export function DataVisualization({
 }: {
   records: PetRecord[]
   petName: string
-  onCreateQna?: () => void
+  onCreateQna?: (metric?: DiaryInsight['metric']) => void
   onShedComplete?: () => void
   onShedNotYet?: () => void
   resolvedInsightIds?: string[]
@@ -3122,7 +3231,7 @@ export function DataVisualization({
   onKeepInsight?: (insightId: string) => void
   onFindHospital?: () => void
 }) {
-  const [activeMetric, setActiveMetric] = useState<'shed' | 'environment' | 'weight' | 'poop'>('shed')
+  const [activeMetric, setActiveMetric] = useState<'shed' | 'environment' | 'weight' | 'poop' | 'mating' | 'egg'>('shed')
   const measuredRecords = deduplicateMeasuredRecordsByDay(records)
   const environmentRecords = measuredRecords
     .filter((record) => record.environmentRecord)
@@ -3134,13 +3243,17 @@ export function DataVisualization({
   const shedRecords = records.filter((record) => record.type === 'shed').sort(compareRecordTime)
   const shedSummary = getShedCycleSummary(shedRecords)
   const poopRecords = records.filter((record) => record.type === 'poop').sort(compareRecordTime)
-  const hasAnyData = environmentRecords.length > 0 || weightRecords.length > 0 || shedSummary.count > 0 || poopRecords.length > 0
+  const matingRecords = records.filter(isMatingRecord).sort(compareRecordTime)
+  const eggRecords = records.filter(isEggRecord).sort(compareRecordTime)
+  const hasAnyData = environmentRecords.length > 0 || weightRecords.length > 0 || shedSummary.count > 0 || poopRecords.length > 0 || matingRecords.length > 0 || eggRecords.length > 0
   if (!hasAnyData) return <div className="data-visualization"><DataVisualizationHeader petName={petName} onCreateQna={onCreateQna} /><div className="data-visualization-empty">아직 모아볼 기록이 없어요.</div></div>
   const metricCounts = {
     shed: shedSummary.count,
     environment: environmentRecords.length,
     weight: weightRecords.length,
     poop: poopRecords.length,
+    mating: matingRecords.length,
+    egg: eggRecords.length,
   }
   const firstAvailableMetric = (Object.keys(metricCounts) as Array<keyof typeof metricCounts>).find((metric) => metricCounts[metric] > 0) ?? 'shed'
   const selectedMetric = metricCounts[activeMetric] > 0 ? activeMetric : firstAvailableMetric
@@ -3155,6 +3268,8 @@ export function DataVisualization({
         <button className={selectedMetric === 'environment' ? 'active' : ''} type="button" onClick={() => setActiveMetric('environment')}>온습도 <span>{metricCounts.environment}</span></button>
         <button className={selectedMetric === 'weight' ? 'active' : ''} type="button" onClick={() => setActiveMetric('weight')}>체중 <span>{metricCounts.weight}</span></button>
         <button className={selectedMetric === 'poop' ? 'active' : ''} type="button" onClick={() => setActiveMetric('poop')}>배변 <span>{metricCounts.poop}</span></button>
+        <button className={selectedMetric === 'mating' ? 'active' : ''} type="button" onClick={() => setActiveMetric('mating')}>메이팅 <span>{metricCounts.mating}</span></button>
+        <button className={selectedMetric === 'egg' ? 'active' : ''} type="button" onClick={() => setActiveMetric('egg')}>산란 <span>{metricCounts.egg}</span></button>
       </div>
       {selectedMetric === 'shed' && (shedRecords.length > 0 ? <ShedCycleChart records={shedRecords} /> : <MetricEmpty label="탈피 기록" />)}
       {selectedMetric === 'environment' && (
@@ -3164,15 +3279,17 @@ export function DataVisualization({
       )}
       {selectedMetric === 'weight' && (weightRecords.length > 0 ? <WeightLineChart records={weightRecords} /> : <MetricEmpty label="체중 기록" />)}
       {selectedMetric === 'poop' && (poopRecords.length > 0 ? <PoopStatusChart records={poopRecords} /> : <MetricEmpty label="배변 기록" />)}
+      {selectedMetric === 'mating' && (matingRecords.length > 0 ? <EventIntervalChart title="메이팅 간격" records={matingRecords} /> : <MetricEmpty label="메이팅 기록" />)}
+      {selectedMetric === 'egg' && (eggRecords.length > 0 ? <EggStatusChart records={eggRecords} /> : <MetricEmpty label="산란 기록" />)}
     </div>
   )
 }
 
-function DataVisualizationHeader({ petName, onCreateQna }: { petName: string; onCreateQna?: () => void }) {
+function DataVisualizationHeader({ petName, onCreateQna }: { petName: string; onCreateQna?: (metric?: DiaryInsight['metric']) => void }) {
   return (
     <header className="data-visualization-heading">
       <div><h2>{petName} 기록 모아보기</h2></div>
-      {onCreateQna && <button className="record-collection-qna" type="button" onClick={onCreateQna}>Q&A 작성하기</button>}
+      {onCreateQna && <button className="record-collection-qna" type="button" onClick={() => onCreateQna()}>Q&A 작성하기</button>}
     </header>
   )
 }
@@ -3300,6 +3417,47 @@ function buildShedInsight(records: PetRecord[], petName: string): DiaryInsight |
         ? `${durationHint}${petName}의 탈피 시작 기록 후 ${days}일이 지났어요. 탈피가 끝났는지 확인해주세요.`
         : `${durationHint}${petName}의 탈피 시작 기록이 있어요. 탈피가 끝났다면 완료로 남겨주세요.`,
       action: 'shed-check',
+    }
+  }
+  const cycle = getShedCyclePrediction(records)
+  if (cycle && cycle.daysUntilExpected <= 0) {
+    const overdueDays = Math.abs(cycle.daysUntilExpected)
+    const latestNotCompleted = records
+      .filter((record) => record.type === 'shed' && record.memo?.includes('완료 안됨') && record.date >= cycle.lastCompletedDate)
+      .sort(compareRecordTime)
+      .at(-1)
+    if (!latestNotCompleted) {
+      return {
+        id: `shed-cycle-check-${cycle.lastCompletedDate}`,
+        metric: 'shed',
+        level: 'notice',
+        title: `평균 ${cycle.averageCycleDays}일 주기예요. 탈피를 완료했나요?`,
+        body: `${petName}의 이전 탈피 완료 기록 간격을 기준으로 확인할 시점이에요.`,
+        action: 'shed-cycle-check',
+      }
+    }
+    const latestHumidity = records
+      .filter((record) => record.environmentRecord?.metricType === 'humidity')
+      .sort(compareRecordTime)
+      .at(-1)?.environmentRecord
+    const humidityIsLow = latestHumidity?.riskDirection === 'low' || (latestHumidity ? latestHumidity.value < latestHumidity.minValue : false)
+    if (humidityIsLow) {
+      return {
+        id: `shed-cycle-humidity-${cycle.lastCompletedDate}`,
+        metric: 'shed',
+        level: overdueDays >= 7 ? 'caution' : 'notice',
+        title: `탈피 확인이 필요해요.`,
+        body: `${petName}의 최근 습도가 기록 당시 범위보다 낮아요. 습도가 낮아 탈피가 지연될 수 있으니 환경을 먼저 확인해주세요.`,
+      }
+    }
+    return {
+      id: `shed-cycle-delay-${cycle.lastCompletedDate}`,
+      metric: 'shed',
+      level: overdueDays >= 7 ? 'caution' : 'notice',
+      title: `탈피 부전 가능성도 있어요. 확인이 필요해요.`,
+      body: overdueDays >= 7
+        ? `${petName}의 예상 시점이 ${overdueDays}일 지났어요. 탈피 부전 가능성도 있어 확인이 필요해요. 기록을 첨부해 질문하거나 특수동물 병원에 상담해보세요.`
+        : `${petName}의 최근 탈피 간격을 기준으로 예상 시점이 지났어요. 탈피 여부와 사육 환경을 확인해주세요.`,
     }
   }
   return null
@@ -3462,6 +3620,42 @@ function averageDurationDays(records: Array<PetRecord & { duration?: number }>) 
   return Math.round(durations.reduce((sum, duration) => sum + duration, 0) / durations.length)
 }
 
+function getCompletedShedDates(records: PetRecord[]) {
+  const summary = getShedCycleSummary(records)
+  const pairedIds = new Set(summary.completedCycles.flatMap((record) => record.sourceIds ?? []))
+  const standalone = records.filter((record) => record.type === 'shed' && isCompletedShed(record) && !pairedIds.has(record.id))
+  return [...summary.completedCycles, ...standalone]
+    .map((record) => record.date)
+    .filter((date, index, dates) => dates.indexOf(date) === index)
+    .sort()
+}
+
+function getShedCyclePrediction(records: PetRecord[]) {
+  const dates = getCompletedShedDates(records)
+  if (dates.length < 2) return null
+  const intervals = dates.slice(1).map((date, index) => Math.max(1, daysBetween(dates[index], date)))
+  const averageCycleDays = Math.round(intervals.reduce((sum, days) => sum + days, 0) / intervals.length)
+  const lastCompletedDate = dates.at(-1) as string
+  const expected = new Date(`${lastCompletedDate}T00:00:00`)
+  expected.setDate(expected.getDate() + averageCycleDays)
+  const expectedDate = toDateKey(expected)
+  return {
+    averageCycleDays,
+    expectedDate,
+    lastCompletedDate,
+    daysUntilExpected: daysBetween(toDateKey(new Date()), expectedDate),
+  }
+}
+
+function buildIntervalRecords(records: PetRecord[]) {
+  const sorted = records.slice().sort(compareRecordTime)
+  return sorted.slice(1).map((record, index) => ({
+    ...record,
+    id: `interval-${sorted[index].id}-${record.id}`,
+    intervalDays: Math.max(1, daysBetween(sorted[index].date, record.date)),
+  }))
+}
+
 function SimpleLineChart({ title, subtitle = '날짜별 변화', unit, records, getValue }: { title: string; subtitle?: string; unit: string; records: PetRecord[]; getValue: (record: PetRecord) => number }) {
   const width = 520
   const height = 190
@@ -3496,10 +3690,31 @@ function WeightLineChart({ records }: { records: PetRecord[] }) {
 
 function ShedCycleChart({ records }: { records: PetRecord[] }) {
   const durations = buildShedDurationRecords(records)
-  const average = averageDurationDays(durations)
+  const durationAverage = averageDurationDays(durations)
+  const completedDates = getCompletedShedDates(records)
+  const cycleRecords = buildIntervalRecords(completedDates.map((date) => ({ id: `shed-complete-${date}`, userId: '', petId: '', type: 'shed' as const, date, createdAt: `${date}T00:00:00` })))
+  const cycleAverage = cycleRecords.length ? Math.round(cycleRecords.reduce((sum, record) => sum + record.intervalDays, 0) / cycleRecords.length) : 0
   const ongoing = getOngoingShedRecord(records)
-  if (durations.length === 0) return <section className="environment-chart shed-cycle-status"><header><strong>탈피</strong><span>{ongoing ? '진행 중' : '완료 기록 없음'}</span></header></section>
-  return <SimpleLineChart title="탈피" subtitle={`${ongoing ? '진행 중 · ' : ''}평균 ${average}일`} unit="일" records={durations} getValue={(record) => 'duration' in record ? Number(record.duration) : 0} />
+  if (cycleRecords.length > 0) return <SimpleLineChart title="탈피 주기" subtitle={`평균 ${cycleAverage}일${durationAverage ? ` · 평균 완료 기간 ${durationAverage}일` : ''}`} unit="일" records={cycleRecords} getValue={(record) => 'intervalDays' in record ? Number(record.intervalDays) : 0} />
+  if (durations.length > 0) return <SimpleLineChart title="탈피 기간" subtitle={`${ongoing ? '진행 중 · ' : ''}평균 ${durationAverage}일`} unit="일" records={durations} getValue={(record) => 'duration' in record ? Number(record.duration) : 0} />
+  return <section className="environment-chart shed-cycle-status"><header><strong>탈피</strong><span>{ongoing ? '진행 중' : '주기 계산에는 완료 기록이 2회 이상 필요해요.'}</span></header></section>
+}
+
+function EventIntervalChart({ title, records }: { title: string; records: PetRecord[] }) {
+  const intervals = buildIntervalRecords(records)
+  if (intervals.length === 0) return <section className="environment-chart shed-cycle-status"><header><strong>{title}</strong><span>간격 계산에는 기록이 2회 이상 필요해요.</span></header></section>
+  const average = Math.round(intervals.reduce((sum, record) => sum + record.intervalDays, 0) / intervals.length)
+  return <SimpleLineChart title={title} subtitle={`평균 ${average}일`} unit="일" records={intervals} getValue={(record) => 'intervalDays' in record ? Number(record.intervalDays) : 0} />
+}
+
+function EggStatusChart({ records }: { records: PetRecord[] }) {
+  const counts = [
+    { label: '무정란', count: records.filter((record) => eggFertility(record) === 'unfertilized').length, color: 'var(--color-primary-300)' },
+    { label: '유정란', count: records.filter((record) => eggFertility(record) === 'fertilized').length, color: 'var(--color-primary-600)' },
+    { label: '구분 없음', count: records.filter((record) => eggFertility(record) === 'unknown').length, color: 'var(--color-neutral-300)' },
+  ].filter((item) => item.count > 0)
+  const total = Math.max(1, counts.reduce((sum, item) => sum + item.count, 0))
+  return <section className="poop-status-chart"><header><strong>산란 기록</strong><span>기록한 알 상태</span></header><div>{counts.map((item) => <span key={item.label}><b>{item.label}</b><i style={{ width: `${(item.count / total) * 100}%`, background: item.color }} /><em>{item.count}회</em></span>)}</div></section>
 }
 
 function PoopStatusChart({ records }: { records: PetRecord[] }) {
@@ -3556,7 +3771,7 @@ function EnvironmentLineChart({ title, records }: { title: string; records: PetR
   )
 }
 
-function DataVisualizationScreen({ records, petName, onBack, onCreateQna, onFindHospital, onShedComplete, onShedNotYet, resolvedInsightIds, followedUpInsightIds, onFollowUpInsight, onResolveInsight, onKeepInsight }: { records: PetRecord[]; petName: string; onBack: () => void; onCreateQna?: () => void; onFindHospital?: () => void; onShedComplete?: () => void; onShedNotYet?: () => void; resolvedInsightIds?: string[]; followedUpInsightIds?: string[]; onFollowUpInsight?: (insightId: string) => void; onResolveInsight?: (insightId: string) => void; onKeepInsight?: (insightId: string) => void }) {
+function DataVisualizationScreen({ records, petName, onBack, onCreateQna, onFindHospital, onShedComplete, onShedNotYet, resolvedInsightIds, followedUpInsightIds, onFollowUpInsight, onResolveInsight, onKeepInsight }: { records: PetRecord[]; petName: string; onBack: () => void; onCreateQna?: (metric?: DiaryInsight['metric']) => void; onFindHospital?: () => void; onShedComplete?: () => void; onShedNotYet?: () => void; resolvedInsightIds?: string[]; followedUpInsightIds?: string[]; onFollowUpInsight?: (insightId: string) => void; onResolveInsight?: (insightId: string) => void; onKeepInsight?: (insightId: string) => void }) {
   return <main className="diary-create-screen data-visualization-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}>←</button><strong>기록 모아보기</strong><span /></header><DataVisualization records={records} petName={petName} onCreateQna={onCreateQna} onFindHospital={onFindHospital} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} /></main>
 }
 
@@ -3925,10 +4140,10 @@ function getRoutineTypeFromRecord(record: PetRecord): ReminderType | null {
 function calendarRecordTag(record: PetRecord): CalendarRecordTag {
   if (record.type === 'poop') return { icon: recordMeta.poop.icon, iconSrc: incidentIconSrc.poop, label: recordMeta.poop.label, className: 'poop' }
   if (record.type === 'shed') return { icon: recordMeta.shed.icon, iconSrc: incidentIconSrc.shed, label: recordMeta.shed.label, className: 'shed' }
-  if (record.type === 'hospital') return { icon: recordMeta.hospital.icon, iconSrc: incidentIconSrc.hospital, label: record.memo === '진료 예정' ? '진료 예정' : '진료', className: 'hospital' }
+  if (record.type === 'hospital') return { icon: recordMeta.hospital.icon, iconSrc: incidentIconSrc.hospital, label: record.memo === '진료 예정' ? '진료 예정' : '진료', className: record.memo === '진료 예정' ? 'hospital planned' : 'hospital' }
   if (record.type === 'other' && record.memo?.startsWith('메이팅')) return { icon: '', iconSrc: incidentIconSrc.mating, label: '메이팅', className: 'mating' }
   if (record.type === 'other' && record.memo?.startsWith('산란')) return { icon: '', iconSrc: incidentIconSrc.egg, label: '산란', className: 'egg' }
-  if (record.type === 'other' && record.memo?.startsWith('약')) return { icon: '', iconSrc: incidentIconSrc.medicine, label: '약', className: 'medicine' }
+  if (record.type === 'other' && record.memo?.startsWith('약')) return { icon: '', iconSrc: incidentIconSrc.medicine, label: record.memo === '약 예정' ? '약 예정' : '약', className: record.memo === '약 예정' ? 'medicine planned' : 'medicine' }
 
   const routineType = getRoutineTypeFromRecord(record)
   const photoKey = routineType ? routinePhotoKeys[routineType] : undefined

@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "css:purge": "node scripts/purge-unused-css.mjs",
     "collect:hospitals": "node scripts/collect-exotic-hospitals.mjs",
+    "collect:hospital-evidence": "node scripts/collect-hospital-condition-evidence.mjs",
     "lint": "eslint . && node scripts/check-ui-architecture.mjs",
     "preview": "vite preview"
   },

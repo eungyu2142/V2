@@ -416,6 +416,61 @@
   }
 }
 
+/* Mobile color contract: neutral surfaces, clear borders, and saturated
+   selection states. Feature styles must not reintroduce pale mint panels. */
+@media (max-width: 760px) and (orientation: portrait) {
+  .section-block,
+  .my-pet-dashboard-panel,
+  .qna-feed-section,
+  .qna-detail-post,
+  .qna-comments,
+  .profile-card,
+  .settings-card,
+  .pet-card,
+  .pet-management-card,
+  .step-card,
+  .pet-complete-card,
+  .create-card {
+    border-color: var(--color-border) !important;
+    background: var(--color-surface) !important;
+  }
+
+  .filter-tags button,
+  .qna-filter-compact button,
+  .diary-mobile-tabs button,
+  .step-chip-grid button,
+  .choice-grid button,
+  .weekday-picker button {
+    border-color: var(--color-primary-300) !important;
+    background: var(--color-surface) !important;
+    color: var(--color-primary-700) !important;
+  }
+
+  .filter-tags button.active,
+  .filter-tags button[aria-selected='true'],
+  .qna-filter-compact button.active,
+  .qna-filter-compact button[aria-selected='true'],
+  .diary-mobile-tabs button.active,
+  .step-chip-grid button.active,
+  .step-chip-grid button[aria-pressed='true'],
+  .choice-grid button.active,
+  .choice-grid button[aria-pressed='true'],
+  .weekday-picker button.active,
+  .weekday-picker button[aria-pressed='true'] {
+    border-color: var(--color-primary-700) !important;
+    background: var(--color-primary-600) !important;
+    color: var(--color-surface) !important;
+  }
+
+  input,
+  select,
+  textarea {
+    border-color: var(--color-border) !important;
+    background: var(--color-surface) !important;
+    color: var(--color-text-primary) !important;
+  }
+}
+
 @media (max-width: 380px) {
   :root {
     --mobile-page-padding: 14px;

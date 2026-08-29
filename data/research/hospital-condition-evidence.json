@@ -1,0 +1,920 @@
+{
+  "generatedAt": "2026-08-29T02:22:38.692Z",
+  "screenIntegrated": false,
+  "purpose": "병원 추천 점수 계산 전 연구용 공개 검색 근거",
+  "disclaimer": "검색 노출 근거이며 의료 품질이나 치료 성공률을 보증하지 않는다. 병원 자체 콘텐츠와 실제 보호자 후기가 섞일 수 있어 원문 확인이 필요하다.",
+  "source": {
+    "provider": "Naver Search API",
+    "categories": [
+      "blog",
+      "cafe"
+    ],
+    "storesFullReviewBody": false
+  },
+  "selection": {
+    "catalogCount": 43,
+    "selectedHospitalCount": 5,
+    "method": "앱 병원 목록을 병원명·지역·파충류 키워드로 검색한 뒤 고유 공개 검색 결과 수 상위 후보를 선택"
+  },
+  "conditionCount": 21,
+  "conditions": [
+    {
+      "id": "shedding",
+      "label": "탈피",
+      "query": "탈피 탈피부전 잔존탈피",
+      "keywords": [
+        "탈피",
+        "탈피부전",
+        "잔존 탈피"
+      ]
+    },
+    {
+      "id": "defecation",
+      "label": "배변",
+      "query": "배변 설사 변비 분변검사",
+      "keywords": [
+        "배변",
+        "설사",
+        "변비",
+        "분변",
+        "묽은 변",
+        "딱딱한 변"
+      ]
+    },
+    {
+      "id": "egg_laying",
+      "label": "산란",
+      "query": "산란 난산 에그바인딩",
+      "keywords": [
+        "산란",
+        "난산",
+        "에그바인딩"
+      ]
+    },
+    {
+      "id": "mbd",
+      "label": "MBD(대사성 골질환)",
+      "query": "MBD 대사성 골질환",
+      "keywords": [
+        "MBD",
+        "대사성 골질환",
+        "대사성골질환"
+      ]
+    },
+    {
+      "id": "dystocia_egg_binding",
+      "label": "난산/에그바인딩",
+      "query": "난산 에그바인딩",
+      "keywords": [
+        "난산",
+        "에그바인딩"
+      ]
+    },
+    {
+      "id": "dysecdysis",
+      "label": "탈피부전",
+      "query": "탈피부전 잔존탈피",
+      "keywords": [
+        "탈피부전",
+        "잔존 탈피",
+        "잔존탈피"
+      ]
+    },
+    {
+      "id": "stomatitis",
+      "label": "구내염",
+      "query": "구내염 입병",
+      "keywords": [
+        "구내염",
+        "입병"
+      ]
+    },
+    {
+      "id": "respiratory_infection",
+      "label": "호흡기 감염",
+      "query": "호흡기 감염 호흡기질환",
+      "keywords": [
+        "호흡기 감염",
+        "호흡기감염",
+        "호흡기 질환",
+        "호흡기질환"
+      ]
+    },
+    {
+      "id": "pneumonia",
+      "label": "폐렴",
+      "query": "폐렴",
+      "keywords": [
+        "폐렴"
+      ]
+    },
+    {
+      "id": "impaction",
+      "label": "장폐색/임팩션",
+      "query": "장폐색 임팩션",
+      "keywords": [
+        "장폐색",
+        "임팩션"
+      ]
+    },
+    {
+      "id": "prolapse",
+      "label": "탈항",
+      "query": "탈항 총배설강 탈출",
+      "keywords": [
+        "탈항",
+        "총배설강 탈출",
+        "총배설강탈출"
+      ]
+    },
+    {
+      "id": "internal_parasites",
+      "label": "내부기생충",
+      "query": "내부기생충 분변검사",
+      "keywords": [
+        "내부기생충",
+        "내부 기생충",
+        "분변검사",
+        "분변 검사"
+      ]
+    },
+    {
+      "id": "external_parasites",
+      "label": "외부기생충",
+      "query": "외부기생충 진드기",
+      "keywords": [
+        "외부기생충",
+        "외부 기생충",
+        "진드기"
+      ]
+    },
+    {
+      "id": "dermatitis",
+      "label": "피부염",
+      "query": "피부염 피부질환",
+      "keywords": [
+        "피부염",
+        "피부 질환",
+        "피부질환"
+      ]
+    },
+    {
+      "id": "fungal_disease",
+      "label": "진균성 질환",
+      "query": "진균성 질환 곰팡이 감염",
+      "keywords": [
+        "진균성 질환",
+        "진균성질환",
+        "곰팡이 감염",
+        "곰팡이감염"
+      ]
+    },
+    {
+      "id": "abscess",
+      "label": "농양",
+      "query": "농양",
+      "keywords": [
+        "농양"
+      ]
+    },
+    {
+      "id": "fracture",
+      "label": "골절",
+      "query": "골절",
+      "keywords": [
+        "골절"
+      ]
+    },
+    {
+      "id": "dehydration",
+      "label": "탈수",
+      "query": "탈수",
+      "keywords": [
+        "탈수"
+      ]
+    },
+    {
+      "id": "hypocalcemia",
+      "label": "저칼슘혈증",
+      "query": "저칼슘혈증 칼슘 부족",
+      "keywords": [
+        "저칼슘혈증",
+        "저칼슘",
+        "칼슘 부족",
+        "칼슘부족"
+      ]
+    },
+    {
+      "id": "follicular_stasis",
+      "label": "난포 정체",
+      "query": "난포 정체 난포정체",
+      "keywords": [
+        "난포 정체",
+        "난포정체"
+      ]
+    },
+    {
+      "id": "reproductive_prolapse",
+      "label": "생식기 탈출",
+      "query": "생식기 탈출 생식기 탈장",
+      "keywords": [
+        "생식기 탈출",
+        "생식기탈출",
+        "생식기 탈장",
+        "생식기탈장"
+      ]
+    }
+  ],
+  "hospitals": [
+    {
+      "id": "exotic_97ba7f50",
+      "name": "펫인쥬동물메디컬센터",
+      "address": "경기도 의정부시 호국로 1336 2층",
+      "supportedAnimals": [
+        "reptile"
+      ],
+      "candidateEvidenceCount": 33,
+      "conditions": {
+        "shedding": {
+          "label": "탈피",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "defecation": {
+          "label": "배변",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "egg_laying": {
+          "label": "산란",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "mbd": {
+          "label": "MBD(대사성 골질환)",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dystocia_egg_binding": {
+          "label": "난산/에그바인딩",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dysecdysis": {
+          "label": "탈피부전",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "stomatitis": {
+          "label": "구내염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "respiratory_infection": {
+          "label": "호흡기 감염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "pneumonia": {
+          "label": "폐렴",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "impaction": {
+          "label": "장폐색/임팩션",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "prolapse": {
+          "label": "탈항",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "internal_parasites": {
+          "label": "내부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "external_parasites": {
+          "label": "외부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dermatitis": {
+          "label": "피부염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fungal_disease": {
+          "label": "진균성 질환",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "abscess": {
+          "label": "농양",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fracture": {
+          "label": "골절",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dehydration": {
+          "label": "탈수",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "hypocalcemia": {
+          "label": "저칼슘혈증",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "follicular_stasis": {
+          "label": "난포 정체",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "reproductive_prolapse": {
+          "label": "생식기 탈출",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        }
+      }
+    },
+    {
+      "id": "exotic_8035f844",
+      "name": "에코동물병원",
+      "address": "서울특별시 송파구 동남로 161 101호",
+      "supportedAnimals": [
+        "reptile"
+      ],
+      "candidateEvidenceCount": 21,
+      "conditions": {
+        "shedding": {
+          "label": "탈피",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "defecation": {
+          "label": "배변",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "egg_laying": {
+          "label": "산란",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "mbd": {
+          "label": "MBD(대사성 골질환)",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dystocia_egg_binding": {
+          "label": "난산/에그바인딩",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dysecdysis": {
+          "label": "탈피부전",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "stomatitis": {
+          "label": "구내염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "respiratory_infection": {
+          "label": "호흡기 감염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "pneumonia": {
+          "label": "폐렴",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "impaction": {
+          "label": "장폐색/임팩션",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "prolapse": {
+          "label": "탈항",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "internal_parasites": {
+          "label": "내부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "external_parasites": {
+          "label": "외부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dermatitis": {
+          "label": "피부염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fungal_disease": {
+          "label": "진균성 질환",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "abscess": {
+          "label": "농양",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fracture": {
+          "label": "골절",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dehydration": {
+          "label": "탈수",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "hypocalcemia": {
+          "label": "저칼슘혈증",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "follicular_stasis": {
+          "label": "난포 정체",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "reproductive_prolapse": {
+          "label": "생식기 탈출",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        }
+      }
+    },
+    {
+      "id": "exotic_e2f69c2a",
+      "name": "맘스동물의료센터",
+      "address": "경기도 부천시 원미구 길주로 80 로얄타워 2층",
+      "supportedAnimals": [
+        "reptile"
+      ],
+      "candidateEvidenceCount": 16,
+      "conditions": {
+        "shedding": {
+          "label": "탈피",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "defecation": {
+          "label": "배변",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "egg_laying": {
+          "label": "산란",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "mbd": {
+          "label": "MBD(대사성 골질환)",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dystocia_egg_binding": {
+          "label": "난산/에그바인딩",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dysecdysis": {
+          "label": "탈피부전",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "stomatitis": {
+          "label": "구내염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "respiratory_infection": {
+          "label": "호흡기 감염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "pneumonia": {
+          "label": "폐렴",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "impaction": {
+          "label": "장폐색/임팩션",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "prolapse": {
+          "label": "탈항",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "internal_parasites": {
+          "label": "내부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "external_parasites": {
+          "label": "외부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dermatitis": {
+          "label": "피부염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fungal_disease": {
+          "label": "진균성 질환",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "abscess": {
+          "label": "농양",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fracture": {
+          "label": "골절",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dehydration": {
+          "label": "탈수",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "hypocalcemia": {
+          "label": "저칼슘혈증",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "follicular_stasis": {
+          "label": "난포 정체",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "reproductive_prolapse": {
+          "label": "생식기 탈출",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        }
+      }
+    },
+    {
+      "id": "exotic_1e2af289",
+      "name": "아우름동물병원",
+      "address": "서울특별시 동작구 사당로 268 1층",
+      "supportedAnimals": [
+        "reptile"
+      ],
+      "candidateEvidenceCount": 10,
+      "conditions": {
+        "shedding": {
+          "label": "탈피",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "defecation": {
+          "label": "배변",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "egg_laying": {
+          "label": "산란",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "mbd": {
+          "label": "MBD(대사성 골질환)",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dystocia_egg_binding": {
+          "label": "난산/에그바인딩",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dysecdysis": {
+          "label": "탈피부전",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "stomatitis": {
+          "label": "구내염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "respiratory_infection": {
+          "label": "호흡기 감염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "pneumonia": {
+          "label": "폐렴",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "impaction": {
+          "label": "장폐색/임팩션",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "prolapse": {
+          "label": "탈항",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "internal_parasites": {
+          "label": "내부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "external_parasites": {
+          "label": "외부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dermatitis": {
+          "label": "피부염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fungal_disease": {
+          "label": "진균성 질환",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "abscess": {
+          "label": "농양",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fracture": {
+          "label": "골절",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dehydration": {
+          "label": "탈수",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "hypocalcemia": {
+          "label": "저칼슘혈증",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "follicular_stasis": {
+          "label": "난포 정체",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "reproductive_prolapse": {
+          "label": "생식기 탈출",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        }
+      }
+    },
+    {
+      "id": "exotic_b051c3e9",
+      "name": "한성동물병원",
+      "address": "서울특별시 관악구 신림로 265 1층",
+      "supportedAnimals": [
+        "reptile"
+      ],
+      "candidateEvidenceCount": 9,
+      "conditions": {
+        "shedding": {
+          "label": "탈피",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "defecation": {
+          "label": "배변",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "egg_laying": {
+          "label": "산란",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "mbd": {
+          "label": "MBD(대사성 골질환)",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dystocia_egg_binding": {
+          "label": "난산/에그바인딩",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dysecdysis": {
+          "label": "탈피부전",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "stomatitis": {
+          "label": "구내염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "respiratory_infection": {
+          "label": "호흡기 감염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "pneumonia": {
+          "label": "폐렴",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "impaction": {
+          "label": "장폐색/임팩션",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "prolapse": {
+          "label": "탈항",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "internal_parasites": {
+          "label": "내부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "external_parasites": {
+          "label": "외부기생충",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dermatitis": {
+          "label": "피부염",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fungal_disease": {
+          "label": "진균성 질환",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "abscess": {
+          "label": "농양",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "fracture": {
+          "label": "골절",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "dehydration": {
+          "label": "탈수",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "hypocalcemia": {
+          "label": "저칼슘혈증",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "follicular_stasis": {
+          "label": "난포 정체",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        },
+        "reproductive_prolapse": {
+          "label": "생식기 탈출",
+          "status": "insufficient_evidence",
+          "evidenceCount": 0,
+          "evidence": []
+        }
+      }
+    }
+  ],
+  "collection": {
+    "requestCount": 296,
+    "requestDelayMs": 120,
+    "errors": []
+  }
+}
