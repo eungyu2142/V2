@@ -14,7 +14,7 @@ import { dataUrlToImageFile, removeUploadedImage, uploadImageFile } from './lib/
 import { deleteHospitalLike, getHospitalLikeKey, mergeLocalHospitalLikes, saveHospitalLike } from './lib/hospitalLikes'
 import { deactivatePushSubscriptionForLogout, syncCurrentDevicePushSubscription } from './lib/pushNotifications'
 import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
-import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaCategory, QnaPost, Tab } from './types/app'
+import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalRecommendationConcern, HospitalReview, HospitalSnapshot, Pet, QnaCategory, QnaPost, Tab } from './types/app'
 export type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost } from './types/app'
 
 const AuthScreen = lazy(() => import('./components/AuthScreen'))
@@ -85,6 +85,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [qnaInitialPreset, setQnaInitialPreset] = useState<{ category: QnaCategory; title: string } | null>(null)
   const [editingDraft, setEditingDraft] = useState<DraftItem | null>(null)
   const [mapFocusHospital, setMapFocusHospital] = useState<HospitalSnapshot | null>(null)
+  const [mapRecommendationConcern, setMapRecommendationConcern] = useState<HospitalRecommendationConcern | null>(null)
   const [diaryClinicHospital, setDiaryClinicHospital] = useState<HospitalSnapshot | null>(null)
   const [currentPetId, setCurrentPetId] = useState<string | null>(initialUrlState.petId)
   const [pets, setPets] = useState<Pet[]>([])
@@ -240,6 +241,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setDiaryReadOnly(false)
     }
     if (tab !== 'qna') setQnaInitialPetId(null)
+    if (tab !== 'map') setMapRecommendationConcern(null)
     setCreateMode(null)
     setEditingPet(null)
     setEditingDraft(null)
@@ -365,8 +367,9 @@ function AuthenticatedApp({ session }: { session: Session }) {
     syncAppUrl('qna', validPetId)
   }
 
-  const openPetHospitalSearch = (petId: string) => {
+  const openPetHospitalSearch = (petId: string, concern?: HospitalRecommendationConcern) => {
     if (pets.some((pet) => pet.id === petId)) setCurrentPetId(petId)
+    setMapRecommendationConcern(concern ?? null)
     moveTab('map')
   }
 
@@ -662,7 +665,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
         </div>
       </header>}
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={updateLikedHospitals} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} recommendationConcern={mapRecommendationConcern} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={updateLikedHospitals} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">

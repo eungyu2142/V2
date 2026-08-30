@@ -4,13 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "node scripts/guard-qna-label.mjs && node scripts/check-ui-architecture.mjs",
+    "prebuild": "node scripts/guard-qna-label.mjs && node scripts/check-ui-architecture.mjs && node scripts/build-hospital-condition-evidence-runtime.mjs",
     "dev": "vite --configLoader native",
     "dev:chrome": "start \"\" chrome \"http://localhost:5173/\" && vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "css:purge": "node scripts/purge-unused-css.mjs",
     "collect:hospitals": "node scripts/collect-exotic-hospitals.mjs",
-    "collect:hospital-evidence": "node scripts/collect-hospital-condition-evidence.mjs",
+    "collect:hospital-evidence": "node scripts/collect-hospital-condition-evidence.mjs && node scripts/build-hospital-condition-evidence-runtime.mjs",
+    "collect:hospital-evidence-priority": "node scripts/expand-priority-hospital-evidence.mjs",
     "lint": "eslint . && node scripts/check-ui-architecture.mjs",
     "preview": "vite preview"
   },

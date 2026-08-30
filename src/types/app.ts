@@ -5,6 +5,7 @@ export type Tab = 'pets' | 'diary' | 'map' | 'qna' | 'profile'
 export type CreateMode = 'pet' | 'post' | null
 export type AnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
 export type HospitalSort = 'distance' | 'reviews' | 'rating'
+export type HospitalRecommendationConcern = 'shed' | 'poop'
 export type MobileMapSheetState = 'collapsed' | 'middle' | 'expanded'
 export type HospitalOpeningHours = {
   openNow?: boolean

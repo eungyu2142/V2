@@ -600,7 +600,7 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
   const [recordCount, setRecordCount] = useState<number | null>(null)
   const [recordCountPetId, setRecordCountPetId] = useState<string | null>(null)
   const [recordAttachOpen, setRecordAttachOpen] = useState(false)
-  const [recordCandidates] = useState<PetRecord[]>([])
+  const [recordCandidates, setRecordCandidates] = useState<PetRecord[]>([])
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([])
   const autoAttachedRef = useRef(false)
   const pet = pets.find((item) => item.id === petId)
@@ -687,18 +687,16 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
   }, [hasNoAnimal, loadPetRecords, pet, petId, step])
 
   const openRecordAttach = async () => {
-    if (attachedDiary) return
     if (hasNoAnimal || !petId || !pet || diaryLoading) return
     setDiaryLoading(true)
     try {
       const petRecords = await loadPetRecords()
       if (!petRecords) return
-      if (petRecords.length <= 1) {
-        setRecordCount(petRecords.length)
-        return
-      }
-      const attachment = makeDiaryAttachment(petRecords)
-      if (attachment) setAttachedDiary(attachment)
+      setRecordCount(petRecords.length)
+      setRecordCountPetId(petId)
+      setRecordCandidates(petRecords)
+      setSelectedRecordIds(attachedDiary?.records.map((record) => record.id) ?? [])
+      setRecordAttachOpen(true)
     } finally {
       setDiaryLoading(false)
     }
@@ -708,6 +706,7 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
     const attachment = makeDiaryAttachment(records)
     if (!attachment) return
     setAttachedDiary(attachment)
+    setSelectedRecordIds(records.map((record) => record.id))
     setRecordAttachOpen(false)
   }
 
@@ -801,8 +800,8 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
           <button type="button" aria-label="첨부 사진 삭제" onClick={() => removeImage(item.id)}>삭제</button>
         </div>)}</div>}
         {attachedRecord && <RecordAttachCard record={attachedRecord} mode="draft" onRemove={() => setAttachedRecord(null)} />}
-        {!startedFromDiary && !hasNoAnimal && petId && <div className="qna-compose-tools">
-          <button type="button" disabled={!attachedDiary && (diaryLoading || recordCountPetId !== petId || recordCount === null || recordCount <= 1)} onClick={openRecordAttach}>{attachedDiary ? '기록 첨부됨' : diaryLoading ? '기록 불러오는 중' : '기록 첨부'}</button>
+        {!hasNoAnimal && petId && <div className="qna-compose-tools">
+          <button type="button" disabled={diaryLoading || (!attachedDiary && (recordCountPetId !== petId || recordCount === null || recordCount <= 0))} onClick={openRecordAttach}>{attachedDiary ? '기록 확인·변경' : diaryLoading ? '기록 불러오는 중' : '기록 첨부'}</button>
         </div>}
         <div>
           {diaryLoading && <DiaryTimelineSkeleton />}
@@ -841,7 +840,9 @@ function QnaRecordAttachSheet({
   onClose: () => void
   onSave: (records: PetRecord[]) => void
 }) {
-  const visibleRecords = records
+  const availableTypes = [...new Set(records.map(getQnaRecordAttachmentType))]
+  const [selectedTypes, setSelectedTypes] = useState<QnaRecordAttachmentType[]>(availableTypes)
+  const visibleRecords = records.filter((record) => selectedTypes.includes(getQnaRecordAttachmentType(record)))
   const grouped = visibleRecords.reduce<Record<string, PetRecord[]>>((groups, record) => {
     groups[record.date] = [...(groups[record.date] ?? []), record]
     return groups
@@ -859,6 +860,19 @@ function QnaRecordAttachSheet({
           <div><strong>{pet.name} 기록 첨부</strong><p>질문에 필요한 기록만 선택하세요.</p></div>
           <button type="button" aria-label="닫기" onClick={onClose}>×</button>
         </header>
+        <div className="qna-record-type-filters" aria-label="첨부할 기록 종류">
+          {availableTypes.map((type) => (
+            <button
+              className={selectedTypes.includes(type) ? 'active' : ''}
+              type="button"
+              key={type}
+              aria-pressed={selectedTypes.includes(type)}
+              onClick={() => setSelectedTypes((types) => types.includes(type) ? types.filter((item) => item !== type) : [...types, type])}
+            >
+              {qnaRecordAttachmentTypeLabels[type]}
+            </button>
+          ))}
+        </div>
         <div className="qna-record-selected-summary"><strong>기록 {selectedRecords.length}개 선택</strong><span>{rangeLabel}</span></div>
         {visibleRecords.length === 0 ? <p className="record-picker-empty">첨부할 기록이 없습니다. 다이어리에서 루틴을 완료한 뒤 다시 확인해 주세요.</p> : (
           <div className="qna-record-group-list">
@@ -871,7 +885,7 @@ function QnaRecordAttachSheet({
                   {items.map((record) => (
                     <label className="qna-record-check-row" key={record.id}>
                       <input type="checkbox" checked={selectedIds.includes(record.id)} onChange={() => onToggle(record.id)} />
-                      <span><strong>{recordTypeLabels[record.type]}</strong><small>{summarizeRecord(record)}</small></span>
+                      <span><strong>{qnaRecordAttachmentTypeLabels[getQnaRecordAttachmentType(record)]}</strong><small>{summarizeRecord(record)}</small></span>
                     </label>
                   ))}
                 </section>
@@ -886,6 +900,28 @@ function QnaRecordAttachSheet({
       </section>
     </div>
   )
+}
+
+type QnaRecordAttachmentType = 'food' | 'poop' | 'shed' | 'weight' | 'environment' | 'cleaning' | 'mating' | 'egg' | 'hospital' | 'other'
+
+const qnaRecordAttachmentTypeLabels: Record<QnaRecordAttachmentType, string> = {
+  food: '먹이',
+  poop: '배변',
+  shed: '탈피',
+  weight: '체중',
+  environment: '온습도',
+  cleaning: '청소',
+  mating: '메이팅',
+  egg: '산란',
+  hospital: '진료',
+  other: '기타',
+}
+
+function getQnaRecordAttachmentType(record: PetRecord): QnaRecordAttachmentType {
+  if (record.environmentRecord) return 'environment'
+  if (record.incidentRecord?.kind === 'mating') return 'mating'
+  if (record.incidentRecord?.kind === 'egg') return 'egg'
+  return record.type
 }
 
 function formatQnaDate(value: string) {

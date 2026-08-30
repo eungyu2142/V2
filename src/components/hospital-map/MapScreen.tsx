@@ -7,13 +7,26 @@ import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
 import { loadLikeStates, saveLike } from '../../lib/likes'
 import HospitalReviewForm from './MapAndReview'
 import HeartIcon from '../common/HeartIcon'
-import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
+import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalRecommendationConcern, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
 import { buildHospitalSearchQuery, createNaverHtmlMarker, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadNaverMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory } from './mapDependencies'
 import type { MapLatLngLiteral, NaverMapInstance, NaverMapListener, NaverMarker } from '../../types/map'
 const HOSPITAL_LIST_PAGE_SIZE = 10
 const HOSPITAL_REVIEWS_ENABLED = true
 const DEFAULT_MAP_CENTER: Coordinates = { lat: 37.5665, lng: 126.978 }
 const MAP_LOCATION_SESSION_KEY = 'exocare-map-location'
+type HospitalConditionEvidence = {
+  id: string
+  name: string
+  address: string
+  shedding: number
+  defecation: number
+}
+
+type HospitalConditionEvidenceData = {
+  generatedAt: string
+  disclaimer: string
+  hospitals: HospitalConditionEvidence[]
+}
 function HospitalAddressIcon() {
   return (
     <svg className="hospital-detail-meta-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -166,7 +179,30 @@ function readSessionMapLocation(): Coordinates | null {
   }
 }
 
-function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
+const hospitalRecommendationKeywords: Record<HospitalRecommendationConcern, readonly string[]> = {
+  shed: ['탈피', '탈피부전', '탈피 부전', '허물'],
+  poop: ['배변', '설사', '변비', '혈변', '이물질', '장폐색', '임팩션', '기생충', '분변'],
+}
+
+function countConcernReviews(reviews: HospitalReview[], concern: HospitalRecommendationConcern) {
+  const keywords = hospitalRecommendationKeywords[concern]
+  return reviews.filter((review) => {
+    const evidence = [
+      ...(review.tags ?? []),
+      review.diagnosis,
+      review.treatment,
+      review.body,
+      review.content,
+    ].filter(Boolean).join(' ').toLocaleLowerCase('ko-KR')
+    return keywords.some((keyword) => evidence.includes(keyword.toLocaleLowerCase('ko-KR')))
+  }).length
+}
+
+function normalizeHospitalEvidenceKey(value: string) {
+  return value.replace(/\s+/g, '').replace(/동물의료센터/g, '동물병원').toLocaleLowerCase('ko-KR')
+}
+
+function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recommendationConcern, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; recommendationConcern?: HospitalRecommendationConcern | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
   const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
   const [initialMapLocation] = useState<Coordinates | null>(readSessionMapLocation)
   const [query, setQuery] = useState('')
@@ -230,6 +266,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const [isSheetDragging, setIsSheetDragging] = useState(false)
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [visibleHospitalCount, setVisibleHospitalCount] = useState(HOSPITAL_LIST_PAGE_SIZE)
+  const [conditionEvidence, setConditionEvidence] = useState<HospitalConditionEvidenceData | null>(null)
+  const [conditionEvidenceStatus, setConditionEvidenceStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const mapElementRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<NaverMapInstance | null>(null)
   const mapClickListenerRef = useRef<NaverMapListener | null>(null)
@@ -241,6 +279,26 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   const sheetDragStartHeightRef = useRef(35)
   const mobileSheetHeightRef = useRef(35)
   const sheetDragPointerIdRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!recommendationConcern || conditionEvidence || conditionEvidenceStatus === 'error') return
+    let active = true
+    fetch('/data/hospital-condition-evidence.json')
+      .then((response) => {
+        if (!response.ok) throw new Error(`Hospital evidence load failed: ${response.status}`)
+        return response.json() as Promise<HospitalConditionEvidenceData>
+      })
+      .then((data) => {
+        if (!active) return
+        setConditionEvidence(data)
+        setConditionEvidenceStatus('ready')
+      })
+      .catch((error) => {
+        console.error(error)
+        if (active) setConditionEvidenceStatus('error')
+      })
+    return () => { active = false }
+  }, [conditionEvidence, conditionEvidenceStatus, recommendationConcern])
 
   function moveMapSmoothly(position: MapLatLngLiteral, zoom: number) {
     const map = mapInstanceRef.current
@@ -262,12 +320,55 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   }
 
   const sortedHospitals = useMemo(() => sortHospitalsByDistance(hospitals, currentLocation), [hospitals, currentLocation])
-  const filteredHospitals = useMemo(() => {
+  const conditionEvidenceByHospital = useMemo(() => {
+    const byId = new Map<string, HospitalConditionEvidence>()
+    const byName = new Map<string, HospitalConditionEvidence>()
+    for (const evidence of conditionEvidence?.hospitals ?? []) {
+      byId.set(evidence.id, evidence)
+      byName.set(normalizeHospitalEvidenceKey(evidence.name), evidence)
+    }
+    return { byId, byName }
+  }, [conditionEvidence])
+  const concernRecommendations = useMemo(() => {
+    if (!recommendationConcern) return []
     return sortedHospitals
+      .map((hospital) => {
+        const hospitalReviews = (reviews[hospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))
+        const evidence = conditionEvidenceByHospital.byId.get(hospital.id)
+          ?? conditionEvidenceByHospital.byName.get(normalizeHospitalEvidenceKey(hospital.name))
+        const researchEvidenceCount = recommendationConcern === 'shed' ? evidence?.shedding ?? 0 : evidence?.defecation ?? 0
+        const appReviewCount = countConcernReviews(hospitalReviews, recommendationConcern)
+        return {
+          hospital,
+          researchEvidenceCount,
+          appReviewCount,
+          totalEvidenceCount: researchEvidenceCount + appReviewCount,
+          averageRating: getReviewSummary(hospitalReviews).average,
+        }
+      })
+      .filter((item) => item.totalEvidenceCount > 0)
+      .sort((a, b) => b.totalEvidenceCount - a.totalEvidenceCount || b.researchEvidenceCount - a.researchEvidenceCount || b.averageRating - a.averageRating || (a.hospital.distanceKm ?? 9999) - (b.hospital.distanceKm ?? 9999))
+      .slice(0, 5)
+  }, [conditionEvidenceByHospital, recommendationConcern, reviews, sortedHospitals])
+  const concernRecommendationById = useMemo(
+    () => new Map(concernRecommendations.map((item, index) => [item.hospital.id, {
+      rank: index + 1,
+      researchEvidenceCount: item.researchEvidenceCount,
+      appReviewCount: item.appReviewCount,
+    }])),
+    [concernRecommendations],
+  )
+  const filteredHospitals = useMemo(() => {
+    const matchingHospitals = sortedHospitals
       .filter((hospital) => hospitalMatchesQuery(hospital, query))
       .filter((hospital) => selectedCategories.length === 0 || hospital.categories.some((category) => selectedCategories.includes(category)))
       .filter((hospital) => !openNowOnly || hospital.isOpenNow === true)
-      .sort((a, b) => {
+    if (recommendationConcern) {
+      return matchingHospitals
+        .filter((hospital) => concernRecommendationById.has(hospital.id))
+        .sort((a, b) => (concernRecommendationById.get(a.id)?.rank ?? 999) - (concernRecommendationById.get(b.id)?.rank ?? 999))
+    }
+    return matchingHospitals.sort((a, b) => {
         if (effectiveSelectedSort === 'rating') {
           const bRating = getReviewSummary((reviews[b.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).average
           const aRating = getReviewSummary((reviews[a.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory))).average
@@ -275,7 +376,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
         }
         return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)
       })
-  }, [effectiveSelectedSort, openNowOnly, query, reviews, selectedCategories, sortedHospitals])
+  }, [concernRecommendationById, effectiveSelectedSort, openNowOnly, query, recommendationConcern, reviews, selectedCategories, sortedHospitals])
   const visibleHospitals = filteredHospitals.slice(0, visibleHospitalCount)
   const visibleHospitalDetailIds = visibleHospitals
     .filter((hospital) => !hospital.googleDetailsLoaded)
@@ -964,8 +1065,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
             </div>
           </div>
           <div className="map-sheet-scroll-content">
+            {recommendationConcern && (
+              <div className="map-concern-recommendation-head">
+                <strong>{recommendationConcern === 'shed' ? '탈피 진료 근거 추천' : '배변 진료 근거 추천'}</strong>
+                <span>공개 검색 근거에 앱 방문 리뷰를 더한 병원 최대 5곳</span>
+              </div>
+            )}
             {filteredHospitals.length === 0 ? (
-              <p className="map-side-empty">검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.</p>
+              <p className="map-side-empty">{recommendationConcern && conditionEvidenceStatus !== 'ready' && conditionEvidenceStatus !== 'error' ? '병원 진료 근거를 불러오고 있어요.' : recommendationConcern ? `${recommendationConcern === 'shed' ? '탈피' : '배변'} 진료 추천에 사용할 근거가 아직 부족해요.` : '검색 버튼을 누르거나 분류를 바꿔 병원을 찾아보세요.'}</p>
             ) : (
               <>
                 {visibleHospitals.map((hospital) => (
@@ -973,6 +1080,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
                     hospital={hospital}
                     key={hospital.id}
                     active={hospital.id === selectedHospitalId}
+                    recommendation={concernRecommendationById.get(hospital.id)}
                     onSelect={() => setSelectedHospitalId(hospital.id)}
                   />
                 ))}
@@ -1169,12 +1277,13 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, reviewD
   )
 }
 
-function HospitalListRow({ hospital, active, onSelect }: { hospital: Hospital; active: boolean; onSelect: () => void }) {
+function HospitalListRow({ hospital, active, recommendation, onSelect }: { hospital: Hospital; active: boolean; recommendation?: { rank: number; researchEvidenceCount: number; appReviewCount: number }; onSelect: () => void }) {
   return (
     <article className={`map-hospital-row ${active ? 'active' : ''}`}>
       <button className="map-hospital-row-main" type="button" onClick={onSelect}>
         <span>
           <strong>{hospital.name}</strong>
+          {recommendation && <span className="hospital-recommendation-evidence"><b>{recommendation.rank}위</b> · 공개 근거 {recommendation.researchEvidenceCount}건 · 앱 리뷰 {recommendation.appReviewCount}개</span>}
           <small>
             <span>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</span>
             <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${getHospitalOpeningStatusClass(hospital)}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>

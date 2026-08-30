@@ -225,7 +225,7 @@ export async function settleSupersededOverdueTasks(userId: string, task: DailyTa
     .eq('pet_id', task.petId)
     .eq('task_type', task.taskType)
     .eq('status', 'pending')
-    .lt('scheduled_date', completedDate)
+    .lte('scheduled_date', completedDate)
     .neq('id', task.id)
     .select('id')
 
