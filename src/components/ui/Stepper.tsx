@@ -56,7 +56,7 @@ export function Stepper({ currentStep, stepCount, labels, onStepChange, classNam
             return (
               <span className={`is-${status}`} key={`${label}-${index}`}>
                 {status === 'completed' && <span className="ui-stepper__mobile-label-check">{'✓'}</span>}
-                <span className={status === 'completed' ? 'ui-stepper__desktop-label-number' : ''}>{index + 1}.</span> {label}
+                {label}
               </span>
             )
           })}

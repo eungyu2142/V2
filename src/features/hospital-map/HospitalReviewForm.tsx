@@ -157,12 +157,12 @@ export default function HospitalReviewForm({
   }
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    if (currentStep < reviewSteps.length - 1) {
-      event.preventDefault()
-      if (canMoveNext) setCurrentStep((step) => Math.min(step + 1, reviewSteps.length - 1))
-      return
-    }
     onSubmit(event)
+  }
+
+  const moveToNextStep = () => {
+    if (!canMoveNext) return
+    setCurrentStep((step) => Math.min(step + 1, reviewSteps.length - 1))
   }
 
   return (
@@ -300,7 +300,7 @@ export default function HospitalReviewForm({
       <div className="step-actions review-form-actions">
         {currentStep > 0 && <button type="button" className="step-secondary" onClick={() => setCurrentStep((step) => step - 1)}>이전</button>}
         {currentStep < reviewSteps.length - 1
-          ? <button type="submit" className="step-primary" disabled={!canMoveNext}>다음</button>
+          ? <button type="button" className="step-primary" disabled={!canMoveNext} onClick={moveToNextStep}>다음</button>
           : <button type="submit" className="step-primary" disabled={!canSubmit}>{submitLabel ?? text.submit}</button>}
       </div>
     </form>

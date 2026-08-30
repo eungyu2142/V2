@@ -45,6 +45,15 @@ type DiaryInsight = {
   metric: 'shed' | 'environment' | 'weight' | 'poop' | 'mating' | 'egg'
   action?: 'shed-check' | 'shed-cycle-check' | 'environment-resolve'
   sourceUrl?: string
+  poopFollowUpStage?: 1 | 2 | 3
+  poopStatus?: StoolStatus
+  poopRecovered?: boolean
+}
+type PoopFollowUp = {
+  record: PetRecord
+  status: StoolStatus
+  repeated: boolean
+  recovered: boolean
 }
 type DisplayPetRecord = PetRecord & {
   sourceIds?: string[]
@@ -102,6 +111,8 @@ export type Reminder = {
   createdAt: string
   updatedAt?: string
   completedAt?: string
+  purpose?: 'poop_follow_up'
+  sourceRecordId?: string
 }
 
 export type RecordDraft = {
@@ -214,7 +225,7 @@ function RoutinePhoto({ type, className = '' }: { type: ReminderType; className?
   return <img className={`routine-photo routine-photo-${photoKey} ${className}`.trim()} src={`/assets/routine-icons/cards/${photoKey}.png`} alt="" aria-hidden="true" />
 }
 
-const baseRoutineTypes: ReminderType[] = ['feed', 'mist', 'water', 'weight', 'humidity', 'temperature', 'full_cleaning', 'partial_cleaning']
+const baseRoutineTypes: ReminderType[] = ['feed', 'mist', 'cleaning', 'medicine', 'water', 'weight', 'humidity', 'temperature']
 const herpRoutineTypes: ReminderType[] = [
   'feed',
   'mist',
@@ -222,11 +233,11 @@ const herpRoutineTypes: ReminderType[] = [
   'weight',
   'humidity',
   'temperature',
-  'full_cleaning',
-  'partial_cleaning',
+  'cleaning',
+  'medicine',
 ]
 
-const aquaticRoutineTypes: ReminderType[] = ['feed', 'water', 'water_temperature', 'water_quality', 'filter_check', 'weight', 'full_cleaning', 'partial_cleaning', 'custom']
+const aquaticRoutineTypes: ReminderType[] = ['feed', 'mist', 'cleaning', 'medicine', 'water', 'water_temperature', 'water_quality', 'filter_check', 'weight', 'custom']
 
 const ENVIRONMENT_PROFILES: Record<string, EnvironmentProfile> = {
   crested_gecko: { key: 'crested_gecko', label: '크레스티드 게코', temperatureType: 'air', targetTemperature: 24, minTemperature: 22, maxTemperature: 26, humidityEnabled: true, targetHumidity: 55, minHumidity: 40, maxHumidity: 70, isBroadCategory: false },
@@ -262,7 +273,7 @@ function routineRecommendationsForPet(pet?: DiaryPet, speciesProfiles: SpeciesCa
   if (profile?.temperatureType === 'water') return withRequiredRoutineTypes(profile.key === 'axolotl' ? aquaticRoutineTypes : aquaticRoutineTypes.filter((type) => type !== 'filter_check'))
   if (pet?.group === 'reptile' || pet?.group === 'amphibian') {
     if (isFullyAquaticTurtlePet(pet)) {
-      return withRequiredRoutineTypes(['feed', 'water_temperature', 'water_quality', 'filter_check', 'full_cleaning', 'partial_cleaning', 'custom'])
+      return withRequiredRoutineTypes(['feed', 'mist', 'cleaning', 'medicine', 'water_temperature', 'water_quality', 'filter_check', 'custom'])
     }
     return withRequiredRoutineTypes([...herpRoutineTypes
       .filter((type) => type !== 'humidity' || profile?.humidityEnabled !== false)
@@ -275,10 +286,10 @@ function routineRecommendationsForPet(pet?: DiaryPet, speciesProfiles: SpeciesCa
 }
 
 function withRequiredRoutineTypes(types: ReminderType[]): ReminderType[] {
-  const withoutWeight = types.filter((type) => type !== 'weight')
-  const customIndex = withoutWeight.indexOf('custom')
-  if (customIndex < 0) return [...withoutWeight, 'weight']
-  return [...withoutWeight.slice(0, customIndex), 'weight', ...withoutWeight.slice(customIndex)]
+  const normalized = types.map((type) => type === 'partial_cleaning' || type === 'full_cleaning' ? 'cleaning' as const : type)
+  const required: ReminderType[] = ['feed', 'mist', 'cleaning', 'medicine']
+  const unique = Array.from(new Set([...required, ...normalized.filter((type) => type !== 'weight' && type !== 'custom')]))
+  return normalized.includes('custom') ? [...unique, 'weight', 'custom'] : [...unique, 'weight']
 }
 
 function isGeckoPet(pet?: DiaryPet) {
@@ -587,6 +598,7 @@ export default function DiaryPage({
   const [smartFoodQuantity, setSmartFoodQuantity] = useState('1')
   const [smartFoodUnit, setSmartFoodUnit] = useState('마리')
   const [smartPoopStatus, setSmartPoopStatus] = useState('')
+  const [poopFollowUp, setPoopFollowUp] = useState<PoopFollowUp | null>(null)
   const [smartShedStatus, setSmartShedStatus] = useState('')
   const [smartMatingFemaleId, setSmartMatingFemaleId] = useState('')
   const [smartMatingMaleId, setSmartMatingMaleId] = useState('')
@@ -1030,18 +1042,19 @@ export default function DiaryPage({
     const duplicate = records.find((item) => item.petId === record.petId && item.date === record.date && `${item.type}|${item.memo ?? ''}|${item.foods?.join('|') ?? ''}` === key)
     if (duplicate) {
       showSmartToast('이미 같은 기록이 있어요.')
-      return
+      return false
     }
     saveRecordList([record, ...records])
     setSmartSheet(null)
     showSmartToast(message)
+    return true
   }
 
   const openNewClinicRecord = () => {
     setSavedClinicDraft(null)
     setClinicDraft({
       id: crypto.randomUUID(),
-      hospitalName: '',
+      hospitalName: '다이어리 진료 기록',
       visitDate: selectedDate <= today ? selectedDate : today,
     })
     setClinicError('')
@@ -1049,7 +1062,7 @@ export default function DiaryPage({
   }
 
   const saveClinicRecord = async (draft: ClinicDraft) => {
-    if (!selectedPet || !draft.hospitalName.trim() || !draft.visitDate) return
+    if (!selectedPet || !draft.visitDate || !draft.treatment?.trim()) return
     setClinicSaving(true)
     setClinicError('')
     try {
@@ -1065,7 +1078,7 @@ export default function DiaryPage({
         treatment: draft.treatment?.trim(),
         reviewBody: undefined,
         nextVisit: draft.nextVisit,
-        medicine: undefined,
+        medicine: draft.medicine ? { ...draft.medicine, ocrRaw: undefined } : undefined,
       })
       const record: PetRecord = {
         id: draft.id,
@@ -1074,10 +1087,9 @@ export default function DiaryPage({
         type: 'hospital',
         date: draft.visitDate,
         memo: [
-          draft.hospitalName.trim(),
           draft.diagnosis?.trim(),
           draft.treatment?.trim(),
-          draft.cost ? `진료비 ${draft.cost.toLocaleString('ko-KR')}원` : '',
+          draft.medicine?.name ? `처방약 ${draft.medicine.name}` : '',
         ].filter(Boolean).join(' · '),
         clinicDetails: draft,
         hospitalId: draft.hospitalName.trim(),
@@ -1086,11 +1098,35 @@ export default function DiaryPage({
         createdAt: new Date().toISOString(),
       }
       setRecords((current) => [record, ...current.filter((item) => item.id !== record.id)])
+      setReminders((current) => {
+        const withoutClinicPlan = current.filter((item) => item.id !== draft.id)
+        if (!draft.nextVisit) return withoutClinicPlan
+        return [...withoutClinicPlan, {
+          id: draft.id,
+          userId,
+          petId: selectedPet.id,
+          title: '다음 진료',
+          reminderType: 'hospital',
+          scheduleType: 'repeat',
+          weekdays: [parseDateKey(draft.nextVisit.date).getDay()],
+          recurrenceType: 'weekdays',
+          recurrenceIntervalDays: 1,
+          startDate: draft.nextVisit.date,
+          endDate: draft.nextVisit.date,
+          reminderDate: draft.nextVisit.date,
+          reminderTime: draft.nextVisit.time,
+          memo: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }]
+      })
+      void refreshDailyTasks()
       setSelectedDate(draft.visitDate)
       setVisibleMonth(new Date(`${draft.visitDate}T00:00:00`))
       setClinicEditorOpen(false)
       setClinicDraft(null)
-      setSavedClinicDraft(draft)
+      setSavedClinicDraft(draft.hospitalSnapshot ? draft : null)
       showSmartToast('진료 기록을 저장했어요.')
     } catch (error: unknown) {
       console.error('Clinic record save failed.', error)
@@ -1120,7 +1156,7 @@ export default function DiaryPage({
   const saveSmartPoop = (statusLabel = smartPoopStatus) => {
     if (!selectedPet) return
     const status = stoolStatusFromLabel(statusLabel)
-    saveSmartRecord({
+    const record: PetRecord = {
       id: crypto.randomUUID(),
       userId,
       petId: selectedPet.id,
@@ -1129,7 +1165,42 @@ export default function DiaryPage({
       memo: statusLabel,
       stoolRecord: { status, statusLabel },
       createdAt: new Date().toISOString(),
-    }, `배변 · ${statusLabel} 기록이 저장되었습니다`)
+    }
+    const previousPoop = petRecords.slice().sort(compareRecordTime).at(-1)
+    if (!saveSmartRecord(record, `배변 · ${statusLabel} 기록이 저장되었습니다`)) return
+    const previousStatus = previousPoop ? getStoolStatus(previousPoop) : null
+    if (status === 'normal' && previousStatus && previousStatus !== 'normal') {
+      showSmartToast('배변 상태가 정상으로 돌아왔어요.')
+    }
+  }
+
+  const addTemporaryPoopRoutine = (taskType: 'mist' | 'water', sourceRecordId?: string) => {
+    if (!selectedPet) return
+    const existing = reminders.find((reminder) => reminder.petId === selectedPet.id && reminder.reminderType === taskType && reminder.isActive)
+    if (existing) {
+      showSmartToast('이미 활성화된 루틴이 있어요.')
+      return
+    }
+    const now = new Date().toISOString()
+    const reminder: Reminder = {
+      id: crypto.randomUUID(), userId, petId: selectedPet.id,
+      title: taskType === 'mist' ? '분무 확인 · 배변 상태 임시 루틴' : '물그릇 확인 · 배변 상태 임시 루틴',
+      reminderType: taskType, scheduleType: 'repeat', weekdays: [0, 1, 2, 3, 4, 5, 6],
+      recurrenceType: 'interval', recurrenceIntervalDays: 1, startDate: today, reminderDate: today,
+      reminderTime: '09:00', memo: '배변 상태 확인을 위한 임시 루틴', isActive: true,
+      createdAt: now, updatedAt: now, purpose: 'poop_follow_up', sourceRecordId: sourceRecordId ?? petRecords.filter((record) => record.type === 'poop').sort(compareRecordTime).at(-1)?.id,
+    }
+    saveReminderList([...reminders, reminder])
+    showSmartToast('배변 상태 확인용 임시 루틴을 추가했어요.')
+  }
+
+  const closeTemporaryPoopRoutines = () => {
+    const next = reminders.map((reminder) => reminder.petId === effectivePetId && reminder.purpose === 'poop_follow_up'
+      ? { ...reminder, isActive: false, updatedAt: new Date().toISOString() }
+      : reminder)
+    saveReminderList(next)
+    setPoopFollowUp(null)
+    showSmartToast('배변 상태 확인용 임시 루틴을 종료했어요.')
   }
   const saveSmartShed = (status = smartShedStatus) => {
     if (status === '탈피 완료' && !getOngoingShedRecord(petRecords)) {
@@ -1730,6 +1801,7 @@ export default function DiaryPage({
 
       <DiaryNotice
         records={petRecords}
+        reminders={petCarePlans}
         petName={selectedPet?.name ?? '펫'}
         resolvedInsightIds={resolvedInsightIds}
         followedUpInsightIds={followedUpInsightIds}
@@ -1740,6 +1812,15 @@ export default function DiaryPage({
         onKeepInsight={keepDiaryInsight}
         onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : metric === 'poop' ? { category: '질병', title: '배변 관련 질문' } : undefined) : undefined}
         onFindHospital={selectedPet && onFindHospital ? (concern) => onFindHospital(selectedPet.id, concern) : undefined}
+        onRecordEnvironment={() => {
+          const environmentRoutine = petCarePlans.find((reminder) => reminder.isActive && (reminder.reminderType === 'humidity' || reminder.reminderType === 'temperature'))
+          if (environmentRoutine) void completePlan(environmentRoutine)
+          else { setEditingReminder(null); setRoutinePresetType('humidity'); setReminderFormOpen(true) }
+        }}
+        onAddTemporaryRoutine={(type, sourceRecordId) => addTemporaryPoopRoutine(type, sourceRecordId)}
+        onOpenRecords={() => setVisualizationOpen(true)}
+        onKeepTemporaryRoutines={(insightId) => { resolveDiaryInsight(insightId); showSmartToast('임시 루틴을 유지합니다.') }}
+        onCloseTemporaryRoutines={(insightId) => { closeTemporaryPoopRoutines(); resolveDiaryInsight(insightId) }}
       />
 
       {!readOnly && (
@@ -1827,7 +1908,6 @@ export default function DiaryPage({
         }}>
           <ClinicRecordEditor
             petName={selectedPet.name}
-            hospitals={hospitals}
             draft={clinicDraft}
             saving={clinicSaving}
             error={clinicError}
@@ -1874,12 +1954,6 @@ export default function DiaryPage({
               setSavedClinicDraft(null)
             }}
             reviewDisabled={!onCreateClinicReview || !(savedClinicDraft.hospitalSnapshot ?? hospitals.find((item) => item.name === savedClinicDraft.hospitalName))}
-            onCreateMedicineRoutine={() => {
-              setSavedClinicDraft(null)
-              setEditingReminder(null)
-              setRoutinePresetType('medicine')
-              setReminderFormOpen(true)
-            }}
           />
         </Overlay>
       )}
@@ -1935,6 +2009,22 @@ export default function DiaryPage({
               <button type="button" onClick={() => { const next = pendingSmartRecord.record; setPendingSmartRecord(null); saveRecordList([next, ...records]); setSmartSheet(null); showSmartToast(pendingSmartRecord.message) }}>추가 기록</button>
             </div>
           </div>
+        </Overlay>
+      )}
+      {poopFollowUp && selectedPet && (
+        <Overlay onClose={() => setPoopFollowUp(null)}>
+          <PoopFollowUpPanel
+            followUp={poopFollowUp}
+            records={petRecords}
+            reminders={reminders.filter((reminder) => reminder.petId === selectedPet.id)}
+            onClose={() => setPoopFollowUp(null)}
+            onOpenRecords={() => { setPoopFollowUp(null); setVisualizationOpen(true) }}
+            onCreateQna={() => onCreateQna?.(selectedPet.id, { category: '질병', title: `${selectedPet.name} 배변 기록 관련 질문` })}
+            onFindHospital={() => onFindHospital?.(selectedPet.id, 'poop')}
+            onAddRoutine={addTemporaryPoopRoutine}
+            onKeepRoutines={() => setPoopFollowUp(null)}
+            onCloseRoutines={closeTemporaryPoopRoutines}
+          />
         </Overlay>
       )}
       {petWarningOpen && (
@@ -1994,7 +2084,7 @@ function DailyPlan({
     ? task.dailyTask.status === 'pending'
     : !isTaskCompleted(task)))
   const completedTodayTasks = tasks.filter((task) => !task.overdue && isTaskCompleted(task))
-  const todayTasks = [...pendingTodayTasks, ...completedTodayTasks]
+  const todayTasks = pendingTodayTasks
   const doneToggle = (
     <button
       className="daily-plan-list-toggle"
@@ -2027,13 +2117,6 @@ function DailyPlan({
         <span className="daily-plan-task-content">
           <span className="daily-plan-title-line">
             <strong>{planLabel(reminder, pet)}</strong>
-            <details className="daily-task-menu">
-              <summary aria-label={`${planLabel(reminder, pet)} 메뉴`} title="루틴 메뉴"><span className="menu-dots" aria-hidden="true"><span /><span /><span /></span></summary>
-              <div>
-                <button type="button" onClick={() => onEditPlan(reminder)}>수정</button>
-                <button type="button" onClick={() => onDeletePlan(reminder.id)}>삭제</button>
-              </div>
-            </details>
           </span>
           {(overdue || checked) && <small>{taskDescription}</small>}
         </span>
@@ -2041,6 +2124,13 @@ function DailyPlan({
           <span className={`daily-plan-check ${checked ? 'checked' : ''}`} aria-hidden="true">{checked ? '✓' : ''}</span>
           <input className="daily-plan-check-input" type="checkbox" checked={checked} disabled={isFuture || checked} onChange={() => onComplete(task)} aria-label={`${planLabel(reminder, pet)} ${checked ? '완료됨' : '완료'}`} />
         </label>}
+        <details className="daily-task-menu">
+          <summary aria-label={`${planLabel(reminder, pet)} 메뉴`} title="루틴 메뉴"><span className="menu-dots" aria-hidden="true"><span /><span /><span /></span></summary>
+          <div>
+            <button type="button" onClick={() => onEditPlan(reminder)}>수정</button>
+            <button type="button" onClick={() => onDeletePlan(reminder.id)}>삭제</button>
+          </div>
+        </details>
       </div>
       {overdue && !checked && <div className="daily-plan-task-actions"><button type="button" onClick={() => onComplete(task)}>지금 완료</button><button type="button" onClick={() => onSkip(task)}>건너뛰기</button></div>}
     </div>
@@ -2049,7 +2139,7 @@ function DailyPlan({
   return (
     <>
       <section className="daily-plan-panel">
-        <div className="daily-plan-heading"><span><strong>오늘 할 일</strong><small>{formatDate(selectedDate)}</small></span><em>전체 {todayTasks.length + overdueTasks.length}개</em></div>
+        <div className="daily-plan-heading"><span><strong>오늘 할 일</strong><small>{formatDate(selectedDate)}</small></span><em>전체 {pendingTodayTasks.length + overdueTasks.length}개</em></div>
         <header><button className="daily-plan-add-button" type="button" onClick={onAddPlan}>루틴</button>{doneToggle}</header>
         {hasCarePlans && (
           <div className="daily-plan-inline-list">
@@ -2256,6 +2346,7 @@ function eggFertility(record: PetRecord): 'unfertilized' | 'fertilized' | 'unkno
 function planLabel(reminder: Reminder, pet?: DiaryPet, speciesProfiles: SpeciesCareProfile[] = fallbackSpeciesCareProfiles) {
   if (reminder.reminderType === 'medicine' || reminder.reminderType === 'hospital') return reminder.title || reminderMeta[reminder.reminderType].label
   if (reminder.reminderType === 'custom') return reminder.title || '직접 입력'
+  if (reminder.reminderType === 'partial_cleaning' || reminder.reminderType === 'full_cleaning') return '청소'
   if (reminder.reminderType === 'water_temperature') return '수온 확인'
   if (reminder.reminderType === 'temperature' && pet) {
     const profile = getEnvironmentProfile(pet, speciesProfiles)
@@ -2289,7 +2380,6 @@ function isReminderVisibleForPet(reminder: Reminder, pet: DiaryPet, speciesProfi
 
 function ClinicRecordEditor({
   petName,
-  hospitals,
   draft,
   saving,
   error,
@@ -2298,7 +2388,6 @@ function ClinicRecordEditor({
   onSave,
 }: {
   petName: string
-  hospitals: HospitalSnapshot[]
   draft: ClinicDraft
   saving: boolean
   error: string
@@ -2308,19 +2397,11 @@ function ClinicRecordEditor({
 }) {
   const update = (patch: Partial<ClinicDraft>) => onChange({ ...draft, ...patch })
   const canSave = Boolean(
-    draft.hospitalName.trim()
-    && draft.visitDate
+    draft.visitDate
+    && draft.treatment?.trim()
     && (!draft.nextVisit || draft.nextVisit.date)
+    && (!draft.medicine?.name || (draft.medicine.startDate && draft.medicine.endDate && draft.medicine.dailyCount >= 1))
   )
-  const selectableHospitals = draft.hospitalSnapshot
-    && !hospitals.some((hospital) => hospitalOptionValue(hospital) === hospitalOptionValue(draft.hospitalSnapshot!))
-    ? [draft.hospitalSnapshot, ...hospitals]
-    : hospitals
-  const hospitalValue = draft.hospitalSnapshot
-    ? hospitalOptionValue(draft.hospitalSnapshot)
-    : selectableHospitals.find((hospital) => hospital.name === draft.hospitalName)
-      ? hospitalOptionValue(selectableHospitals.find((hospital) => hospital.name === draft.hospitalName)!)
-      : ''
 
   return (
     <section className="clinic-record-editor" role="dialog" aria-modal="true" aria-labelledby="clinic-record-editor-title">
@@ -2332,30 +2413,14 @@ function ClinicRecordEditor({
         <button type="button" aria-label="진료 기록 닫기" onClick={onCancel}>×</button>
       </header>
       <div className="clinic-record-fields">
-        <label>
-          병원 <span aria-label="필수">*</span>
-          <select
-            value={hospitalValue}
-            onChange={(event) => {
-              const hospital = selectableHospitals.find((item) => hospitalOptionValue(item) === event.target.value)
-              update({ hospitalName: hospital?.name ?? '', hospitalSnapshot: hospital })
-            }}
-          >
-            <option value="">병원을 선택하세요</option>
-            {draft.hospitalName && !hospitalValue && <option value="" disabled>{draft.hospitalName} · 현재 검색 목록에 없음</option>}
-            {selectableHospitals.map((hospital) => (
-              <option key={hospitalOptionValue(hospital)} value={hospitalOptionValue(hospital)}>
-                {hospital.name}{hospital.address ? ` · ${hospital.address}` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="clinic-record-row">
-          <label>방문 날짜 <span aria-label="필수">*</span><input type="date" value={draft.visitDate} onChange={(event) => update({ visitDate: event.target.value })} /></label>
-          <label>진료비<input inputMode="numeric" value={draft.cost ? draft.cost.toLocaleString('ko-KR') : ''} onChange={(event) => update({ cost: Number(event.target.value.replace(/\D/g, '')) || undefined })} placeholder="예: 35,000" /></label>
-        </div>
-        <label>진단 또는 방문 사유<input value={draft.diagnosis ?? ''} onChange={(event) => update({ diagnosis: event.target.value })} /></label>
-        <label>진료 내용<input value={draft.treatment ?? ''} onChange={(event) => update({ treatment: event.target.value })} /></label>
+        <label>방문 날짜 <span aria-label="필수">*</span><input type="date" value={draft.visitDate} onChange={(event) => update({ visitDate: event.target.value })} /></label>
+        <label>병명<input value={draft.diagnosis ?? ''} onChange={(event) => update({ diagnosis: event.target.value })} placeholder="진단받은 병명을 입력하세요" /></label>
+        <label>진료 내용 <span aria-label="필수">*</span><textarea value={draft.treatment ?? ''} onChange={(event) => update({ treatment: event.target.value })} placeholder="검사와 진료 내용을 입력하세요" /></label>
+        <fieldset>
+          <legend>처방약과 약 루틴</legend>
+          <label>처방약<input value={draft.medicine?.name ?? ''} onChange={(event) => update({ medicine: event.target.value ? { name: event.target.value, dose: draft.medicine?.dose, startDate: draft.medicine?.startDate || draft.visitDate, endDate: draft.medicine?.endDate, dailyCount: draft.medicine?.dailyCount || 1, instructions: draft.medicine?.instructions } : undefined })} placeholder="약 이름" /></label>
+          {draft.medicine && <><div className="clinic-record-row"><label>복용량<input value={draft.medicine.dose ?? ''} onChange={(event) => update({ medicine: { ...draft.medicine!, dose: event.target.value } })} placeholder="예: 0.2ml" /></label><label>하루 횟수<input type="number" min="1" value={draft.medicine.dailyCount} onChange={(event) => update({ medicine: { ...draft.medicine!, dailyCount: Math.max(1, Number(event.target.value) || 1) } })} /></label></div><div className="clinic-record-row"><label>복용 시작일<input type="date" value={draft.medicine.startDate} onChange={(event) => update({ medicine: { ...draft.medicine!, startDate: event.target.value } })} /></label><label>복용 종료일<input type="date" min={draft.medicine.startDate} value={draft.medicine.endDate ?? ''} onChange={(event) => update({ medicine: { ...draft.medicine!, endDate: event.target.value || undefined } })} /></label></div><label>복용 안내<input value={draft.medicine.instructions ?? ''} onChange={(event) => update({ medicine: { ...draft.medicine!, instructions: event.target.value } })} placeholder="투약 방법이나 주의사항" /></label><small>저장하면 기존 약 루틴에 연결됩니다.</small></>}
+        </fieldset>
         <fieldset>
           <legend>다음 예정일이 있나요?</legend>
           <div className="clinic-record-choice">
@@ -2379,21 +2444,15 @@ function ClinicRecordEditor({
   )
 }
 
-function hospitalOptionValue(hospital: HospitalSnapshot) {
-  return hospital.id || `${hospital.name}|${hospital.address}`
-}
-
 function ClinicRecordNextActions({
   hospitalName,
   reviewDisabled,
   onCreateReview,
-  onCreateMedicineRoutine,
   onClose,
 }: {
   hospitalName: string
   reviewDisabled: boolean
   onCreateReview: () => void
-  onCreateMedicineRoutine: () => void
   onClose: () => void
 }) {
   return (
@@ -2407,7 +2466,6 @@ function ClinicRecordNextActions({
       </header>
       <div className="clinic-record-next-buttons">
         <button type="button" onClick={onCreateReview} disabled={reviewDisabled}>리뷰 작성하러 가기</button>
-        <button type="button" onClick={onCreateMedicineRoutine}>약 루틴 작성하러 가기</button>
       </div>
     </section>
   )
@@ -2506,10 +2564,10 @@ function SmartAddSheet({
   onEggSave: () => void
 }) {
   const foodOptions = ['밀웜', '귀뚜라미', '랩사료']
-  const poopOptions = ['정상', '설사', '변비', '이물질', '혈변']
+  const poopOptions = ['정상', '건조', '묽음', '이물질', '혈변']
   const shedOptions = ['탈피 시작', '탈피 완료', '이상 있음']
   const waterOptions = ['전체 교체', '일부 보충', '물그릇 세척']
-  const cleaningOptions = ['부분 청소', '전체 청소', '바닥재 교체', '용품 세척']
+  const cleaningOptions = ['청소']
   const foodValue = foodKind.trim() ? `${foodKind.trim()} ${foodQuantity || '1'}${foodUnit}` : ''
   const femaleCandidates = matingPetCandidates.filter((candidate) => candidate.gender === 'female')
   const maleCandidates = matingPetCandidates.filter((candidate) => candidate.gender === 'male')
@@ -2637,11 +2695,12 @@ function Calendar({
           if (view !== 'month') return undefined
           const key = toDateKey(date)
           const predictionTypes = cyclePredictions.filter((prediction) => prediction.date === key).map((prediction) => `expected-${prediction.type}`).join(' ')
-          return `calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${date.getMonth() !== month.getMonth() ? 'muted' : ''} ${predictionTypes}`
+          const hasClinicPlan = records.some((record) => record.date === key && record.type === 'hospital' && record.memo === '진료 예정')
+          return `calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${date.getMonth() !== month.getMonth() ? 'muted' : ''} ${predictionTypes} ${hasClinicPlan ? 'expected-clinic' : ''}`
         }}
         tileContent={({ date, view }) => view === 'month' ? renderRecordTags(date) : null}
       />
-      {cyclePredictions.length > 0 && <div className="calendar-cycle-legend" aria-label="예상 주기 색상 안내"><span className="shed"><i />탈피 예상일</span><span className="egg"><i />산란 예상일</span></div>}
+      {(cyclePredictions.length > 0 || records.some((record) => record.type === 'hospital' && record.memo === '진료 예정')) && <div className="calendar-cycle-legend" aria-label="예정일 색상 안내"><span className="clinic"><i />다음 진료일</span><span className="shed"><i />탈피 예상일</span><span className="egg"><i />산란 예상일</span></div>}
     </section>
   )
 }
@@ -2857,7 +2916,13 @@ function ReminderCreateScreen({
     .filter((reminder) => reminder.petId === petId && reminder.isActive && reminder.id !== initialReminder?.id && reminder.reminderType !== 'custom')
     .map((reminder) => reminder.reminderType))
   const initialType = initialReminder?.reminderType ?? presetType
-  const [routineTypes, setRoutineTypes] = useState<ReminderType[]>(initialType ? [initialType] : [])
+  const requiredRoutineTypes: ReminderType[] = ['feed', 'mist', 'cleaning']
+  const normalizedExistingTypes = new Set<ReminderType>()
+  existingTypes.forEach((type) => {
+    normalizedExistingTypes.add(type === 'partial_cleaning' || type === 'full_cleaning' ? 'cleaning' : type)
+  })
+  const missingRequiredTypes = requiredRoutineTypes.filter((type) => !normalizedExistingTypes.has(type))
+  const [routineTypes, setRoutineTypes] = useState<ReminderType[]>(initialType ? [initialType] : missingRequiredTypes)
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>(initialReminder?.weekdays ?? [])
   const [recurrenceType, setRecurrenceType] = useState<'weekdays' | 'interval'>(initialReminder?.recurrenceType ?? 'weekdays')
   const [recurrenceIntervalDays, setRecurrenceIntervalDays] = useState(initialReminder?.recurrenceIntervalDays ?? 3)
@@ -2900,6 +2965,7 @@ function ReminderCreateScreen({
       setRoutineTypes([type])
       return
     }
+    if (missingRequiredTypes.includes(type) && routineTypes.includes(type)) return
     setRoutineTypes((current) => current.includes(type) ? current.filter((item) => item !== type) : [...current, type])
   }
   const buildReminder = (reminderType: ReminderType, index = 0): Reminder => {
@@ -2964,7 +3030,8 @@ function ReminderCreateScreen({
                     <button type="button" className={routineTypes.includes(key) ? 'selected' : ''} key={key} onClick={() => toggleRoutineType(key)}>
                       <RoutinePhoto type={key} className="routine-picker-photo" />
                       <strong>{routineOptionLabel(key, selectedPet, speciesCareProfiles)}</strong>
-                      {existingTypes.has(key) && <em>이미 있음</em>}
+                      {requiredRoutineTypes.includes(key) && <em>필수</em>}
+                      {normalizedExistingTypes.has(key) && <em>이미 있음</em>}
                     </button>
                   ))}
                 </div>
@@ -3106,6 +3173,7 @@ function DateRecordsScreen({ date, records, mobileActions, onBack, onOpenRecord,
 
 function DiaryNotice({
   records,
+  reminders,
   petName,
   resolvedInsightIds = [],
   followedUpInsightIds = [],
@@ -3116,8 +3184,14 @@ function DiaryNotice({
   onKeepInsight,
   onCreateQna,
   onFindHospital,
+  onRecordEnvironment,
+  onAddTemporaryRoutine,
+  onOpenRecords,
+  onKeepTemporaryRoutines,
+  onCloseTemporaryRoutines,
 }: {
   records: PetRecord[]
+  reminders: Reminder[]
   petName: string
   resolvedInsightIds?: string[]
   followedUpInsightIds?: string[]
@@ -3128,6 +3202,11 @@ function DiaryNotice({
   onKeepInsight?: (insightId: string) => void
   onCreateQna?: (metric?: DiaryInsight['metric']) => void
   onFindHospital?: (concern?: HospitalRecommendationConcern) => void
+  onRecordEnvironment?: () => void
+  onAddTemporaryRoutine?: (type: 'mist' | 'water', sourceRecordId: string) => void
+  onOpenRecords?: () => void
+  onKeepTemporaryRoutines?: (insightId: string) => void
+  onCloseTemporaryRoutines?: (insightId: string) => void
 }) {
   const insights = buildDiaryInsights(records, petName, resolvedInsightIds)
   if (insights.length === 0) {
@@ -3141,10 +3220,14 @@ function DiaryNotice({
         {insights.map((insight) => {
           const stage = noticeStageFromTitle(insight.title)
           const followedUp = followedUpInsightIds.includes(insight.id)
+          const hasTemporaryRoutine = reminders.some((reminder) => reminder.isActive && reminder.purpose === 'poop_follow_up')
+          const isRepeatedPoop = insight.metric === 'poop' && insight.poopFollowUpStage === 2
           return (
             <div className="diary-notice-item" key={insight.id}>
-              {stage ? <b className={`notice-stage stage-${stage}`}>{stage}단계</b> : null}
-              <span>{insight.title}</span>
+              <div className="diary-notice-copy">
+                <div className="diary-notice-heading">{stage ? <b className={`notice-stage stage-${stage}`}>{stage}단계</b> : null}<b>{insight.title}</b></div>
+                <p>{insight.body}</p>
+              </div>
               <div className="diary-notice-actions">
                 {(insight.action === 'shed-check' || insight.action === 'shed-cycle-check') && onShedComplete && onShedNotYet ? (
                   insight.action === 'shed-cycle-check'
@@ -3154,9 +3237,19 @@ function DiaryNotice({
                   <><b>해결됐나요?</b><button type="button" onClick={() => onResolveInsight(insight.id)}>예</button><button type="button" onClick={() => onKeepInsight(insight.id)}>아니오</button></>
                 ) : (
                   <>
+                    {insight.metric === 'poop' && insight.poopRecovered && hasTemporaryRoutine && onKeepTemporaryRoutines && <button type="button" onClick={() => onKeepTemporaryRoutines(insight.id)}>유지하기</button>}
+                    {insight.metric === 'poop' && insight.poopRecovered && hasTemporaryRoutine && onCloseTemporaryRoutines && <button type="button" onClick={() => onCloseTemporaryRoutines(insight.id)}>종료하기</button>}
+                    {insight.metric === 'poop' && insight.poopFollowUpStage === 1 && onRecordEnvironment && <button type="button" onClick={onRecordEnvironment}>온습도 기록하기</button>}
+                    {insight.metric === 'poop' && insight.poopFollowUpStage === 1 && insight.poopStatus === 'dry' && onAddTemporaryRoutine && <button type="button" onClick={() => onAddTemporaryRoutine('mist', insight.id.replace('poop-dry-', ''))}>분무 루틴</button>}
+                    {insight.metric === 'poop' && insight.poopFollowUpStage === 1 && insight.poopStatus === 'dry' && onAddTemporaryRoutine && <button type="button" onClick={() => onAddTemporaryRoutine('water', insight.id.replace('poop-dry-', ''))}>물그릇 루틴</button>}
+                    {isRepeatedPoop && onOpenRecords && <button type="button" onClick={onOpenRecords}>기록 모아보기</button>}
+                    {isRepeatedPoop && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
+                    {isRepeatedPoop && onFindHospital && <button type="button" onClick={() => onFindHospital('poop')}>병원 찾기</button>}
+                    {insight.metric === 'poop' && insight.level === 'urgent' && insight.poopStatus === 'foreign_body' && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
                     {insight.metric === 'poop' && insight.level === 'urgent' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital('poop') }}>병원 찾기</button>}
-                    {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'poop' ? '배변 질문' : 'Q&A'}</button>}
-                    {!(insight.metric === 'poop' && insight.level === 'urgent') && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital(insight.metric === 'shed' ? 'shed' : insight.metric === 'poop' ? 'poop' : undefined) }}>병원 찾기</button>}
+                    {insight.metric === 'poop' && insight.level === 'urgent' && insight.poopStatus !== 'foreign_body' && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
+                    {insight.metric !== 'poop' && onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>Q&A</button>}
+                    {insight.metric !== 'poop' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital(insight.metric === 'shed' ? 'shed' : undefined) }}>병원 찾기</button>}
                   </>
                 )}
               </div>
@@ -3166,6 +3259,32 @@ function DiaryNotice({
       </div>
     </section>
   )
+}
+
+function PoopFollowUpPanel({ followUp, records, reminders, onClose, onOpenRecords, onCreateQna, onFindHospital, onAddRoutine, onKeepRoutines, onCloseRoutines }: {
+  followUp: PoopFollowUp; records: PetRecord[]; reminders: Reminder[]; onClose: () => void; onOpenRecords: () => void; onCreateQna: () => void; onFindHospital: () => void; onAddRoutine: (type: 'mist' | 'water') => void; onKeepRoutines: () => void; onCloseRoutines: () => void
+}) {
+  const temporary = reminders.filter((item) => item.isActive && item.purpose === 'poop_follow_up')
+  const hasMist = reminders.some((item) => item.isActive && item.reminderType === 'mist')
+  const hasWater = reminders.some((item) => item.isActive && item.reminderType === 'water')
+  const humidity = records.filter((item) => item.environmentRecord?.metricType === 'humidity').sort(compareRecordTime).at(-1)
+  const actions = (children: ReactNode) => <div className="poop-follow-up-actions">{children}</div>
+  if (followUp.recovered) return <div className="poop-follow-up-panel"><h2>배변 상태가 정상으로 돌아왔습니다.</h2><p>{temporary.length ? '배변 상태 확인을 위해 추가한 임시 루틴을 종료할까요?' : '이전 이상 상태의 추적을 마쳤어요.'}</p>{actions(temporary.length ? <><button type="button" onClick={onKeepRoutines}>유지하기</button><button type="button" onClick={onCloseRoutines}>종료하기</button></> : <button type="button" onClick={onClose}>확인</button>)}</div>
+  if (followUp.status === 'blood') return <div className="poop-follow-up-panel urgent"><h2>혈변이 기록되었습니다.</h2><p>환경 조절만으로 판단하지 말고 진료 가능한 병원을 확인해 주세요.</p>{actions(<><button type="button" onClick={onFindHospital}>병원 찾기</button><button type="button" onClick={onCreateQna}>Q&A 작성하기</button></>)}</div>
+  if (followUp.status === 'foreign_body') return <div className="poop-follow-up-panel caution"><h2>배변에서 이물질이 확인되었습니다.</h2><p>기록을 첨부해 질문하거나 진료 가능한 병원을 찾아볼 수 있습니다.</p>{actions(<><button type="button" onClick={onCreateQna}>Q&A 작성하기</button><button type="button" onClick={onFindHospital}>병원 찾기</button></>)}</div>
+  if (followUp.repeated && ['dry', 'constipation', 'diarrhea'].includes(followUp.status)) return <div className="poop-follow-up-panel caution"><h2>{followUp.status === 'diarrhea' ? '묽은' : '건조한'} 배변이 반복되고 있습니다.</h2><p>{followUp.status === 'diarrhea' ? '최근 기록을 함께 확인하거나 도움이 필요한 경우 질문 또는 병원 찾기를 이용할 수 있습니다.' : '최근 사육환경과 기록을 함께 확인해 주세요.'}</p>{actions(<><button type="button" onClick={onOpenRecords}>기록 모아보기</button><button type="button" onClick={onCreateQna}>Q&A 작성하기</button><button type="button" onClick={onFindHospital}>병원 찾기</button></>)}</div>
+  if (followUp.status === 'diarrhea') return <div className="poop-follow-up-panel"><h2>묽은 배변이 기록되었습니다.</h2><p>최근 사육환경과 급여 기록을 확인해 주세요.</p><div className="poop-context-list">{buildRecentPoopContext(records, followUp.record.date).map((item) => <span key={item}>{item}</span>)}</div>{actions(<button type="button" onClick={onOpenRecords}>최근 기록 확인</button>)}</div>
+  if (followUp.status === 'dry' || followUp.status === 'constipation') return <div className="poop-follow-up-panel"><h2>건조한 배변이 기록되었습니다.</h2><p>최근 습도와 수분 공급 환경을 확인해 주세요.</p><div className="poop-context-list"><span>{humidity?.environmentRecord ? `최근 습도 ${humidity.environmentRecord.value}% · ${formatDate(humidity.date)}` : '최근 습도 기록 없음'}</span><span>분무 루틴 {hasMist ? '있음' : '없음'}</span><span>물그릇·물 공급 루틴 {hasWater ? '있음' : '없음'}</span></div>{actions(<><button type="button" onClick={onOpenRecords}>습도 기록 확인</button>{!hasMist && <button type="button" onClick={() => onAddRoutine('mist')}>분무 루틴 추가</button>}{!hasWater && <button type="button" onClick={() => onAddRoutine('water')}>물그릇 확인 루틴 추가</button>}</>)}</div>
+  return null
+}
+
+function buildRecentPoopContext(records: PetRecord[], date: string) {
+  const latest = (predicate: (record: PetRecord) => boolean) => records.filter((record) => record.date <= date && predicate(record)).sort(compareRecordTime).at(-1)
+  const temperature = latest((record) => record.environmentRecord?.metricType === 'temperature')
+  const humidity = latest((record) => record.environmentRecord?.metricType === 'humidity')
+  const food = latest((record) => record.type === 'food')
+  const water = latest((record) => Boolean(record.memo?.includes('물') || record.memo?.includes('분무')))
+  return [temperature?.environmentRecord ? `최근 온도 ${temperature.environmentRecord.value}℃` : '최근 온도 기록 없음', humidity?.environmentRecord ? `최근 습도 ${humidity.environmentRecord.value}%` : '최근 습도 기록 없음', food ? `최근 먹이 ${food.feedingFoods?.map((item) => item.foodName).join(' · ') || food.foods?.join(' · ') || '기록 있음'}` : '최근 먹이 기록 없음', water ? `최근 수분 공급 ${formatDate(water.date)}` : '최근 수분 공급 기록 없음']
 }
 
 function DiaryInsightBanner({
@@ -3180,6 +3299,7 @@ function DiaryInsightBanner({
   onKeepInsight,
   onCreateQna,
   onFindHospital,
+  onOpenRecords,
 }: {
   records: PetRecord[]
   petName: string
@@ -3192,8 +3312,9 @@ function DiaryInsightBanner({
   onKeepInsight?: (insightId: string) => void
   onCreateQna?: (metric?: DiaryInsight['metric']) => void
   onFindHospital?: (concern?: HospitalRecommendationConcern) => void
+  onOpenRecords?: () => void
 }) {
-  const insights = buildDiaryInsights(records, petName, resolvedInsightIds)
+  const insights = buildDiaryInsights(records, petName, resolvedInsightIds).filter((insight) => insight.metric !== 'poop')
   if (insights.length === 0) return null
   return (
     <section className="diary-insight-banner" aria-label="다이어리 경고와 변화">
@@ -3221,9 +3342,13 @@ function DiaryInsightBanner({
           )}
           {insight.action !== 'shed-check' && insight.action !== 'shed-cycle-check' && !followedUpInsightIds.includes(insight.id) && (onCreateQna || onFindHospital) && (
             <div className="diary-insight-actions">
+              {insight.metric === 'poop' && !isRepeatedPoopInsight(insight) && insight.level !== 'urgent' && onResolveInsight && <button type="button" onClick={() => onResolveInsight(insight.id)}>확인했어요</button>}
+              {isRepeatedPoopInsight(insight) && onOpenRecords && <button type="button" onClick={onOpenRecords}>기록 모아보기</button>}
+              {isRepeatedPoopInsight(insight) && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
+              {isRepeatedPoopInsight(insight) && onFindHospital && <button type="button" onClick={() => onFindHospital('poop')}>병원 찾기</button>}
               {insight.metric === 'poop' && insight.level === 'urgent' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital('poop') }}>병원 찾으러 가기</button>}
-              {onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'shed' ? '탈피 질문 작성' : insight.metric === 'poop' ? '배변 관련 질문 작성' : 'Q&A에 도움받기'}</button>}
-              {!(insight.metric === 'poop' && insight.level === 'urgent') && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital(insight.metric === 'shed' ? 'shed' : insight.metric === 'poop' ? 'poop' : undefined) }}>병원 찾으러 가기</button>}
+              {insight.metric !== 'poop' && onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'shed' ? '탈피 질문 작성' : 'Q&A에 도움받기'}</button>}
+              {insight.metric !== 'poop' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital(insight.metric === 'shed' ? 'shed' : undefined) }}>병원 찾으러 가기</button>}
             </div>
           )}
         </article>
@@ -3286,7 +3411,7 @@ export function DataVisualization({
   return (
     <div className="data-visualization">
       <DataVisualizationHeader petName={petName} onCreateQna={onCreateQna} />
-      <DiaryInsightBanner records={records} petName={petName} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} onCreateQna={onCreateQna} onFindHospital={onFindHospital} />
+      <DiaryInsightBanner records={records} petName={petName} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} onCreateQna={onCreateQna} onFindHospital={onFindHospital} onOpenRecords={() => setActiveMetric('poop')} />
       <div className="record-collection-tabs" aria-label="모아보기 항목">
         <button className={selectedMetric === 'shed' ? 'active' : ''} type="button" onClick={() => setActiveMetric('shed')}>
           탈피 <span>{metricCounts.shed}</span>
@@ -3512,10 +3637,19 @@ function buildPoopInsight(records: PetRecord[], petName: string): DiaryInsight |
   if (poops.length === 0) return null
   const latest = poops.at(-1) as PetRecord
   const latestStatus = getStoolStatus(latest)
-  const latestPoops = poops.slice(-5)
-  const diarrheaCount = latestPoops.filter((record) => getStoolStatus(record) === 'diarrhea').length
-  const constipationCount = latestPoops.filter((record) => getStoolStatus(record) === 'constipation').length
-  const feedingContext = describeRecentFeeding(records, latest.date)
+  const previousStatus = poops.length > 1 ? getStoolStatus(poops[poops.length - 2]) : null
+
+  if (latestStatus === 'normal' && (previousStatus === 'dry' || previousStatus === 'constipation')) {
+    return {
+      id: `poop-recovered-${latest.id}`,
+      metric: 'poop',
+      level: 'notice',
+      title: '배변 상태가 정상으로 돌아왔습니다.',
+      body: '배변 상태 확인을 위해 추가한 임시 루틴을 종료할까요?',
+      poopRecovered: true,
+      poopStatus: 'normal',
+    }
+  }
 
   if (latestStatus === 'blood' || latestStatus === 'foreign_body') {
     const statusLabel = latestStatus === 'blood' ? '혈변' : '이물질'
@@ -3524,27 +3658,35 @@ function buildPoopInsight(records: PetRecord[], petName: string): DiaryInsight |
       metric: 'poop',
       level: 'urgent',
       title: `${statusLabel} 기록을 확인해주세요.`,
-      body: `${petName}의 최근 배변에 ${statusLabel}이 기록됐어요. 원인을 앱에서 단정할 수 없으므로 정확한 확인을 위해 특수동물 병원 상담을 우선 권장해요.`,
+      body: latestStatus === 'blood' ? '환경 조절만으로 판단하지 말고 진료 가능한 병원을 확인해 주세요.' : '기록을 첨부해 질문하거나 진료 가능한 병원을 찾아볼 수 있습니다.',
+      poopStatus: latestStatus,
       sourceUrl: 'https://www.msdvetmanual.com/digestive-system/digestive-system-introduction/the-digestive-system-in-animals',
     }
   }
-  if (latestStatus === 'diarrhea' && diarrheaCount >= 2) {
+  if (latestStatus === 'diarrhea') {
+    const repeated = previousStatus === 'diarrhea'
+    const environmentSummary = describePoopEnvironment(records, latest.date)
     return {
       id: `poop-diarrhea-${latest.id}`,
       metric: 'poop',
-      level: diarrheaCount >= 3 ? 'urgent' : 'caution',
-      title: '설사 기록이 반복됐어요.',
-      body: `${petName}의 최근 배변 5회 중 설사가 ${diarrheaCount}회 기록됐어요. ${feedingContext} 반복되거나 다른 변화가 함께 보이면 기록을 첨부해 질문하거나 병원에서 확인해주세요.`,
+      level: repeated ? 'caution' : 'notice',
+      title: repeated ? '묽은 배변이 반복되고 있습니다.' : '묽은 배변이 기록되었습니다.',
+      body: repeated ? '최근 기록을 함께 확인하거나 도움이 필요한 경우 질문 또는 병원 찾기를 이용할 수 있습니다.' : `최근 사육환경과 급여 기록을 확인해 주세요. ${environmentSummary} ${describeRecentFeeding(records, latest.date)}`,
+      poopFollowUpStage: repeated ? 2 : 1,
+      poopStatus: 'diarrhea',
       sourceUrl: 'https://www.msdvetmanual.com/all-other-pets/reptiles/disorders-and-diseases-of-reptiles',
     }
   }
-  if (latestStatus === 'constipation' || constipationCount >= 2) {
+  if (latestStatus === 'dry' || latestStatus === 'constipation') {
+    const repeated = previousStatus === 'dry' || previousStatus === 'constipation'
     return {
-      id: `poop-constipation-${latest.id}`,
+      id: `poop-dry-${latest.id}`,
       metric: 'poop',
-      level: constipationCount >= 2 ? 'caution' : 'notice',
-      title: constipationCount >= 2 ? '변비 기록이 반복됐어요.' : '변비 기록을 확인해주세요.',
-      body: `${describeStoolDelayCause(records)} ${feedingContext} 상태가 계속되면 정확한 확인을 위해 기록을 첨부해 질문하거나 병원에 상담해보세요.`,
+      level: repeated ? 'caution' : 'notice',
+      title: repeated ? '건조한 배변이 반복되고 있습니다.' : '건조한 배변이 기록되었습니다.',
+      body: repeated ? '최근 사육환경과 기록을 함께 확인해 주세요.' : describePoopEnvironment(records, latest.date),
+      poopFollowUpStage: repeated ? 2 : 1,
+      poopStatus: 'dry',
     }
   }
   const cycle = analyzeRecordedCycle(poops.filter((record) => getStoolStatus(record) === 'normal').map((record) => record.date), toDateKey(new Date()))
@@ -3554,10 +3696,21 @@ function buildPoopInsight(records: PetRecord[], petName: string): DiaryInsight |
       metric: 'poop',
       level: cycle.daysOverdue >= 3 ? 'caution' : 'notice',
       title: `평균 배변 주기보다 ${cycle.daysOverdue}일 지났어요.`,
-      body: `${petName}의 정상 배변 간격은 평균 ${cycle.averageCycleDays}일이에요. ${describeStoolDelayCause(records)} ${describeRecentFeeding(records)} 배변 지연이 계속되면 변비 가능성도 있어 확인이 필요해요.`,
+      body: `${petName}의 정상 배변 간격은 평균 ${cycle.averageCycleDays}일이에요. ${describeStoolDelayCause(records)} ${describeRecentFeeding(records)} 배변 지연이 계속되면 다음 배변 상태를 다이어리에 남기고 확인이 필요해요.`,
     }
   }
   return null
+}
+
+function describePoopEnvironment(records: PetRecord[], date: string) {
+  const todayEnvironment = records
+    .filter((record) => record.date === date && record.environmentRecord)
+    .sort(compareRecordTime)
+  const temperature = todayEnvironment.filter((record) => record.environmentRecord?.metricType === 'temperature').at(-1)?.environmentRecord
+  const humidity = todayEnvironment.filter((record) => record.environmentRecord?.metricType === 'humidity').at(-1)?.environmentRecord
+  if (!temperature || !humidity) return '현재 사육환경을 확인하기 위해 오늘 온도와 습도를 먼저 기록해 주세요.'
+  if (temperature.riskDirection !== 'normal' || humidity.riskDirection !== 'normal') return '현재 사육환경이 설정된 적정 범위를 벗어났습니다. 적정 범위를 확인해 주세요.'
+  return `오늘 온도 ${temperature.value}℃와 습도 ${humidity.value}%는 설정된 적정 범위 안에 있습니다.`
 }
 
 function describeStoolDelayCause(records: PetRecord[]) {
@@ -3582,6 +3735,10 @@ function insightLabel(metric: DiaryInsight['metric']) {
   if (metric === 'environment') return '온습도 변화'
   if (metric === 'weight') return '체중 변화'
   return '배변 상태'
+}
+
+function isRepeatedPoopInsight(insight: DiaryInsight) {
+  return insight.metric === 'poop' && insight.title.includes('반복')
 }
 
 function compareRecordTime(a: PetRecord, b: PetRecord) {
@@ -3629,6 +3786,7 @@ function stoolStatusFromLabel(value?: string): StoolStatus {
   if (value?.includes('혈변') || value?.includes('피')) return 'blood'
   if (value?.includes('이물질')) return 'foreign_body'
   if (value?.includes('설사') || value?.includes('묽')) return 'diarrhea'
+  if (value?.includes('건조')) return 'dry'
   if (value?.includes('변비') || value?.includes('딱딱') || value?.includes('단단')) return 'constipation'
   return 'normal'
 }
@@ -3813,8 +3971,8 @@ function EggStatusChart({ records }: { records: PetRecord[] }) {
 function PoopStatusChart({ records }: { records: PetRecord[] }) {
   const counts = [
     { label: '정상', status: 'normal' as const, color: 'var(--color-primary-600)' },
-    { label: '설사', status: 'diarrhea' as const, color: 'var(--color-primary-300)' },
-    { label: '변비', status: 'constipation' as const, color: 'var(--color-accent-700)' },
+    { label: '건조', status: 'dry' as const, color: 'var(--color-accent-700)' },
+    { label: '묽음', status: 'diarrhea' as const, color: 'var(--color-primary-300)' },
     { label: '이물질', status: 'foreign_body' as const, color: 'var(--color-warning-600)' },
     { label: '혈변', status: 'blood' as const, color: 'var(--color-error-600)' },
   ].map((item) => ({ ...item, count: records.filter((record) => getStoolStatus(record) === item.status).length }))
@@ -4158,6 +4316,8 @@ function carePlanToReminder(plan: CarePlan): Reminder {
     isActive: plan.isActive,
     createdAt: plan.createdAt,
     updatedAt: plan.updatedAt,
+    purpose: plan.purpose,
+    sourceRecordId: plan.sourceRecordId,
   }
 }
 
@@ -4197,6 +4357,8 @@ function reminderToCarePlan(reminder: Reminder): CarePlan {
     isActive: reminder.isActive,
     createdAt: reminder.createdAt,
     updatedAt: reminder.updatedAt ?? new Date().toISOString(),
+    purpose: reminder.purpose,
+    sourceRecordId: reminder.sourceRecordId,
   }
 }
 
@@ -4220,8 +4382,7 @@ function getRoutineTypeFromRecord(record: PetRecord): ReminderType | null {
   const memo = record.memo?.replace(/\s+/g, '') ?? ''
   if (memo.includes('물그릇교체') || memo.includes('물교체') || memo.includes('물관리')) return 'water'
   if (memo.includes('분무')) return 'mist'
-  if (memo.includes('부분청소')) return 'partial_cleaning'
-  if (memo.includes('전체청소')) return 'full_cleaning'
+  if (memo.includes('부분청소') || memo.includes('전체청소')) return 'cleaning'
   if (memo.includes('바닥재교체')) return 'substrate_change'
   if (memo.includes('구조물세척')) return 'structure_cleaning'
   if (memo.includes('벽닦기')) return 'wall_wipe'
@@ -4249,7 +4410,9 @@ function calendarRecordTag(record: PetRecord): CalendarRecordTag {
         ? '수온'
         : routineType === 'temperature'
           ? '온도'
-          : reminderMeta[routineType].label
+      : routineType === 'partial_cleaning' || routineType === 'full_cleaning'
+        ? '청소'
+        : reminderMeta[routineType].label
     return {
       icon: '',
       iconSrc: `/assets/routine-icons/cards/${photoKey}.png`,

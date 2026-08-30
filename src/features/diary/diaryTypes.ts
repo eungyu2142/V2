@@ -91,7 +91,7 @@ export type EggRecordData = {
 
 export type IncidentRecordData = MatingRecordData | EggRecordData
 
-export type StoolStatus = 'normal' | 'diarrhea' | 'constipation' | 'foreign_body' | 'blood'
+export type StoolStatus = 'normal' | 'dry' | 'diarrhea' | 'constipation' | 'foreign_body' | 'blood'
 
 export type StoolRecordData = {
   status: StoolStatus
@@ -158,6 +158,8 @@ export type CarePlan = {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  purpose?: 'poop_follow_up'
+  sourceRecordId?: string
 }
 
 export type DailyTaskStatus = 'pending' | 'completed' | 'skipped'

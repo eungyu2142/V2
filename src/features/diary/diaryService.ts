@@ -17,6 +17,8 @@ type CarePlanRow = {
   is_active: boolean
   created_at: string
   updated_at: string
+  purpose?: 'poop_follow_up' | null
+  source_record_id?: string | null
 }
 
 type DailyTaskRow = {
@@ -96,6 +98,8 @@ const toCarePlan = (row: CarePlanRow): CarePlan => ({
   isActive: row.is_active,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  purpose: row.purpose ?? undefined,
+  sourceRecordId: row.source_record_id ?? undefined,
 })
 
 const toDailyTask = (row: DailyTaskRow): DailyTask => ({
@@ -170,6 +174,8 @@ export async function saveCarePlan(userId: string, plan: CarePlan) {
     start_date: plan.startDate,
     end_date: plan.endDate ?? null,
     notification_time: plan.notificationTime,
+    purpose: plan.purpose ?? null,
+    source_record_id: plan.sourceRecordId ?? null,
     is_active: plan.isActive,
   })
   if (error) throw error
@@ -429,7 +435,7 @@ export async function saveClinicToDiary(input: ClinicDiaryInput) {
       user_id: input.userId,
       pet_id: input.petId,
       task_type: 'hospital',
-      title: `진료 · ${input.hospitalName}`,
+      title: '다음 진료',
       repeat_days: [weekdayFromDateKey(input.nextVisit.date)],
       start_date: input.nextVisit.date,
       end_date: input.nextVisit.date,
