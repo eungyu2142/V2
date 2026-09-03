@@ -13,6 +13,7 @@ import { supabase } from './lib/supabase'
 import { dataUrlToImageFile, removeUploadedImage, uploadImageFile } from './lib/imageStorage'
 import { deleteHospitalLike, getHospitalLikeKey, mergeLocalHospitalLikes, saveHospitalLike } from './lib/hospitalLikes'
 import { deactivatePushSubscriptionForLogout, syncCurrentDevicePushSubscription } from './lib/pushNotifications'
+import { isCurrentDeviceBlocked, registerCurrentDevice } from './lib/qnaModeration'
 import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
 import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalRecommendationConcern, HospitalReview, HospitalSnapshot, Pet, QnaCategory, QnaPost, Tab } from './types/app'
 export type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost } from './types/app'
@@ -36,6 +37,15 @@ const qnaDatabaseCategory = ['Q', '&A'].join('')
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [deviceBlocked, setDeviceBlocked] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void isCurrentDeviceBlocked()
+      .then((blocked) => { if (active) setDeviceBlocked(blocked) })
+      .catch(() => { if (active) setDeviceBlocked(false) })
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -67,7 +77,8 @@ function App() {
     }
   }, [])
 
-  if (!authReady) return <main className="auth-screen"><p className="auth-loading">로그인 상태를 확인하고 있습니다.</p></main>
+  if (!authReady || deviceBlocked === null) return <main className="auth-screen"><p className="auth-loading">로그인 상태를 확인하고 있습니다.</p></main>
+  if (deviceBlocked) return <main className="auth-screen"><section className="auth-card"><h1>접근이 제한된 기기입니다</h1><p>커뮤니티 운영 정책 위반으로 이 기기에서는 서비스를 이용할 수 없습니다.</p></section></main>
   if (!session) return <Suspense fallback={<AppLoading />}><AuthScreen /></Suspense>
   return <Suspense fallback={<AppLoading />}><AuthenticatedApp session={session} /></Suspense>
 }
@@ -81,6 +92,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
   const [diaryPetId, setDiaryPetId] = useState<string | null>(initialUrlState.petId)
   const [diaryReadOnly, setDiaryReadOnly] = useState(false)
+  const [diaryInitialAction, setDiaryInitialAction] = useState<'routine-create' | null>(null)
   const [qnaInitialPetId, setQnaInitialPetId] = useState<string | null>(initialUrlState.tab === 'qna' ? initialUrlState.petId : null)
   const [qnaInitialPreset, setQnaInitialPreset] = useState<{ category: QnaCategory; title: string } | null>(null)
   const [editingDraft, setEditingDraft] = useState<DraftItem | null>(null)
@@ -101,6 +113,11 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const previousContentTabRef = useRef<Tab>(initialUrlState.tab === 'profile' ? 'map' : initialUrlState.tab)
 
   useEffect(() => {
+    void registerCurrentDevice().then((allowed) => {
+      if (!allowed) void supabase.auth.signOut().finally(() => window.location.reload())
+    }).catch((error: unknown) => {
+      if (import.meta.env.DEV) console.error('Current device registration failed.', error)
+    })
     void syncCurrentDevicePushSubscription().catch((error: unknown) => {
       if (import.meta.env.DEV) console.error('Current device push synchronization failed.', error)
     })
@@ -346,10 +363,11 @@ function AuthenticatedApp({ session }: { session: Session }) {
     }
   }
 
-  const openPetDiary = (petId: string) => {
+  const openPetDiary = (petId: string, action?: 'routine-create') => {
     setCurrentPetId(petId)
     setDiaryPetId(petId)
     setDiaryReadOnly(false)
+    setDiaryInitialAction(action ?? null)
     syncAppUrl('diary', petId)
     setActiveTab('diary')
     setCreateMode(null)
@@ -670,7 +688,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       {activeTab !== 'map' && (
         <main className="app-main">
           {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
-          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitals={allHospitals} hospitalReviews={hospitalReviews} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onFindHospital={openPetHospitalSearch} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitals={allHospitals} hospitalReviews={hospitalReviews} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialAction={diaryInitialAction} onInitialActionHandled={() => setDiaryInitialAction(null)} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onFindHospital={openPetHospitalSearch} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
           {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={allHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalOnMap} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
           {activeTab === 'profile' && (
             <ProfileScreen

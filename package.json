@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
+    "badword-filter-ko": "^1.0.1",
     "react": "^19.2.6",
     "react-calendar": "^6.0.1",
     "react-dom": "^19.2.6"

@@ -24,6 +24,7 @@ type PetCreateFlowProps = {
 
 const customSpeciesOption = '직접 입력'
 const defaultPhotoPosition = { x: 50, y: 50 }
+type PendingPhoto = { url: string; file: File; position: { x: number; y: number } }
 const reptileBranches: ReptileBranch[] = ['도마뱀', '뱀', '거북이']
 const lizardGroups = ['게코', '비어디드래곤', '모니터(왕도마뱀)', '카멜레온', '이구아나', '스킨크', '유로매스틱스']
 const geckoSpecies = ['크레스티드 게코', '레오파드 게코', '펫테일 게코', '바이퍼 게코', '차화 게코', '가고일 게코', '토케이 게코', '데이 게코']
@@ -90,8 +91,10 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
   const [gender, setGender] = useState<Pet['gender'] | ''>(initialPet?.gender ?? '')
   const [photo, setPhoto] = useState<string | undefined>(initialPet?.photo)
   const [photoFile, setPhotoFile] = useState<File | undefined>()
+  const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null)
   const [saveError, setSaveError] = useState('')
   const previewObjectUrlRef = useRef('')
+  const pendingPreviewObjectUrlRef = useRef('')
   const [photoPosition, setPhotoPosition] = useState(initialPet?.photoPosition ?? defaultPhotoPosition)
   const [weight, setWeight] = useState(initialPet?.weight ?? '')
   const [weightUnit, setWeightUnit] = useState<'g' | 'kg'>(initialPet?.weightUnit ?? 'g')
@@ -104,7 +107,27 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
 
   useEffect(() => () => {
     if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current)
+    if (pendingPreviewObjectUrlRef.current) URL.revokeObjectURL(pendingPreviewObjectUrlRef.current)
   }, [])
+
+  useEffect(() => {
+    if (!pendingPhoto) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (pendingPreviewObjectUrlRef.current === pendingPhoto.url) {
+        URL.revokeObjectURL(pendingPhoto.url)
+        pendingPreviewObjectUrlRef.current = ''
+      }
+      setPendingPhoto(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [pendingPhoto])
 
   const selectReptileBranch = (value: string) => {
     setReptileBranch(value as ReptileBranch)
@@ -160,23 +183,23 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
     if (!file) return
     try {
       validateImageFile(file)
-      if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current)
+      if (pendingPreviewObjectUrlRef.current) URL.revokeObjectURL(pendingPreviewObjectUrlRef.current)
       const previewUrl = URL.createObjectURL(file)
-      previewObjectUrlRef.current = previewUrl
-      setPhoto(previewUrl)
-      setPhotoFile(file)
-      setPhotoPosition(defaultPhotoPosition)
+      pendingPreviewObjectUrlRef.current = previewUrl
+      setPendingPhoto({ url: previewUrl, file, position: defaultPhotoPosition })
       setSaveError('')
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : '사진을 불러오지 못했습니다.')
     }
   }
 
-  const movePhotoPosition = (event: PointerEvent<HTMLDivElement>) => {
+  const movePhotoPosition = (event: PointerEvent<HTMLDivElement>, editingPreview = false) => {
     const rect = event.currentTarget.getBoundingClientRect()
     const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100))
     const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100))
-    setPhotoPosition({ x: Math.round(x), y: Math.round(y) })
+    const position = { x: Math.round(x), y: Math.round(y) }
+    if (editingPreview) setPendingPhoto((current) => current ? { ...current, position } : current)
+    else setPhotoPosition(position)
   }
 
   const startPhotoDrag = (event: PointerEvent<HTMLDivElement>) => {
@@ -184,6 +207,32 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
     movePhotoPosition(event)
+  }
+
+  const startPreviewDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (!pendingPhoto) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    movePhotoPosition(event, true)
+  }
+
+  const cancelPhotoPreview = () => {
+    if (pendingPhoto && pendingPreviewObjectUrlRef.current === pendingPhoto.url) {
+      URL.revokeObjectURL(pendingPhoto.url)
+      pendingPreviewObjectUrlRef.current = ''
+    }
+    setPendingPhoto(null)
+  }
+
+  const applyPhotoPreview = () => {
+    if (!pendingPhoto) return
+    if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current)
+    previewObjectUrlRef.current = pendingPhoto.url
+    pendingPreviewObjectUrlRef.current = ''
+    setPhoto(pendingPhoto.url)
+    setPhotoFile(pendingPhoto.file)
+    setPhotoPosition(pendingPhoto.position)
+    setPendingPhoto(null)
   }
 
   if (completedPet) {
@@ -201,7 +250,7 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
     }
   }
 
-  return <StepShell title={isEditing ? '펫 수정' : '펫 등록'} onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={4} stepLabels={['기본', '분류', '종', '확인']} onStepChange={setStep}>
+  return <><StepShell title={isEditing ? '펫 수정' : '펫 등록'} onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={4} stepLabels={['기본', '분류', '종', '확인']} onStepChange={setStep}>
     {step === 0 && <div className="pet-basic-step"><h2>새로운 가족을 알려주세요</h2><StepText label="이름" value={name} onChange={(value) => setName(value.slice(0, 24))} placeholder="이름을 입력해주세요" required /></div>}
     {step === 1 && <StepSelect label="동물 분류" value={group} options={allowedCategoryOptions} labels={categoryLabels} onChange={(value) => { const nextGroup = value as SupportedPetCategory; setGroup(nextGroup); setReptileBranch(''); setAmphibianBranch(''); setLizardGroup(''); setSpeciesOption(''); setCustomSpecies('') }} required />}
     {step === 2 && <div className="pet-species-step">
@@ -224,4 +273,18 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
     {saveError && <p className="pet-save-error" role="alert">{saveError}</p>}
     <div className="step-actions"><button className="step-secondary step-back" type="button" disabled={step === 0} onClick={() => step > 0 ? setStep((value) => value - 1) : onClose()}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={step === 3 ? (isEditing ? finishEdit : finish) : () => setStep((value) => value + 1)}>{step === 3 ? (isEditing ? '수정 완료' : '등록 완료') : '다음'}</button></div>
   </StepShell>
+    {pendingPhoto && <div className="pet-photo-preview-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) cancelPhotoPreview() }}>
+      <section className="pet-photo-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-photo-preview-title">
+        <div className="pet-photo-preview-header"><button type="button" onClick={cancelPhotoPreview} aria-label="사진 조정 취소">취소</button><h2 id="pet-photo-preview-title">사진 조정</h2><button type="button" onClick={applyPhotoPreview}>적용</button></div>
+        <div className="pet-photo-preview-body">
+          <p>사진을 움직여 펫이 가운데 오도록 맞춰주세요.</p>
+          <div className="pet-photo-preview-frame" onPointerDown={startPreviewDrag} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePhotoPosition(event, true) }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId) }}>
+            <img src={pendingPhoto.url} alt="조정 중인 펫 사진" style={{ objectPosition: `${pendingPhoto.position.x}% ${pendingPhoto.position.y}%` }} draggable={false} />
+            <span className="pet-photo-preview-guide" aria-hidden="true" />
+          </div>
+          <small><span aria-hidden="true">↔</span> 상하좌우로 드래그해 위치를 조정할 수 있어요.</small>
+        </div>
+      </section>
+    </div>}
+  </>
 }

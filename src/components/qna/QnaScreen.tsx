@@ -3,6 +3,8 @@ import './Qna.css'
 import { ensureSupabaseSession, supabase } from '../../lib/supabase'
 import { loadAppData } from '../../lib/appData'
 import { saveLike } from '../../lib/likes'
+import { sanitizeImageFile, validateImageFile } from '../../lib/imageStorage'
+import { maskKoreanProfanity } from '../../lib/qnaModeration'
 import StepShell from '../account/StepShell'
 import HeartIcon from '../common/HeartIcon'
 import { RequiredMark } from '../common/FieldMarkers'
@@ -410,12 +412,12 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
         {(likeError || commentError) && <button className="data-error" type="button" onClick={() => { setLikeError(''); setCommentError('') }}>{likeError || commentError}</button>}
         <article className="qna-detail-post">
           <div className="qna-detail-badges">{qnaPostCategories(selected).map((category) => <span className="qna-category" data-category={category} key={category}>{category}</span>)}<button className={`qna-detail-like ${selected.liked ? 'active' : ''}`} type="button" aria-label={selected.liked ? '좋아요 취소' : '좋아요'} aria-pressed={selected.liked} onClick={() => toggleLike(selected)}><HeartIcon filled={selected.liked} /><span>{selected.likes}</span></button>{selected.mine === true ? <button className={`qna-detail-resolve-button ${qnaStatus(selected) === 'resolved' ? 'resolved' : ''}`} type="button" onClick={() => toggleStatus(selected)}>{qnaStatus(selected) === 'resolved' ? '해결 완료' : '해결'}</button> : <span className={`qna-status ${qnaStatus(selected)}`}>{qnaStatusLabel(qnaStatus(selected))}</span>}</div>
-          <h2>{selected.title}</h2>
+          <h2>{maskKoreanProfanity(selected.title)}</h2>
           <div className="qna-detail-author qna-detail-author-meta"><UserAvatar url={selected.mine === true ? profile.avatarUrl : selected.authorAvatarUrl} name={qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)} /><div className="qna-detail-author-copy"><strong>{qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)}</strong><QnaPostMeta createdAt={selected.createdAt} viewCount={selected.viewCount ?? 0} commentCount={selectedComments.length} likes={selected.likes} className="qna-detail-meta-line" /></div></div>
           <div className="qna-detail-pet-meta">종: {formatQnaAnimal(selected)}</div>
           <div className="qna-author"><UserAvatar url={selected.mine === true ? profile.avatarUrl : selected.authorAvatarUrl} name={qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)} /><div><strong>{qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)}</strong><span>{formatQnaAnimal(selected)} · {formatQnaDate(selected.createdAt)}</span></div></div>
           {selectedImages.length > 0 && <div className="qna-detail-image-grid">{selectedImages.map((image) => <button className="qna-detail-image-button" type="button" key={image} onClick={() => setLightboxImage(image)}><img src={image} alt="첨부 이미지" /></button>)}</div>}
-          <p>{selected.body}</p>
+          <p>{maskKoreanProfanity(selected.body)}</p>
           {selected.attachedDiarySnapshot && selected.attachedDiarySnapshot.records.length > 1 && <DiaryVisualizationAttachment snapshot={selected.attachedDiarySnapshot} />}
           {!selected.attachedDiarySnapshot && selected.attachedRecordSnapshot && <RecordAttachCard record={selected.attachedRecordSnapshot} mode="posted" onOpen={() => onOpenDiary(selected.attachedRecordSnapshot!.petId, selected.mine !== true)} />}
         </article>
@@ -425,7 +427,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
             <article className={selected.selectedAnswerCommentId === item.id ? 'accepted' : ''} key={item.id}>
               <div className="qna-comment-head"><span className="qna-comment-author"><UserAvatar url={item.mine ? profile.avatarUrl : item.authorAvatarUrl} name={item.author} /><span><strong>{item.author} <QnaTrustBadge score={getTrustScoreForAuthor(trustPosts, item.author)} /></strong><time>{formatQnaDate(item.createdAt)}</time></span></span>{item.mine && <div className="qna-comment-menu"><button type="button" aria-label="댓글 관리 메뉴" aria-expanded={commentMenuId === item.id} onClick={() => setCommentMenuId(commentMenuId === item.id ? null : item.id)}>⋮</button>{commentMenuId === item.id && <div><button type="button" onClick={async () => { await supabase.from('post_comments').delete().eq('id', item.id).eq('user_id', userId); setCommentsByPost((items) => ({ ...items, [selected.id]: (items[selected.id] ?? []).filter((commentItem) => commentItem.id !== item.id) })); setCommentMenuId(null) }}>댓글 삭제</button></div>}</div>}</div>
               {selected.selectedAnswerCommentId === item.id && <span className="accepted-answer-chip">채택 답변</span>}
-              {item.body && <p>{item.body}</p>}
+              {item.body && <p>{maskKoreanProfanity(item.body)}</p>}
               {readCommentHospitalSnapshot(item) && <HospitalAttachCard hospital={readCommentHospitalSnapshot(item)!} mode="posted" onOpen={() => onOpenHospital(readCommentHospitalSnapshot(item)!)} />}
               <button className={`qna-comment-like ${item.liked ? 'active' : ''}`} type="button" aria-label={item.liked ? '댓글 좋아요 취소' : '댓글 좋아요'} aria-pressed={item.liked} onClick={() => void toggleCommentLike(item)}><span aria-hidden="true">{item.liked ? '♥' : '♡'}</span>{(item.likes ?? 0) > 0 && <span className="qna-comment-like-count">{item.likes}</span>}</button>
               {selected.mine === true && item.mine !== true && <button className="qna-accept-button" type="button" onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '답변 채택'}</button>}
@@ -495,8 +497,10 @@ function QnaHelpCard({ post, authorName, trustScore, commentCount, fallbackAvata
   const maxRecordTypeCount = Math.max(1, ...recordTypeCounts.map(([, count]) => count))
   const [menuOpen, setMenuOpen] = useState(false)
   const [recordPreviewOpen, setRecordPreviewOpen] = useState(false)
-  const title = post.title.trim() || '제목 없는 질문'
-  const body = post.body.trim()
+  const rawTitle = post.title.trim() || '제목 없는 질문'
+  const rawBody = post.body.trim()
+  const title = maskKoreanProfanity(rawTitle)
+  const body = maskKoreanProfanity(rawBody)
   const listStatus = qnaListStatus(post, commentCount)
   const statusLabel = listStatus === 'answered' ? `답변 ${commentCount}개` : qnaListStatusLabel(listStatus)
   const attachedRecordCount = diary?.records.length ?? (record ? 1 : 0)
@@ -754,9 +758,10 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
         : current))
     }, 180)
     try {
-      const extension = item.file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+      const sanitizedFile = await sanitizeImageFile(item.file)
+      const extension = sanitizedFile.type === 'image/png' ? 'png' : 'jpg'
       const path = `${userId}/${crypto.randomUUID()}.${extension}`
-      const { error } = await supabase.storage.from(QNA_IMAGE_BUCKET).upload(path, item.file, { cacheControl: '3600', contentType: item.file.type || 'image/jpeg', upsert: false })
+      const { error } = await supabase.storage.from(QNA_IMAGE_BUCKET).upload(path, sanitizedFile, { cacheControl: '3600', contentType: sanitizedFile.type, upsert: false })
       if (error) throw error
       const { data } = supabase.storage.from(QNA_IMAGE_BUCKET).getPublicUrl(path)
       updateImageUpload(item.id, { status: 'uploaded', progress: 100, storageUrl: data.publicUrl, storagePath: path })
@@ -768,9 +773,15 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
   }
 
   const attachImage = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('image/')).slice(0, 3)
+    const files = Array.from(event.target.files ?? []).slice(0, 3)
     event.target.value = ''
     if (files.length === 0) return
+    try {
+      files.forEach(validateImageFile)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '사진을 확인해 주세요.')
+      return
+    }
     const nextItems = files.map((file) => ({ id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file), status: 'uploading' as const, progress: 0 }))
     setImageUploads(nextItems)
     nextItems.forEach((item) => { void uploadImage(item) })

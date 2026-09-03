@@ -10,6 +10,9 @@ import { toDateKey } from './mockDiaryData'
 import type { HospitalRecommendationConcern, HospitalReview, HospitalSnapshot } from '../../types/app'
 import NotificationOptInNudge from '../../components/notifications/NotificationOptInNudge'
 import { OptionalBadge } from '../../components/common/FieldMarkers'
+import { sanitizeImageFile } from '../../lib/imageStorage'
+import DiaryMobileScreen from './DiaryMobileScreen'
+import type { MobileDiaryAlert, MobileDiaryPrediction, MobileDiaryQuickAction, MobileDiaryRecord, MobileDiaryRoutine } from './DiaryMobileScreen'
 import 'react-calendar/dist/Calendar.css'
 import './DiaryPage.css'
 
@@ -67,6 +70,9 @@ type CalendarRecordTag = {
 }
 type CalendarCyclePrediction = {
   date: string
+  startDate: string
+  endDate: string
+  lastDate: string
   type: 'shed' | 'egg'
   label: string
 }
@@ -523,12 +529,25 @@ function environmentRiskLabel(level: RiskLevel) {
   return ['정상', '정상', '확인 필요', '조치 필요', '긴급 점검', '즉시 대응'][level]
 }
 
+function useDiaryMobileLayout() {
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 760px) and (orientation: portrait)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px) and (orientation: portrait)')
+    const update = () => setMobile(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  return mobile
+}
+
 export default function DiaryPage({
   userId,
   pets,
   hospitals = [],
   hospitalReviews = {},
   initialPetId,
+  initialAction,
+  onInitialActionHandled,
   initialClinicHospital,
   readOnly = false,
   onAddPet,
@@ -544,6 +563,8 @@ export default function DiaryPage({
   hospitals?: HospitalSnapshot[]
   hospitalReviews?: Record<string, HospitalReview[]>
   initialPetId?: string
+  initialAction?: 'routine-create' | null
+  onInitialActionHandled?: () => void
   initialClinicHospital?: HospitalSnapshot | null
   readOnly?: boolean
   onAddPet: () => void
@@ -555,6 +576,7 @@ export default function DiaryPage({
   onDeleteDraft?: (draftId: string) => void | Promise<void>
 }) {
   const today = toDateKey(new Date())
+  const mobileLayout = useDiaryMobileLayout()
   const [selectedPetId, setSelectedPetId] = useState(() => getInitialDiaryPetId(userId, pets, initialPetId))
   const [selectedDate, setSelectedDate] = useState(today)
   const [mobileView, setMobileView] = useState<'plan' | 'calendar'>('plan')
@@ -674,6 +696,14 @@ export default function DiaryPage({
     ))
     return [...displayPetRecords.filter((record) => record.date <= today), ...futurePlans]
   }, [activeReminders, displayPetRecords, effectivePetId, hospitalReviews, today, userId, visibleMonth])
+
+  useEffect(() => {
+    if (initialAction !== 'routine-create' || !effectivePetId) return
+    setEditingReminder(null)
+    setRoutinePresetType(null)
+    setReminderFormOpen(true)
+    onInitialActionHandled?.()
+  }, [effectivePetId, initialAction, onInitialActionHandled])
   const recentFoods = Array.from(new Set(petRecords.flatMap((record) => record.type === 'food' ? record.foods ?? [] : []))).slice(0, 3)
   const matingPetCandidates = selectedPet ? pets.filter((pet) => sameSpecies(pet, selectedPet)) : []
   const matingOptions = useMemo(() => getMatingOptions(records, pets, selectedPet), [pets, records, selectedPet])
@@ -747,6 +777,49 @@ export default function DiaryPage({
     .map((item) => ({ ...item, dailyTask: undefined }))
   const planReminders = [...dailyTaskPlanReminders, ...immediatePlanReminders]
     .filter((item) => !selectedPet || isReminderVisibleForPet(item.reminder, selectedPet, speciesCareProfiles))
+  const mobileDays = getDiaryWeekDates(selectedDate).map((date) => {
+    const key = toDateKey(date)
+    const indicators: Array<'record' | 'egg' | 'shed'> = []
+    if (calendarPetRecords.some((record) => record.date === key)) indicators.push('record')
+    if (calendarCyclePredictions.some((prediction) => prediction.type === 'egg' && key >= prediction.startDate && key <= prediction.endDate)) indicators.push('egg')
+    if (calendarCyclePredictions.some((prediction) => prediction.type === 'shed' && key >= prediction.startDate && key <= prediction.endDate)) indicators.push('shed')
+    return { key, weekday: ['일', '월', '화', '수', '목', '금', '토'][date.getDay()], day: date.getDate(), selected: key === selectedDate, today: key === today, indicators }
+  })
+  const mobileRoutines: MobileDiaryRoutine[] = planReminders.filter((item) => !item.overdue).map((item) => ({
+    id: item.dailyTask?.id ?? item.reminder.id,
+    label: planLabel(item.reminder, selectedPet),
+    icon: routinePhotoKeys[item.reminder.reminderType] ? `/assets/routine-icons/cards/${routinePhotoKeys[item.reminder.reminderType]}.png` : undefined,
+    completed: item.dailyTask ? item.dailyTask.status === 'completed' : item.reminder.completedAt?.slice(0, 10) === selectedDate,
+    disabled: selectedDate > today,
+  }))
+  const mobileQuickActions: MobileDiaryQuickAction[] = [
+    { id: 'poop', label: '배변', icon: incidentIconSrc.poop ?? '', disabled: selectedDate > today, onClick: () => openSmartAdd('poop') },
+    { id: 'shed', label: '탈피', icon: incidentIconSrc.shed ?? '', disabled: selectedDate > today, onClick: () => openSmartAdd('shed') },
+    { id: 'egg', label: '산란', icon: incidentIconSrc.egg ?? '', disabled: selectedDate > today, onClick: () => openSmartAdd('egg') },
+    { id: 'mating', label: '메이팅', icon: incidentIconSrc.mating ?? '', disabled: selectedDate > today, onClick: () => openSmartAdd('mating') },
+    { id: 'hospital', label: '병원 방문', icon: incidentIconSrc.hospital ?? '', onClick: () => openIncidentRoutine('hospital') },
+  ]
+  const mobileAgenda = mobileRecordsForDate(petRecords, selectedDate)
+  const mobilePredictions: MobileDiaryPrediction[] = calendarCyclePredictions.map((prediction) => ({ type: prediction.type, label: prediction.type === 'egg' ? '산란 예상 주기' : '탈피 예상 주기', startDate: prediction.startDate, endDate: prediction.endDate }))
+  const mobileInsight = buildDiaryInsights(petRecords, selectedPet?.name ?? '펫', resolvedInsightIds)[0]
+  const hasTemporaryPoopRoutine = petCarePlans.some((reminder) => reminder.isActive && reminder.purpose === 'poop_follow_up')
+  const mobileAlert: MobileDiaryAlert | undefined = mobileInsight && !(mobileInsight.poopRecovered && !hasTemporaryPoopRoutine) ? {
+    severity: mobileInsight.poopRecovered ? 'complete' : mobileInsight.level === 'urgent' ? 'critical' : mobileInsight.level === 'caution' ? 'warning' : mobileInsight.level === 'notice' ? 'caution' : 'info',
+    badge: mobileInsight.poopRecovered ? '완료' : mobileInsight.level === 'urgent' ? '심각' : mobileInsight.level === 'caution' ? '경고' : mobileInsight.level === 'notice' ? '주의' : '정보',
+    title: mobileInsight.title,
+    body: mobileInsight.body,
+    actions: mobileInsight.poopRecovered ? [
+      { label: '유지하기', onClick: () => { resolveDiaryInsight(mobileInsight.id); showSmartToast('임시 루틴을 유지합니다.') } },
+      { label: '종료하기', onClick: () => { closeTemporaryPoopRoutines(); resolveDiaryInsight(mobileInsight.id) } },
+    ] : buildMobileDiaryAlertActions({
+      insight: mobileInsight,
+      onOpenRecords: () => setVisualizationOpen(true),
+      onCreateQna: selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id, mobileInsight.metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : mobileInsight.metric === 'poop' ? { category: '질병', title: '배변 관련 질문' } : undefined) : undefined,
+      onFindHospital: selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id, mobileInsight.metric === 'poop' ? 'poop' : mobileInsight.metric === 'shed' ? 'shed' : undefined) : undefined,
+      onShedComplete: () => saveShedCheckRecord('탈피 완료'),
+      onShedNotYet: () => saveShedCheckRecord('탈피 확인 · 완료 안됨'),
+    }),
+  } : undefined
   const selectedRecord = selectedRecordId ? records.find((record) => record.id === selectedRecordId) : null
 
   useEffect(() => {
@@ -1762,7 +1835,29 @@ export default function DiaryPage({
 
   return (
     <section className="diary-page">
-      {dateRecordsView ?? (
+      {dateRecordsView ?? (mobileLayout ? (
+        <>
+          <DiaryMobileScreen
+            petName={selectedPet?.name ?? '펫 선택'}
+            petPhoto={selectedPet?.photo}
+            canChangePet={!readOnly && pets.length > 1}
+            calendarOpen={mobileView === 'calendar'}
+            days={mobileDays}
+            alert={mobileAlert}
+            routines={mobileRoutines}
+            quickActions={mobileQuickActions}
+            agenda={mobileAgenda}
+            selectedDateLabel={formatMobileAgendaDate(selectedDate)}
+            predictions={mobilePredictions}
+            calendar={<Calendar mobileMode month={visibleMonth} selectedDate={selectedDate} records={calendarPetRecords} cyclePredictions={calendarCyclePredictions} onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))} onSelect={(date) => setSelectedDate(date)} />}
+            onChangePet={() => setPetMenuOpen(true)}
+            onToggleCalendar={() => setMobileView((view) => view === 'calendar' ? 'plan' : 'calendar')}
+            onSelectDate={(date) => { setSelectedDate(date); setVisibleMonth(parseDateKey(date)) }}
+            onToggleRoutine={(id) => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id); if (item) void completePlan(item.reminder, item.dailyTask) }}
+          />
+          {petMenuOpen && selectedPet && <PetMenuDrawer currentPet={selectedPet} pets={pets} selectedPetId={effectivePetId} onClose={() => setPetMenuOpen(false)} onSelect={switchPet} />}
+        </>
+      ) : (
         <>
       <div className={`diary-pet-bar ${!readOnly && pets.length > 1 ? 'has-menu' : 'single-pet'}`}>
         {!readOnly && pets.length > 1 && (
@@ -1860,7 +1955,7 @@ export default function DiaryPage({
       </div>
 
         </>
-      )}
+      ))}
 
       {smartSheet && selectedPet && (
         <Overlay onClose={() => setSmartSheet(null)}>
@@ -2619,6 +2714,7 @@ function SmartAddSheet({
 }
 
 function Calendar({
+  mobileMode = false,
   month,
   selectedDate,
   records,
@@ -2626,6 +2722,7 @@ function Calendar({
   onMove,
   onSelect,
 }: {
+  mobileMode?: boolean
   month: Date
   selectedDate: string
   records: PetRecord[]
@@ -2670,7 +2767,7 @@ function Calendar({
     <section className="calendar-month">
       <ReactCalendar
         activeStartDate={new Date(month.getFullYear(), month.getMonth(), 1)}
-        calendarType="gregory"
+        calendarType={mobileMode ? 'iso8601' : 'gregory'}
         locale="ko-KR"
         minDetail="decade"
         maxDetail="month"
@@ -2694,7 +2791,12 @@ function Calendar({
         tileClassName={({ date, view }) => {
           if (view !== 'month') return undefined
           const key = toDateKey(date)
-          const predictionTypes = cyclePredictions.filter((prediction) => prediction.date === key).map((prediction) => `expected-${prediction.type}`).join(' ')
+          const predictionTypes = cyclePredictions.flatMap((prediction) => key >= prediction.startDate && key <= prediction.endDate ? [
+            `expected-${prediction.type}`,
+            `expected-range-${prediction.type}`,
+            key === prediction.startDate ? 'expected-range-start' : '',
+            key === prediction.endDate ? 'expected-range-end' : '',
+          ] : []).filter(Boolean).join(' ')
           const hasClinicPlan = records.some((record) => record.date === key && record.type === 'hospital' && record.memo === '진료 예정')
           return `calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${date.getMonth() !== month.getMonth() ? 'muted' : ''} ${predictionTypes} ${hasClinicPlan ? 'expected-clinic' : ''}`
         }}
@@ -3137,13 +3239,20 @@ function ChoiceField({
 }
 
 function PhotoPicker({ value, onChange }: { value?: string; onChange: (value?: string) => void }) {
-  const choose = (event: ChangeEvent<HTMLInputElement>) => {
+  const choose = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) return
+    event.target.value = ''
+    let sanitizedFile: File
+    try {
+      sanitizedFile = await sanitizeImageFile(file)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '사진을 확인해 주세요.')
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => onChange(typeof reader.result === 'string' ? reader.result : undefined)
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(sanitizedFile)
   }
   return (
     <label className="photo-picker">
@@ -3208,7 +3317,9 @@ function DiaryNotice({
   onKeepTemporaryRoutines?: (insightId: string) => void
   onCloseTemporaryRoutines?: (insightId: string) => void
 }) {
+  const hasTemporaryPoopRoutine = reminders.some((reminder) => reminder.isActive && reminder.purpose === 'poop_follow_up')
   const insights = buildDiaryInsights(records, petName, resolvedInsightIds)
+    .filter((insight) => !insight.poopRecovered || hasTemporaryPoopRoutine)
   if (insights.length === 0) {
     const notice = buildDiaryNotice(records, resolvedInsightIds)
     return <div className="diary-notice-line"><strong>NOTICE</strong><span>{notice.message}</span></div>
@@ -3745,6 +3856,70 @@ function compareRecordTime(a: PetRecord, b: PetRecord) {
   return `${a.date}${a.occurredAt ?? a.createdAt}`.localeCompare(`${b.date}${b.occurredAt ?? b.createdAt}`)
 }
 
+function getDiaryWeekDates(dateKey: string) {
+  const selected = parseDateKey(dateKey)
+  const monday = new Date(selected)
+  monday.setDate(selected.getDate() + (selected.getDay() === 0 ? -6 : 1 - selected.getDay()))
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday)
+    date.setDate(monday.getDate() + index)
+    return date
+  })
+}
+
+function formatMobileDiaryTime(record: PetRecord) {
+  const value = record.occurredAt ?? record.createdAt
+  if (!value) return '--'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '--' : date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+function formatMobileDiarySummary(record: PetRecord) {
+  if (record.environmentRecord) return formatEnvironmentValue(record.environmentRecord)
+  if (record.weight !== undefined) return `${formatWeightValue(record.weight)}g`
+  const foods = getRecordFoodNames(record)
+  return foods.length > 0 ? foods.join(' · ') : record.memo?.trim() || undefined
+}
+
+function mobileRecordsForDate(records: PetRecord[], date: string): MobileDiaryRecord[] {
+  return records.filter((record) => record.date === date).sort((a, b) => compareRecordTime(a, b)).map((record) => ({
+    id: record.id,
+    date: '',
+    time: formatMobileDiaryTime(record),
+    type: calendarRecordTag(record).label,
+    summary: formatMobileDiarySummary(record),
+    photo: record.photoUrl,
+  }))
+}
+
+function formatMobileAgendaDate(date: string) {
+  const [, month, day] = date.split('-')
+  return `${Number(month)}월 ${Number(day)}일`
+}
+
+function buildMobileDiaryAlertActions({ insight, onOpenRecords, onCreateQna, onFindHospital, onShedComplete, onShedNotYet }: {
+  insight: DiaryInsight
+  onOpenRecords: () => void
+  onCreateQna?: () => void
+  onFindHospital?: () => void
+  onShedComplete: () => void
+  onShedNotYet: () => void
+}) {
+  if (insight.action === 'shed-check' || insight.action === 'shed-cycle-check') return [
+    { label: insight.action === 'shed-check' ? '탈피 중' : '아니요', onClick: onShedNotYet },
+    { label: insight.action === 'shed-check' ? '탈피 완료' : '예', onClick: onShedComplete },
+  ]
+  if (isRepeatedPoopInsight(insight)) return [
+    { label: '기록 모아보기', onClick: onOpenRecords },
+    ...(onCreateQna ? [{ label: 'Q&A 작성하기', onClick: onCreateQna }] : []),
+  ].slice(0, 2)
+  return [
+    ...(onFindHospital ? [{ label: '병원 찾기', onClick: onFindHospital }] : []),
+    ...(onCreateQna ? [{ label: 'Q&A', onClick: onCreateQna }] : []),
+    { label: '기록 모아보기', onClick: onOpenRecords },
+  ].slice(0, 2)
+}
+
 function deduplicateMeasuredRecordsByDay(records: PetRecord[]) {
   const uniqueRecords = new Map<string, PetRecord>()
 
@@ -3872,27 +4047,43 @@ function getShedCyclePrediction(records: PetRecord[]) {
   const expected = new Date(`${lastCompletedDate}T00:00:00`)
   expected.setDate(expected.getDate() + averageCycleDays)
   const expectedDate = toDateKey(expected)
+  const expectedStartDate = addDaysToDateKey(lastCompletedDate, Math.min(...intervals))
+  const expectedEndDate = addDaysToDateKey(lastCompletedDate, Math.max(...intervals))
   return {
     averageCycleDays,
     expectedDate,
+    expectedStartDate,
+    expectedEndDate,
     lastCompletedDate,
     daysUntilExpected: daysBetween(toDateKey(new Date()), expectedDate),
   }
+}
+
+function addDaysToDateKey(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T00:00:00`)
+  date.setDate(date.getDate() + days)
+  return toDateKey(date)
+}
+
+function getObservedCycleWindow(dates: string[]) {
+  const uniqueDates = Array.from(new Set(dates)).sort()
+  if (uniqueDates.length < 2) return null
+  const intervals = uniqueDates.slice(1).map((date, index) => Math.max(1, daysBetween(uniqueDates[index], date)))
+  const prediction = analyzeRecordedCycle(uniqueDates, toDateKey(new Date()))
+  if (!prediction) return null
+  return { ...prediction, startDate: addDaysToDateKey(prediction.lastDate, Math.min(...intervals)), endDate: addDaysToDateKey(prediction.lastDate, Math.max(...intervals)) }
 }
 
 function buildCalendarCyclePredictions(records: PetRecord[]): CalendarCyclePrediction[] {
   const predictions: CalendarCyclePrediction[] = []
   const shedPrediction = getShedCyclePrediction(records)
   if (shedPrediction) {
-    predictions.push({ date: shedPrediction.expectedDate, type: 'shed', label: '탈피 예상' })
+    predictions.push({ date: shedPrediction.expectedDate, startDate: shedPrediction.expectedStartDate, endDate: shedPrediction.expectedEndDate, lastDate: shedPrediction.lastCompletedDate, type: 'shed', label: '탈피 예상' })
   }
 
-  const eggPrediction = analyzeRecordedCycle(
-    records.filter(isEggRecord).map((record) => record.date),
-    toDateKey(new Date()),
-  )
+  const eggPrediction = getObservedCycleWindow(records.filter(isEggRecord).map((record) => record.date))
   if (eggPrediction) {
-    predictions.push({ date: eggPrediction.expectedDate, type: 'egg', label: '산란 예상' })
+    predictions.push({ date: eggPrediction.expectedDate, startDate: eggPrediction.startDate, endDate: eggPrediction.endDate, lastDate: eggPrediction.lastDate, type: 'egg', label: '산란 예상' })
   }
 
   return predictions.filter((prediction, index) => predictions.findIndex((item) => item.date === prediction.date && item.type === prediction.type) === index)

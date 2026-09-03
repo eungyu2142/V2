@@ -821,3 +821,9 @@
 .profile-rating-stars .is-empty {
   color: var(--color-border) !important;
 }
+.settings-warning-card { position: relative; }
+.settings-warning-count { display: flex; align-items: baseline; gap: 5px; margin-top: 14px; color: var(--color-text-secondary); }
+.settings-warning-count strong { color: var(--color-error-600); font-size: 1.5rem; }
+.settings-warning-meter { width: 100%; height: 8px; margin-top: 10px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-border); }
+.settings-warning-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--color-error-600); transition: width var(--motion-normal); }
+.settings-warning-note { margin: 10px 0 0; color: var(--color-text-secondary); font-size: .8rem; line-height: 1.5; }

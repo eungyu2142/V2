@@ -1,19 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listCarePlans, listDailyTasks } from '../../features/diary/diaryService'
-import type { CarePlan, DailyTask } from '../../features/diary/diaryTypes'
-
-type AnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
-
-type Pet = {
-  id: string
-  name: string
-  group: AnimalCategory
-  species: string
-  gender: 'male' | 'female' | 'unknown'
-  photo?: string
-  photoPosition?: { x: number; y: number }
-  registeredAt?: string
-}
+import { listCarePlans, listCareRecords, listDailyTasks } from '../../features/diary/diaryService'
+import type { CarePlan, DailyTask, PetRecord } from '../../features/diary/diaryTypes'
+import type { AnimalCategory, Pet } from '../../types/app'
+import PetMobileFlow, { type PetMobileView } from './PetMobileFlow'
 
 const animalCategoryLabels: Record<AnimalCategory, string> = {
   all: '전체',
@@ -100,7 +89,7 @@ export default function PetsScreen({
   pets: Pet[]
   onDeletePet: (petId: string) => void | Promise<void>
   onEditPet: (pet: Pet) => void
-  onOpenDiary: (petId: string) => void
+  onOpenDiary: (petId: string, action?: 'routine-create') => void
   onRegisterPet: () => void
 }) {
   const [query, setQuery] = useState('')
@@ -108,6 +97,23 @@ export default function PetsScreen({
   const [menuPetId, setMenuPetId] = useState<string | null>(null)
   const [todayTasksByPet, setTodayTasksByPet] = useState<Record<string, TodayTask[]>>({})
   const [routinePetIds, setRoutinePetIds] = useState<Set<string>>(() => new Set())
+  const [plans, setPlans] = useState<CarePlan[]>([])
+  const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([])
+  const [records, setRecords] = useState<PetRecord[]>([])
+  const [mobileView, setMobileView] = useState<PetMobileView>('main')
+  const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id ?? '')
+  const [mobileLayout, setMobileLayout] = useState(() => window.matchMedia('(max-width: 760px) and (orientation: portrait)').matches)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px) and (orientation: portrait)')
+    const update = () => setMobileLayout(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (!pets.some((pet) => pet.id === selectedPetId)) setSelectedPetId(pets[0]?.id ?? '')
+  }, [pets, selectedPetId])
 
   useEffect(() => {
     let active = true
@@ -116,7 +122,8 @@ export default function PetsScreen({
     Promise.all([
       listCarePlans(userId).catch(() => [] as CarePlan[]),
       listDailyTasks(userId, today, today).catch(() => [] as DailyTask[]),
-    ]).then(([plans, tasks]) => {
+      listCareRecords(userId).catch(() => [] as PetRecord[]),
+    ]).then(([plans, tasks, nextRecords]) => {
       if (!active) return
       const plansById = new Map(plans.map((plan) => [plan.id, plan]))
       const taskPlanIds = new Set(tasks.map((task) => task.carePlanId).filter((id): id is string => Boolean(id)))
@@ -146,6 +153,9 @@ export default function PetsScreen({
 
       setRoutinePetIds(new Set(plans.filter((plan) => plan.isActive).map((plan) => plan.petId)))
       setTodayTasksByPet(grouped)
+      setPlans(plans)
+      setDailyTasks(tasks)
+      setRecords(nextRecords)
     })
 
     return () => {
@@ -180,6 +190,8 @@ export default function PetsScreen({
   const requestDelete = (pet: Pet) => {
     if (window.confirm(`'${pet.name}'을 삭제하시겠습니까?`)) onDeletePet(pet.id)
   }
+
+  if (mobileLayout) return <PetMobileFlow pets={pets} selectedPetId={selectedPetId} view={mobileView} tasks={dailyTasks} plans={plans} records={records} onSelectPet={(id) => { setSelectedPetId(id); setMobileView('main') }} onView={setMobileView} onRegisterPet={onRegisterPet} onEditPet={onEditPet} onOpenDiary={onOpenDiary} />
 
   return (
     <section className="mx-auto flex w-full max-w-[76rem] flex-col gap-5 px-4 pb-24 pt-2 max-[760px]:-mx-4 max-[760px]:w-[calc(100%+2rem)] sm:px-6 max-[760px]:px-4 lg:px-8">

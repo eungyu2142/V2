@@ -8,6 +8,7 @@ import {
 } from '../../lib/pushNotifications'
 import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaComment, QnaPost } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
+import { getMyQnaWarningCount } from '../../lib/qnaModeration'
 
 type ProfileTab = 'posts' | 'drafts' | 'likes' | 'accepted' | 'settings'
 type WrittenFilter = 'qna' | 'reviews'
@@ -894,6 +895,7 @@ function ProfileSettings({
         onSave={onSave}
       />
       <NotificationSection userId={userId} />
+      <QnaWarningSection userId={userId} />
       <AccountSection onSignOut={onSignOut} />
       <DangerZoneSection
         deleteConfirm={deleteConfirm}
@@ -902,6 +904,36 @@ function ProfileSettings({
         onDeleteAccount={onDeleteAccount}
       />
     </div>
+  )
+}
+
+function QnaWarningSection({ userId }: { userId: string }) {
+  const [warningCount, setWarningCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void getMyQnaWarningCount()
+      .then((count) => { if (active) setWarningCount(Math.min(5, Math.max(0, count))) })
+      .catch(() => { if (active) setWarningCount(0) })
+    return () => { active = false }
+  }, [userId])
+
+  const count = warningCount ?? 0
+  return (
+    <section className="settings-card settings-warning-card" aria-labelledby="settings-warning-title">
+      <header className="settings-card-header">
+        <h3 id="settings-warning-title">커뮤니티 경고</h3>
+        <p>Q&A 글과 댓글에서 욕설이 확인되면 자동으로 누적됩니다.</p>
+      </header>
+      <div className="settings-warning-count" aria-live="polite">
+        <strong>{warningCount === null ? '확인 중' : `${count}회`}</strong>
+        <span>/ 5회</span>
+      </div>
+      <div className="settings-warning-meter" role="progressbar" aria-label="커뮤니티 경고 횟수" aria-valuemin={0} aria-valuemax={5} aria-valuenow={count}>
+        <span style={{ width: `${count * 20}%` }} />
+      </div>
+      <p className="settings-warning-note">경고 5회 누적 시 계정과 등록된 설치 기기의 접근이 제한됩니다.</p>
+    </section>
   )
 }
 
