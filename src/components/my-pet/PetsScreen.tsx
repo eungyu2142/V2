@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import GuideAction from '../common/GuideAction'
+import './MyPet.css'
 import { listCarePlans, listCareRecords, listDailyTasks } from '../../features/diary/diaryService'
 import type { CarePlan, DailyTask, PetRecord } from '../../features/diary/diaryTypes'
 import type { AnimalCategory, Pet } from '../../types/app'
 import PetMobileFlow, { type PetMobileView } from './PetMobileFlow'
+import { PetIcon } from './PetIcons'
 
 const animalCategoryLabels: Record<AnimalCategory, string> = {
   all: '전체',
@@ -17,12 +20,6 @@ const visibleCategoryOptions: AnimalCategory[] = ['all', 'reptile', 'amphibian']
 
 function isVisiblePetCategory(value: AnimalCategory): value is 'reptile' | 'amphibian' {
   return value === 'reptile' || value === 'amphibian'
-}
-
-function genderSymbol(value: Pet['gender']) {
-  if (value === 'male') return '♂'
-  if (value === 'female') return '♀'
-  return ''
 }
 
 type TodayTask = {
@@ -57,6 +54,16 @@ function todayDateKey() {
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function weekDateRange() {
+  const today = new Date()
+  const start = new Date(today)
+  start.setDate(today.getDate() - today.getDay())
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  const format = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return { start: format(start), end: format(end) }
 }
 
 function taskLabel(task: DailyTask, plans: Map<string, CarePlan>) {
@@ -111,23 +118,23 @@ export default function PetsScreen({
     return () => media.removeEventListener('change', update)
   }, [])
 
-  useEffect(() => {
-    if (!pets.some((pet) => pet.id === selectedPetId)) setSelectedPetId(pets[0]?.id ?? '')
-  }, [pets, selectedPetId])
+  const resolvedSelectedPetId = pets.some((pet) => pet.id === selectedPetId) ? selectedPetId : pets[0]?.id ?? ''
 
   useEffect(() => {
     let active = true
     const today = todayDateKey()
+    const week = weekDateRange()
 
     Promise.all([
       listCarePlans(userId).catch(() => [] as CarePlan[]),
-      listDailyTasks(userId, today, today).catch(() => [] as DailyTask[]),
+      listDailyTasks(userId, week.start, week.end).catch(() => [] as DailyTask[]),
       listCareRecords(userId).catch(() => [] as PetRecord[]),
     ]).then(([plans, tasks, nextRecords]) => {
       if (!active) return
       const plansById = new Map(plans.map((plan) => [plan.id, plan]))
-      const taskPlanIds = new Set(tasks.map((task) => task.carePlanId).filter((id): id is string => Boolean(id)))
-      const grouped = tasks.reduce<Record<string, TodayTask[]>>((result, task) => {
+      const todayTasks = tasks.filter((task) => task.scheduledDate === today)
+      const taskPlanIds = new Set(todayTasks.map((task) => task.carePlanId).filter((id): id is string => Boolean(id)))
+      const grouped = todayTasks.reduce<Record<string, TodayTask[]>>((result, task) => {
         const petTasks = result[task.petId] ?? []
         petTasks.push({
           id: task.id,
@@ -191,13 +198,13 @@ export default function PetsScreen({
     if (window.confirm(`'${pet.name}'을 삭제하시겠습니까?`)) onDeletePet(pet.id)
   }
 
-  if (mobileLayout) return <PetMobileFlow pets={pets} selectedPetId={selectedPetId} view={mobileView} tasks={dailyTasks} plans={plans} records={records} onSelectPet={(id) => { setSelectedPetId(id); setMobileView('main') }} onView={setMobileView} onRegisterPet={onRegisterPet} onEditPet={onEditPet} onOpenDiary={onOpenDiary} />
+  if (mobileLayout) return <PetMobileFlow pets={pets} selectedPetId={resolvedSelectedPetId} view={mobileView} tasks={dailyTasks} plans={plans} records={records} onSelectPet={(id) => { setSelectedPetId(id); setMobileView('main') }} onView={setMobileView} onRegisterPet={onRegisterPet} onEditPet={onEditPet} onDeletePet={onDeletePet} onOpenDiary={onOpenDiary} />
 
   return (
     <section className="mx-auto flex w-full max-w-[76rem] flex-col gap-5 px-4 pb-24 pt-2 max-[760px]:-mx-4 max-[760px]:w-[calc(100%+2rem)] sm:px-6 max-[760px]:px-4 lg:px-8">
       <section className="flex flex-col gap-3">
         <div className="relative h-11 w-full">
-          <span className="pointer-events-none absolute left-3 top-1/2 z-10 grid size-5 -translate-y-1/2 place-items-center text-lg leading-none text-app-muted" aria-hidden="true">⌕</span>
+          <span className="pointer-events-none absolute left-3 top-1/2 z-10 grid size-5 -translate-y-1/2 place-items-center text-app-muted" aria-hidden="true"><svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg></span>
           <input
             className={`m-0! h-11! min-h-11! w-full! rounded-control! border! border-app-border! bg-app-surface! py-0! pl-10! text-sm! text-app-ink! shadow-none! outline-none! placeholder:text-app-muted focus:border-brand-600! focus:ring-2! focus:ring-brand-100! sm:text-base! ${query ? 'pr-11!' : 'pr-3!'}`}
             aria-label="펫 검색"
@@ -205,7 +212,7 @@ export default function PetsScreen({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="예시) 크레스티드 게코"
           />
-          {query ? <button className="absolute right-1.5 top-1/2 z-10 grid size-8 -translate-y-1/2 place-items-center rounded-full text-lg text-app-muted hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600" type="button" aria-label="검색어 지우기" onClick={() => setQuery('')}>×</button> : null}
+          {query ? <button className="absolute right-1.5 top-1/2 z-10 grid size-8 -translate-y-1/2 place-items-center rounded-full text-lg text-app-muted hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600" type="button" aria-label="검색어 지우기" onClick={() => setQuery('')}><GuideAction symbol="×" /></button> : null}
         </div>
 
         {pets.length === 0 ? (
@@ -237,7 +244,6 @@ export default function PetsScreen({
         ) : (
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             {filteredPets.map((pet) => {
-              const symbol = genderSymbol(pet.gender)
               const todayTasks = todayTasksByPet[pet.id] ?? []
               const completedTaskCount = todayTasks.filter((task) => task.status === 'completed').length
               const hasRoutineSummary = routinePetIds.has(pet.id) || todayTasks.length > 0
@@ -250,7 +256,7 @@ export default function PetsScreen({
                     <div className="min-w-0 self-center">
                       <strong className="flex w-full min-w-0 items-center gap-1 whitespace-nowrap text-sm font-bold text-app-ink sm:text-lg">
                         <span className="min-w-0 flex-1 truncate" title={pet.name}>{pet.name}</span>
-                        {symbol ? <span className={`shrink-0 text-sm ${pet.gender === 'male' ? 'text-blue-600' : 'text-red-500'}`} aria-label={pet.gender === 'male' ? '수컷' : '암컷'}>{symbol}</span> : null}
+                        <PetIcon name={pet.gender === 'male' ? 'male' : pet.gender === 'female' ? 'female' : 'unknown'} className="size-4 shrink-0 text-brand-700" aria-label={pet.gender === 'male' ? '수컷' : pet.gender === 'female' ? '암컷' : '미구분'} />
                       </strong>
                       {pet.species ? <small className="mt-1 block w-full truncate whitespace-nowrap text-xs text-app-muted sm:text-sm" title={pet.species}>{pet.species}</small> : null}
                     </div>
@@ -277,8 +283,8 @@ export default function PetsScreen({
                     <button className="grid size-11 place-items-center rounded-full text-lg font-bold text-app-muted hover:bg-brand-50 hover:text-app-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" type="button" aria-label={`${pet.name} 메뉴 열기`} onClick={(event) => { event.stopPropagation(); setMenuPetId(menuPetId === pet.id ? null : pet.id) }}>⋯</button>
                     {menuPetId === pet.id ? (
                       <div className="absolute right-0 top-10 z-20 min-w-28 overflow-hidden rounded-control border border-app-border bg-app-surface py-1 shadow-lg">
-                        <button className="block h-10 w-full px-4 text-left text-sm text-app-ink hover:bg-brand-50 focus-visible:outline-none focus-visible:bg-brand-50" type="button" onClick={() => { setMenuPetId(null); onEditPet(pet) }}>수정</button>
-                        <button className="block h-10 w-full px-4 text-left text-sm text-app-danger hover:bg-red-50 focus-visible:outline-none focus-visible:bg-red-50" type="button" onClick={() => { setMenuPetId(null); requestDelete(pet) }}>삭제</button>
+                        <button className="flex h-10 w-full items-center gap-2 px-4 text-left text-sm text-app-ink hover:bg-brand-50 focus-visible:outline-none focus-visible:bg-brand-50" type="button" onClick={() => { setMenuPetId(null); onEditPet(pet) }}><PetIcon name="edit" className="size-4"/>수정</button>
+                        <button className="flex h-10 w-full items-center gap-2 px-4 text-left text-sm text-app-danger hover:bg-red-50 focus-visible:outline-none focus-visible:bg-red-50" type="button" onClick={() => { setMenuPetId(null); requestDelete(pet) }}><PetIcon name="delete" className="size-4"/>삭제</button>
                       </div>
                     ) : null}
                   </div>
@@ -289,7 +295,7 @@ export default function PetsScreen({
         )}
         {pets.length > 0 ? (
           <button className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-control bg-brand-700 px-5 text-base font-bold text-white transition-colors hover:bg-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" type="button" onClick={onRegisterPet}>
-            <span className="text-xl leading-none" aria-hidden="true">+</span>
+            <PetIcon name="add" className="size-5" />
             <span>펫 추가</span>
           </button>
         ) : null}

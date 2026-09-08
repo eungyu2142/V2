@@ -1,4 +1,5 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import GuideAction from '../common/GuideAction'
 import './Qna.css'
 import { ensureSupabaseSession, supabase } from '../../lib/supabase'
 import { loadAppData } from '../../lib/appData'
@@ -7,6 +8,7 @@ import { sanitizeImageFile, validateImageFile } from '../../lib/imageStorage'
 import { maskKoreanProfanity } from '../../lib/qnaModeration'
 import StepShell from '../account/StepShell'
 import HeartIcon from '../common/HeartIcon'
+import { QnaIcon, type QnaIconName } from './QnaIcon'
 import { RequiredMark } from '../common/FieldMarkers'
 import { TextField } from '../ui'
 import { DiaryTimelineSkeleton, DiaryVisualizationAttachment, HospitalAttachCard, RecordAttachCard } from './QnaParts'
@@ -110,11 +112,11 @@ function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalS
   const visibleHospitals = filteredHospitals.slice(0, visibleCount)
   const hasMore = visibleCount < filteredHospitals.length
 
-  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true" aria-label="병원 선택"><div className="qna-hospital-picker-heading"><strong>병원 선택</strong><button className="qna-hospital-picker-close" type="button" aria-label="닫기" onClick={onClose}>×</button></div><label className="qna-hospital-search"><span aria-hidden="true">⌕</span><input value={search} onChange={(event) => { setSearch(event.target.value); setVisibleCount(10) }} placeholder="병원 이름이나 주소 검색" aria-label="병원 검색" /></label>{loadError ? <p role="alert">{loadError}</p> : filteredHospitals.length > 0 ? <><div className="qna-hospital-picker-list">{visibleHospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? `${hospital.name}-${hospital.lat}-${hospital.lng}`} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.address}</span></button>)}</div>{hasMore && <button className="qna-hospital-picker-more" type="button" onClick={() => setVisibleCount((count) => count + 10)}>더보기</button>}</> : <p>검색 결과가 없습니다.</p>}</section></div>
+  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true" aria-label="병원 선택"><div className="qna-hospital-picker-heading"><strong>병원 선택</strong><button className="qna-hospital-picker-close" type="button" aria-label="닫기" onClick={onClose}><GuideAction symbol="×" /></button></div><label className="qna-hospital-search"><span aria-hidden="true"><GuideAction symbol="⌕" /></span><input value={search} onChange={(event) => { setSearch(event.target.value); setVisibleCount(10) }} placeholder="병원 이름이나 주소 검색" aria-label="병원 검색" /></label>{loadError ? <p role="alert">{loadError}</p> : filteredHospitals.length > 0 ? <><div className="qna-hospital-picker-list">{visibleHospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? `${hospital.name}-${hospital.lat}-${hospital.lng}`} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.address}</span></button>)}</div>{hasMore && <button className="qna-hospital-picker-more" type="button" onClick={() => setVisibleCount((count) => count + 10)}>더보기</button>}</> : <p>검색 결과가 없습니다.</p>}</section></div>
 }
 import type { PetRecord, PetRecordType } from '../../features/diary/diaryTypes'
 import { animalCategoryLabels, CategoryTagIcon, loadCollectedHospitals, toHospitalSnapshot } from '../hospital-map/mapDependencies'
-function StepText({ label, value, onChange, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean }) { return <TextField className="step-field" label={label} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} /> }
+function StepText({ label, value, onChange, placeholder, required = false, maxLength, error }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean; maxLength?: number; error?: string }) { return <div className="qna-field-wrap"><TextField className="step-field" label={label} value={value} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} />{maxLength && <small className="qna-character-count">{value.length}/{maxLength}자</small>}{error && <small className="qna-field-error" role="alert">{error}</small>}</div> }
 
 export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, onChange, onDeletePost, onEditPost, onCreate, onOpenHospital, onOpenDiary, hospitals = [] }: { userId: string; profile: AppProfile; posts: QnaPost[]; openPostId?: string | null; onOpenHandled?: () => void; onChange: (posts: QnaPost[]) => void; onDeletePost: (postId: string) => void; onEditPost: (post: QnaPost) => void; onCreate: (petId?: string | null) => void; onOpenHospital: (hospital: HospitalSnapshot) => void; onOpenDiary: (petId: string, readOnly: boolean) => void; hospitals?: HospitalSnapshot[] }) {
   const displayAuthor = profile.nickname.trim() || profile.username.trim() || '사용자'
@@ -127,6 +129,9 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   const [visibleCount, setVisibleCount] = useState(6)
   const [searchInput, setSearchInput] = useState(qnaUrl.get('q') ?? '')
   const [query, setQuery] = useState(qnaUrl.get('q') ?? '')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [animalFilter, setAnimalFilter] = useState('all')
+  const [attachmentOnly, setAttachmentOnly] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [attachedHospital, setAttachedHospital] = useState<HospitalSnapshot | null>(null)
@@ -140,6 +145,11 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   const [commentError, setCommentError] = useState('')
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null)
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState(() => sessionStorage.getItem('qna_created_message') ?? '')
+  const [detailMenuOpen, setDetailMenuOpen] = useState(false)
+  const [reportSheetOpen, setReportSheetOpen] = useState(false)
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set())
+  const [commentSort, setCommentSort] = useState<'latest' | 'likes'>('latest')
   const previousSelectedIdRef = useRef<string | null>(null)
   const selectedBase = posts.find((post) => post.id === selectedId)
   const selected = selectedBase ? { ...selectedBase, ...postLikeOverrides[selectedBase.id] } : undefined
@@ -155,6 +165,19 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   })
   const postsWithCommentLikes = posts.map((post) => ({ ...post, comments: withCommentLikes(commentsByPost[post.id] ?? post.comments) }))
   const selectedComments = selected ? withCommentLikes(commentsByPost[selected.id] ?? selected.comments) : []
+  useEffect(() => {
+    let active = true
+    void supabase.from('qna_user_blocks').select('blocked_user_id').eq('blocker_id', userId).then(({ data }) => {
+      if (active && data) setBlockedUserIds(new Set(data.map((row) => row.blocked_user_id)))
+    })
+    return () => { active = false }
+  }, [userId])
+  useEffect(() => {
+    if (!toastMessage) return
+    sessionStorage.removeItem('qna_created_message')
+    const timer = window.setTimeout(() => setToastMessage(''), 2400)
+    return () => window.clearTimeout(timer)
+  }, [toastMessage])
   useEffect(() => {
     if (!lightboxImage) return
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setLightboxImage(null) }
@@ -179,12 +202,12 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
       }
       const grouped: Record<string, QnaComment[]> = {}
       for (const row of data ?? []) {
-        const payload = (row.payload ?? {}) as { author?: string; authorAvatarUrl?: string; isAccepted?: boolean; is_accepted?: boolean; likes?: number; likedBy?: string[]; liked_by?: string[]; hospitalSnapshot?: HospitalSnapshot }
+        const payload = (row.payload ?? {}) as { author?: string; authorAvatarUrl?: string; isAccepted?: boolean; is_accepted?: boolean; likes?: number; likedBy?: string[]; liked_by?: string[]; hospitalSnapshot?: HospitalSnapshot; parentCommentId?: string }
         const mine = row.user_id === userId
         const hospitalSnapshot = readHospitalSnapshot((row as typeof row & { hospital_snapshot?: unknown }).hospital_snapshot) ?? readHospitalSnapshot(row.payload)
         const author = payload.author && payload.author !== '작성자' ? payload.author : mine ? displayAuthor : '사용자'
         const likedBy = Array.isArray(payload.likedBy) ? payload.likedBy : Array.isArray(payload.liked_by) ? payload.liked_by : []
-        const item: QnaComment = { id: row.id, author, authorAvatarUrl: payload.authorAvatarUrl, body: row.body, createdAt: row.created_at, mine, isAccepted: payload.isAccepted === true || payload.is_accepted === true, liked: likedBy.includes(userId), likes: Number(payload.likes ?? 0), hospitalSnapshot, hospital_snapshot: hospitalSnapshot ?? null, payload: { hospitalSnapshot: hospitalSnapshot ?? null, hospital_snapshot: hospitalSnapshot ?? null } }
+        const item: QnaComment = { id: row.id, ownerUserId: row.user_id, parentCommentId: payload.parentCommentId, author, authorAvatarUrl: payload.authorAvatarUrl, body: row.body, createdAt: row.created_at, mine, isAccepted: payload.isAccepted === true || payload.is_accepted === true, liked: likedBy.includes(userId), likes: Number(payload.likes ?? 0), hospitalSnapshot, hospital_snapshot: hospitalSnapshot ?? null, payload: { hospitalSnapshot: hospitalSnapshot ?? null, hospital_snapshot: hospitalSnapshot ?? null, parentCommentId: payload.parentCommentId } }
         item.hospitalSnapshot = hospitalSnapshot
         grouped[row.post_id] = [...(grouped[row.post_id] ?? []), item]
       }
@@ -281,6 +304,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     }
   }, [onChange, posts, selectedId, userId])
   const searchedPosts = posts.filter((post) => {
+    if (post.ownerUserId && blockedUserIds.has(post.ownerUserId)) return false
     const text = `${post.title} ${post.body} ${post.author} ${post.animalGroup ?? ''} ${post.animalSpecies ?? post.animal}`.toLowerCase()
     return text.includes(query.trim().toLowerCase())
   })
@@ -291,13 +315,16 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     const matchesStatus = statusFilter === 'unresolved'
       ? listStatus !== 'resolved'
       : statusFilter === 'all' || listStatus === statusFilter
-    return matchesCategory && matchesStatus
+    const matchesAnimal = animalFilter === 'all' || post.animalGroup === animalFilter
+    const matchesAttachment = !attachmentOnly || Boolean(post.image || post.images?.length || post.attachedDiarySnapshot || post.attachedRecordSnapshot)
+    return matchesCategory && matchesStatus && matchesAnimal && matchesAttachment
   })
   const feedPosts = sortQnaPosts(scopedPosts, sort, getCommentCount)
   const visiblePosts = feedPosts.slice(0, visibleCount)
-  const waitingCount = posts.filter((post) => qnaListStatus(post, getCommentCount(post)) === 'waiting').length
   const statusFilterLabel = statusFilter === 'all' ? '질문 상태' : qnaListStatusLabel(statusFilter)
   const categoryFilterLabel = categoryFilter.length === 0 ? '전체' : categoryFilter.length === 1 ? categoryFilter[0] : `${categoryFilter.length}개 선택`
+
+  if (searchOpen) return <QnaSearchScreen value={searchInput} category={categoryFilter} sort={sort} status={statusFilter} animal={animalFilter} attachmentOnly={attachmentOnly} onClose={() => setSearchOpen(false)} onSearch={(next) => { setSearchInput(next.value); setQuery(next.value); setCategoryFilter(next.category); setSort(next.sort); setStatusFilter(next.status); setAnimalFilter(next.animal); setAttachmentOnly(next.attachmentOnly); setVisibleCount(6); setSearchOpen(false) }} />
 
   const updatePost = (post: QnaPost) => onChange(posts.map((item) => item.id === post.id ? post : item))
   const toggleLike = async (post: QnaPost) => {
@@ -315,6 +342,34 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     }
   }
   const toggleStatus = (post: QnaPost) => updatePost({ ...post, status: qnaStatus(post) === 'resolved' ? 'unresolved' : 'resolved' })
+  const copySelectedLink = async () => {
+    if (!selected) return
+    const url = new URL(window.location.href)
+    url.searchParams.set('post', selected.id)
+    try {
+      await navigator.clipboard.writeText(url.toString())
+      setToastMessage('링크를 복사했어요.')
+    } catch {
+      setToastMessage('링크를 복사하지 못했어요.')
+    }
+    setDetailMenuOpen(false)
+  }
+  const reportSelected = async (reason: string) => {
+    if (!selected) return
+    const { error } = await supabase.rpc('submit_qna_report', { p_target_type: 'post', p_target_id: selected.id, p_reason: reason })
+    setReportSheetOpen(false)
+    setToastMessage(error ? '신고를 접수하지 못했어요.' : '신고를 접수했어요.')
+  }
+  const blockSelectedAuthor = async () => {
+    if (!selected?.ownerUserId) return
+    const { error } = await supabase.rpc('block_qna_user', { p_target_type: 'post', p_target_id: selected.id })
+    if (!error) {
+      setBlockedUserIds((current) => new Set([...current, selected.ownerUserId!]))
+      setSelectedId(null)
+    }
+    setDetailMenuOpen(false)
+    setToastMessage(error ? '사용자를 차단하지 못했어요.' : '사용자를 차단했어요.')
+  }
   const selectAnswer = (post: QnaPost, commentId: string) => {
     const comment = (commentsByPost[post.id] ?? post.comments).find((item) => item.id === commentId)
     if (post.mine !== true || comment?.mine === true) return
@@ -400,18 +455,23 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
 
   if (selected) {
     const selectedImages = selected.images?.length ? selected.images : selected.image ? [selected.image] : []
-    const sortedComments = [...selectedComments].sort((a, b) => (a.id === selected.selectedAnswerCommentId ? -1 : 0) - (b.id === selected.selectedAnswerCommentId ? -1 : 0))
+    const sortedComments = [...selectedComments].sort((a, b) => {
+      const accepted = (a.id === selected.selectedAnswerCommentId ? -1 : 0) - (b.id === selected.selectedAnswerCommentId ? -1 : 0)
+      if (accepted !== 0) return accepted
+      return commentSort === 'likes' ? (b.likes ?? 0) - (a.likes ?? 0) : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
     const trustPosts = posts.map((post) => ({ ...post, comments: withCommentLikes(commentsByPost[post.id] ?? post.comments) }))
     return (
       <section className="qna-detail">
+        {toastMessage && <div className="qna-toast" role="status">{toastMessage}</div>}
         <header className="qna-detail-header">
-          <button className="qna-back" type="button" aria-label="뒤로가기" onClick={() => setSelectedId(null)}>←</button>
+          <button className="qna-back" type="button" aria-label="뒤로가기" onClick={() => setSelectedId(null)}><GuideAction symbol="←" /></button>
           <strong>Q&A</strong>
-          {selected.mine === true && <QnaOwnerMenu post={selected} onEdit={() => onEditPost(selected)} onToggleResolve={() => toggleStatus(selected)} onDelete={() => { if (window.confirm(`‘${selected.title || '제목 없는 질문'}’ 질문을 삭제할까요?`)) { onDeletePost(selected.id); setSelectedId(null) } }} />}
+          <button className="qna-detail-more" type="button" aria-label="게시글 더보기" onClick={() => setDetailMenuOpen(true)}><QnaIcon name="more" /></button>
         </header>
         {(likeError || commentError) && <button className="data-error" type="button" onClick={() => { setLikeError(''); setCommentError('') }}>{likeError || commentError}</button>}
         <article className="qna-detail-post">
-          <div className="qna-detail-badges">{qnaPostCategories(selected).map((category) => <span className="qna-category" data-category={category} key={category}>{category}</span>)}<button className={`qna-detail-like ${selected.liked ? 'active' : ''}`} type="button" aria-label={selected.liked ? '좋아요 취소' : '좋아요'} aria-pressed={selected.liked} onClick={() => toggleLike(selected)}><HeartIcon filled={selected.liked} /><span>{selected.likes}</span></button>{selected.mine === true ? <button className={`qna-detail-resolve-button ${qnaStatus(selected) === 'resolved' ? 'resolved' : ''}`} type="button" onClick={() => toggleStatus(selected)}>{qnaStatus(selected) === 'resolved' ? '해결 완료' : '해결'}</button> : <span className={`qna-status ${qnaStatus(selected)}`}>{qnaStatusLabel(qnaStatus(selected))}</span>}</div>
+          <div className="qna-detail-badges">{qnaPostCategories(selected).slice(0, 2).map((category) => <span className="qna-category" data-category={category} key={category}>{category}</span>)}{selected.mine === true ? <button className={`qna-detail-resolve-button ${qnaStatus(selected) === 'resolved' ? 'resolved' : ''}`} type="button" onClick={() => toggleStatus(selected)}>{qnaStatus(selected) === 'resolved' ? '해결 완료' : '해결'}</button> : <span className={`qna-status ${qnaStatus(selected)}`}>{qnaStatusLabel(qnaStatus(selected))}</span>}</div>
           <h2>{maskKoreanProfanity(selected.title)}</h2>
           <div className="qna-detail-author qna-detail-author-meta"><UserAvatar url={selected.mine === true ? profile.avatarUrl : selected.authorAvatarUrl} name={qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)} /><div className="qna-detail-author-copy"><strong>{qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)}</strong><QnaPostMeta createdAt={selected.createdAt} viewCount={selected.viewCount ?? 0} commentCount={selectedComments.length} likes={selected.likes} className="qna-detail-meta-line" /></div></div>
           <div className="qna-detail-pet-meta">종: {formatQnaAnimal(selected)}</div>
@@ -420,12 +480,13 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
           <p>{maskKoreanProfanity(selected.body)}</p>
           {selected.attachedDiarySnapshot && selected.attachedDiarySnapshot.records.length > 1 && <DiaryVisualizationAttachment snapshot={selected.attachedDiarySnapshot} />}
           {!selected.attachedDiarySnapshot && selected.attachedRecordSnapshot && <RecordAttachCard record={selected.attachedRecordSnapshot} mode="posted" onOpen={() => onOpenDiary(selected.attachedRecordSnapshot!.petId, selected.mine !== true)} />}
+          <div className="qna-detail-actions"><button className={selected.liked ? 'active' : ''} type="button" onClick={() => toggleLike(selected)}><HeartIcon filled={selected.liked} /> 좋아요 {selected.likes}</button><button type="button" onClick={() => void copySelectedLink()}>공유하기</button></div>
         </article>
         <section className="qna-comments">
-          <h3>댓글 {selectedComments.length}</h3>
-          {sortedComments.map((item) => (
+          <header className="qna-comments-heading"><h3>댓글 {selectedComments.length}</h3><div><button className={commentSort === 'latest' ? 'active' : ''} type="button" onClick={() => setCommentSort('latest')}>최신순</button><span>|</span><button className={commentSort === 'likes' ? 'active' : ''} type="button" onClick={() => setCommentSort('likes')}>좋아요순</button></div></header>
+          {sortedComments.filter((item) => !item.ownerUserId || !blockedUserIds.has(item.ownerUserId)).map((item) => (
             <article className={selected.selectedAnswerCommentId === item.id ? 'accepted' : ''} key={item.id}>
-              <div className="qna-comment-head"><span className="qna-comment-author"><UserAvatar url={item.mine ? profile.avatarUrl : item.authorAvatarUrl} name={item.author} /><span><strong>{item.author} <QnaTrustBadge score={getTrustScoreForAuthor(trustPosts, item.author)} /></strong><time>{formatQnaDate(item.createdAt)}</time></span></span>{item.mine && <div className="qna-comment-menu"><button type="button" aria-label="댓글 관리 메뉴" aria-expanded={commentMenuId === item.id} onClick={() => setCommentMenuId(commentMenuId === item.id ? null : item.id)}>⋮</button>{commentMenuId === item.id && <div><button type="button" onClick={async () => { await supabase.from('post_comments').delete().eq('id', item.id).eq('user_id', userId); setCommentsByPost((items) => ({ ...items, [selected.id]: (items[selected.id] ?? []).filter((commentItem) => commentItem.id !== item.id) })); setCommentMenuId(null) }}>댓글 삭제</button></div>}</div>}</div>
+              <div className="qna-comment-head"><span className="qna-comment-author"><UserAvatar url={item.mine ? profile.avatarUrl : item.authorAvatarUrl} name={item.author} /><span><strong>{item.author} <QnaTrustBadge score={getTrustScoreForAuthor(trustPosts, item.author)} /></strong><time>{formatQnaDate(item.createdAt)}</time></span></span>{item.mine && <div className="qna-comment-menu"><button type="button" aria-label="댓글 관리 메뉴" aria-expanded={commentMenuId === item.id} onClick={() => setCommentMenuId(commentMenuId === item.id ? null : item.id)}><GuideAction symbol="⋮" /></button>{commentMenuId === item.id && <div><button type="button" onClick={async () => { await supabase.from('post_comments').delete().eq('id', item.id).eq('user_id', userId); setCommentsByPost((items) => ({ ...items, [selected.id]: (items[selected.id] ?? []).filter((commentItem) => commentItem.id !== item.id) })); setCommentMenuId(null) }}>댓글 삭제</button></div>}</div>}</div>
               {selected.selectedAnswerCommentId === item.id && <span className="accepted-answer-chip">채택 답변</span>}
               {item.body && <p>{maskKoreanProfanity(item.body)}</p>}
               {readCommentHospitalSnapshot(item) && <HospitalAttachCard hospital={readCommentHospitalSnapshot(item)!} mode="posted" onOpen={() => onOpenHospital(readCommentHospitalSnapshot(item)!)} />}
@@ -439,13 +500,15 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
               <button type="button" onClick={() => setHospitalPickerOpen((open) => !open)}>병원 첨부</button>
             </div>
             <div className="qna-comment-input-row">
-              <input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요" aria-label="댓글" />
+              <input value={comment} maxLength={1000} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요" aria-label="댓글, 최대 1000자" />
               <button type="submit" disabled={!comment.trim()}>등록</button>
             </div>
           </form>
         </section>
         {hospitalPickerOpen && <HospitalPicker hospitals={hospitals} onSelect={(hospital) => { attachedHospitalRef.current = hospital; setAttachedHospital(hospital); setHospitalPickerOpen(false) }} onClose={() => setHospitalPickerOpen(false)} />}
-        {lightboxImage && <div className="qna-lightbox" role="dialog" aria-modal="true" aria-label="이미지 확대 보기" onClick={() => setLightboxImage(null)} onKeyDown={(event) => { if (event.key === 'Escape') setLightboxImage(null) }} tabIndex={-1}><button type="button" className="qna-lightbox-close" aria-label="이미지 닫기" onClick={() => setLightboxImage(null)}>×</button><img src={lightboxImage} alt="확대된 첨부 이미지" onClick={(event) => event.stopPropagation()} /></div>}
+        {detailMenuOpen && <div className="qna-action-overlay" onClick={() => setDetailMenuOpen(false)}><section className="qna-action-sheet" role="dialog" aria-modal="true" aria-label="게시글 메뉴" onClick={(event) => event.stopPropagation()}><span className="hospital-picker-handle" aria-hidden="true" /><button type="button" onClick={() => void copySelectedLink()}>링크 복사</button>{selected.mine ? <><button type="button" onClick={() => { setDetailMenuOpen(false); onEditPost(selected) }}>게시글 수정</button><button type="button" onClick={() => { setDetailMenuOpen(false); toggleStatus(selected) }}>{qnaStatus(selected) === 'resolved' ? '해결 취소' : '해결로 표시'}</button><button className="danger" type="button" onClick={() => { if (window.confirm('이 질문을 삭제할까요?')) { onDeletePost(selected.id); setSelectedId(null) } }}>게시글 삭제</button></> : <><button className="danger" type="button" onClick={() => { setDetailMenuOpen(false); setReportSheetOpen(true) }}>게시글 신고</button><button className="danger" type="button" onClick={() => void blockSelectedAuthor()}>이 사용자 차단</button></>}</section></div>}
+        {reportSheetOpen && <QnaReportSheet onClose={() => setReportSheetOpen(false)} onSubmit={(reason) => void reportSelected(reason)} />}
+        {lightboxImage && <div className="qna-lightbox" role="dialog" aria-modal="true" aria-label="이미지 확대 보기" onClick={() => setLightboxImage(null)} onKeyDown={(event) => { if (event.key === 'Escape') setLightboxImage(null) }} tabIndex={-1}><button type="button" className="qna-lightbox-close" aria-label="이미지 닫기" onClick={() => setLightboxImage(null)}><GuideAction symbol="×" /></button><strong className="qna-lightbox-count">{selectedImages.indexOf(lightboxImage) + 1} / {selectedImages.length}</strong><img src={lightboxImage} alt="확대된 첨부 이미지" onClick={(event) => event.stopPropagation()} /><div className="qna-lightbox-thumbnails" onClick={(event) => event.stopPropagation()}>{selectedImages.map((image, index) => <button className={image === lightboxImage ? 'active' : ''} type="button" key={image} aria-label={`${index + 1}번째 이미지 보기`} onClick={() => setLightboxImage(image)}><img src={image} alt="" /></button>)}</div></div>}
       </section>
     )
   }
@@ -456,21 +519,23 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
       <header className="qna-feed-head">
         <div>
           <h2>Q&A</h2>
-          {waitingCount > 0 && <p className="qna-feed-summary">답변이 필요한 질문 {waitingCount}개</p>}
+          <p className="qna-feed-summary">함께 배우고, 더 건강하게 키워요.</p>
         </div>
-        <button className="qna-create-button" type="button" aria-label="글쓰기" onClick={() => onCreate()}><span className="qna-write-icon" aria-hidden="true" /></button>
+        <button className="qna-create-button" type="button" aria-label="글쓰기" onClick={() => onCreate()}><QnaIcon name="write" /></button>
       </header>
-      <label className="qna-feed-search"><span aria-hidden="true">⌕</span><input aria-label="Q&A 검색" value={searchInput} onChange={(event) => { setSearchInput(event.target.value); setVisibleCount(6) }} placeholder="질문이나 동물 종으로 검색" />{searchInput && <button type="button" aria-label="검색어 지우기" onClick={() => { setSearchInput(''); setQuery(''); setVisibleCount(6) }}>×</button>}</label>
-      <div className="qna-filter-compact" aria-label="Q&A 필터">
-        <button className="qna-filter-icon-button" type="button" aria-label="전체 필터 열기" onClick={() => setFilterSheet((current) => current === 'all' ? null : 'all')}><svg className="qna-filter-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><circle cx="9" cy="6" r="2.2" fill="var(--color-surface)" stroke="currentColor" strokeWidth="1.6" /><circle cx="15" cy="12" r="2.2" fill="var(--color-surface)" stroke="currentColor" strokeWidth="1.6" /><circle cx="10" cy="18" r="2.2" fill="var(--color-surface)" stroke="currentColor" strokeWidth="1.6" /></svg></button>
-        <button className={`qna-filter-summary ${statusFilter !== 'all' ? 'is-selected' : ''}`} type="button" onClick={() => setFilterSheet((current) => current === 'status' ? null : 'status')}>{statusFilterLabel}<span className="qna-sort-chevron" aria-hidden="true" /></button>
-        <button className={`qna-filter-summary ${categoryFilter.length > 0 ? 'is-selected' : ''}`} type="button" onClick={() => setFilterSheet((current) => current === 'category' ? null : 'category')}>{categoryFilterLabel}<span className="qna-sort-chevron" aria-hidden="true" /></button>
-        <button className="qna-feed-sort-trigger" type="button" aria-label="정렬 선택" onClick={() => setSortSheetOpen((open) => !open)}>{qnaSortLabel(sort)}<span className="qna-sort-chevron" aria-hidden="true" /></button>
+      <button className="qna-feed-search qna-search-entry" type="button" onClick={() => setSearchOpen(true)}><QnaIcon name="search" /><span>{searchInput || '질문이나 동물 종으로 검색'}</span></button>
+      <div className="qna-home-filters" aria-label="질문 상태 필터">
+        {([['all', '전체'], ['unresolved', '미해결'], ['resolved', '해결됨']] as const).map(([value, label]) => <button className={statusFilter === value ? 'active' : ''} type="button" key={value} aria-pressed={statusFilter === value} onClick={() => { setStatusFilter(value); setVisibleCount(6) }}>{label}</button>)}
+        <button className="qna-feed-sort-trigger" type="button" onClick={() => setSortSheetOpen(true)}>{qnaSortLabel(sort)}⌄</button>
+        <button className="qna-filter-icon-button" type="button" aria-label={`추가 필터 열기, 주제 ${categoryFilterLabel}, 상태 ${statusFilterLabel}`} onClick={() => setFilterSheet('all')}><QnaIcon name="filter" /></button>
       </div>
+      <aside className="qna-guide-card"><span><strong>Q&A 이용 안내</strong><small>사육 환경과 최근 변화를 함께 적으면 더 좋은 답변을 받을 수 있어요.</small></span></aside>
       {feedPosts.length === 0 ? <div className="qna-empty-state">
-        <div className="qna-empty-icon" aria-hidden="true">⌕</div>
-        <strong>{query ? '검색 결과가 없습니다.' : statusFilter !== 'all' || categoryFilter.length > 0 ? '선택한 조건에 맞는 질문이 없습니다.' : '아직 등록된 질문이 없습니다.'}</strong>
-        {(query || statusFilter !== 'unresolved' || categoryFilter.length > 0) && <button type="button" onClick={() => { setSearchInput(''); setQuery(''); setStatusFilter('unresolved'); setCategoryFilter([]); setVisibleCount(6) }}>필터 초기화</button>}
+        <div className="qna-empty-icon" aria-hidden="true"><QnaIcon name="search" /></div>
+        <strong>{query ? '검색 결과가 없어요.' : statusFilter !== 'all' || categoryFilter.length > 0 ? '선택한 조건에 맞는 질문이 없어요.' : '아직 등록된 질문이 없어요.'}</strong>
+        <p>다른 키워드로 검색하거나 필터를 변경해보세요.</p>
+        {(query || statusFilter !== 'all' || categoryFilter.length > 0) && <button type="button" onClick={() => setSearchOpen(true)}>다른 키워드로 검색하기</button>}
+        <div className="qna-empty-suggestions" aria-label="추천 검색어">{['레오파드 게코', '먹이', '탈피'].map((item) => <button type="button" key={item} onClick={() => { setSearchInput(item); setQuery(item) }}>{item}</button>)}</div>
       </div> : (
         <section className="qna-feed-section">
           <div className="qna-feed-list">
@@ -481,7 +546,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
       )}
       {filterSheet && <QnaFilterChoiceSheet scope={filterSheet} status={statusFilter} category={categoryFilter} onApply={(nextStatus, nextCategory) => { setStatusFilter(nextStatus); setCategoryFilter(nextCategory); setVisibleCount(6); setFilterSheet(null) }} onClose={() => setFilterSheet(null)} />}
       {sortSheetOpen && <QnaSortSheet value={sort} onChange={(value) => { setSort(value); setVisibleCount(6); setSortSheetOpen(false) }} onClose={() => setSortSheetOpen(false)} />}
-      <button className="qna-mobile-fab" type="button" aria-label="글쓰기" onClick={() => onCreate()}><svg className="qna-write-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20 5.5 15.2 16.3 4.4a2.1 2.1 0 0 1 3 0l.3.3a2.1 2.1 0 0 1 0 3L8.8 18.8 4 20Z" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" /><path d="m14.8 5.9 3.3 3.3" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" /><path d="m4 20 1.5-4.8 3.3 3.3L4 20Z" fill="currentColor" /></svg></button>
+      <button className="qna-mobile-fab" type="button" aria-label="글쓰기" onClick={() => onCreate()}><QnaIcon name="write" /></button>
     </section>
   )
 }
@@ -507,10 +572,11 @@ function QnaHelpCard({ post, authorName, trustScore, commentCount, fallbackAvata
   return (
     <article className={`qna-help-card ${listStatus}`} role="button" tabIndex={0} aria-label={`${title} 상세 보기`} onClick={onOpen} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen() } }}>
       <div className="qna-help-card-top">
-        <span className={`qna-status ${listStatus}`}>{statusLabel}</span>
+        <span className="post-author"><UserAvatar url={fallbackAvatarUrl || post.authorAvatarUrl} name={authorName} />{authorName}<QnaTrustBadge score={trustScore} /></span>
         {qnaPostCategories(post).map((category) => <span className="qna-category" data-category={category} key={category}>{category}</span>)}
+        <span className={`qna-status ${listStatus}`}>{statusLabel}</span>
         {(onEdit || onToggleResolve || onDelete) && <div className="qna-card-menu">
-          <button className="qna-card-menu-trigger" type="button" aria-label="질문 관리 메뉴" aria-expanded={menuOpen} onClick={(event) => { event.stopPropagation(); setMenuOpen((value) => !value) }}>⋮</button>
+          <button className="qna-card-menu-trigger" type="button" aria-label="질문 관리 메뉴" aria-expanded={menuOpen} onClick={(event) => { event.stopPropagation(); setMenuOpen((value) => !value) }}><GuideAction symbol="⋮" /></button>
           {menuOpen && <div className="qna-card-menu-popover" onClick={(event) => event.stopPropagation()}>
             {onEdit && <button type="button" onClick={() => { setMenuOpen(false); onEdit() }}>수정</button>}
             {onToggleResolve && <button type="button" onClick={() => { setMenuOpen(false); onToggleResolve() }}>{qnaStatus(post) === 'resolved' ? '해결 취소' : '해결'}</button>}
@@ -518,12 +584,6 @@ function QnaHelpCard({ post, authorName, trustScore, commentCount, fallbackAvata
           </div>}
         </div>}
       </div>
-      <div className="qna-card-author-row">
-        <span className="post-author"><UserAvatar url={fallbackAvatarUrl || post.authorAvatarUrl} name={authorName} />{authorName}<QnaTrustBadge score={trustScore} /></span>
-      </div>
-      <footer>
-        <QnaPostMeta createdAt={post.createdAt} viewCount={post.viewCount ?? 0} commentCount={commentCount} likes={post.likes} className="qna-card-meta-line" />
-      </footer>
       <div className="qna-card-main">
         <div className="qna-card-copy">
           <h3>{title}</h3>
@@ -540,14 +600,60 @@ function QnaHelpCard({ post, authorName, trustScore, commentCount, fallbackAvata
           </button>}
         </div>}
       </div>
+      <footer>
+        <QnaPostMeta createdAt={post.createdAt} viewCount={post.viewCount ?? 0} commentCount={commentCount} likes={post.likes} className="qna-card-meta-line" />
+      </footer>
       {recordPreviewOpen && (diary || record) && <div className="qna-record-preview-overlay" role="dialog" aria-modal="true" aria-label="첨부 기록 자세히 보기" onClick={() => setRecordPreviewOpen(false)}>
         <section className="qna-record-preview-dialog" onClick={(event) => event.stopPropagation()}>
-          <header><strong>{diary?.petName ?? record?.petName}의 기록</strong><button type="button" aria-label="기록 닫기" onClick={() => setRecordPreviewOpen(false)}>×</button></header>
+          <header><strong>{diary?.petName ?? record?.petName}의 기록</strong><button type="button" aria-label="기록 닫기" onClick={() => setRecordPreviewOpen(false)}><GuideAction symbol="×" /></button></header>
           {diary ? <DiaryVisualizationAttachment snapshot={diary} /> : record && <RecordAttachCard record={record} mode="posted" />}
         </section>
       </div>}
     </article>
   )
+}
+
+type QnaSearchValues = { value: string; category: QnaCategory[]; sort: QnaSort; status: QnaListStatus; animal: string; attachmentOnly: boolean }
+
+function QnaReportSheet({ onClose, onSubmit }: { onClose: () => void; onSubmit: (reason: string) => void }) {
+  const [reason, setReason] = useState('')
+  const reasons = ['스팸/광고', '욕설/괴롭힘', '개인정보 노출', '위험하거나 부적절한 사육 정보', '기타']
+  return <div className="qna-action-overlay" onClick={onClose}><section className="qna-action-sheet qna-report-sheet" role="dialog" aria-modal="true" aria-labelledby="qna-report-title" onClick={(event) => event.stopPropagation()}><span className="hospital-picker-handle" aria-hidden="true" /><h2 id="qna-report-title">신고 사유를 선택해주세요</h2>{reasons.map((item) => <button className={reason === item ? 'active' : ''} type="button" key={item} onClick={() => setReason(item)}>{item}</button>)}<div><button type="button" onClick={onClose}>취소</button><button className="danger" type="button" disabled={!reason} onClick={() => onSubmit(reason)}>신고하기</button></div></section></div>
+}
+
+function QnaSearchScreen({ value, category, sort, status, animal, attachmentOnly, onClose, onSearch }: QnaSearchValues & { onClose: () => void; onSearch: (values: QnaSearchValues) => void }) {
+  const [draftValue, setDraftValue] = useState(value)
+  const [draftCategory, setDraftCategory] = useState(category)
+  const [draftSort, setDraftSort] = useState(sort)
+  const [draftStatus, setDraftStatus] = useState(status)
+  const [draftAnimal, setDraftAnimal] = useState(animal)
+  const [draftAttachmentOnly, setDraftAttachmentOnly] = useState(attachmentOnly)
+  const [recent, setRecent] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('qna_recent_searches_v1') ?? '[]') as string[] } catch { return [] }
+  })
+  const submit = () => {
+    const keyword = draftValue.trim()
+    if (keyword) {
+      const nextRecent = [keyword, ...recent.filter((item) => item !== keyword)].slice(0, 5)
+      localStorage.setItem('qna_recent_searches_v1', JSON.stringify(nextRecent))
+      setRecent(nextRecent)
+    }
+    onSearch({ value: keyword, category: draftCategory, sort: draftSort, status: draftStatus, animal: draftAnimal, attachmentOnly: draftAttachmentOnly })
+  }
+  const removeRecent = (item: string) => {
+    const next = recent.filter((valueItem) => valueItem !== item)
+    setRecent(next)
+    localStorage.setItem('qna_recent_searches_v1', JSON.stringify(next))
+  }
+  return <section className="qna-search-screen">
+    <header><button type="button" aria-label="검색 닫기" onClick={onClose}><GuideAction symbol="←" /></button><label><QnaIcon name="search" /><input autoFocus value={draftValue} onChange={(event) => setDraftValue(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') submit() }} placeholder="질문이나 동물 종으로 검색" />{draftValue && <button type="button" aria-label="검색어 지우기" onClick={() => setDraftValue('')}><GuideAction symbol="×" /></button>}</label></header>
+    {recent.length > 0 && <section className="qna-search-section"><h2>최근 검색어</h2>{recent.map((item) => <div className="qna-recent-row" key={item}><button type="button" onClick={() => setDraftValue(item)}><QnaIcon name="clock" />{item}</button><button type="button" aria-label={`${item} 삭제`} onClick={() => removeRecent(item)}><GuideAction symbol="×" /></button></div>)}</section>}
+    <section className="qna-search-section"><h2>주제</h2><div className="qna-search-chips"><button className={draftCategory.length === 0 ? 'active' : ''} type="button" onClick={() => setDraftCategory([])}>전체</button>{qnaCategoryCards.map((item) => <button className={draftCategory.includes(item) ? 'active' : ''} type="button" key={item} onClick={() => setDraftCategory([item])}>{item}</button>)}</div></section>
+    <section className="qna-search-section"><h2>동물 종류</h2><div className="qna-search-chips">{[['all', '전체'], ['reptile', '파충류'], ['amphibian', '양서류'], ['bird', '조류'], ['rodent', '설치류'], ['other', '기타']].map(([key, label]) => <button className={draftAnimal === key ? 'active' : ''} type="button" key={key} onClick={() => setDraftAnimal(key)}>{label}</button>)}</div></section>
+    <section className="qna-search-section"><h2>정렬</h2><div className="qna-search-chips">{([['latest', '최신순'], ['popular', '인기순'], ['views', '조회순']] as const).map(([key, label]) => <button className={draftSort === key ? 'active' : ''} type="button" key={key} onClick={() => setDraftSort(key)}>{label}</button>)}</div></section>
+    <section className="qna-search-options"><label><span>해결된 글만 보기</span><input type="checkbox" checked={draftStatus === 'resolved'} onChange={(event) => setDraftStatus(event.target.checked ? 'resolved' : 'all')} /></label><label><span>사진/기록 있는 글만 보기</span><input type="checkbox" checked={draftAttachmentOnly} onChange={(event) => setDraftAttachmentOnly(event.target.checked)} /></label></section>
+    <button className="qna-search-submit" type="button" onClick={submit}>검색하기</button>
+  </section>
 }
 
 
@@ -570,7 +676,7 @@ function QnaFilterChoiceSheet({ scope, status, category, onApply, onClose }: { s
 }
 
 function QnaSortSheet({ value, onChange, onClose }: { value: QnaSort; onChange: (value: QnaSort) => void; onClose: () => void }) {
-  const options: QnaSort[] = ['latest', 'popular', 'comments']
+  const options: QnaSort[] = ['latest', 'popular', 'views']
   return (
     <div className="qna-sort-sheet-overlay">
       <button className="qna-sort-sheet-dim" type="button" aria-label="정렬 닫기" onClick={onClose} />
@@ -606,10 +712,12 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
   const [recordAttachOpen, setRecordAttachOpen] = useState(false)
   const [recordCandidates, setRecordCandidates] = useState<PetRecord[]>([])
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([])
+  const [validationErrors, setValidationErrors] = useState<{ title?: string; body?: string }>({})
+  const [reviewOpen, setReviewOpen] = useState(false)
   const autoAttachedRef = useRef(false)
   const pet = pets.find((item) => item.id === petId)
   const hasNoAnimal = petId === 'none'
-  const canSubmit = title.trim().length > 0 && body.trim().length > 0 && imageUploads.some((item) => item.status === 'uploaded' && Boolean(item.storageUrl))
+  const canSubmit = title.trim().length > 0 && body.trim().length > 0
   const canNext = step === 0 ? categories.length > 0 : step === 1 ? Boolean(petId) : canSubmit
   const goNextStep = () => setStep((value) => startedFromDiary && value === 0 ? 2 : value + 1)
   const goPreviousStep = () => setStep((value) => startedFromDiary && value === 2 ? 0 : value - 1)
@@ -742,7 +850,10 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
   const hasImageUploadError = imageUploads.some((item) => item.status === 'error')
   const finish = () => {
     if (hasImageUploadInProgress || hasImageUploadError) return
-    onSave(buildPost())
+    const nextErrors = { ...(!title.trim() ? { title: '질문 제목을 입력해 주세요.' } : {}), ...(!body.trim() ? { body: '질문 내용을 입력해 주세요.' } : {}) }
+    setValidationErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
+    setReviewOpen(true)
   }
 
   const updateImageUpload = (id: string, update: Partial<QnaImageUploadItem>) => {
@@ -798,12 +909,13 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
 
   return (
     <StepShell title="질문 작성" onBack={step === 0 ? onClose : goPreviousStep} currentStep={displayStep} stepCount={displayStepCount} stepLabels={displayStepLabels} onStepChange={changeStep}>
-      {step === 0 && <div className="required-section"><span className="required-section-label">질문 유형<RequiredMark /></span><StepSelect label="질문 유형" values={categories} options={qnaCategoryCards} onChange={(value) => setCategories((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])} /></div>}
+      {step === 0 && <div className="required-section"><div className="qna-step-intro"><span>STEP 1</span><h2>어떤 내용이 궁금한가요?</h2></div><span className="required-section-label">주제 선택<RequiredMark /></span><StepSelect label="질문 유형" values={categories} options={qnaCategoryCards} onChange={(value) => setCategories([value])} /></div>}
       {step === 1 && !startedFromDiary && <QnaPetSelect pets={pets} value={petId} onChange={changePet} />}
       {step === 2 && <div className="qna-compose-fields">
-        <StepText label="제목" value={title} onChange={setTitle} placeholder="질문 제목을 입력하세요" required />
-        <StepTextarea label="내용" value={body} onChange={setBody} placeholder="궁금한 내용을 자세히 적어 주세요" required />
-        <label className="step-field attach-file-field"><span>사진 첨부<RequiredMark /></span><span className="attach-file-button">사진 선택</span><input type="file" accept="image/*" multiple onChange={attachImage} required={imageUploads.length === 0} /><small>{imageUploads.length > 0 ? `사진 ${imageUploads.length}장이 선택되었습니다` : '선택된 사진 없음'}</small></label>
+        <div className="qna-step-intro"><span>STEP 3</span><h2>질문을 자세히 알려주세요</h2><p>{[categories[0], pet?.species, pet?.name].filter(Boolean).join(' · ') || '일반 질문'}</p></div>
+        <StepText label="제목" value={title} onChange={(value) => { setTitle(value); setValidationErrors((errors) => ({ ...errors, title: undefined })) }} placeholder="질문 제목을 입력해주세요" required maxLength={50} error={validationErrors.title} />
+        <StepTextarea label="내용" value={body} onChange={(value) => { setBody(value); setValidationErrors((errors) => ({ ...errors, body: undefined })) }} placeholder="사육 환경, 최근 변화, 먹이, 온습도 등을 구체적으로 적어주세요" required maxLength={1000} error={validationErrors.body} />
+        <label className="step-field attach-file-field"><span>사진 첨부 <small>(선택)</small></span><span className="attach-file-button">+ 사진 선택</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={attachImage} /><small>{imageUploads.length > 0 ? `사진 ${imageUploads.length}/3장이 선택되었습니다` : '최대 3장까지 첨부할 수 있어요.'}</small></label>
         {imageUploads.length > 0 && <div className="qna-compose-upload-list">{imageUploads.map((item) => <div className={`qna-compose-upload-item ${item.status}`} key={item.id}>
           <img src={item.previewUrl} alt="첨부 사진 미리보기" />
           <div className="qna-compose-upload-status"><span>{item.status === 'uploaded' ? '업로드 완료' : item.status === 'error' ? '업로드 실패' : `업로드 중 ${item.progress}%`}</span>{item.status === 'uploading' && <progress value={item.progress} max="100" />}{item.error && <small>{item.error}</small>}</div>
@@ -820,18 +932,11 @@ export function QnaCreateFlow({ userId, pets, author, authorAvatarUrl, initialPe
         </div>
         {recordAttachOpen && pet && <QnaRecordAttachSheet pet={pet} records={recordCandidates} selectedIds={selectedRecordIds} onToggle={(recordId) => setSelectedRecordIds((ids) => ids.includes(recordId) ? ids.filter((id) => id !== recordId) : [...ids, recordId])} onSelectDate={(_date, ids) => setSelectedRecordIds((current) => ids.every((id) => current.includes(id)) ? current.filter((id) => !ids.includes(id)) : [...new Set([...current, ...ids])])} onClose={() => setRecordAttachOpen(false)} onSave={saveRecordAttachment} />}
       </div>}
-      {step === 2 && <div className="step-actions"><button className="step-secondary step-back" type="button" onClick={goPreviousStep}>이전</button><button className="step-primary" type="button" disabled={!canNext || hasImageUploadInProgress || hasImageUploadError} onClick={finish}>등록</button></div>}
+      {step === 2 && <div className="step-actions"><button className="step-secondary step-back" type="button" onClick={goPreviousStep}>이전</button><button className="step-primary" type="button" disabled={hasImageUploadInProgress || hasImageUploadError} onClick={finish}>질문 등록</button></div>}
       {step !== 2 && !startedFromDiary && <div className="step-actions"><button className="step-secondary step-back" type="button" onClick={() => setStep((value) => value - 1)} disabled={step === 0}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={goNextStep}>다음</button></div>}
+      {reviewOpen && <div className="qna-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="qna-confirm-title"><section><h2 id="qna-confirm-title">질문을 등록할까요?</h2><p>{title.trim()}</p><div><button type="button" onClick={() => setReviewOpen(false)}>다시 확인</button><button type="button" onClick={() => onSave(buildPost())}>등록하기</button></div></section></div>}
     </StepShell>
   )
-}
-
-function QnaOwnerMenu({ post, onEdit, onToggleResolve, onDelete }: { post: QnaPost; onEdit: () => void; onToggleResolve: () => void; onDelete: () => void }) {
-  const [open, setOpen] = useState(false)
-  return <div className="qna-owner-menu">
-    <button type="button" aria-label="질문 관리 메뉴 열기" aria-expanded={open} onClick={() => setOpen((value) => !value)}>⋮</button>
-    {open && <div role="menu"><button type="button" onClick={() => { setOpen(false); onEdit() }}>수정</button><button type="button" onClick={() => { setOpen(false); onToggleResolve() }}>{qnaStatus(post) === 'resolved' ? '해결 취소' : '해결'}</button><button className="danger" type="button" onClick={() => { setOpen(false); onDelete() }}>삭제</button></div>}
-  </div>
 }
 
 function QnaRecordAttachSheet({
@@ -869,7 +974,7 @@ function QnaRecordAttachSheet({
         <div className="hospital-picker-handle" aria-hidden="true" />
         <header>
           <div><strong>{pet.name} 기록 첨부</strong><p>질문에 필요한 기록만 선택하세요.</p></div>
-          <button type="button" aria-label="닫기" onClick={onClose}>×</button>
+          <button type="button" aria-label="닫기" onClick={onClose}><GuideAction symbol="×" /></button>
         </header>
         <div className="qna-record-type-filters" aria-label="첨부할 기록 종류">
           {availableTypes.map((type) => (
@@ -1007,7 +1112,7 @@ function parseQnaCategoryFilters(value: string | null): QnaCategory[] {
 }
 
 function parseQnaSort(value: string | null): QnaSort {
-  return value === 'popular' || value === 'comments' ? value : 'latest'
+  return value === 'popular' || value === 'comments' || value === 'views' ? value : 'latest'
 }
 
 function qnaListStatus(post: QnaPost, commentCount = post.comments.length): QnaListStatus {
@@ -1027,11 +1132,13 @@ const qnaCategoryCards: QnaCategory[] = ['질병', '사육', '먹이', '환경',
 function qnaSortLabel(sort: QnaSort) {
   if (sort === 'latest') return '최신순'
   if (sort === 'popular') return '인기순'
+  if (sort === 'views') return '조회순'
   return '댓글순'
 }
 
 function sortQnaPosts(posts: QnaPost[], sort: QnaSort, getCommentCount: (post: QnaPost) => number = (post) => post.comments.length) {
   return [...posts].sort((a, b) => {
+    if (sort === 'views') return (b.viewCount ?? 0) - (a.viewCount ?? 0)
     if (sort === 'popular') {
       const commentDiff = getCommentCount(b) - getCommentCount(a)
       if (commentDiff !== 0) return commentDiff
@@ -1084,8 +1191,8 @@ function formatRecordDate(value: string) {
   return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value))
 }
 
-function StepTextarea({ label, value, onChange, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean }) {
-  return <label className="step-field qna-content-field"><span>{label}{required && <RequiredMark />}</span><textarea autoFocus value={value} maxLength={500} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} /><small className="qna-character-count">{value.length}/500자</small></label>
+function StepTextarea({ label, value, onChange, placeholder, required = false, maxLength = 1000, error }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean; maxLength?: number; error?: string }) {
+  return <label className="step-field qna-content-field"><span>{label}{required && <RequiredMark />}</span><textarea autoFocus value={value} maxLength={maxLength} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} /><small className="qna-character-count">{value.length}/{maxLength}자</small>{error && <small className="qna-field-error" role="alert">{error}</small>}</label>
 }
 
 function QnaPetSelect({ pets, value, onChange }: { pets: Pet[]; value: string; onChange: (value: string) => void }) {
@@ -1100,15 +1207,16 @@ function QnaPetSelect({ pets, value, onChange }: { pets: Pet[]; value: string; o
   const selectedPet = selectedPetIsHidden ? recentPets.find((pet) => pet.id === value) : undefined
   const visiblePets = expanded ? recentPets : selectedPet ? [selectedPet, ...firstPets.filter((pet) => pet.id !== selectedPet.id)].slice(0, 5) : firstPets
   return <section className="qna-pet-select">
-    <h2>관련 펫<RequiredMark /></h2>
+    <div className="qna-step-intro"><span>STEP 2</span><h2>어떤 아이에 대한 질문인가요?</h2><p>내 펫을 선택하거나 일반 질문으로 진행할 수 있어요.</p></div>
+    <h3>내 펫에서 선택 <small>(선택)</small></h3>
     <div className="qna-pet-grid">
       {visiblePets.map((pet) => <button className={value === pet.id ? 'active' : ''} type="button" aria-pressed={value === pet.id} key={pet.id} onClick={() => onChange(pet.id)}>
         <span className="qna-pet-avatar">{pet.photo ? <img src={pet.photo} alt="" /> : <CategoryTagIcon category={pet.group} />}</span>
-        <span className="qna-pet-copy"><strong>{pet.name}</strong><small>{pet.species || '종 미등록'}</small><small>{qnaGenderLabel(pet.gender)}</small></span>{value === pet.id && <span className="qna-pet-check" aria-hidden="true">✓</span>}
+        <span className="qna-pet-copy"><strong>{pet.name}</strong><small>{pet.species || '종 미등록'}</small><small>{qnaGenderLabel(pet.gender)}</small></span>{value === pet.id && <span className="qna-pet-check" aria-hidden="true"><GuideAction symbol="✓" /></span>}
       </button>)}
       <button className={value === 'none' ? 'active' : ''} type="button" aria-pressed={value === 'none'} onClick={() => onChange('none')}>
-        <span className="qna-pet-avatar qna-pet-none" aria-hidden="true">×</span>
-        <span className="qna-pet-copy"><strong>동물 X</strong><small>질문 대상 없음</small><small>펫 없이 질문하기</small></span>{value === 'none' && <span className="qna-pet-check" aria-hidden="true">✓</span>}
+        <span className="qna-pet-avatar qna-pet-none" aria-hidden="true"><GuideAction symbol="×" /></span>
+        <span className="qna-pet-copy"><strong>동물을 선택하지 않음</strong><small>질문 대상 없음</small><small>펫 없이 질문하기</small></span>{value === 'none' && <span className="qna-pet-check" aria-hidden="true"><GuideAction symbol="✓" /></span>}
       </button>
       {pets.length > 5 && !expanded && <button className="qna-pet-more" type="button" onClick={() => setExpanded(true)}>더보기</button>}
     </div>
@@ -1122,20 +1230,22 @@ function qnaGenderLabel(gender: Pet['gender']) {
 }
 
 function StepSelect({ label, values, options, labels, onChange }: { label: string; values: QnaCategory[]; options: QnaCategory[]; labels?: Record<string, string>; onChange: (value: QnaCategory) => void }) {
-  const icons: Record<string, string> = {
-    질병: '/assets/qna-topics/disease.png',
-    사육: '/assets/qna-topics/care.png',
-    먹이: '/assets/qna-topics/food.png',
-    환경: '/assets/qna-topics/environment.png',
-    행동: '/assets/qna-topics/behavior.png',
-    번식: '/assets/qna-topics/breeding.png',
-  }
   return (
     <div className="step-field">
       <span>{label}</span>
       <div className="choice-grid">
-        {options.map((option) => { const active = values.includes(option); return <button className={active ? 'active' : ''} data-category={option} key={option} type="button" aria-pressed={active} onClick={() => onChange(option)}><span className="qna-question-type-icon" aria-hidden="true"><img src={icons[option]} alt="" /></span>{labels?.[option] ?? option}</button> })}
+        {options.map((option) => { const active = values.includes(option); return <button className={active ? 'active' : ''} data-category={option} key={option} type="button" aria-pressed={active} onClick={() => onChange(option)}><span className="qna-question-type-icon" aria-hidden="true"><QnaIcon name={topicIconName(option)} /></span>{labels?.[option] ?? option}</button> })}
       </div>
     </div>
   )
+}
+
+function topicIconName(topic: string): QnaIconName {
+  if (topic === '질병') return 'disease'
+  if (topic === '사육') return 'care'
+  if (topic === '먹이') return 'food'
+  if (topic === '환경') return 'environment'
+  if (topic === '행동') return 'behavior'
+  if (topic === '번식') return 'breeding'
+  return 'other'
 }

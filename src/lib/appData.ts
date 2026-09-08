@@ -29,6 +29,7 @@ export async function loadAppData<T>(table: AppDataTable, options: { userId?: st
   return ((data ?? []) as unknown as StoredRow<T>[]).map((row) => ({
     ...row.payload,
     id: row.id,
+    ...(row.user_id ? { ownerUserId: row.user_id } : {}),
     ...(options.userId ? { mine: row.user_id === options.userId } : {}),
     ...(options.includeViewCount ? { viewCount: row.view_count ?? 0 } : {}),
   }))

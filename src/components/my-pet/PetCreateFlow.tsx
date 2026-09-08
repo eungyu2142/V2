@@ -1,16 +1,13 @@
 import { type ChangeEvent, type PointerEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import './MyPet.css'
-import StepShell from '../account/StepShell'
 import type { AnimalCategory, DraftItem, Pet } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
 import { RequiredMark } from '../common/FieldMarkers'
-import { ChoiceGroup, TextField } from '../ui'
+import { PetIcon, PetIconMark } from './PetIcons'
 
 type SupportedPetCategory = 'reptile' | 'amphibian'
-type ReptileBranch = '도마뱀' | '뱀' | '거북이'
-type AmphibianBranch = '개구리' | '도롱뇽'
-
-type PetCreateFlowProps = {
+type PendingPhoto = { url: string; file: File; position: { x: number; y: number } }
+type Props = {
   initialPet: Pet | null
   initialDraft?: DraftItem | null
   categoryOptions: Exclude<AnimalCategory, 'all'>[]
@@ -22,269 +19,146 @@ type PetCreateFlowProps = {
   onOpenPlan: (petId: string) => void
 }
 
-const customSpeciesOption = '직접 입력'
-const defaultPhotoPosition = { x: 50, y: 50 }
-type PendingPhoto = { url: string; file: File; position: { x: number; y: number } }
-const reptileBranches: ReptileBranch[] = ['도마뱀', '뱀', '거북이']
-const lizardGroups = ['게코', '비어디드래곤', '모니터(왕도마뱀)', '카멜레온', '이구아나', '스킨크', '유로매스틱스']
-const geckoSpecies = ['크레스티드 게코', '레오파드 게코', '펫테일 게코', '바이퍼 게코', '차화 게코', '가고일 게코', '토케이 게코', '데이 게코']
-const snakeSpecies = ['스네이크', '파이톤', '보아']
-const turtleSpecies = ['육지거북', '수생거북', '반수생 거북']
-const amphibianBranches: AmphibianBranch[] = ['개구리', '도롱뇽']
-const frogSpecies = ['팩맨', '트리프록', '두꺼비(토드)', '다트프록(독화살 개구리)']
-const salamanderSpecies = ['뉴트', '살라만다', '아홀로틀']
-
-function isSupportedCategory(value?: AnimalCategory | ''): value is SupportedPetCategory {
+const defaultPosition = { x: 50, y: 50 }
+function isSupported(value?: AnimalCategory | ''): value is SupportedPetCategory {
   return value === 'reptile' || value === 'amphibian'
 }
 
-function StepText({ label, value, onChange, placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; required?: boolean }) {
-  return <TextField className="w-full" label={label} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} />
+function sanitizeDecimal(value: string) {
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  const [integer = '', ...decimal] = cleaned.split('.')
+  return decimal.length ? `${integer.slice(0, 5)}.${decimal.join('').slice(0, 2)}` : integer.slice(0, 5)
 }
 
-function StepSelect({ label, value, options, labels, onChange, required = false }: { label: string; value: string; options: string[]; labels?: Record<string, string>; onChange: (value: string) => void; required?: boolean }) {
-  return <ChoiceGroup className="w-full" label={label} value={value} options={options.map((option) => ({ value: option, label: labels?.[option] ?? option }))} onChange={(nextValue) => onChange(String(nextValue))} required={required} />
-}
-
-function ChipGroup({ label, value, options, onChange, required = false }: { label: string; value: string; options: string[]; onChange: (value: string) => void; required?: boolean }) {
-  return (
-    <fieldset className="m-0 min-w-0 border-0 p-0">
-      <legend className="mb-2 p-0 text-sm font-bold text-app-ink">{label}{required ? <RequiredMark /> : null}</legend>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const selected = value === option
-          return (
-            <button
-              className={`min-h-9 max-w-full rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${selected ? 'border-brand-600 bg-brand-600 text-white' : 'border-app-border bg-app-surface text-app-ink hover:bg-brand-50'}`}
-              type="button"
-              key={option}
-              aria-pressed={selected}
-              onClick={() => onChange(option)}
-            >
-              {option}
-            </button>
-          )
-        })}
-      </div>
-    </fieldset>
-  )
-}
-
-export default function PetCreateFlow({ initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave }: PetCreateFlowProps) {
-  const initialGroup = isSupportedCategory(initialPet?.group) ? initialPet.group : ''
-  const allowedCategoryOptions = categoryOptions.filter(isSupportedCategory)
-  const [step, setStep] = useState(initialDraft?.step ?? 0)
+export default function PetCreateFlow({ initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave }: Props) {
+  const initialGroup = isSupported(initialPet?.group) ? initialPet.group : ''
+  const [step, setStep] = useState(Math.min(initialDraft?.step ?? 0, 1))
   const [completedPet, setCompletedPet] = useState<Pet | null>(null)
   const [name, setName] = useState(initialPet?.name ?? '')
   const [group, setGroup] = useState<SupportedPetCategory | ''>(initialGroup)
-  const [reptileBranch, setReptileBranch] = useState<ReptileBranch | ''>('')
-  const [amphibianBranch, setAmphibianBranch] = useState<AmphibianBranch | ''>('')
-  const [lizardGroup, setLizardGroup] = useState('')
-  const [speciesOption, setSpeciesOption] = useState(() => {
-    if (!initialPet?.species || !initialGroup) return ''
-    return speciesOptions[initialGroup].includes(initialPet.species) ? initialPet.species : customSpeciesOption
-  })
-  const [customSpecies, setCustomSpecies] = useState(() => {
-    if (!initialPet?.species || !initialGroup) return ''
-    return speciesOptions[initialGroup].includes(initialPet.species) ? '' : initialPet.species
-  })
+  const knownInitialSpecies = initialGroup && speciesOptions[initialGroup].includes(initialPet?.species ?? '')
+  const [species, setSpecies] = useState(knownInitialSpecies ? initialPet?.species ?? '' : '')
+  const [customSpecies, setCustomSpecies] = useState(knownInitialSpecies ? '' : initialPet?.species ?? '')
   const [gender, setGender] = useState<Pet['gender'] | ''>(initialPet?.gender ?? '')
-  const [photo, setPhoto] = useState<string | undefined>(initialPet?.photo)
-  const [photoFile, setPhotoFile] = useState<File | undefined>()
+  const [photo, setPhoto] = useState(initialPet?.photo)
+  const [photoFile, setPhotoFile] = useState<File>()
+  const [photoPosition, setPhotoPosition] = useState(initialPet?.photoPosition ?? defaultPosition)
   const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null)
-  const [saveError, setSaveError] = useState('')
-  const previewObjectUrlRef = useRef('')
-  const pendingPreviewObjectUrlRef = useRef('')
-  const [photoPosition, setPhotoPosition] = useState(initialPet?.photoPosition ?? defaultPhotoPosition)
+  const [birthday, setBirthday] = useState(initialPet?.birthday ?? '')
+  const [adoptionDate, setAdoptionDate] = useState(initialPet?.adoptionDate ?? '')
+  const [description, setDescription] = useState(initialPet?.description ?? '')
+  const [memo, setMemo] = useState(initialPet?.memo ?? '')
   const [weight, setWeight] = useState(initialPet?.weight ?? '')
   const [weightUnit, setWeightUnit] = useState<'g' | 'kg'>(initialPet?.weightUnit ?? 'g')
-  const [ageText, setAgeText] = useState(initialPet?.ageText ?? '')
-  const isEditing = Boolean(initialPet)
-  const normalizedName = name.trim().slice(0, 24)
-  const resolvedSpecies = speciesOption === customSpeciesOption ? customSpecies.trim().slice(0, 32) : speciesOption
-  const customSpeciesValid = resolvedSpecies.length > 0 && /[0-9A-Za-z가-힣]/.test(resolvedSpecies)
-  const canNext = step === 0 ? normalizedName.length > 0 : step === 1 ? Boolean(group) : step === 2 ? Boolean(resolvedSpecies && (speciesOption !== customSpeciesOption || customSpeciesValid)) : step === 3 ? Boolean(photo && gender) : true
+  const [saveError, setSaveError] = useState('')
+  const appliedUrlRef = useRef('')
+  const pendingUrlRef = useRef('')
+  const resolvedSpecies = (species || customSpecies).trim().slice(0, 40)
+  const canContinue = name.trim().length > 0 && Boolean(group) && resolvedSpecies.length > 0 && Boolean(gender)
 
   useEffect(() => () => {
-    if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current)
-    if (pendingPreviewObjectUrlRef.current) URL.revokeObjectURL(pendingPreviewObjectUrlRef.current)
+    if (appliedUrlRef.current) URL.revokeObjectURL(appliedUrlRef.current)
+    if (pendingUrlRef.current) URL.revokeObjectURL(pendingUrlRef.current)
   }, [])
 
   useEffect(() => {
     if (!pendingPhoto) return
-    const previousOverflow = document.body.style.overflow
+    const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const closeOnEscape = (event: KeyboardEvent) => {
+    const close = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      if (pendingPreviewObjectUrlRef.current === pendingPhoto.url) {
-        URL.revokeObjectURL(pendingPhoto.url)
-        pendingPreviewObjectUrlRef.current = ''
-      }
+      if (pendingUrlRef.current) URL.revokeObjectURL(pendingUrlRef.current)
+      pendingUrlRef.current = ''
       setPendingPhoto(null)
     }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', closeOnEscape)
-    }
+    window.addEventListener('keydown', close)
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', close) }
   }, [pendingPhoto])
-
-  const selectReptileBranch = (value: string) => {
-    setReptileBranch(value as ReptileBranch)
-    setLizardGroup('')
-    setSpeciesOption('')
-    setCustomSpecies('')
-  }
-
-  const selectLizardGroup = (value: string) => {
-    setLizardGroup(value)
-    setCustomSpecies('')
-    if (value === '게코') {
-      setSpeciesOption('')
-      return
-    }
-    setSpeciesOption(value === '기타' ? customSpeciesOption : value)
-  }
-
-  const selectAmphibianBranch = (value: string) => {
-    setAmphibianBranch(value as AmphibianBranch)
-    setSpeciesOption('')
-    setCustomSpecies('')
-  }
-
-  const buildPet = (): Pet => ({
-    id: initialPet?.id ?? crypto.randomUUID(),
-    name: normalizedName,
-    group: group || 'reptile',
-    species: resolvedSpecies,
-    gender: gender || 'unknown',
-    photo,
-    photoPosition,
-    weight: weight.trim() || undefined,
-    weightUnit,
-    ageText: ageText.trim() || undefined,
-    registeredAt: initialPet?.registeredAt ?? new Date().toISOString(),
-  })
-
-  const finish = async () => {
-    if (!group || !resolvedSpecies || !normalizedName || !photo || !gender) return
-    const pet = buildPet()
-    try {
-      setSaveError('')
-      await onSave(pet, photoFile)
-      setCompletedPet(pet)
-    } catch {
-      setSaveError('사진 또는 펫 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')
-    }
-  }
 
   const attachPhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
+    event.target.value = ''
     if (!file) return
     try {
       validateImageFile(file)
-      if (pendingPreviewObjectUrlRef.current) URL.revokeObjectURL(pendingPreviewObjectUrlRef.current)
-      const previewUrl = URL.createObjectURL(file)
-      pendingPreviewObjectUrlRef.current = previewUrl
-      setPendingPhoto({ url: previewUrl, file, position: defaultPhotoPosition })
+      if (pendingUrlRef.current) URL.revokeObjectURL(pendingUrlRef.current)
+      const url = URL.createObjectURL(file)
+      pendingUrlRef.current = url
+      setPendingPhoto({ url, file, position: defaultPosition })
       setSaveError('')
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : '사진을 불러오지 못했습니다.')
+      setSaveError(error instanceof Error ? error.message : '사진을 업로드하지 못했어요. 다시 시도해주세요.')
     }
   }
 
-  const movePhotoPosition = (event: PointerEvent<HTMLDivElement>, editingPreview = false) => {
+  const movePendingPhoto = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
-    const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100))
-    const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100))
-    const position = { x: Math.round(x), y: Math.round(y) }
-    if (editingPreview) setPendingPhoto((current) => current ? { ...current, position } : current)
-    else setPhotoPosition(position)
+    const position = { x: Math.round(Math.min(100, Math.max(0, (event.clientX - rect.left) / rect.width * 100))), y: Math.round(Math.min(100, Math.max(0, (event.clientY - rect.top) / rect.height * 100))) }
+    setPendingPhoto((current) => current ? { ...current, position } : current)
   }
 
-  const startPhotoDrag = (event: PointerEvent<HTMLDivElement>) => {
-    if (!photo) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    movePhotoPosition(event)
-  }
-
-  const startPreviewDrag = (event: PointerEvent<HTMLDivElement>) => {
-    if (!pendingPhoto) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    movePhotoPosition(event, true)
-  }
-
-  const cancelPhotoPreview = () => {
-    if (pendingPhoto && pendingPreviewObjectUrlRef.current === pendingPhoto.url) {
-      URL.revokeObjectURL(pendingPhoto.url)
-      pendingPreviewObjectUrlRef.current = ''
-    }
+  const cancelPhoto = () => {
+    if (pendingUrlRef.current) URL.revokeObjectURL(pendingUrlRef.current)
+    pendingUrlRef.current = ''
     setPendingPhoto(null)
   }
 
-  const applyPhotoPreview = () => {
+  const applyPhoto = () => {
     if (!pendingPhoto) return
-    if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current)
-    previewObjectUrlRef.current = pendingPhoto.url
-    pendingPreviewObjectUrlRef.current = ''
+    if (appliedUrlRef.current) URL.revokeObjectURL(appliedUrlRef.current)
+    appliedUrlRef.current = pendingPhoto.url
+    pendingUrlRef.current = ''
     setPhoto(pendingPhoto.url)
     setPhotoFile(pendingPhoto.file)
     setPhotoPosition(pendingPhoto.position)
     setPendingPhoto(null)
   }
 
-  if (completedPet) {
-    return <main className="pet-complete-screen"><section className="pet-complete-card"><div className="pet-complete-mark">✓</div><h1>{completedPet.name}가 등록되었어요.</h1><div className="pet-complete-summary"><div className="pet-card-icon"><img src={completedPet.photo} alt={`${completedPet.name} 사진`} style={{ objectPosition: `${completedPet.photoPosition?.x ?? 50}% ${completedPet.photoPosition?.y ?? 50}%` }} /></div><strong>{completedPet.name}</strong><span>{completedPet.species || '종 미등록'}</span></div><div className="pet-complete-actions single"><button className="step-primary" type="button" onClick={onClose}>완료</button></div></section></main>
-  }
+  const buildPet = (): Pet => ({
+    id: initialPet?.id ?? crypto.randomUUID(), name: name.trim().slice(0, 24), group: group || 'reptile', species: resolvedSpecies,
+    gender: gender || 'unknown', photo, photoPosition, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined,
+    description: description.trim().slice(0, 80) || undefined, memo: memo.trim().slice(0, 300) || undefined,
+    weight: weight || undefined, weightUnit, registeredAt: initialPet?.registeredAt ?? new Date().toISOString(),
+  })
 
-  const finishEdit = async () => {
-    if (!group || !resolvedSpecies || !normalizedName || !photo || !gender) return
+  const save = async () => {
+    if (!canContinue) return
     try {
       setSaveError('')
-      await onSave(buildPet(), photoFile)
-      onClose()
+      const pet = buildPet()
+      await onSave(pet, photoFile)
+      if (initialPet) onClose()
+      else setCompletedPet(pet)
     } catch {
-      setSaveError('사진 또는 펫 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      setSaveError('반려동물 정보를 저장하지 못했어요. 다시 시도해주세요.')
     }
   }
 
-  return <><StepShell title={isEditing ? '펫 수정' : '펫 등록'} onBack={step === 0 ? onClose : () => setStep((value) => value - 1)} currentStep={step} stepCount={4} stepLabels={['기본', '분류', '종', '확인']} onStepChange={setStep}>
-    {step === 0 && <div className="pet-basic-step"><h2>새로운 가족을 알려주세요</h2><StepText label="이름" value={name} onChange={(value) => setName(value.slice(0, 24))} placeholder="이름을 입력해주세요" required /></div>}
-    {step === 1 && <StepSelect label="동물 분류" value={group} options={allowedCategoryOptions} labels={categoryLabels} onChange={(value) => { const nextGroup = value as SupportedPetCategory; setGroup(nextGroup); setReptileBranch(''); setAmphibianBranch(''); setLizardGroup(''); setSpeciesOption(''); setCustomSpecies('') }} required />}
-    {step === 2 && <div className="pet-species-step">
-      {group === 'reptile' && <>
-        <ChipGroup label="파충류 태그" value={reptileBranch} options={reptileBranches} onChange={selectReptileBranch} required />
-        {reptileBranch === '도마뱀' && <ChipGroup label="도마뱀" value={lizardGroup} options={lizardGroups} onChange={selectLizardGroup} required />}
-        {lizardGroup === '게코' && <ChipGroup label="게코" value={speciesOption} options={geckoSpecies} onChange={(value) => { setSpeciesOption(value); setCustomSpecies('') }} required />}
-        {reptileBranch === '뱀' && <ChipGroup label="뱀" value={speciesOption} options={snakeSpecies} onChange={(value) => { setSpeciesOption(value); setCustomSpecies('') }} required />}
-        {reptileBranch === '거북이' && <ChipGroup label="거북이" value={speciesOption} options={turtleSpecies} onChange={(value) => { setSpeciesOption(value); setCustomSpecies('') }} required />}
-      </>}
-      {group === 'amphibian' && <>
-        <ChipGroup label="양서류 태그" value={amphibianBranch} options={amphibianBranches} onChange={selectAmphibianBranch} required />
-        {amphibianBranch === '개구리' && <ChipGroup label="개구리" value={speciesOption} options={frogSpecies} onChange={(value) => { setSpeciesOption(value); setCustomSpecies('') }} required />}
-        {amphibianBranch === '도롱뇽' && <ChipGroup label="도롱뇽" value={speciesOption} options={salamanderSpecies} onChange={(value) => { setSpeciesOption(value); setCustomSpecies('') }} required />}
-      </>}
-      <button className={speciesOption === customSpeciesOption ? 'species-custom-toggle active' : 'species-custom-toggle'} type="button" onClick={() => { setSpeciesOption(customSpeciesOption); setLizardGroup(group === 'reptile' && reptileBranch === '도마뱀' ? '기타' : lizardGroup) }}>목록에 없나요? 직접 입력</button>
-      {speciesOption === customSpeciesOption && <StepText label="종 직접 입력" value={customSpecies} onChange={(value) => setCustomSpecies(value.slice(0, 32))} placeholder={group === 'amphibian' ? '예: 팩맨' : '예: 팬서카멜레온'} required />}
-    </div>}
-    {step === 3 && <div className="pet-confirm-step"><label className="pet-confirm-card pet-confirm-photo-card"><input type="file" accept="image/*" onChange={attachPhoto} /><div className="pet-card-icon pet-photo-adjuster" onPointerDown={startPhotoDrag} onPointerMove={(event) => { if (photo && event.currentTarget.hasPointerCapture(event.pointerId)) movePhotoPosition(event) }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId) }} onClick={(event) => { if (photo) event.preventDefault() }}>{photo ? <img src={photo} alt="선택한 펫 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }} draggable={false} /> : <span className="pet-photo-plus" aria-hidden="true">+</span>}</div><strong>{photo ? '사진 변경' : <>사진 추가<RequiredMark /></>}</strong><span>{normalizedName}</span>{photo && <small className="pet-photo-drag-hint"><span aria-hidden="true">↔</span>사진을 움직여 위치를 맞출 수 있어요.</small>}</label><div className="pet-confirm-detail-panel"><StepSelect label="성별" value={gender} options={['male', 'female', 'unknown']} labels={{ male: '수컷', female: '암컷', unknown: '미구분' }} onChange={(value) => setGender(value as Pet['gender'])} required /><div className="step-field"><span>나이</span><div className="age-input"><input inputMode="numeric" pattern="[0-9]*" value={ageText} onChange={(event) => setAgeText(event.target.value.replace(/[^0-9]/g, '').slice(0, 3))} placeholder="숫자 입력" aria-label="나이" /><span aria-hidden="true">살</span></div></div><div className="step-field"><span>몸무게</span><div className="weight-input"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="선택 입력" aria-label="몸무게" /><div className="weight-unit" aria-label="몸무게 단위">{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} aria-pressed={weightUnit === unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></div></div></div>}
-    {saveError && <p className="pet-save-error" role="alert">{saveError}</p>}
-    <div className="step-actions"><button className="step-secondary step-back" type="button" disabled={step === 0} onClick={() => step > 0 ? setStep((value) => value - 1) : onClose()}>이전</button><button className="step-primary" type="button" disabled={!canNext} onClick={step === 3 ? (isEditing ? finishEdit : finish) : () => setStep((value) => value + 1)}>{step === 3 ? (isEditing ? '수정 완료' : '등록 완료') : '다음'}</button></div>
-  </StepShell>
-    {pendingPhoto && <div className="pet-photo-preview-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) cancelPhotoPreview() }}>
-      <section className="pet-photo-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-photo-preview-title">
-        <div className="pet-photo-preview-header"><button type="button" onClick={cancelPhotoPreview} aria-label="사진 조정 취소">취소</button><h2 id="pet-photo-preview-title">사진 조정</h2><button type="button" onClick={applyPhotoPreview}>적용</button></div>
-        <div className="pet-photo-preview-body">
-          <p>사진을 움직여 펫이 가운데 오도록 맞춰주세요.</p>
-          <div className="pet-photo-preview-frame" onPointerDown={startPreviewDrag} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePhotoPosition(event, true) }} onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId) }}>
-            <img src={pendingPhoto.url} alt="조정 중인 펫 사진" style={{ objectPosition: `${pendingPhoto.position.x}% ${pendingPhoto.position.y}%` }} draggable={false} />
-            <span className="pet-photo-preview-guide" aria-hidden="true" />
-          </div>
-          <small><span aria-hidden="true">↔</span> 상하좌우로 드래그해 위치를 조정할 수 있어요.</small>
-        </div>
+  if (completedPet) return <main className="pet-reference-complete"><section><PetIconMark name="pet" className="pet-reference-complete-mark"/><PetIconMark name="check" className="pet-reference-complete-check"/><h1>반려동물이<br/>정상적으로 등록되었어요!</h1><button type="button" onClick={onClose}>확인</button></section></main>
+
+  const categories = categoryOptions.filter(isSupported)
+  return <main className="pet-reference-create">
+    <header><button type="button" onClick={onClose}>취소</button><h1>{initialPet ? '반려동물 수정' : '반려동물 등록'}</h1><span /></header>
+    <form onSubmit={(event) => { event.preventDefault(); if (step === 0) setStep(1); else void save() }}>
+      <section className="pet-reference-form-body">
+        <p className="pet-reference-step-label">{step + 1}/2 {step === 0 ? '기본 정보' : '추가 정보'}</p>
+        {step === 0 ? <>
+          <label className="pet-reference-photo"><input type="file" accept="image/*" onChange={attachPhoto}/><span>{photo ? <img src={photo} alt="반려동물 사진 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }}/> : <PetIcon name="camera"/>}</span><small>사진을 추가해주세요<br/>(선택)</small></label>
+          <label className="pet-reference-field"><span>이름 <RequiredMark/></span><input value={name} maxLength={24} onChange={(event) => setName(event.target.value)} placeholder="이름을 입력해주세요"/></label>
+          <label className="pet-reference-field"><span>종 <RequiredMark/></span><select value={species ? `${group}|${species}` : customSpecies ? 'custom' : ''} onChange={(event) => { if (event.target.value === 'custom') { setSpecies(''); setCustomSpecies(''); return } const [nextGroup, nextSpecies] = event.target.value.split('|') as [SupportedPetCategory, string]; setGroup(nextGroup); setSpecies(nextSpecies); setCustomSpecies('') }}><option value="">종을 선택해주세요</option>{categories.map((category) => <optgroup label={categoryLabels[category]} key={category}>{speciesOptions[category].map((item) => <option value={`${category}|${item}`} key={item}>{item}</option>)}</optgroup>)}<option value="custom">직접 입력</option></select></label>
+          {(!species && (customSpecies || group)) ? <div className="pet-reference-custom"><div>{categories.map((category) => <button className={group === category ? 'active' : ''} type="button" key={category} onClick={() => setGroup(category)}>{categoryLabels[category]}</button>)}</div><input value={customSpecies} maxLength={40} onChange={(event) => setCustomSpecies(event.target.value)} placeholder="종을 직접 입력해주세요" aria-label="종 직접 입력"/></div> : null}
+          <fieldset className="pet-reference-gender"><legend>성별 <RequiredMark/></legend><div>{(['male','female','unknown'] as const).map((value) => <button className={gender === value ? 'active' : ''} type="button" key={value} aria-pressed={gender === value} onClick={() => setGender(value)}><PetIcon name={value === 'male' ? 'male' : value === 'female' ? 'female' : 'unknown'}/>{value === 'male' ? '수컷' : value === 'female' ? '암컷' : '미구분'}</button>)}</div></fieldset>
+          <label className="pet-reference-field optional"><span>현재 몸무게 (선택)</span><div className="pet-reference-weight"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(sanitizeDecimal(event.target.value))} placeholder="숫자 입력"/><div>{(['g','kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></label>
+        </> : <>
+          <label className="pet-reference-field"><span>생년월일</span><span className="pet-reference-date"><input type="date" value={birthday} onChange={(event) => setBirthday(event.target.value)}/><PetIcon name="calendar"/></span></label>
+          <label className="pet-reference-field"><span>입양일</span><span className="pet-reference-date"><input type="date" value={adoptionDate} onChange={(event) => setAdoptionDate(event.target.value)}/><PetIcon name="calendar"/></span></label>
+          <label className="pet-reference-field"><span>특징 (선택)</span><textarea value={description} maxLength={80} onChange={(event) => setDescription(event.target.value)} placeholder="예) 색, 크기, 성격 등"/></label>
+          <label className="pet-reference-field"><span>메모 (선택)</span><textarea value={memo} maxLength={300} onChange={(event) => setMemo(event.target.value)} placeholder="추가로 기록할 내용이 있나요?"/></label>
+        </>}
+        {saveError ? <p className="pet-reference-error" role="alert">{saveError}</p> : null}
       </section>
-    </div>}
-  </>
+      <footer>{step === 1 ? <button className="secondary" type="button" onClick={() => setStep(0)}>이전</button> : null}<button className="primary" type="submit" disabled={step === 0 && !canContinue}>{step === 0 ? '다음' : initialPet ? '저장' : '등록 완료'}</button></footer>
+    </form>
+    {pendingPhoto ? <div className="pet-photo-preview-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) cancelPhoto() }}><section className="pet-photo-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-photo-preview-title"><div className="pet-photo-preview-header"><button type="button" onClick={cancelPhoto}>취소</button><h2 id="pet-photo-preview-title">사진 조정</h2><button type="button" onClick={applyPhoto}>적용</button></div><div className="pet-photo-preview-body"><p>사진을 움직여 위치를 맞춰주세요.</p><div className="pet-photo-preview-frame" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); movePendingPhoto(event) }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePendingPhoto(event) }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><img src={pendingPhoto.url} alt="조정 중인 반려동물 사진" style={{ objectPosition: `${pendingPhoto.position.x}% ${pendingPhoto.position.y}%` }} draggable={false}/><span className="pet-photo-preview-guide" aria-hidden="true"/></div><small>상하좌우로 드래그해 조정할 수 있어요.</small></div></section></div> : null}
+  </main>
 }

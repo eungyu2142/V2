@@ -1,6 +1,7 @@
 ﻿import { type FormEvent, useState } from 'react'
 
 import { Stepper } from '../../components/ui/Stepper'
+import type { ChangeEvent } from 'react'
 import { specialistReviewTags } from './reviewTagOptions'
 
 export type ReviewAnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
@@ -13,31 +14,28 @@ type ReviewPetOption = {
 }
 
 type HospitalReviewFormProps = {
-  rating: number
   body: string
   visitDate: string
-  hasNextVisit: boolean
-  nextVisitDate: string
-  nextVisitTime: string
   cost: string
   diagnosis: string
   treatment: string
   pets: ReviewPetOption[]
   selectedPetId: string
   selectedTags: string[]
+  images: Array<{ id: string; previewUrl: string }>
+  imageError?: string
+  isSubmitting?: boolean
   canSubmit: boolean
   submitLabel?: string
-  onRatingChange: (value: number) => void
   onBodyChange: (value: string) => void
   onVisitDateChange: (value: string) => void
-  onHasNextVisitChange: (value: boolean) => void
-  onNextVisitDateChange: (value: string) => void
-  onNextVisitTimeChange: (value: string) => void
   onCostChange: (value: string) => void
   onDiagnosisChange: (value: string) => void
   onTreatmentChange: (value: string) => void
   onPetChange: (value: string) => void
   onToggleTag: (value: string) => void
+  onImagesSelect: (files: File[]) => void
+  onImageRemove: (id: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 const text = {
@@ -49,16 +47,11 @@ const text = {
   other: '\uAE30\uD0C0',
   required: '\uD544\uC218',
   optional: '\uC120\uD0DD',
-  ratingTitle: '\uBC29\uBB38\uC5D0 \uB9CC\uC871\uD558\uC168\uB098\uC694?',
-  ratingLabel: '\uBCC4\uC810 \uC120\uD0DD',
   petTitle: '\uD568\uAED8 \uBC29\uBB38\uD55C \uBC18\uB824\uB3D9\uBB3C',
   petSelectLabel: '\uB9C8\uC774 \uD3AB\uC5D0\uC11C \uC120\uD0DD',
   petSelectPlaceholder: '\uBC18\uB824\uB3D9\uBB3C \uC120\uD0DD',
   treatmentTitle: '\uC9C4\uB8CC \uC815\uBCF4',
   visitDate: '\uBC29\uBB38 \uB0A0\uC9DC',
-  nextVisitQuestion: '\uB2E4\uC74C \uC608\uC815\uC77C (\uB8E8\uD2F4)\uC774 \uC788\uB098\uC694?',
-  nextVisitDate: '\uB0A0\uC9DC',
-  reminderTime: '\uC54C\uB9BC \uC2DC\uAC04',
   cost: '\uC9C4\uB8CC\uBE44',
   costPlaceholder: '\uC608: 35,000',
   diagnosis: '\uBCD1\uBA85/\uC9C4\uB2E8\uBA85',
@@ -68,8 +61,7 @@ const text = {
   tagTitle: '\uC5B4\uB5A4 \uC810\uC774 \uC88B\uC558\uB098\uC694?',
   bodyTitle: '\uB9AC\uBDF0\uB97C \uB0A8\uACA8\uC8FC\uC138\uC694',
   bodyPlaceholder: '\uBC29\uBB38 \uACBD\uD5D8, \uC9C4\uB8CC \uACFC\uC815, \uB2E4\uC2DC \uBC29\uBB38\uD558\uACE0 \uC2F6\uC740 \uC774\uC720\uB97C \uC801\uC5B4\uC8FC\uC138\uC694.',
-  submit: '\uB4F1\uB85D',
-  point: '\uC810',
+  submit: '\uB9AC\uBDF0 \uC791\uC131 \uC644\uB8CC',
 }
 
 const generalReviewTags = [
@@ -103,54 +95,45 @@ function formatCostInput(value: string) {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
-function formatScheduledDate(value: string) {
-  if (!value) return ''
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-  }).format(date)
-}
-
 export default function HospitalReviewForm({
-  rating,
   body,
   visitDate,
-  hasNextVisit,
-  nextVisitDate,
-  nextVisitTime,
   cost,
   diagnosis,
   treatment,
   pets,
   selectedPetId,
   selectedTags,
+  images,
+  imageError,
+  isSubmitting = false,
   canSubmit,
   submitLabel,
-  onRatingChange,
   onBodyChange,
   onVisitDateChange,
-  onHasNextVisitChange,
-  onNextVisitDateChange,
-  onNextVisitTimeChange,
   onCostChange,
   onDiagnosisChange,
   onTreatmentChange,
   onPetChange,
   onToggleTag,
+  onImagesSelect,
+  onImageRemove,
   onSubmit,
 }: HospitalReviewFormProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
   const selectedPetMeta = selectedPet?.species || ''
   const canMoveNext = currentStep === 0
-    ? rating > 0 && Boolean(selectedPetId)
+    ? Boolean(selectedPetId)
     : currentStep === 1
-      ? Boolean(visitDate) && (!hasNextVisit || Boolean(nextVisitDate))
+      ? Boolean(visitDate)
       : true
+
+  const handleImagesSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    if (files.length > 0) onImagesSelect(files)
+  }
 
   const moveToStep = (step: number) => {
     if (step <= currentStep) setCurrentStep(step)
@@ -171,20 +154,6 @@ export default function HospitalReviewForm({
 
       {currentStep === 0 && <div className="review-step-content" aria-labelledby="review-step-visit">
       <h3 id="review-step-visit" className="review-step-title">방문 정보</h3>
-      <section className="review-input-section">
-        <div className="review-input-head">
-          <strong>{text.ratingTitle}</strong>
-          <span className="review-required-star" aria-label={text.required}>*</span>
-        </div>
-        <div className="review-rating-picker" aria-label={text.ratingLabel}>
-          {[1, 2, 3, 4, 5].map((score) => (
-            <button className={rating >= score ? 'active' : ''} type="button" key={score} onClick={() => onRatingChange(score)} aria-label={`${score}${text.point}`}>
-              ★
-            </button>
-          ))}
-        </div>
-      </section>
-
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.petTitle}</strong>
@@ -233,28 +202,6 @@ export default function HospitalReviewForm({
             {prescriptionOptions.map((option) => <option value={option} key={option} />)}
           </datalist>
         </label>
-        <div className="review-next-visit">
-          <strong>{text.nextVisitQuestion}</strong>
-          <div className="review-next-visit-choice" role="group" aria-label={text.nextVisitQuestion}>
-            <button type="button" className={hasNextVisit ? 'active' : ''} aria-pressed={hasNextVisit} onClick={() => onHasNextVisitChange(true)}>예</button>
-            <button type="button" className={!hasNextVisit ? 'active' : ''} aria-pressed={!hasNextVisit} onClick={() => onHasNextVisitChange(false)}>아니요</button>
-          </div>
-          {hasNextVisit && (
-            <div className="review-next-visit-fields">
-              <div className="review-form-row">
-                <label>
-                  {text.nextVisitDate}
-                  <input type="date" min={new Date().toISOString().slice(0, 10)} value={nextVisitDate} onChange={(event) => onNextVisitDateChange(event.target.value)} required />
-                </label>
-                <label>
-                  {text.reminderTime}
-                  <input type="time" value={nextVisitTime} onChange={(event) => onNextVisitTimeChange(event.target.value)} />
-                </label>
-              </div>
-              {nextVisitDate && <p className="review-next-visit-summary"><strong>{formatScheduledDate(nextVisitDate)}</strong>에 병원 일정으로 캘린더에 추가돼요.</p>}
-            </div>
-          )}
-        </div>
       </section>
       </div>}
 
@@ -295,13 +242,35 @@ export default function HospitalReviewForm({
         </div>
         <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} placeholder={text.bodyPlaceholder} required />
       </section>
+      <section className="review-input-section review-image-section">
+        <div className="review-input-head">
+          <strong>사진 첨부</strong>
+          <span>{images.length}/3</span>
+        </div>
+        <label className={`review-image-picker ${images.length >= 3 ? 'is-disabled' : ''}`}>
+          <span>+ 사진 선택</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" multiple disabled={images.length >= 3 || isSubmitting} onChange={handleImagesSelect} />
+        </label>
+        <small className="review-image-help">최대 3장까지 첨부할 수 있어요.</small>
+        {imageError && <p className="review-image-error" role="alert">{imageError}</p>}
+        {images.length > 0 && (
+          <div className="review-image-preview-list" aria-label="첨부 사진 미리보기">
+            {images.map((image, index) => (
+              <figure key={image.id}>
+                <img src={image.previewUrl} alt={`첨부 사진 ${index + 1}`} />
+                <button type="button" aria-label={`첨부 사진 ${index + 1} 삭제`} disabled={isSubmitting} onClick={() => onImageRemove(image.id)}>삭제</button>
+              </figure>
+            ))}
+          </div>
+        )}
+      </section>
       </div>}
 
       <div className="step-actions review-form-actions">
         {currentStep > 0 && <button type="button" className="step-secondary" onClick={() => setCurrentStep((step) => step - 1)}>이전</button>}
         {currentStep < reviewSteps.length - 1
           ? <button type="button" className="step-primary" disabled={!canMoveNext} onClick={moveToNextStep}>다음</button>
-          : <button type="submit" className="step-primary" disabled={!canSubmit}>{submitLabel ?? text.submit}</button>}
+          : <button type="submit" className="step-primary" disabled={!canSubmit || isSubmitting}>{isSubmitting ? '사진 저장 중' : submitLabel ?? text.submit}</button>}
       </div>
     </form>
   )

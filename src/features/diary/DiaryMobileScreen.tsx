@@ -1,136 +1,53 @@
-import type { ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import GuideAction from '../../components/common/GuideAction'
+import DiaryGlyph, { type DiaryGlyphName } from './DiaryGlyph'
 
-export type MobileDiaryDay = {
-  key: string
-  weekday: string
-  day: number
-  selected: boolean
-  today: boolean
-  indicators: Array<'record' | 'egg' | 'shed'>
-}
+export type MobileDiaryDay = { key: string; weekday: string; day: number; selected: boolean; today: boolean; indicators: Array<'record' | 'egg' | 'shed'> }
+export type MobileDiaryRoutine = { id: string; label: string; time?: string; icon?: DiaryGlyphName; completed: boolean; disabled: boolean }
+export type MobileDiaryQuickAction = { id: string; label: string; icon: DiaryGlyphName; disabled?: boolean; onClick: () => void }
+export type MobileDiaryRecord = { id: string; date: string; time: string; type: string; summary?: string; photo?: string }
+export type MobileDiaryAlert = { severity: 'critical' | 'warning' | 'caution' | 'info' | 'complete'; badge: string; title: string; body: string; actions: Array<{ label: string; onClick: () => void }> }
+export type MobileDiaryPrediction = { type: 'egg' | 'shed'; label: string; startDate: string; endDate: string }
 
-export type MobileDiaryRoutine = {
-  id: string
-  label: string
-  icon?: string
-  completed: boolean
-  disabled: boolean
-}
+type Props = { petName: string; canChangePet: boolean; alert?: MobileDiaryAlert; routines: MobileDiaryRoutine[]; quickActions: MobileDiaryQuickAction[]; agenda: MobileDiaryRecord[]; selectedDateLabel: string; predictions: MobileDiaryPrediction[]; calendar: ReactNode; onChangePet: () => void; onToggleRoutine: (id: string) => void; onUndoRoutine: (id: string) => void; onAddRoutine: () => void; onOpenRecords: () => void; recordMenuOpen: boolean; onRecordMenuChange: (open: boolean) => void }
 
-export type MobileDiaryQuickAction = {
-  id: string
-  label: string
-  icon: string
-  disabled?: boolean
-  onClick: () => void
-}
+const recordActionOrder = ['shed', 'poop', 'mating', 'egg', 'hospital']
+const recordActionCopy: Record<string, string> = { shed: '탈피 과정을 기록해요.', poop: '배변 상태를 기록해요.', mating: '메이팅 기록을 남겨요.', egg: '산란 기록을 남겨요.', hospital: '병원 방문과 진료 내용을 기록해요.' }
+const recordActionLabel: Record<string, string> = { shed: '탈피 기록', poop: '배변 기록', mating: '메이팅 기록', egg: '산란 기록', hospital: '진료 기록' }
 
-export type MobileDiaryRecord = {
-  id: string
-  date: string
-  time: string
-  type: string
-  summary?: string
-  photo?: string
-}
-
-export type MobileDiaryAlert = {
-  severity: 'critical' | 'warning' | 'caution' | 'info' | 'complete'
-  badge: string
-  title: string
-  body: string
-  actions: Array<{ label: string; onClick: () => void }>
-}
-
-export type MobileDiaryPrediction = {
-  type: 'egg' | 'shed'
-  label: string
-  startDate: string
-  endDate: string
-}
-
-type Props = {
-  petName: string
-  petPhoto?: string
-  canChangePet: boolean
-  calendarOpen: boolean
-  days: MobileDiaryDay[]
-  alert?: MobileDiaryAlert
-  routines: MobileDiaryRoutine[]
-  quickActions: MobileDiaryQuickAction[]
-  agenda: MobileDiaryRecord[]
-  selectedDateLabel: string
-  predictions: MobileDiaryPrediction[]
-  calendar: ReactNode
-  onChangePet: () => void
-  onToggleCalendar: () => void
-  onSelectDate: (date: string) => void
-  onToggleRoutine: (id: string) => void
-}
-
-const shortDate = (value: string) => {
-  const [, month, day] = value.split('-')
-  return `${Number(month)}.${day}`
-}
-
-export default function DiaryMobileScreen({
-  petName,
-  petPhoto,
-  canChangePet,
-  calendarOpen,
-  days,
-  alert,
-  routines,
-  quickActions,
-  agenda,
-  selectedDateLabel,
-  predictions,
-  calendar,
-  onChangePet,
-  onToggleCalendar,
-  onSelectDate,
-  onToggleRoutine,
-}: Props) {
+export default function DiaryMobileScreen({ petName, canChangePet, alert, routines, quickActions, agenda, selectedDateLabel, predictions, calendar, onChangePet, onToggleRoutine, onUndoRoutine, onAddRoutine, onOpenRecords, recordMenuOpen, onRecordMenuChange }: Props) {
+  const [selectedRoutine, setSelectedRoutine] = useState<MobileDiaryRoutine | null>(null)
+  const [completedRoutine, setCompletedRoutine] = useState<MobileDiaryRoutine | null>(null)
+  const [showAllComplete, setShowAllComplete] = useState(false)
   const completedCount = routines.filter((routine) => routine.completed).length
+  const recordActions = useMemo(() => recordActionOrder.map((id) => quickActions.find((action) => action.id === id)).filter((action): action is MobileDiaryQuickAction => Boolean(action)), [quickActions])
 
-  return (
-    <main className="mobile-diary">
-      <header className="mobile-diary-header">
-        <h1>다이어리</h1>
-        <button className="mobile-diary-pet" type="button" disabled={!canChangePet} onClick={onChangePet}>
-          {petPhoto ? <img src={petPhoto} alt="" /> : <span aria-hidden="true">●</span>}
-          <strong>{petName}</strong>
-          {canChangePet && <i aria-hidden="true">⌄</i>}
-        </button>
-        <button className={`mobile-diary-calendar-button ${calendarOpen ? 'active' : ''}`} type="button" aria-expanded={calendarOpen} aria-label={calendarOpen ? '월간 캘린더 닫기' : '월간 캘린더 열기'} onClick={onToggleCalendar}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="2" /><path d="M7.5 3.5v4M16.5 3.5v4M3.5 9.5h17" /></svg>
-        </button>
-      </header>
+  const completeRoutine = () => {
+    if (!selectedRoutine || selectedRoutine.completed || selectedRoutine.disabled) return
+    onToggleRoutine(selectedRoutine.id)
+    const isLastRoutine = routines.length > 0 && completedCount + 1 >= routines.length
+    setCompletedRoutine(selectedRoutine)
+    setSelectedRoutine(null)
+    setShowAllComplete(isLastRoutine)
+  }
 
-      <nav className="mobile-diary-week" aria-label="주간 날짜">
-        {days.map((day) => <button type="button" className={`${day.today ? 'today' : ''} ${day.selected ? 'selected' : ''}`} aria-pressed={day.selected} onClick={() => onSelectDate(day.key)} key={day.key}>
-          <span>{day.weekday}</span><strong>{day.day}</strong>
-          <small aria-hidden="true">{day.indicators.map((indicator) => <i className={indicator} key={indicator} />)}</small>
-        </button>)}
-      </nav>
+  if (showAllComplete) return <main className="mobile-diary mobile-diary-all-complete"><div className="mobile-diary-confetti" aria-hidden="true">◆ · ◆ ·</div><h1>오늘의 루틴을<br />모두 완료했어요!</h1><div className="mobile-diary-mascot" aria-hidden="true"><DiaryGlyph name="check" /></div><p>꾸준한 관리가<br />건강한 아이를 만들어요.</p><button type="button" onClick={() => setShowAllComplete(false)}>확인</button></main>
 
-      {calendarOpen && <section className="mobile-diary-calendar">{calendar}{predictions.length > 0 && <div className="mobile-diary-predictions">{predictions.map((prediction) => <article className={prediction.type} key={prediction.type}><span>{prediction.label}</span><strong>{shortDate(prediction.startDate)} ~ {shortDate(prediction.endDate)}</strong></article>)}</div>}<div className="mobile-diary-agenda"><h2>{selectedDateLabel} 일정</h2>{agenda.length > 0 ? <ul>{agenda.map((record) => <li key={record.id}><time>{record.time}</time><span><strong>{record.type}</strong>{record.summary && <small>{record.summary}</small>}</span></li>)}</ul> : <p>등록된 일정이나 기록이 없어요.</p>}</div></section>}
+  if (completedRoutine) return <main className="mobile-diary mobile-diary-routine-result"><SubHeader title="루틴" onBack={() => setCompletedRoutine(null)} /><RoutineSummary routine={completedRoutine} /><div className="mobile-diary-result-check"><DiaryGlyph name="check" /></div><h2>오늘의 루틴을<br />완료했어요!</h2><p>{completedRoutine.time ? `${completedRoutine.time}에 완료했어요.` : '오늘 완료했어요.'}<br />내일도 잊지 말고 챙겨주세요!</p><div className="mobile-diary-result-actions"><button type="button" onClick={() => { onUndoRoutine(completedRoutine.id); setCompletedRoutine(null) }}>완료 취소하기</button><button type="button" onClick={() => setCompletedRoutine(null)}>닫기</button></div></main>
 
-      {alert && <article className={`mobile-diary-alert ${alert.severity}`}>
-        <span>{alert.badge}</span><h2>{alert.title}</h2><p>{alert.body}</p>
-        {alert.actions.length > 0 && <div>{alert.actions.slice(0, 2).map((action) => <button type="button" onClick={action.onClick} key={action.label}>{action.label}</button>)}</div>}
-      </article>}
+  if (selectedRoutine) return <main className="mobile-diary mobile-diary-routine-check"><SubHeader title="루틴" onBack={() => setSelectedRoutine(null)} /><RoutineSummary routine={selectedRoutine} /><div className="mobile-diary-result-check"><DiaryGlyph name="check" /></div><h2>{selectedRoutine.completed ? <>오늘의 루틴을<br />완료했어요!</> : '루틴을 완료할까요?'}</h2><p>{selectedRoutine.time ? `${selectedRoutine.time} 예정이에요.` : '오늘 예정된 루틴이에요.'}<br />잊지 말고 챙겨주세요!</p><div className="mobile-diary-result-actions"><button type="button" className="primary" disabled={selectedRoutine.completed || selectedRoutine.disabled} onClick={completeRoutine}>{selectedRoutine.completed ? '완료됨' : '완료하기'}</button><button type="button" onClick={() => setSelectedRoutine(null)}>닫기</button></div></main>
 
-      <section className="mobile-diary-section mobile-diary-routines">
-        <header><h2>오늘 할 관리</h2><span>{completedCount}/{routines.length} 완료</span></header>
-        {routines.length > 0 ? <ul>{routines.map((routine) => <li key={routine.id}><img src={routine.icon} alt="" /><strong>{routine.label}</strong><button type="button" className={routine.completed ? 'checked' : ''} disabled={routine.disabled || routine.completed} aria-label={`${routine.label} ${routine.completed ? '완료됨' : '완료하기'}`} onClick={() => onToggleRoutine(routine.id)}>{routine.completed ? '✓' : ''}</button></li>)}</ul> : <p className="mobile-diary-empty">오늘 예정된 관리가 없어요.</p>}
-      </section>
+  if (recordMenuOpen) return <main className="mobile-diary mobile-diary-record-menu-page"><SubHeader title="기록 추가하기" onBack={() => onRecordMenuChange(false)} /><section className="mobile-diary-record-list" aria-label="기록 종류">{recordActions.map((action) => <button type="button" disabled={action.disabled} onClick={action.onClick} key={action.id}><span><DiaryGlyph name={action.icon} /></span><span><strong>{recordActionLabel[action.id]}</strong><small>{recordActionCopy[action.id]}</small></span><GuideAction symbol="›" /></button>)}</section></main>
 
-      <section className="mobile-diary-section mobile-diary-quick">
-        <header><h2>상황별 기록 추가</h2></header>
-        <div>{quickActions.map((action) => <button type="button" disabled={action.disabled} onClick={action.onClick} key={action.id}><img src={action.icon} alt="" /><span>{action.label}</span></button>)}</div>
-      </section>
-
-    </main>
-  )
+  return <main className="mobile-diary mobile-diary-home">
+    <header className="mobile-diary-header"><div><h1>다이어리</h1><p>{petName}의 하루를 기록해요</p></div><button type="button" aria-label="펫 선택" disabled={!canChangePet} onClick={onChangePet}><DiaryGlyph name="poop" /></button></header>
+    <section className="mobile-diary-calendar" aria-label="월간 기록 캘린더">{calendar}{predictions.length > 0 && <div className="mobile-diary-predictions">{predictions.map((item) => <article className={item.type} key={`${item.type}-${item.startDate}`}><strong>{item.label}</strong><span>{item.startDate.slice(5).replace('-', '.')} - {item.endDate.slice(5).replace('-', '.')}</span></article>)}</div>}</section>
+    {alert && <article className={`mobile-diary-alert ${alert.severity}`}><span>{alert.badge}</span><h2>{alert.title}</h2><p>{alert.body}</p>{alert.actions.length > 0 && <div>{alert.actions.slice(0, 2).map((action) => <button type="button" onClick={action.onClick} key={action.label}>{action.label}</button>)}</div>}</article>}
+    <section className="mobile-diary-section mobile-diary-routines"><header><h2>오늘의 루틴 <small>{completedCount}/{routines.length}</small></h2><button type="button" onClick={onAddRoutine}>루틴 관리 <GuideAction symbol="›" /></button></header><div className="mobile-diary-routine-progress"><i style={{ width: `${routines.length ? completedCount / routines.length * 100 : 0}%` }} /></div>{routines.length > 0 ? <ul>{routines.slice(0, 4).map((routine) => <li key={routine.id}><button type="button" disabled={routine.disabled} onClick={() => setSelectedRoutine(routine)}><span className="mobile-diary-routine-icon">{routine.icon ? <DiaryGlyph name={routine.icon} /> : null}</span><span><strong>{routine.label}</strong><small>{routine.time ?? '시간 미지정'}</small></span><em className={routine.completed ? 'complete' : 'pending'}>{routine.completed ? '완료' : '미완료'}</em></button></li>)}</ul> : <div className="mobile-diary-empty"><strong>오늘 예정된 루틴이 없어요.</strong><button type="button" onClick={onAddRoutine}>루틴 추가하기</button></div>}</section>
+    <section className="mobile-diary-section mobile-diary-quick"><header><div><h2>상황별 기록</h2><p>필요할 때 바로 기록해보세요.</p></div></header><div>{recordActions.map((action) => <button type="button" disabled={action.disabled} onClick={action.onClick} key={action.id}><span className="mobile-diary-action-icon"><DiaryGlyph name={action.icon}/></span><span><strong>{action.label}</strong><small>{recordActionCopy[action.id]}</small></span></button>)}</div></section>
+    <section className="mobile-diary-collection"><div><h2>기록 모아보기</h2><p>{agenda.length ? `${selectedDateLabel} 기록 ${agenda.length}개가 있어요.` : '기록의 변화를 한눈에 확인해요.'}</p></div><button type="button" onClick={onOpenRecords}>그래프 보기</button></section>
+  </main>
 }
+
+function SubHeader({ title, onBack }: { title: string; onBack: () => void }) { return <header className="mobile-diary-subheader"><button type="button" aria-label="뒤로가기" onClick={onBack}><GuideAction symbol="‹" /></button><div><h1>{title}</h1></div><span /></header> }
+function RoutineSummary({ routine }: { routine: MobileDiaryRoutine }) { return <section className="mobile-diary-routine-summary"><span>{routine.icon ? <DiaryGlyph name={routine.icon} /> : null}</span><div><strong>{routine.label}</strong><small>{routine.time ?? '시간 미지정'}</small></div></section> }

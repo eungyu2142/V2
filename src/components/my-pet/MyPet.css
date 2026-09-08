@@ -364,6 +364,388 @@
   }
 }
 
+/* 2026-09-04 My Pet reference-marker system */
+.pet-basic-step > h2,
+.pet-category-step > h2,
+.pet-species-step > h2,
+.pet-final-step > h2 {
+  margin: 0 0 24px;
+  color: var(--color-text-primary);
+  font-size: clamp(1.3rem, 4.8vw, 1.65rem);
+  line-height: 1.3;
+}
+
+.pet-category-step fieldset,
+.pet-gender-field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pet-category-step legend,
+.pet-gender-field legend {
+  margin-bottom: 10px;
+  color: var(--color-text-primary);
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.pet-category-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pet-category-options > button {
+  position: relative;
+  display: grid;
+  min-height: 142px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pet-category-options > button:hover,
+.pet-category-options > button:focus-visible,
+.pet-category-options > button.selected {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-50);
+  outline: none;
+}
+
+.pet-category-mark {
+  width: 62px;
+  height: 62px;
+}
+
+.pet-category-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-600);
+  color: var(--color-surface);
+}
+
+.pet-category-check svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pet-final-step .pet-confirm-step {
+  margin-top: 0;
+}
+
+.pet-photo-camera {
+  width: 64px;
+  height: 64px;
+}
+
+.pet-final-field-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.pet-final-field-heading + fieldset > legend {
+  display: none;
+}
+
+.pet-confirm-detail-panel .step-field > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pet-confirm-detail-panel .step-field > span svg {
+  width: 19px;
+  height: 19px;
+  color: var(--color-primary-700);
+}
+
+.step-actions.first-step {
+  grid-template-columns: 1fr !important;
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .step-screen:has(.pet-category-step, .pet-final-step) .step-card {
+    background: var(--color-surface);
+  }
+
+  .pet-final-step .pet-confirm-step {
+    gap: 14px !important;
+  }
+
+  .pet-final-step .pet-confirm-photo-card {
+    min-height: 200px !important;
+  }
+}
+
+/* 2026-09-05 reference registration flow */
+.pet-reference-create,
+.pet-reference-complete {
+  width: min(100%, 430px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+.pet-reference-create > header {
+  display: grid;
+  grid-template-columns: 64px 1fr 64px;
+  align-items: center;
+  height: 58px;
+  padding: 0 12px;
+}
+
+.pet-reference-create > header h1 {
+  margin: 0;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.pet-reference-create > header button {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+}
+
+.pet-reference-create form {
+  display: grid;
+  min-height: calc(100dvh - 58px);
+  grid-template-rows: 1fr auto;
+}
+
+.pet-reference-form-body {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  margin: 12px 10px;
+  padding: 18px 16px 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.pet-reference-step-label {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.pet-reference-photo {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.pet-reference-photo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.pet-reference-photo > span { display: grid; width: 112px; height: 112px; overflow: hidden; place-items: center; border-radius: 50%; background: var(--color-background); color: var(--color-text-secondary); }
+.pet-reference-photo > span svg { width: 38px; height: 38px; }
+.pet-reference-photo img { width: 100%; height: 100%; object-fit: cover; }
+.pet-reference-photo small { color: var(--color-text-secondary); line-height: 1.5; text-align: center; }
+
+.pet-reference-field { display: grid; gap: 8px; color: var(--color-text-primary); font-size: .84rem; font-weight: 750; }
+.pet-reference-field input,
+.pet-reference-field select,
+.pet-reference-field textarea,
+.pet-reference-custom input { width: 100%; min-height: 46px; box-sizing: border-box; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-background); padding: 0 13px; color: var(--color-text-primary); font: inherit; font-weight: 500; outline: none; }
+.pet-reference-field textarea { min-height: 82px; padding-block: 12px; resize: vertical; }
+.pet-reference-field input:focus,
+.pet-reference-field select:focus,
+.pet-reference-field textarea:focus,
+.pet-reference-custom input:focus { border-color: var(--color-primary-600); box-shadow: 0 0 0 3px var(--color-primary-50); }
+
+.pet-reference-custom { display: grid; gap: 8px; }
+.pet-reference-custom > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pet-reference-custom button { height: 38px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); color: var(--color-text-secondary); }
+.pet-reference-custom button.active { border-color: var(--color-primary-600); background: var(--color-primary-50); color: var(--color-primary-900); font-weight: 800; }
+
+.pet-reference-gender { margin: 0; padding: 0; border: 0; }
+.pet-reference-gender legend { margin-bottom: 8px; font-size: .84rem; font-weight: 750; }
+.pet-reference-gender > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pet-reference-gender button { display: flex; min-height: 42px; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-background); color: var(--color-text-secondary); }
+.pet-reference-gender button svg { width: 17px; height: 17px; }
+.pet-reference-gender button.active { border-color: var(--color-primary-600); background: var(--color-primary-50); color: var(--color-primary-900); font-weight: 800; }
+
+.pet-reference-weight { display: grid; grid-template-columns: 1fr 100px; }
+.pet-reference-weight input { border-radius: 10px 0 0 10px; }
+.pet-reference-weight > div { display: grid; grid-template-columns: 1fr 1fr; }
+.pet-reference-weight button { border: 1px solid var(--color-border); border-left: 0; background: var(--color-surface); color: var(--color-text-secondary); }
+.pet-reference-weight button:last-child { border-radius: 0 10px 10px 0; }
+.pet-reference-weight button.active { background: var(--color-primary-100); color: var(--color-primary-900); font-weight: 800; }
+.pet-reference-date { position: relative; display: block; }
+.pet-reference-date svg { position: absolute; top: 50%; right: 13px; width: 18px; height: 18px; transform: translateY(-50%); color: var(--color-text-secondary); pointer-events: none; }
+.pet-reference-date input { padding-right: 42px; }
+.pet-reference-error { margin: 0; color: var(--color-error-600); font-size: .82rem; }
+
+.pet-reference-create form > footer {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 10px;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.pet-reference-create form > footer button,
+.pet-reference-complete button { min-height: 48px; border: 0; border-radius: 10px; font: inherit; font-weight: 850; }
+.pet-reference-create form > footer .primary,
+.pet-reference-complete button { background: var(--color-primary-700); color: var(--color-surface); }
+.pet-reference-create form > footer .secondary { background: var(--color-primary-50); color: var(--color-primary-900); }
+.pet-reference-create form > footer button:disabled { opacity: .45; }
+
+.pet-reference-complete { display: grid; place-items: center; padding: 24px; }
+.pet-reference-complete > section { position: relative; display: grid; width: 100%; min-height: calc(100dvh - 48px); justify-items: center; align-content: center; text-align: center; }
+.pet-reference-complete-mark { width: 132px; height: 132px; }
+.pet-reference-complete-check { position: absolute; top: calc(50% - 112px); right: calc(50% - 78px); width: 38px; height: 38px; background: var(--color-primary-600); color: var(--color-surface); }
+.pet-reference-complete h1 { margin: 30px 0 0; font-size: 1.25rem; line-height: 1.6; }
+.pet-reference-complete button { position: absolute; right: 0; bottom: 0; left: 0; width: 100%; }
+
+/* 2026-09-05 reference list and tabbed detail */
+@media (max-width: 760px) and (orientation: portrait) {
+  .pet-mobile-home { display: grid; gap: 18px; width: min(100%, 430px); min-height: calc(100dvh - var(--mobile-bottom-nav-height)); margin: 0 auto; padding: 0 0 28px; color: var(--color-text-primary); }
+  .pet-mobile-home > header { display: flex; min-height: 64px; align-items: center; justify-content: space-between; }
+  .pet-mobile-home > header h1 { margin: 0; font-size: 1.45rem; }
+  .pet-mobile-home > header button { display: grid; width: 40px; height: 40px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: var(--color-primary-600); color: var(--color-surface); }
+  .pet-mobile-home > header svg { width: 22px; height: 22px; }
+  .pet-mobile-selector { display: flex; gap: 14px; overflow-x: auto; padding: 2px 1px 7px; scrollbar-width: none; }
+  .pet-mobile-selector::-webkit-scrollbar { display: none; }
+  .pet-mobile-selector > button { display: grid; flex: 0 0 66px; gap: 5px; justify-items: center; padding: 0; border: 0; background: transparent; color: var(--color-text-primary); }
+  .pet-mobile-selector > button > span { display: block; width: 58px; height: 58px; padding: 3px; border: 2px solid transparent; border-radius: 50%; background: var(--color-surface); }
+  .pet-mobile-selector > button.active > span { border-color: var(--color-primary-600); }
+  .pet-mobile-selector > button > span.add { display: grid; place-items: center; border: 1px dashed var(--color-text-placeholder); color: var(--color-primary-700); }
+  .pet-mobile-selector strong { max-width: 66px; overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+  .pet-mobile-selector small { max-width: 66px; overflow: hidden; color: var(--color-text-secondary); font-size: .58rem; text-overflow: ellipsis; white-space: nowrap; }
+  .pet-mobile-summary { display: grid; grid-template-columns: 42% minmax(0, 1fr) 20px; min-height: 178px; padding: 0; overflow: hidden; align-items: center; gap: 14px; border: 1px solid var(--color-border); border-radius: var(--card-radius); background: var(--color-surface); color: var(--color-text-primary); text-align: left; }
+  .pet-mobile-summary .photo { width: 100%; height: 100%; min-height: 178px; }
+  .pet-mobile-summary .copy { display: grid; gap: 5px; min-width: 0; }
+  .pet-mobile-summary .copy > small { color: var(--color-primary-700); font-size: .64rem; font-weight: 800; }
+  .pet-mobile-summary .copy > strong { font-size: 1.3rem; }
+  .pet-mobile-summary .copy > span { overflow: hidden; color: var(--color-text-secondary); font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+  .pet-mobile-summary > svg { width: 18px; color: var(--color-text-secondary); }
+  .pet-mobile-care, .pet-mobile-progress { display: grid; gap: 10px; }
+  .pet-mobile-care > header, .pet-mobile-progress > header { display: flex; align-items: center; justify-content: space-between; }
+  .pet-mobile-care h2, .pet-mobile-progress h2 { margin: 0; font-size: 1rem; }
+  .pet-mobile-care header div { display: flex; align-items: baseline; gap: 7px; }
+  .pet-mobile-care header span { color: var(--color-primary-700); font-size: .66rem; font-weight: 800; }
+  .pet-mobile-care header button, .pet-mobile-progress > button { display: flex; align-items: center; gap: 2px; border: 0; background: transparent; color: var(--color-text-secondary); font-size: .66rem; }
+  .pet-mobile-care header svg, .pet-mobile-progress > button svg { width: 14px; height: 14px; }
+  .pet-mobile-care > div { padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--card-radius); background: var(--color-surface); }
+  .pet-mobile-care > div > button { display: grid; grid-template-columns: 36px minmax(0, 1fr) 24px; width: 100%; min-height: 58px; padding: 6px 0; align-items: center; gap: 9px; border: 0; border-bottom: 1px solid var(--color-border); background: transparent; color: var(--color-text-primary); text-align: left; }
+  .pet-mobile-care > div > button:last-child { border-bottom: 0; }
+  .pet-mobile-care .pet-icon-mark { width: 34px; height: 34px; }
+  .pet-mobile-care button > span { display: grid; gap: 3px; }
+  .pet-mobile-care button strong { font-size: .76rem; }
+  .pet-mobile-care button small { color: var(--color-text-secondary); font-size: .62rem; }
+  .pet-mobile-care i { display: grid; width: 23px; height: 23px; place-items: center; border: 1px solid var(--color-text-placeholder); border-radius: 6px; color: var(--color-surface); font-style: normal; }
+  .pet-mobile-care i.done { border-color: var(--color-primary-600); background: var(--color-primary-600); }
+  .pet-mobile-care > p { margin: 0; padding: 24px; border: 1px solid var(--color-border); border-radius: var(--card-radius); color: var(--color-text-secondary); font-size: .72rem; text-align: center; }
+  .pet-mobile-progress { padding: 15px; border-radius: var(--card-radius); background: var(--color-primary-50); }
+  .pet-mobile-progress header strong { color: var(--color-primary-800); font-size: 1.2rem; }
+  .pet-mobile-progress > div { height: 8px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-surface); }
+  .pet-mobile-progress > div i { display: block; height: 100%; border-radius: inherit; background: var(--color-primary-600); }
+  .pet-mobile-progress > button { justify-self: end; color: var(--color-primary-700); font-weight: 800; }
+}
+
+.pet-reference-list,
+.pet-reference-detail { width: min(100%, 430px); min-height: calc(100dvh - var(--bottom-nav-height, 64px)); margin: 0 auto; padding-bottom: 88px; background: var(--color-background); color: var(--color-text-primary); }
+.pet-reference-list > header { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; height: 64px; padding: 0 18px; background: var(--color-surface); }
+.pet-reference-list > header h1 { grid-column: 2; margin: 0; font-size: 1.05rem; text-align: center; }
+.pet-reference-list > header button { grid-column: 3; display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 50%; background: var(--color-primary-700); color: var(--color-surface); }
+.pet-reference-list > header button svg { width: 22px; height: 22px; }
+.pet-reference-pet-list { display: grid; gap: 14px; padding: 18px; }
+.pet-reference-pet-list > button { display: grid; grid-template-columns: 76px 1fr 24px; align-items: center; gap: 14px; min-height: 108px; padding: 14px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text-primary); text-align: left; box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary-900) 6%, transparent); }
+.pet-reference-list-photo { width: 72px; height: 72px; }
+.pet-reference-photo-content { display: block; width: 100%; height: 100%; overflow: hidden; background: var(--color-primary-50); }
+.pet-reference-photo-content.is-circle { border-radius: 50%; }
+.pet-reference-photo-content > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pet-reference-photo-content > span { display: grid; width: 100%; height: 100%; place-items: center; color: var(--color-primary-900); font-size: 1.25rem; font-weight: 800; }
+.pet-icon-mark { display: inline-grid; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--color-primary-50); color: var(--color-primary-700); }
+.pet-icon-mark > svg { width: 55%; height: 55%; }
+.pet-reference-pet-list > button > span:nth-child(2) { display: grid; min-width: 0; gap: 3px; }
+.pet-reference-pet-list strong { overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.pet-reference-pet-list small { overflow: hidden; color: var(--color-text-secondary); font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+.pet-reference-pet-list > button > svg { width: 21px; color: var(--color-text-secondary); }
+.pet-reference-list.empty > section { display: grid; justify-items: center; gap: 12px; padding: 100px 20px; text-align: center; }
+.pet-reference-list.empty h2 { margin: 0; font-size: 1rem; }
+.pet-reference-list.empty section > button { min-height: 46px; padding: 0 24px; border: 0; border-radius: 10px; background: var(--color-primary-700); color: var(--color-surface); font-weight: 800; }
+
+.pet-reference-hero { position: relative; height: 245px; overflow: hidden; background: var(--color-primary-50); }
+.pet-reference-hero-photo { width: 100%; height: 100%; }
+.pet-reference-hero-photo img { border-radius: 0; }
+.pet-detail-circle-button { position: absolute; top: 14px; left: 14px; z-index: 2; display: grid; width: 38px; height: 38px; place-items: center; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--color-surface) 92%, transparent); color: var(--color-text-primary); box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary-900) 12%, transparent); }
+.pet-detail-circle-button svg { width: 22px; height: 22px; }
+.pet-detail-circle-button.menu { right: 14px; left: auto; font-weight: 900; letter-spacing: -1px; }
+.pet-reference-edit-pill { position: absolute; right: 16px; bottom: 14px; display: flex; min-height: 36px; align-items: center; gap: 5px; padding: 0 12px; border: 0; border-radius: 18px; background: color-mix(in srgb, var(--color-surface) 94%, transparent); color: var(--color-primary-900); font-weight: 800; }
+.pet-reference-edit-pill svg { width: 16px; height: 16px; }
+.pet-reference-detail-menu { position: absolute; top: 56px; right: 14px; z-index: 4; overflow: hidden; width: 112px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); }
+.pet-reference-detail-menu button { display: flex; width: 100%; min-height: 42px; align-items: center; gap: 8px; padding: 0 12px; border: 0; background: transparent; color: var(--color-text-primary); }
+.pet-reference-detail-menu button:last-child { color: var(--color-error-600); }
+.pet-reference-detail-menu svg { width: 17px; height: 17px; }
+.pet-reference-identity { padding: 14px 20px 12px; background: var(--color-surface); }
+.pet-reference-identity h1 { margin: 0 0 4px; font-size: 1.28rem; }
+.pet-reference-identity p { margin: 2px 0; color: var(--color-text-secondary); font-size: .8rem; }
+.pet-reference-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 18px; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+.pet-reference-tabs button { display: grid; justify-items: center; gap: 5px; min-height: 66px; padding: 8px 3px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--color-text-secondary); font-size: .73rem; }
+.pet-reference-tabs button > span:first-child { width: 36px; height: 36px; }
+.pet-reference-tabs button.active { border-color: var(--color-primary-600); background: var(--color-primary-50); color: var(--color-primary-900); font-weight: 850; }
+.pet-reference-panel { margin-top: 8px; padding: 18px 20px; background: var(--color-surface); }
+.pet-reference-panel > h2,
+.pet-reference-panel > header h2 { margin: 0; font-size: 1rem; }
+.pet-reference-panel > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.pet-reference-panel > header button { display: flex; align-items: center; gap: 3px; border: 0; background: transparent; color: var(--color-text-secondary); font-size: .75rem; }
+.pet-reference-panel > header button svg { width: 15px; height: 15px; }
+.pet-reference-panel dl { margin: 12px 0 0; }
+.pet-reference-panel dl > div { display: grid; grid-template-columns: 92px 1fr; padding: 11px 0; border-bottom: 1px solid var(--color-border); font-size: .82rem; }
+.pet-reference-panel dt { color: var(--color-text-secondary); }
+.pet-reference-panel dd { margin: 0; color: var(--color-text-primary); }
+.pet-reference-record-list,
+.pet-reference-routine-list { display: grid; }
+.pet-reference-record-list > button,
+.pet-reference-routine-list > button { display: grid; grid-template-columns: 40px 1fr auto 18px; align-items: center; gap: 10px; min-height: 62px; padding: 7px 0; border: 0; border-bottom: 1px solid var(--color-border); background: transparent; color: var(--color-text-primary); text-align: left; }
+.pet-reference-record-list button > span:nth-child(2),
+.pet-reference-routine-list button > span:nth-child(2) { display: grid; gap: 2px; }
+.pet-reference-record-list strong,
+.pet-reference-routine-list strong { font-size: .83rem; }
+.pet-reference-record-list small,
+.pet-reference-routine-list small { color: var(--color-text-secondary); font-size: .7rem; }
+.pet-reference-record-list button > svg { width: 17px; color: var(--color-text-secondary); }
+.pet-reference-routine-list > button { grid-template-columns: 40px 1fr 44px; }
+.pet-reference-routine-list i { position: relative; width: 42px; height: 24px; border-radius: 14px; background: var(--color-primary-700); }
+.pet-reference-routine-list i::after { content: ''; position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface); }
+.pet-reference-add-routine { min-height: 32px; padding: 0 10px !important; border-radius: 16px !important; background: var(--color-primary-700) !important; color: var(--color-surface) !important; font-weight: 800; }
+.pet-reference-empty { margin: 0; padding: 32px 0; color: var(--color-text-secondary); font-size: .82rem; text-align: center; }
+.pet-reference-period { display: grid; grid-template-columns: repeat(4, 1fr); margin: -6px 0 14px; border-radius: 22px; background: var(--color-background); padding: 4px; }
+.pet-reference-period button { min-height: 34px; border: 0; border-radius: 18px; background: transparent; color: var(--color-text-secondary); font-size: .75rem; }
+.pet-reference-period button.active { background: var(--color-surface); color: var(--color-text-primary); font-weight: 850; box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary-900) 8%, transparent); }
+.pet-reference-panel.stats article { padding: 14px; border: 1px solid var(--color-border); border-radius: 14px; }
+.pet-reference-panel.stats article h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: .9rem; }
+.pet-reference-panel.stats article h2 span { width: 34px; height: 34px; }
+.pet-reference-panel.stats article svg { width: 100%; height: 170px; margin-top: 12px; overflow: visible; }
+.pet-reference-stat-link { display: grid; grid-template-columns: 36px 1fr 18px; align-items: center; gap: 10px; width: 100%; min-height: 58px; margin-top: 10px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); color: var(--color-text-primary); text-align: left; }
+.pet-reference-stat-link > span { width: 34px; height: 34px; }
+.pet-reference-stat-link > svg { width: 17px; color: var(--color-text-secondary); }
+
 @media (max-width: 520px) {
 
   .my-pet-dashboard .pet-list.card-view {

@@ -5410,3 +5410,127 @@ AI 사진을 사용하지 않고, 사용자가 직접 사진을 첨부해야 펫
 - 핵심 변경 내용: 사진 선택 직후 큰 정사각형 미리보기를 열고 상하좌우 드래그로 표시 위치를 맞춘다. 적용한 경우에만 등록 데이터에 반영하며, 취소하면 기존 사진과 위치를 유지한다.
 - 검증 결과: 변경 파일 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다.
 - 남은 작업: 실제 모바일 기기에서 사진 선택 후 드래그 감도를 확인한다.
+
+## 2026-09-03 해결된 배변 상태 알림 종료
+
+- 요청 요약: 해결된 배변 상태에 경고와 병원·Q&A 행동이 계속 표시되지 않게 한다.
+- 분석·판단 이유: 정상 배변은 해결 상태이므로 배변 확인용 임시 루틴이 없는 경우 추가 행동을 요구하지 않아야 한다. 임시 루틴이 남아 있는 경우에만 사용자가 유지 여부를 결정할 필요가 있다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`, `src/features/diary/DiaryMobileScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 정상화 인사이트는 활성 임시 루틴이 없으면 모바일과 데스크톱 NOTICE에서 제외한다. 임시 루틴이 있으면 완료 상태로 표시하고 `유지하기`, `종료하기`만 제공한다. 공통 병원·Q&A 분기로 들어가지 않도록 별도 처리했다.
+- 검증 결과: TypeScript, 프로덕션 빌드와 UI 구조 검사를 통과했다. 변경한 모바일 컴포넌트 ESLint도 통과했다.
+- 남은 작업: 없음.
+
+## 2026-09-03 모바일 다이어리 탐색 흐름 단순화
+
+- 요청 요약: 참고 이미지처럼 다이어리의 날짜 탐색과 오늘 할 일을 중심에 두고 약 및 최근 기록을 뺀다.
+- 분석·판단 이유: 사용 빈도가 높은 날짜 선택, 루틴 완료, 상황 기록 추가를 첫 화면에서 처리하게 하면 불필요한 스크롤과 탐색 단계를 줄일 수 있다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 이전·다음 주 이동과 오늘 복귀, 월간 캘린더 열기를 날짜 카드 안에서 제공한다. 루틴 완료 동작은 기존 저장 흐름을 유지하며, `할 일 추가`는 기존 루틴 생성 화면으로 연결한다. 상황 기록은 배변·탈피·산란·메이팅·병원 방문만 제공한다.
+- 검증 결과: TypeScript 검사, 모바일 다이어리 컴포넌트 ESLint와 전체 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+## 2026-09-04 모바일 다이어리 핵심 흐름 재구성
+
+- 요청 요약: 다이어리에서 루틴 확인·완료, 상황별 기록 저장, 기록 그래프 확인의 세 흐름을 고민 없이 사용할 수 있게 재구성한다.
+- 분석·판단 이유: 기존 Supabase 및 기록 핸들러를 유지하면서 모바일 표시 계층만 교체해야 데이터 호환성과 출시 안정성을 함께 지킬 수 있다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 루틴 전체보기와 하단 고정 완료 CTA를 추가하고 기존 `completePlan`에 연결했다. 상황 카드는 기존 `openSmartAdd`와 병원 기록 흐름을 그대로 사용하며 약 항목은 모바일 상황 메뉴에서 제외했다. 기록 모아보기는 기존 `DataVisualizationScreen`으로 연결했다. 펫 전환, 캘린더 날짜 선택, 예측 기간, 경고 행동도 기존 상태와 이벤트를 재사용한다.
+- 검증 결과: TypeScript 및 프로덕션 빌드 통과. 라우터, DB schema, Supabase query는 변경하지 않았다.
+- 남은 작업: 로그인된 실데이터에서 측정형 루틴 입력 후 완료와 상황별 기록 저장을 실기기로 최종 확인.
+## 2026-09-04 Q&A 탐색·작성·안전 흐름 개선
+
+- 요청 요약: 질문 검색부터 상세 답변 확인, 3단계 작성, 신고·차단까지 실제 배포 앱처럼 자연스러운 흐름으로 개선한다.
+- 분석·판단 이유: 기존 검색·좋아요·댓글·사진·펫·다이어리 연결 로직은 유지하되 홈의 인지 부담을 줄이고 필수값 오류와 안전 행동을 해당 맥락에서 바로 이해할 수 있게 해야 했다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/App.tsx`, `src/lib/appData.ts`, `src/types/app.ts`, `supabase/migrations/202609040001_qna_reports_and_user_blocks.sql`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 검색창을 별도 검색 화면으로 연결하고 상태·정렬·주제·동물·첨부 여부를 단계적으로 제공한다. 작성 필수값은 alert 대신 필드 가까이에 표시하며 제목 50자, 본문·댓글 1000자, 이미지 3개 제한과 기존 MIME·용량 검사를 유지한다. 등록 확인 후 상세로 이동하고 toast를 표시한다. 더보기에서 신고 사유를 선택하며 DB RPC가 대상 작성자를 서버에서 해석하도록 구성했고 차단 사용자의 글과 댓글은 목록에서 제외한다.
+- 검증 결과: React 기본 escaping을 유지하고 `dangerouslySetInnerHTML` 및 프론트의 service-role secret 사용이 없음을 확인했다. 기존 게시글·댓글 소유자 RLS와 저장 쿼리는 유지했으며 신규 신고·차단 테이블에도 RLS를 작성했다.
+- 남은 작업: `202609040001_qna_reports_and_user_blocks.sql` 적용 후 신고·차단 RPC를 테스트하고, 기존 Storage 정책이 운영 프로젝트에도 적용됐는지 Dashboard에서 확인한다.
+## 2026-09-04 Q&A 아이콘 인지 체계 통일
+
+- 요청 요약: Q&A 전 화면의 기능 표식을 제공된 아이콘 가이드와 같은 선형 언어로 통일한다.
+- 분석·판단 이유: 검색·필터·글쓰기 같은 핵심 행동이 문자 기호로 표시되면 기기별 모양이 달라지고 터치 목표를 빠르게 구분하기 어렵다.
+- 수정 파일: `src/components/qna/QnaIcon.tsx`, `src/components/qna/QnaScreen.tsx`, `src/components/qna/Qna.css`.
+- 핵심 변경 내용: 검색 및 최근 검색, 필터, 글쓰기, 더보기와 주제 선택 아이콘을 접근성 라벨이 있는 버튼 안의 SVG로 교체했다. 목록 카드는 작성자와 상태를 먼저 확인한 뒤 제목·미리보기·종·통계를 읽도록 정보 순서를 조정했고, 사진이 있을 때만 78px 썸네일을 표시한다.
+- 검증 결과: 아이콘은 장식 요소로 숨기고 버튼의 기존 `aria-label`을 유지했다. 관련 ESLint를 통과했다.
+- 남은 작업: 인증된 Q&A에서 375px와 430px 너비의 터치 영역과 긴 제목 말줄임을 확인한다.
+## 2026-09-04 마이 펫 선택·상세·등록 UX 통합
+
+- 요청 요약: 기존 데이터와 기본→분류→종→확인의 등록 흐름을 유지하면서 펫 중심 홈, 상세, 수정, 다이어리 연결을 개선한다.
+- 분석·판단 이유: 마이 펫은 펫 요약과 선택에 집중하고 루틴 실행·기록은 다이어리에 남겨야 한다. 따라서 홈에는 실제 오늘 루틴 최대 3개와 주간 완료율만 보여주고 모든 관리 행동은 선택 펫을 유지한 채 기존 다이어리로 연결했다.
+- 수정 파일: `src/components/my-pet/PetsScreen.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetCreateFlow.tsx`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 가로 스크롤 펫 선택, 선택 유지형 상세/다이어리 이동, 실제 주간 태스크 완료율, 최근 체중·기록, 상세 탭, 정보 수정·삭제 연결을 구현했다. 등록 단계와 종 계층·직접 입력·Storage 업로드는 유지하고 이름·나이·몸무게 정규화와 사진 미리보기를 재사용했다. RLS의 `auth.uid() = user_id` 소유권 정책도 확인했다.
+- 검증 결과: 변경 파일 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 계정에서 여러 펫 전환과 주간 경계의 완료율을 확인한다.
+## 2026-09-04 다이어리 기록 진입 흐름 정리
+
+- 요청 요약: 첫 번째 참고 이미지와 같은 순서로 다이어리 기능을 이용하도록 구성한다.
+- 분석·판단 이유: 오늘의 루틴과 상황 기록 작성의 목적이 달라 중간 선택 화면을 분리해야 사용자가 기록 종류를 확인한 뒤 세부 작성으로 이동할 수 있다.
+- 수정 파일: `src/features/diary/DiaryGlyph.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryMobileScreen.css`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 모바일 홈에서 `상황별 기록`을 누르면 배변·탈피·메이팅·산란·병원 방문을 고르는 별도 화면으로 이동하고, 선택 후 기존 저장 기능을 쓰는 작성 화면으로 진입한다. 오늘의 루틴 전체보기, 복수 선택 완료와 완료 피드백, 기록 모아보기 연결은 유지했다. 기록 작성 화면은 모바일에서 전체 화면으로 표시한다.
+- 검증 결과: TypeScript 검사, 관련 컴포넌트 ESLint와 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+## 2026-09-05 실제 데이터 기반 마이 펫 전체 흐름
+
+- 요청 요약: 레퍼런스에 표시된 더미 값을 제거하고 동일한 사용자 흐름을 프로젝트 기능에 연결한다.
+- 분석·판단 이유: 목록·상세·탭 화면에 예시값을 고정하면 사용자 데이터와 불일치한다. 펫 payload, care records, care plans, daily tasks를 기준으로 각 화면을 만들고 없는 값은 `-` 또는 명시적인 빈 상태로 처리했다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/types/app.ts`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 목록 선택 후 상세 진입, 탭 이동, 실제 최근 기록, 실제 활성 루틴, 실제 체중 그래프, 다이어리 이동, 수정·삭제를 연결했다. 등록의 생년월일·입양일·특징·메모는 기존 JSON payload 저장 경로로 보존하며 사진 검증·조정·Storage 업로드도 유지한다.
+- 검증 결과: 변경 파일 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 데이터가 많은 계정에서 기록·루틴 목록 스크롤을 확인한다.
+## 2026-09-05 리뷰와 진료 기록의 다음 예정일 역할 분리
+
+- 요청 요약: 리뷰 작성에서 다음 예정일을 제거하고 진료 기록에서만 설정하도록 한다.
+- 분석·판단 이유: 리뷰는 방문 경험 공유에 집중하고 예정 진료·알림 관리는 다이어리 진료 기록에서 담당해야 중복 일정 생성과 역할 혼선을 막을 수 있다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/MapScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 리뷰의 다음 예정일 여부·날짜·시간 UI와 검증을 제거하고, 리뷰 저장 및 리뷰에서 생성되는 진료 기록에도 다음 예정일을 만들지 않도록 변경했다. 다이어리 진료 기록의 기존 다음 진료일·알림 기능은 유지했다.
+- 검증 결과: 변경 파일 ESLint, TypeScript 검사, UI 구조 검사와 프로덕션 빌드 통과. 리뷰 코드에서 다음 예정일 상태·검증·저장 연결이 제거된 것을 확인했다.
+- 남은 작업: 없음.
+## 2026-09-08 Q&A 동물 미선택 선택지 명확화
+
+- 요청 요약: `동물 X` 선택지를 자연스러운 설명형 문구로 변경한다.
+- 분석·판단 이유: 사용자가 특정 펫 없이 일반 질문을 작성할 수 있다는 의미를 바로 이해할 수 있어야 한다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 버튼 제목을 `동물을 선택하지 않음`으로 바꾸고 기존 보조 설명과 동작은 유지했다.
+- 검증 결과: 내부 선택값을 변경하지 않아 기존 게시글과 수정 흐름에 영향을 주지 않는다.
+- 남은 작업: 없음.
+## 2026-09-08 다이어리 기록 탐색·작성 흐름 개선
+
+- 요청 요약: 달력 확인에서 루틴, 기록 작성, 과거 기록 확인으로 자연스럽게 이어지는 모바일 다이어리 UX를 구현한다.
+- 분석·판단 이유: 날짜를 눌러도 선택만 바뀌던 흐름과 분산된 작성 진입점을 연결하고, 하루 기록과 통계에서 필요한 정보를 단계적으로 보여줄 필요가 있었다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryMobileScreen.css`, `src/features/diary/DiaryGlyph.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 날짜 선택 즉시 하루 상세로 이동하고, 상세에서 전체·루틴·상황 필터 및 기록 추가를 제공한다. 기록 선택 화면은 정기 관리와 상황 기록을 분리했고 작성 화면은 날짜·시간·유형별 필드·메모·사진을 한 번에 입력한다. 통계는 주간·월간·전체로 범위를 바꾸며 실제 기록만 계산한다. 기록 상세의 수정은 기존 ID를 유지해 저장하고 삭제 기능도 유지한다.
+- 검증 결과: 타입 검사, 모바일·아이콘 컴포넌트 ESLint와 프로덕션 빌드를 통과했다. 다이어리 본문의 기존 초기 액션 effect ESLint 1건은 이번 변경 범위 밖으로 유지했다.
+- 남은 작업: 없음.
+
+## 2026-09-08 리뷰 별점 제거와 완료 흐름 명확화
+
+- 요청 요약: 리뷰 작성의 별점 입력을 없애고 마지막 단계까지 진행해 작성을 완료할 수 있게 한다.
+- 분석·판단 이유: 방문 리뷰는 선택한 반려동물, 진료 정보, 경험 태그와 후기 중심으로 작성하며 별점 선택을 필수 진행 조건으로 둘 필요가 없다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/MapScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 별점 선택 UI와 콜백·상태·제출 조건을 제거하고 리뷰 카드의 별점 표시도 제거했다. 첫 단계는 반려동물 선택만으로 다음 단계에 진입하며 새 리뷰 데이터의 별점은 호환용 값 `0`으로 저장한다.
+- 검증 결과: 리뷰 컴포넌트 ESLint와 TypeScript 검사를 통과했고 별점 상태·입력 콜백·필수 조건·목록 표시가 남지 않은 것을 검색으로 확인했다. 전체 프로덕션 빌드는 별도 다이어리 화면의 기존 `canWrite` 속성 타입 불일치로 중단됐다.
+- 남은 작업: 없음.
+
+### 2026-09-08 · 날짜 권한·루틴 삭제·배변 NOTICE 흐름 복구
+
+- 요청 요약: 미래 기록 방지, 과거 기록 열람 전용, 완료 루틴 삭제 가능, 배변 상태별 안내 동작을 기존 요구사항 기준으로 복구했다.
+- 분석·판단: 선택 날짜에 대한 쓰기 권한이 화면별로 달랐고 완료 기록 삭제가 연결된 `daily_tasks`를 되돌리지 않았으며 모바일 NOTICE가 모든 경고를 병원/Q&A로 단순화하고 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 오늘만 기록 작성 가능, 완료 기록 삭제 시 일일 작업 undo 및 레거시 완료 상태 해제, 첫 건조·묽음은 환경/최근 기록 확인, 반복 배변은 기록/Q&A/병원, 이물질·혈변은 서로 다른 우선순서로 연결했다.
+- 검증 결과: `tsc -b` 통과. 기존 데이터 모델과 Supabase CRUD 경로를 유지했다.
+- 남은 작업: Supabase 연결 환경에서 완료 루틴 삭제 후 새로고침 시 미완료 상태 유지 여부를 통합 확인한다.
+### 2026-09-08 · 시안 10단계 다이어리 인터랙션 적용
+
+- 요청 요약: 달력 확인부터 루틴 체크, 기록 작성과 상세 확인까지 첨부 시안의 순서를 그대로 따르도록 변경했다.
+- 분석·판단: 루틴 체크를 목록에서 즉시 처리하던 방식을 전용 확인 화면으로 분리해야 사용자가 어떤 루틴을 완료하는지 명확히 알 수 있다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 루틴 선택 후 완료, 마지막 항목 전체 완료, 완료 취소의 실제 기록 복구, 날짜별 루틴/기록 탐색, 상황 기록 추가 흐름을 연결했다.
+- 검증 결과: 기존 Supabase 루틴 완료와 기록 CRUD를 재사용했으며 새 데이터 구조를 추가하지 않았다.
+- 남은 작업: 푸시 권한이 있는 기기에서 미완료 시간 경고 알림을 종단 검증한다.
+## 2026-09-08 모바일 마이펫·다이어리 플로우 교체
+
+- 요청 요약: 기존 외형을 보존하지 않고 이미지의 Screen → Action → Destination 흐름을 실제 UX로 반영한다.
+- 분석 및 판단: 마이펫은 선택 후 상세 진입, 오늘 할 일 전체보기, 다이어리 연결이 한 화면에서 이어져야 한다. 다이어리는 캘린더 확인, 루틴 완료, 상황 기록, 분석 화면 진입의 세 핵심 동선을 노출해야 한다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/features/diary/DiaryMobileScreen.tsx`.
+- 핵심 변경: 저장된 펫 선택과 상세 이동, 기존 다이어리 이동 핸들러, 기존 루틴 완료/취소 핸들러, 상황별 기록 작성 핸들러, 기록 분석 진입 핸들러를 새 UI에 다시 연결했다. 모바일 전용 분기만 변경해 데스크톱 UX를 유지했다.
+- 검증 결과: production build 성공.
+- 남은 작업: 병원·Q&A의 모바일 플로우는 기존 상세/작성 동작을 유지하며, 후속 시각 검증에서 레퍼런스와의 간격 및 전환 방식을 추가 정리한다.

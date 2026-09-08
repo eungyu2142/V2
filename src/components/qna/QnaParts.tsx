@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import GuideAction from '../common/GuideAction'
 import type { AttachedDiarySnapshot, AttachedRecordSnapshot, HospitalSnapshot, QnaPost, QnaSort } from '../../types/app'
 import { DataVisualization } from '../../features/diary/DiaryPage'
 
@@ -83,7 +84,7 @@ export function HospitalAttachCard({ hospital, mode, onRemove, onOpen }: { hospi
 }
 
 export function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalSnapshot[]; onSelect: (hospital: HospitalSnapshot) => void; onClose: () => void }) {
-  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true" aria-label={text.hospitalSelect}><div className="qna-hospital-picker-heading"><strong>{text.hospitalSelect}</strong><button className="qna-hospital-picker-close" type="button" aria-label={text.close} onClick={onClose}>×</button></div>{hospitals.length > 0 ? <div className="qna-hospital-picker-list">{hospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? `${hospital.name}-${hospital.lat}-${hospital.lng}`} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.animalTags.join(' · ') || '특수동물 진료'}</span></button>)}</div> : <p>{text.hospitalHelp}</p>}</section></div>
+  return <div className="hospital-picker-overlay"><section className="hospital-picker" role="dialog" aria-modal="true" aria-label={text.hospitalSelect}><div className="qna-hospital-picker-heading"><strong>{text.hospitalSelect}</strong><button className="qna-hospital-picker-close" type="button" aria-label={text.close} onClick={onClose}><GuideAction symbol="×" /></button></div>{hospitals.length > 0 ? <div className="qna-hospital-picker-list">{hospitals.map((hospital) => <button className="qna-hospital-picker-item" type="button" key={hospital.id ?? `${hospital.name}-${hospital.lat}-${hospital.lng}`} onClick={() => onSelect(hospital)}><strong>{hospital.name}</strong><span>{hospital.animalTags.join(' · ') || '특수동물 진료'}</span></button>)}</div> : <p>{text.hospitalHelp}</p>}</section></div>
 }
 
 export function QnaSortSheet({ value, onChange, onClose, label }: { value: QnaSort; onChange: (value: QnaSort) => void; onClose: () => void; label: (value: QnaSort) => string }) {

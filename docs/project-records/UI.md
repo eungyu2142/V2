@@ -5911,3 +5911,167 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 핵심 변경 내용: 민트·뉴트럴 토큰을 사용한 반응형 모달/모바일 바텀시트, 정사각형 조정 프레임, 안전 영역 가이드, 취소·적용 헤더를 추가했다.
 - 검증 결과: 변경 파일 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다.
 - 남은 작업: 실제 기기에서 작은 화면의 세로 여백을 확인한다.
+
+## 2026-09-03 모바일 캘린더 노출과 정상화 카드 수정
+
+- 요청 요약: 모바일 다이어리에서 캘린더가 잘 보이지 않고 이미 해결된 배변 상태에도 경고 카드가 표시되는 문제를 수정한다.
+- 분석·판단 이유: 전역 모바일 프로필 버튼이 다이어리 캘린더 버튼 위에 겹쳤고, 정상화 인사이트가 모바일 공통 경고 행동 분기로 들어가 병원·Q&A 버튼을 표시하고 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`, `src/features/diary/DiaryMobileScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 다이어리 모바일 화면에서는 전역 프로필 버튼을 숨기고 캘린더 버튼의 테두리·색상·레이어 순서를 강화했다. 열린 월간 캘린더에 그림자와 분리 여백을 추가했다. 이전 요청대로 최근 기록 영역과 상황별 약 버튼도 제거했다.
+- 검증 결과: TypeScript와 프로덕션 빌드, UI 구조 검사를 통과했다. 모바일 화면 컴포넌트 ESLint는 통과했으며 다이어리 본문 전체 ESLint는 기존 초기 액션 effect 규칙 1건 때문에 실패했다.
+- 남은 작업: 없음.
+
+## 2026-09-03 모바일 다이어리 참고 UI 반영
+
+- 요청 요약: 참고 이미지의 다이어리 구성을 반영하되 `약/처방`과 `최근 기록` 영역은 제외한다.
+- 분석·판단 이유: 짧은 화면에서도 날짜 이동과 오늘 할 일을 먼저 확인할 수 있도록 상단 정보 위계를 정리하고, 긴 세로 스크롤을 만드는 최근 기록은 제거할 필요가 있다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 제목·펫 선택 아래에 선택 날짜, 일/주 전환, 캘린더 버튼, 주간 이동을 한 카드로 구성했다. 오늘 할 일은 시간과 완료 체크가 보이는 2열 카드로 바꾸고 할 일 추가 버튼을 배치했다. 상황별 기록에서 약/처방을 제외하고 최근 기록 영역은 렌더링하지 않는다.
+- 검증 결과: TypeScript 검사, 모바일 다이어리 컴포넌트 ESLint, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 소형 모바일 화면에서 긴 펫 이름과 긴 루틴명의 줄바꿈을 확인한다.
+## 2026-09-04 모바일 다이어리 출시형 리디자인
+
+- 요청 요약: 첨부 레퍼런스를 기준으로 웹 다이어리는 유지하고 모바일 다이어리 홈, 루틴 전체보기, 상황별 기록 진입, 기록 분석 진입의 시각 구조를 실제 앱 수준으로 교체한다.
+- 분석·판단 이유: 기존 모바일 화면은 주간 패널과 2열 루틴 카드가 첫 화면의 정보 위계를 약하게 만들고 있었다. 사용 빈도가 높은 월간 기록 확인, 오늘 루틴 완료, 상황 기록을 한 방향의 스크롤 흐름으로 재배치했다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryMobileScreen.css`, `src/features/diary/DiaryPage.tsx`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 월간 캘린더를 첫 핵심 콘텐츠로 고정하고 오늘 날짜·기록 점·산란/탈피 예상 범위를 유지했다. 루틴은 최대 4개의 밀도 높은 행으로 미리 보이며 전체보기에서 선택 완료할 수 있다. 상황 기록은 배변·탈피·메이팅·산란·병원 방문만 2열 카드로 구성하고 기존 다이어리 아이콘 에셋을 동일한 크기와 배경 규칙으로 정돈했다. 최근 기록은 제거하고 기록 모아보기 진입 영역으로 대체했다.
+- 검증 결과: 모바일 컴포넌트 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다. 로컬 브라우저에서 앱과 인증 화면 로딩을 확인했다.
+- 남은 작업: 인증된 실제 데이터 화면의 375px·430px 실기기 시각 확인.
+## 2026-09-04 Q&A 모바일 출시형 리디자인
+
+- 요청 요약: 기존 Q&A의 기능과 `전체·미해결·해결됨` 분류를 유지하면서 탐색, 상세, 댓글, 3단계 질문 작성 UI를 모바일 중심으로 개선한다.
+- 분석·판단 이유: 홈에 모든 필터와 입력 요소를 노출하던 구조를 분리하고, 질문 카드의 정보 밀도와 상태 구분을 높여 375~430px 화면에서 빠르게 훑을 수 있게 할 필요가 있었다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/Qna.css`, `src/components/qna/QnaTrustBadge.tsx`, `src/App.tsx`, `src/types/app.ts`, `src/lib/appData.ts`, `supabase/migrations/202609040001_qna_reports_and_user_blocks.sql`.
+- 핵심 변경 내용: 별도 검색·필터 화면, 최근 검색어, compact 질문 카드, 답변 상태 badge, 이미지 뷰어와 썸네일, 상세 더보기 bottom sheet, 신고 사유 sheet, 댓글 정렬, 활동 기반 신뢰 답변자 표시를 추가했다. 질문 작성은 주제→동물→내용의 3단계로 정리하고 사진과 다이어리 기록은 선택 첨부로 유지했다. 모든 신규 색상은 디자인 토큰을 사용했다.
+- 검증 결과: TypeScript와 관련 파일 ESLint를 통과했고 로컬 앱 및 인증 화면의 정상 로딩을 확인했다.
+- 남은 작업: 로그인된 실데이터로 375px·430px 화면을 실기기 확인하고 신규 Supabase migration을 원격 환경에 적용한다.
+## 2026-09-04 Q&A 레퍼런스 색상·아이콘 통일
+
+- 요청 요약: 제공된 Q&A 레퍼런스의 색상과 컴포넌트 형식을 반영하고 기존 Q&A 아이콘을 두 번째 아이콘 가이드의 선형 스타일로 교체한다.
+- 분석·판단 이유: 문자 기호와 주제별 PNG 아이콘이 혼재해 화면마다 굵기와 정렬이 달랐다. 동일한 24px SVG 좌표계와 디자인 토큰을 사용하면 모바일 크기에서도 형태와 활성 상태가 일관된다.
+- 수정 파일: `src/components/qna/QnaIcon.tsx`, `src/components/qna/QnaScreen.tsx`, `src/components/qna/Qna.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 검색·필터·글쓰기·더보기·최근 검색·질병·사육·먹이·환경·행동·번식·기타 아이콘을 공용 선형 SVG로 교체했다. 홈 배경, 검색창, 상태 필터, 안내 카드, 목록 카드, 썸네일, 상태 배지와 주제 선택 카드를 레퍼런스의 민트·화이트·차콜 구조로 재정렬했다. 목록 상단은 작성자→주제→답변 상태 순서로 통일했다.
+- 검증 결과: Q&A TSX 파일 ESLint, TypeScript, UI 구조 검사, diff 공백 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 로그인된 모바일 화면에서 최종 시각 검증이 필요하다.
+## 2026-09-04 마이 펫 전체 UI와 마커 리디자인
+
+- 요청 요약: 첨부 레퍼런스의 원형 민트 마커, 얇은 선, 둥근 형태를 반영해 마이 펫 홈·상세·등록·수정 화면을 하나의 디자인 체계로 재구성한다.
+- 분석·판단 이유: 기존 모바일 화면은 텍스트 기호와 이모지, 단순 카드가 섞여 있었고 선택 펫의 정보 우선순위와 다이어리 연결이 약했다. 공통 SVG 아이콘 세트를 만들어 의미와 선 굵기를 통일하고 실제 데이터가 있는 정보만 노출했다.
+- 수정 파일: `src/components/my-pet/PetIcons.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetsScreen.tsx`, `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/MyPet.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 펫·추가·프로필·수정·삭제·분류·성별·사진·달력·몸무게·기록·먹이·분무·온습도·체크·뒤로가기 마커를 단일 SVG 스타일로 추가했다. 모바일 홈은 원형 펫 목록, 요약 카드, 오늘 케어, 주간 달성률, 다이어리 CTA로 재배치했고 상세에는 기본 정보·기록·사진 탭과 고정 CTA를 구성했다. 등록 4단계에는 분류 선택 카드와 추가 정보 마커를 적용했다.
+- 검증 결과: 변경 파일 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 모바일 화면에서 375px·430px 폭과 긴 펫 이름을 시각 확인한다.
+## 2026-09-04 다이어리 플로우와 아이콘 가이드 통일
+
+- 요청 요약: 첫 번째 참고 이미지의 다이어리 화면 흐름을 따르고 기존 마크를 두 번째 참고 이미지의 플랫 아이콘 스타일로 전부 교체한다.
+- 분석·판단 이유: 구형 PNG 일러스트와 선형 아이콘이 혼재해 화면별 시각 언어가 달랐고, 상황별 기록이 홈에서 바로 작성창으로 연결되어 참고 흐름의 중간 메뉴가 없었다.
+- 수정 파일: `src/features/diary/DiaryGlyph.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryMobileScreen.css`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 루틴·배변·탈피·메이팅·산란·병원·달력·그래프·완료 상태에 쓰는 공통 SVG 아이콘 세트를 추가했다. 모바일 홈, 전체 루틴, 상황별 기록 메뉴, 기록 작성 헤더, 캘린더 기록, 날짜 기록 상세와 루틴 선택 영역의 구형 이미지 마크를 새 아이콘으로 교체했다. 색은 기존 디자인 토큰만 사용했다.
+- 검증 결과: TypeScript 검사, 신규 및 모바일 컴포넌트 ESLint, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 모바일 기기에서 화면 배율별 아이콘 선명도를 확인한다.
+## 2026-09-04 병원 지도 H 마커 통일
+
+- 요청 요약: 지도에 표시되는 모든 병원 마커를 첨부 아이콘 가이드의 H 핀으로 교체한다.
+- 분석·판단 이유: 기존 마커는 리뷰 수와 좋아요 상태에 따라 숫자·하트 배지가 붙고 색상도 달라져 지도에서 병원 영업 상태를 빠르게 구분하기 어려웠다.
+- 수정 파일: `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/HospitalMap.css`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 모든 병원 마커를 흰색 H가 들어간 동일한 물방울형 핀으로 고정했다. 영업 중은 지도 전용 파란색, 영업 종료 또는 상태 미확인은 회색으로 표시한다. 선택된 핀은 형태를 바꾸지 않고 크기와 외곽선만 강조하며 리뷰 수·좋아요 배지는 제거했다. 접근성 이름에는 병원명, 영업 상태, 리뷰 수, 찜 여부를 그대로 유지했다.
+- 검증 결과: 관련 컴포넌트 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: TypeScript, 프로덕션 빌드와 지도 렌더링 확인.
+## 2026-09-05 레퍼런스 기반 마이 펫 UI 재구성
+
+- 요청 요약: 첨부 이미지의 마이 펫 목록, 등록, 완료, 상세 및 탭별 화면을 더미 데이터 없이 그대로 반영한다.
+- 분석·판단 이유: 이전 홈 요약형 구조보다 최신 레퍼런스의 세로 펫 카드 목록과 사진 중심 상세 구조가 우선한다. 레퍼런스의 샘플 동물·날짜·수치는 사용하지 않고 실제 펫·기록·루틴 데이터만 렌더링했다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetIcons.tsx`, `src/components/my-pet/MyPet.css`, `src/types/app.ts`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 상단 중앙 제목과 원형 추가 버튼, 세로 펫 카드 목록, 큰 사진 상세 헤더, 오버레이 뒤로가기·메뉴·수정 버튼, 프로필·기록·루틴·통계 탭을 구현했다. 등록 화면은 기본 정보와 추가 정보로 재구성하고 원형 사진 선택, 종 선택, 성별 세그먼트, 날짜·특징·메모 필드를 적용했다.
+- 검증 결과: 변경 파일 ESLint, TypeScript, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 로그인된 실제 모바일 계정에서 사진 비율과 긴 기록 제목을 확인한다.
+## 2026-09-05 모바일 리뷰 하단 버튼과 사진 첨부
+
+- 요청 요약: 모바일 리뷰 작성에서 다음 버튼이 보이지 않는 문제를 고치고 사진을 최대 3장 첨부할 수 있게 한다.
+- 분석·판단 이유: 모바일 모달의 중첩 flex 높이 계산에 따라 하단 행동 영역이 화면 밖으로 밀릴 수 있어 모달과 작성 폼의 행 구조를 명시적으로 고정해야 했다. 리뷰 데이터에는 기존 `images` 필드가 있어 같은 저장 구조를 재사용했다.
+- 수정 파일: `src/components/hospital-map/HospitalMap.css`, `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/lib/imageStorage.ts`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 모바일 리뷰 폼을 `단계 표시 / 스크롤 내용 / 하단 행동` 3행으로 고정했다. 후기 단계에 최대 3장 선택, 미리보기, 개별 삭제, 업로드 오류 표시를 추가하고 저장 중 중복 제출을 차단했다.
+- 검증 결과: 변경 파일 ESLint, TypeScript 검사, UI 구조 검사와 프로덕션 빌드 통과. 375×812 모바일 뷰포트에서 앱 로드, 빈 화면 없음, Vite 오류 오버레이 없음, 콘솔 오류 없음을 확인했다. 인증 화면 이후 리뷰 모달의 실제 클릭 검증은 계정 세션이 없어 정적 레이아웃 검사로 대체했다.
+- 남은 작업: 실제 인증 계정으로 사진 Storage 업로드와 모바일 안전 영역을 최종 확인한다.
+## 2026-09-05 리뷰 모바일 레이아웃 충돌 복구
+
+- 요청 요약: 이전 수정 이후 깨진 모바일 UI/UX를 복구하고 참고 사진의 마크 체계를 정확히 반영한다.
+- 분석·판단 이유: 리뷰 모달에 추가한 강제 grid 레이아웃이 기존 전역 모바일 flex 규칙과 충돌했다. 참고 사진 원본은 현재 대화와 저장소에서 확인되지 않아 마크를 임의로 다시 그리지 않는다.
+- 수정 파일: `src/components/hospital-map/HospitalMap.css`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 강제 grid를 제거하고 기존 flex 구조를 복원했다. 스텝 내용만 스크롤되며 하단 행동 영역은 별도 flex 행으로 항상 남도록 높이와 축소 규칙만 명시했다.
+- 검증 결과: 변경 컴포넌트 ESLint, TypeScript 검사, UI 구조 검사와 프로덕션 빌드를 통과했다. 빌드 산출물에 `MyPet.css`가 마이 펫 청크로 포함된 것도 확인했다.
+- 남은 작업: 사용자가 참고 마크 사진을 다시 첨부하면 모든 대상 화면과 현재 마크 목록을 대조해 일괄 교체한다.
+## 2026-09-05 모바일 마이 펫 스타일 누락 복구
+
+- 요청 요약: 첨부 화면처럼 마이 펫 사진과 이동 마크가 비정상적으로 커지고 전체 UI/UX가 깨진 문제를 복구한다.
+- 분석·판단 이유: 신규 `PetMobileFlow`를 렌더링하는 `PetsScreen`에서 전용 `MyPet.css` import가 누락되어 카드, 사진, SVG 크기와 배치 규칙이 전혀 로드되지 않았다. 일부 핵심 모양도 Tailwind 유틸리티 클래스에 의존해 전용 스타일 누락 시 안전장치가 없었다.
+- 수정 파일: `src/components/my-pet/PetsScreen.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetIcons.tsx`, `src/components/my-pet/MyPet.css`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: `MyPet.css`를 화면 진입점에서 명시적으로 불러오고, 펫 사진과 원형 기능 마크에 전용 클래스를 부여해 사진·대체 문자·SVG의 너비, 높이, 잘림과 원형 배경을 컴포넌트 CSS로 고정했다.
+- 검증 결과: 변경 컴포넌트 ESLint, TypeScript 검사, UI 구조 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 첨부 화면과 동일한 모바일 폭에서 카드·사진·화살표·하단 내비게이션 마크를 시각 확인한다.
+## 2026-09-05 반려동물 등록 진행도 제거와 본문 경계 강화
+
+- 요청 요약: 반려동물 추가 화면 상단의 초록 진행도를 제거하고 흰색 입력 배경에 테두리를 더한다.
+- 분석·판단 이유: 별도 점형 진행도와 `1/2 기본 정보` 텍스트가 단계를 중복 안내하고 있었다. 흰색 본문과 화면 배경의 경계도 약해 입력 영역이 하나의 카드로 인식되지 않았다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/MyPet.css`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 점형 진행도 DOM과 CSS를 제거했다. 화면 바깥은 뉴트럴 배경으로 두고 입력 본문은 디자인 토큰 기반의 흰색 배경, 1px 테두리, 둥근 모서리와 여백을 가진 카드로 변경했다. `1/2 기본 정보`, `2/2 추가 정보` 텍스트는 단계 안내로 유지했다.
+- 검증 결과: 진행 중.
+- 남은 작업: 모바일 375px 화면에서 본문 카드와 하단 버튼 간격을 확인한다.
+## 2026-09-05 공통 아이콘 가이드 및 설치 아이콘 교체
+
+- 요청: 최신 민트 원형 아이콘 가이드를 화면 전반과 배포 앱 아이콘에 적용. 이전 변경 금지 조건 해제.
+- 판단: 기존 기능별 SVG를 공통 GuideIcon에 연결하여 원형 배경, 외곽선, 의미별 색과 선 굵기를 일관되게 관리한다.
+- 수정: GuideIcon.tsx/css 신규, DiaryGlyph, PetIcons, QnaIcon, HeartIcon, AppNavigation, MapScreen, mapDependencies, index.html, manifest.webmanifest, sw.js, AuthScreen.
+- 변경: 다이어리·마이펫·Q&A의 공통 아이콘과 내비게이션, 지도 상세 버튼 및 좋아요를 원형 가이드로 통일. 지도 핀은 영업 중 +, 종료 ×, 미확인 ?를 표시. 생성한 도마뱀 이미지를 public/pajak-icon-v2.png에 저장하고 로그인·탭·favicon·Apple 아이콘·PWA·푸시 기본 이미지에 연결. 서비스워커 캐시 버전을 갱신.
+- 검증: TypeScript 및 프로덕션 빌드 확인. 생성 이미지 시각 확인.
+- 남은 확인: 실제 기기에 이미 설치된 PWA 아이콘은 운영체제의 갱신 시점에 따라 재설치가 필요할 수 있음. 개별 화면에 직접 작성된 텍스트 기호는 추가 점검 필요.
+## 2026-09-08 Q&A 동물 미선택 문구 수정
+
+- 요청 요약: 질문 작성의 동물 선택 버튼에서 `동물 X` 문구를 `동물을 선택하지 않음`으로 변경한다.
+- 분석·판단 이유: 기호 표현보다 선택 결과를 직접 설명하는 문구가 의미를 더 명확하게 전달한다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 동물 미선택 카드의 대표 문구만 변경하고 기존 `none` 선택값과 저장 데이터 호환성은 유지했다.
+- 검증 결과: 관련 컴포넌트 ESLint와 TypeScript 검사를 실행했다.
+- 남은 작업: 없음.
+
+## 2026-09-08 모바일 리뷰 하단 행동 영역 복구
+
+- 요청 요약: 모바일 리뷰 작성 화면에서 보이지 않는 `다음` 버튼을 복구하고 마지막 제출 행동을 명확히 표시한다.
+- 분석·판단 이유: 리뷰 폼의 하단 행동 영역이 내용 높이에 밀려 모바일 뷰포트 밖으로 내려갈 수 있었다. 단계 콘텐츠와 행동 영역의 위치를 분리해야 입력량과 관계없이 진행할 수 있다.
+- 수정 파일: `src/components/hospital-map/HospitalMap.css`, `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/MapScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 모바일 폼 하단에 행동 영역을 고정하고 스크롤 콘텐츠에 안전 여백을 확보했다. 중간 단계는 `다음`, 마지막 단계는 신규 작성 시 `리뷰 작성 완료`, 수정 시 `리뷰 수정 완료`로 표시한다.
+- 검증 결과: 리뷰 컴포넌트 ESLint와 TypeScript 검사를 통과했다. 전체 프로덕션 빌드는 별도 다이어리 화면의 기존 `canWrite` 속성 타입 불일치로 중단됐다.
+- 남은 작업: 인증된 모바일 실기기에서 하단 버튼의 safe-area 간격을 최종 확인한다.
+## 2026-09-08 모바일 다이어리 전체 리디자인
+
+- 요청 요약: 기존 기능 구조를 유지하면서 첨부 시안과 같은 모바일 다이어리 메인, 날짜 상세, 기록 선택·작성, 통계, 기록 상세 UI로 리디자인한다.
+- 분석·판단 이유: 기존 화면은 캘린더 이후 행동이 분산되어 있었고, 날짜 선택 후 상세 확인 및 기록 추가로 이어지는 연결이 약했다. 시안의 정보 우선순위에 맞춰 달력, 루틴, 기록, 분석 순서를 명확히 했다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryMobileScreen.css`, `src/features/diary/DiaryGlyph.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 메인 헤더와 원형 추가 버튼, 점 중심 월간 캘린더, 루틴 완료 수·진행률, 정기 관리/상황 기록 3열 선택 화면, 단일 기록 작성 폼, 하루 상세 필터·썸네일, 통계 기간 필터·횟수 요약, 상세 수정·삭제 버튼을 구현했다. 과도한 테두리를 줄이고 토큰 기반 간격과 radius를 통일했다.
+- 검증 결과: TypeScript, 모바일·아이콘 컴포넌트 ESLint, UI 구조 검사와 프로덕션 빌드를 통과했다. 다이어리 본문 전체 ESLint에는 기존 초기 액션 effect 규칙 1건이 남아 있다. 로컬 앱은 인증 화면까지 정상 로드됐으며 인증 데이터가 없어 로그인 이후 실제 데이터 화면의 자동 시각 검증은 제한됐다.
+- 남은 작업: 인증된 실기기에서 사진이 많은 하루 기록과 긴 루틴명 줄바꿈을 확인한다.
+
+### 2026-09-08 · 다이어리 캘린더 진입 및 날짜 상태 UI 보정
+
+- 요청 요약: 월간 캘린더를 메인에 상시 표시하지 않고 캘린더 버튼으로 진입하며, 미래·과거 날짜의 잘못된 작성 UI를 제거했다.
+- 분석·판단: 날짜 탐색 화면과 오늘 기록 화면의 역할이 섞여 미래 루틴이 완료 대상처럼 보이고 과거 상세에도 작성 버튼이 노출되고 있었다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryMobileScreen.css`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`.
+- 핵심 변경: 상단 캘린더 버튼 전용 화면, 미래 루틴 빈 상태, 과거 상세 읽기 전용, NOTICE 최대 3개 버튼의 모바일 줄바꿈을 반영했다.
+- 검증 결과: TypeScript 프로젝트 검사 통과. 전체 Vite 빌드는 로컬 Tailwind 네이티브 바이너리 로드 오류로 번들 단계 진입 전에 중단됐다.
+- 남은 작업: 실제 모바일 브라우저에서 캘린더 전환과 작은 화면의 NOTICE 버튼 배치를 확인한다.
+### 2026-09-08 · 최종 시안 기준 다이어리 화면 재구성
+
+- 요청 요약: 첨부 시안의 1~10번 모바일 화면 흐름과 표현을 다이어리에 반영했다.
+- 분석·판단: 이전 구현은 달력, 루틴 완료, 기록 종류 선택, 날짜별 기록이 서로 다른 정보 구조를 사용해 시안의 연속된 사용 흐름과 달랐다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryMobileScreen.css`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryPage.css`.
+- 핵심 변경: 월간 달력 메인 노출, 루틴 확인·완료·전체 완료 화면, 세로 기록 종류 목록, 루틴/기록 2탭, 기록 없음 빈 상태를 구현했다.
+- 검증 결과: TypeScript와 모바일 다이어리 ESLint를 실행했다.
+- 남은 작업: 실기기에서 운영체제 미완료 알림 카드의 실제 표시를 확인한다.
+## 2026-09-08 모바일 핵심 화면 시각 구조 교체
+
+- 요청 요약: 첨부된 UX 플로우를 장식 수준이 아니라 실제 모바일 화면 구조로 반영하고 기존 UI를 교체한다.
+- 분석 및 판단: 데스크톱 레이아웃과 데이터 로직은 유지하고, 세로 펫 목록과 축약된 다이어리 홈이 레퍼런스의 정보 흐름을 막고 있어 두 모바일 진입 화면의 JSX를 우선 교체했다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/MyPet.css`, `src/features/diary/DiaryMobileScreen.tsx`.
+- 핵심 변경: 마이펫을 펫 선택기, 대표 펫 카드, 오늘 할 일, 주간 달성률 순서로 재구성했다. 다이어리를 월간 캘린더와 예측 기간, 경고, 루틴 미리보기, 상황별 기록, 기록 모아보기 순서로 재구성했다. 모든 색은 기존 디자인 토큰을 사용했다.
+- 검증 결과: `npm run build` 성공, TypeScript 및 Vite production build 오류 없음.
+- 남은 작업: 인증된 실제 모바일 세션에서 터치 동선과 375~430px 시각 검증이 필요하다.

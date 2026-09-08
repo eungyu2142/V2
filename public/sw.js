@@ -1,12 +1,12 @@
-const CACHE_NAME = 'pajakpajak-pwa-v6'
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/exopet-logo.png', '/favicon.svg']
+const CACHE_NAME = 'pajakpajak-pwa-v7'
+const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/pajak-icon-v2.png']
 const DEFAULT_NOTIFICATION_TITLE = '\uD30C\uC791\uD30C\uC791'
 const DEFAULT_NOTIFICATION_BODY = '\uC644\uB8CC\uD558\uC9C0 \uC54A\uC740 \uB3CC\uBD04 \uC77C\uC815\uC774 \uC788\uC5B4\uC694.'
 const DEFAULT_NOTIFICATION = {
   title: '파작파작',
   body: '완료하지 않은 돌봄 루틴이 있어요.',
-  icon: '/exopet-logo.png',
-  badge: '/exopet-logo.png',
+  icon: '/pajak-icon-v2.png',
+  badge: '/pajak-icon-v2.png',
   url: '/diary',
 }
 

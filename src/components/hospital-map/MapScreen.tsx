@@ -5,8 +5,10 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { PetRecord } from '../../features/diary/diaryTypes'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
 import { loadLikeStates, saveLike } from '../../lib/likes'
+import { uploadImageFile, validateImageFile } from '../../lib/imageStorage'
 import HospitalReviewForm from './MapAndReview'
 import HeartIcon from '../common/HeartIcon'
+import { GuideIcon } from '../common/GuideIcon'
 import type { AnimalCategory, AppProfile, Coordinates, DraftItem, Hospital, HospitalRecommendationConcern, HospitalReview, HospitalReviewDraftPayload, HospitalSnapshot, HospitalSort, MobileMapSheetState, Pet } from '../../types/app'
 import { buildHospitalSearchQuery, createNaverHtmlMarker, formatReviewDate, getReviewSummary, getTodayOpeningHoursDescription, hospitalFromSnapshot, hospitalMarkerContent, hospitalMatchesQuery, isHospitalCareCategory, isSameHospitalIdentity, loadGoogleHospitalDetails, loadNaverMaps, readBrowserLocation, reviewStorageKey, searchHospitals, sortHospitalsByDistance, toHospitalSnapshot, toReviewAnimalCategory } from './mapDependencies'
 import type { MapLatLngLiteral, NaverMapInstance, NaverMapListener, NaverMarker } from '../../types/map'
@@ -27,57 +29,64 @@ type HospitalConditionEvidenceData = {
   disclaimer: string
   hospitals: HospitalConditionEvidence[]
 }
+
+type ReviewImageDraft = {
+  id: string
+  previewUrl: string
+  file?: File
+  storedUrl?: string
+}
 function HospitalAddressIcon() {
   return (
-    <svg className="hospital-detail-meta-icon" viewBox="0 0 24 24" aria-hidden="true">
+<GuideIcon className="hospital-detail-meta-icon" aria-hidden="true">
       <path d="M12 22c4.6-4.2 7-8 7-11.3A7 7 0 1 0 5 10.7C5 14 7.4 17.8 12 22Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
       <circle cx="12" cy="10.5" r="2.8" fill="currentColor" />
-    </svg>
+    </GuideIcon>
   )
 }
 
 function PhoneIcon() {
   return (
-    <svg className="hospital-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+<GuideIcon className="hospital-action-icon" aria-hidden="true">
       <path d="M7.2 3.4 4.8 5.8c-.7.7-.8 1.8-.3 2.8 2.4 5 5.9 8.5 10.9 10.9 1 .5 2.1.4 2.8-.3l2.4-2.4-4.2-3.1-2.1 2.1c-2.7-1.5-4.6-3.4-6.1-6.1l2.1-2.1-3.1-4.2Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" />
       <path d="M14.5 5.2c2.3.5 3.8 2 4.3 4.3M14.8 1.8c4 .7 6.7 3.4 7.4 7.4" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
-    </svg>
+    </GuideIcon>
   )
 }
 
 function CopyIcon() {
   return (
-    <svg className="hospital-copy-svg" viewBox="0 0 24 24" aria-hidden="true">
+<GuideIcon className="hospital-copy-svg" aria-hidden="true">
       <rect x="8" y="7" width="11" height="13" rx="2.2" fill="none" stroke="currentColor" strokeWidth="2" />
       <path d="M16 7V5.8A2.8 2.8 0 0 0 13.2 3H5.8A2.8 2.8 0 0 0 3 5.8v9.4A2.8 2.8 0 0 0 5.8 18H8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
-    </svg>
+    </GuideIcon>
   )
 }
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
+<GuideIcon aria-hidden="true">
       <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2.25" />
       <path d="m15.4 15.4 4.1 4.1" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.25" />
-    </svg>
+    </GuideIcon>
   )
 }
 
 function CurrentLocationIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
+<GuideIcon aria-hidden="true">
       <path d="M12 21c3.8-3.6 6-6.7 6-9.5a6 6 0 1 0-12 0c0 2.8 2.2 5.9 6 9.5Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
       <circle cx="12" cy="11" r="2.2" fill="currentColor" />
-    </svg>
+    </GuideIcon>
   )
 }
 
 function OpeningStatusIcon({ open }: { open: boolean }) {
   return (
-    <svg className="hospital-status-icon" viewBox="0 0 24 24" aria-hidden="true">
+<GuideIcon className="hospital-status-icon" aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
       {open ? <circle className="hospital-status-icon-mark" cx="12" cy="12" r="3.6" /> : <path className="hospital-status-icon-mark" d="M8.2 12h7.6" />}
-    </svg>
+    </GuideIcon>
   )
 }
 
@@ -247,17 +256,16 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false)
   const [isOpeningHoursExpanded, setIsOpeningHoursExpanded] = useState(false)
   const [copiedAddressHospitalId, setCopiedAddressHospitalId] = useState<string | null>(null)
-  const [reviewRating, setReviewRating] = useState(5)
   const [reviewBody, setReviewBody] = useState('')
   const [reviewVisitDate, setReviewVisitDate] = useState(new Date().toISOString().slice(0, 10))
-  const [reviewHasNextVisit, setReviewHasNextVisit] = useState(false)
-  const [reviewNextVisitDate, setReviewNextVisitDate] = useState('')
-  const [reviewNextVisitTime, setReviewNextVisitTime] = useState('09:00')
   const [reviewCost, setReviewCost] = useState('')
   const [reviewDiagnosis, setReviewDiagnosis] = useState('')
   const [reviewTreatment, setReviewTreatment] = useState('')
   const [reviewPetId, setReviewPetId] = useState(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
   const [reviewTags, setReviewTags] = useState<string[]>([])
+  const [reviewImages, setReviewImages] = useState<ReviewImageDraft[]>([])
+  const [reviewImageError, setReviewImageError] = useState('')
+  const [isReviewSubmitting, setIsReviewSubmitting] = useState(false)
   const [clinicRecords, setClinicRecords] = useState<PetRecord[]>([])
   const [reviewClinicRecordId, setReviewClinicRecordId] = useState('')
   const [isSidePanelCollapsed, setIsSidePanelCollapsed] = useState(false)
@@ -396,8 +404,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
     && isHospitalCareCategory(selectedReviewPet?.group)
     && reviewBody.trim().length > 0
     && reviewVisitDate.trim().length > 0
-    && reviewRating >= 1
-    && (!reviewHasNextVisit || reviewNextVisitDate)
   )
   const selectedHospitalIsLiked = selectedHospital ? likedHospitals.some((hospital) => isSameHospitalIdentity(hospital, selectedHospital)) : false
   const selectedHospitalOpeningHours = selectedHospital?.openingHours ?? []
@@ -489,17 +495,15 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
     setMobileSheetState('expanded')
     setIsReviewFormOpen(true)
     setEditingReviewId((reviews[hospital.id] ?? []).some((review) => review.id === reviewDraftPayload.review.id && review.mine === true) ? reviewDraftPayload.review.id : null)
-    setReviewRating(reviewDraftPayload.review.rating)
     setReviewBody(reviewDraftPayload.review.body)
     setReviewVisitDate(reviewDraftPayload.review.visitDate ?? new Date().toISOString().slice(0, 10))
-    setReviewHasNextVisit(Boolean(reviewDraftPayload.review.nextVisitDate))
-    setReviewNextVisitDate(reviewDraftPayload.review.nextVisitDate ?? '')
-    setReviewNextVisitTime(reviewDraftPayload.review.nextVisitTime ?? '09:00')
     setReviewCost(reviewDraftPayload.review.cost ? reviewDraftPayload.review.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(reviewDraftPayload.review.diagnosis ?? '')
     setReviewTreatment(reviewDraftPayload.review.treatment ?? reviewDraftPayload.review.medicine ?? '')
     setReviewPetId(reviewDraftPayload.review.petId && pets.some((pet) => pet.id === reviewDraftPayload.review.petId && isHospitalCareCategory(pet.group)) ? reviewDraftPayload.review.petId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
     setReviewTags(reviewDraftPayload.review.tags ?? [])
+    setReviewImages((reviewDraftPayload.review.images ?? []).slice(0, 3).map((url, index) => ({ id: `stored-${index}-${url}`, previewUrl: url, storedUrl: url })))
+    setReviewImageError('')
     setReviewClinicRecordId(reviewDraftPayload.review.clinicRecordId ?? '')
     setQuery(hospital.name)
     setSelectedCategories(hospital.categories.filter(isHospitalCareCategory))
@@ -691,16 +695,18 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
 
   const resetReviewForm = () => {
     setEditingReviewId(null)
-    setReviewRating(5)
     setReviewBody('')
     setReviewVisitDate(new Date().toISOString().slice(0, 10))
-    setReviewHasNextVisit(false)
-    setReviewNextVisitDate('')
-    setReviewNextVisitTime('09:00')
     setReviewCost('')
     setReviewDiagnosis('')
     setReviewTreatment('')
     setReviewTags([])
+    setReviewImages((items) => {
+      items.forEach((item) => { if (item.file) URL.revokeObjectURL(item.previewUrl) })
+      return []
+    })
+    setReviewImageError('')
+    setIsReviewSubmitting(false)
     setReviewClinicRecordId('')
     setReviewPetId(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
   }
@@ -713,30 +719,70 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   const beginReviewEdit = (review: HospitalReview) => {
     if (!review.mine) return
     setEditingReviewId(review.id)
-    setReviewRating(review.rating)
     setReviewBody(review.body || review.content || '')
     setReviewVisitDate(review.visitDate ?? new Date().toISOString().slice(0, 10))
-    setReviewHasNextVisit(Boolean(review.nextVisitDate))
-    setReviewNextVisitDate(review.nextVisitDate ?? '')
-    setReviewNextVisitTime(review.nextVisitTime ?? '09:00')
     setReviewCost(review.cost ? review.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(review.diagnosis ?? '')
     setReviewTreatment(review.treatment ?? review.medicine ?? '')
     setReviewTags(review.tags ?? [])
+    setReviewImages((review.images ?? []).slice(0, 3).map((url, index) => ({ id: `stored-${index}-${url}`, previewUrl: url, storedUrl: url })))
+    setReviewImageError('')
     setReviewClinicRecordId(review.clinicRecordId ?? clinicRecords.find((record) => record.reviewId === review.id)?.id ?? '')
     setReviewPetId(review.petId && pets.some((pet) => pet.id === review.petId && isHospitalCareCategory(pet.group)) ? review.petId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
     setIsReviewFormOpen(true)
   }
 
+  const selectReviewImages = (files: File[]) => {
+    setReviewImageError('')
+    const remainingCount = Math.max(0, 3 - reviewImages.length)
+    if (remainingCount === 0) return
+    const selectedFiles = files.slice(0, remainingCount)
+    try {
+      selectedFiles.forEach(validateImageFile)
+    } catch (error) {
+      setReviewImageError(error instanceof Error ? error.message : '사진을 확인해 주세요.')
+      return
+    }
+    setReviewImages((items) => [
+      ...items,
+      ...selectedFiles.map((file) => ({ id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file) })),
+    ])
+    if (files.length > remainingCount) setReviewImageError('사진은 최대 3장까지 첨부할 수 있어요.')
+  }
+
+  const removeReviewImage = (imageId: string) => {
+    setReviewImages((items) => {
+      const target = items.find((item) => item.id === imageId)
+      if (target?.file) URL.revokeObjectURL(target.previewUrl)
+      return items.filter((item) => item.id !== imageId)
+    })
+    setReviewImageError('')
+  }
+
   const submitReview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!selectedHospital || !canSubmitHospitalReview) return
+    if (!selectedHospital || !canSubmitHospitalReview || isReviewSubmitting) return
 
     const reviewPet = pets.find((pet) => pet.id === reviewPetId)
     const existingReview = editingReviewId ? selectedHospitalReviews.find((item) => item.id === editingReviewId) : null
 
     const reviewId = editingReviewId ?? reviewDraftPayload?.review.id ?? crypto.randomUUID()
     const clinicRecordId = reviewClinicRecordId || existingReview?.clinicRecordId || reviewDraftPayload?.review.clinicRecordId || reviewId
+    setIsReviewSubmitting(true)
+    setReviewImageError('')
+    let uploadedReviewImages: string[]
+    try {
+      uploadedReviewImages = await Promise.all(reviewImages.map(async (image) => image.storedUrl ?? (await uploadImageFile({
+        file: image.file as File,
+        userId,
+        area: 'reviews',
+        ownerId: reviewId,
+      })).url))
+    } catch (error) {
+      setReviewImageError(error instanceof Error ? error.message : '사진을 저장하지 못했어요. 다시 시도해 주세요.')
+      setIsReviewSubmitting(false)
+      return
+    }
     const review: HospitalReview = {
       id: reviewId,
       hospitalId: selectedHospital.id,
@@ -748,16 +794,15 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
       authorAvatarUrl: profile.avatarUrl,
       animalCategory: selectedReviewAnimalCategory,
       species: selectedReviewSpecies,
-      rating: reviewRating,
+      rating: 0,
       visitDate: reviewVisitDate,
-      nextVisitDate: reviewHasNextVisit ? reviewNextVisitDate : undefined,
-      nextVisitTime: reviewHasNextVisit ? reviewNextVisitTime : undefined,
       cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
       diagnosis: reviewDiagnosis.trim(),
       treatment: reviewTreatment.trim(),
       tags: reviewTags,
       body: reviewBody.trim(),
       content: reviewBody.trim(),
+      images: uploadedReviewImages,
       mine: true,
       liked: existingReview?.liked ?? reviewDraftPayload?.review.liked ?? false,
       likes: existingReview?.likes ?? reviewDraftPayload?.review.likes ?? 0,
@@ -794,10 +839,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
         diagnosis: reviewDiagnosis.trim(),
         treatment: reviewTreatment.trim(),
         reviewBody: reviewBody.trim(),
-        nextVisit: reviewHasNextVisit && reviewNextVisitDate ? {
-          date: reviewNextVisitDate,
-          time: reviewNextVisitTime || '09:00',
-        } : undefined,
       })
       setClinicRecords((current) => {
         const nextRecord: PetRecord = {
@@ -814,7 +855,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
             diagnosis: reviewDiagnosis.trim(),
             treatment: reviewTreatment.trim(),
             reviewBody: reviewBody.trim(),
-            nextVisit: reviewHasNextVisit && reviewNextVisitDate ? { date: reviewNextVisitDate, time: reviewNextVisitTime || '09:00' } : undefined,
           },
           hospitalId: selectedHospital.id,
           reviewId: review.id,
@@ -1236,29 +1276,21 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
             </header>
             <div className="hospital-review-modal-body">
               <HospitalReviewForm
-                rating={reviewRating}
                 body={reviewBody}
                 visitDate={reviewVisitDate}
-                hasNextVisit={reviewHasNextVisit}
-                nextVisitDate={reviewNextVisitDate}
-                nextVisitTime={reviewNextVisitTime}
                 cost={reviewCost}
                 diagnosis={reviewDiagnosis}
                 treatment={reviewTreatment}
                 pets={reviewablePets.map((pet) => ({ id: pet.id, name: pet.name, group: pet.group, species: pet.species }))}
                 selectedPetId={reviewPetId}
                 selectedTags={reviewTags}
+                images={reviewImages}
+                imageError={reviewImageError}
+                isSubmitting={isReviewSubmitting}
                 canSubmit={canSubmitHospitalReview}
-                submitLabel={editingReviewId ? '수정 완료' : '등록'}
-                onRatingChange={setReviewRating}
+                submitLabel={editingReviewId ? '리뷰 수정 완료' : '리뷰 작성 완료'}
                 onBodyChange={setReviewBody}
                 onVisitDateChange={setReviewVisitDate}
-                onHasNextVisitChange={(value) => {
-                  setReviewHasNextVisit(value)
-                  if (!value) setReviewNextVisitDate('')
-                }}
-                onNextVisitDateChange={setReviewNextVisitDate}
-                onNextVisitTimeChange={setReviewNextVisitTime}
                 onCostChange={setReviewCost}
                 onDiagnosisChange={setReviewDiagnosis}
                 onTreatmentChange={setReviewTreatment}
@@ -1267,6 +1299,8 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
                   setReviewClinicRecordId('')
                 }}
                 onToggleTag={toggleReviewTag}
+                onImagesSelect={selectReviewImages}
+                onImageRemove={removeReviewImage}
                 onSubmit={submitReview}
               />
             </div>
@@ -1316,7 +1350,6 @@ function HospitalReviewItem({ review, onDelete, onEdit, onToggleLike }: { review
           <small>{reviewMeta}</small>
         </div>
         <div className="review-item-head-tools">
-          <ReviewRatingStars rating={review.rating} />
           {review.mine && (
             <div
               className="review-manage-menu"
@@ -1328,7 +1361,7 @@ function HospitalReviewItem({ review, onDelete, onEdit, onToggleLike }: { review
               }}
             >
               <button className="review-manage-trigger" type="button" aria-label="내 리뷰 관리" aria-expanded={isManageMenuOpen} aria-haspopup="menu" onClick={() => setIsManageMenuOpen((open) => !open)}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
+<GuideIcon aria-hidden="true"><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></GuideIcon>
               </button>
               {isManageMenuOpen && (
                 <div className="review-manage-popover" role="menu">
@@ -1403,19 +1436,6 @@ function HospitalReviewTagSummary({ reviews }: { reviews: HospitalReview[] }) {
         </button>
       )}
     </section>
-  )
-}
-
-function ReviewRatingStars({ rating }: { rating: number }) {
-  const filledStars = Math.max(0, Math.min(5, Math.round(rating)))
-  return (
-    <span className="review-rating-stars" aria-label={`평점 ${rating}점`} role="img">
-      {Array.from({ length: 5 }, (_, index) => (
-        <svg className={index < filledStars ? 'is-filled' : ''} viewBox="0 0 24 24" aria-hidden="true" key={index}>
-          <polygon points="12,2 15.1,8.2 22,9.2 17,14 18.2,21 12,17.7 5.8,21 7,14 2,9.2 8.9,8.2" />
-        </svg>
-      ))}
-    </span>
   )
 }
 

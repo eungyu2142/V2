@@ -2,6 +2,7 @@ import type { PointerEventHandler, ReactNode } from 'react'
 import './Navigation.css'
 import type { AppProfile, Tab } from '../../types/app'
 import { appTabs } from './navigationConfig'
+import { GuideIcon } from '../common/GuideIcon'
 
 function NavigationIcon({ tab, mobile = false }: { tab: Tab; mobile?: boolean }) {
   const className = `${mobile ? 'bottom-nav-icon ' : ''}side-nav-icon nav-icon-vector ${tab}`
@@ -12,7 +13,14 @@ function NavigationIcon({ tab, mobile = false }: { tab: Tab; mobile?: boolean })
     qna: <><path d="M3.2 14.8 2.5 19l4-1.9a8.5 8.5 0 0 0 3.5.7c4.4 0 8-3 8-6.7s-3.6-6.6-8-6.6-8 3-8 6.6c0 1.4.4 2.6 1.2 3.7Z" /><path d="M15.4 8.2c3.5.3 6.1 2.7 6.1 5.7 0 1.2-.4 2.3-1 3.2l.6 3.5-3.4-1.6a7.5 7.5 0 0 1-5.4.2" /><circle cx="7.2" cy="11.1" r=".7" fill="currentColor" stroke="none" /><circle cx="10" cy="11.1" r=".7" fill="currentColor" stroke="none" /><circle cx="12.8" cy="11.1" r=".7" fill="currentColor" stroke="none" /></>,
     profile: <><circle cx="12" cy="7" r="4" /><path d="M4.5 20c.2-5 3-8 7.5-8s7.3 3 7.5 8c-2.2 1-4.7 1.5-7.5 1.5S6.7 21 4.5 20Z" /></>,
   }
-  return <svg className={className} viewBox="0 0 24 24" aria-hidden="true">{paths[tab]}</svg>
+  if (tab === 'pets') return <img className={className} src="/pajak-icon-v2.png" alt="" />
+  const referencePaths: Partial<Record<Tab, ReactNode>> = {
+    diary: <><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 10h16"/></>,
+    map: <><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
+    qna: <><path d="M21 11c0 4.5-4 8-9 8-2 0-3-.3-4-.8L3 21l1-6a7 7 0 0 1-1-4c0-4.5 4-8 9-8s9 3.5 9 8Z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></>,
+    profile: <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="3"/><path d="M5 18c3-5 11-5 14 0"/></>,
+  }
+  return <GuideIcon className={className}>{referencePaths[tab] ?? paths[tab]}</GuideIcon>
 }
 
 function BotanicalDecoration() {

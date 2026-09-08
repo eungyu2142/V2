@@ -72,7 +72,7 @@ export default function AuthScreen() {
   return (
     <main className="auth-screen">
       <section className="auth-panel">
-        <div className="auth-brand"><img src="/exopet-logo.png" alt="" /><strong>파작파작</strong><span>양서파충류 케어</span></div>
+        <div className="auth-brand"><img src="/pajak-icon-v2.png" alt="" /><strong>파작파작</strong><span>양서파충류 케어</span></div>
         <div className="auth-tabs" role="tablist">
           <button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => switchMode('login')}>로그인</button>
           <button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => switchMode('signup')}>회원가입</button>

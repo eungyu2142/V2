@@ -398,6 +398,9 @@ function AuthenticatedApp({ session }: { session: Session }) {
       await saveAppData(qnaTable, session.user.id, post, {
         category: qnaDatabaseCategory, title: post.title, body: post.body, view_count: post.viewCount ?? 0,
       })
+      sessionStorage.setItem('qna_created_message', '질문을 등록했어요.')
+      setQnaOpenId(post.id)
+      setActiveTab('qna')
     } catch (error) {
       console.error('Supabase QNA save failed; kept local state.', error)
     }

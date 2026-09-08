@@ -7,7 +7,7 @@ const MAX_IMAGE_EDGE = 4096
 const PUBLIC_OBJECT_MARKER = `/storage/v1/object/public/${IMAGE_BUCKET}/`
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'])
 
-type ImageArea = 'pets' | 'profiles'
+type ImageArea = 'pets' | 'profiles' | 'reviews'
 
 function imageExtension(file: File) {
   const mimeExtension = file.type.split('/')[1]?.toLowerCase().replace('jpeg', 'jpg').replace(/[^a-z0-9]/g, '')
