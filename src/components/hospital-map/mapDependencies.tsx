@@ -178,12 +178,20 @@ export function CategoryTagIcon({ category }: { category: AnimalCategory }) {
 }
 
 
+let naverMapsAuthFailed = false
 export function loadNaverMaps(clientId: string) {
+  if (naverMapsAuthFailed) return Promise.reject(new Error('NAVER Maps authentication failed.'))
   if (window.naver?.maps?.Map) return Promise.resolve(window.naver)
   if (naverMapsLoader) return naverMapsLoader
 
   naverMapsLoader = new Promise<NaverMapApi>((resolve, reject) => {
+    window.navermap_authFailure = () => {
+      naverMapsAuthFailed = true
+      window.dispatchEvent(new Event('naver-map-auth-failure'))
+      reject(new Error('NAVER Maps authentication failed.'))
+    }
     const finish = () => {
+      if (naverMapsAuthFailed) { reject(new Error('NAVER Maps authentication failed.')); return }
       if (window.naver?.maps?.Map) resolve(window.naver)
       else reject(new Error('NAVER Maps JavaScript API namespace is unavailable.'))
     }
@@ -698,7 +706,7 @@ export function hospitalMarkerContent(hospital: Hospital, active: boolean, revie
   const openingClass = hospital.isOpenNow === true ? ' is-open' : ''
   const openingLabel = hospital.isOpenNow === true ? '영업 중' : hospital.isOpenNow === false ? '영업 종료' : '영업 상태 미확인'
   const savedLabel = liked ? ', 찜한 병원' : ''
-  return `<button class="exo-hospital-marker${openingClass}${active ? ' is-selected' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}, ${openingLabel}, 리뷰 ${reviewCount}개${savedLabel}"><span class="exo-marker-pin" aria-hidden="true"><b>${hospital.isOpenNow === true ? '+' : hospital.isOpenNow === false ? '×' : '?'}</b></span></button>`
+  return `<button class="exo-hospital-marker${openingClass}${active ? ' is-selected' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}, ${openingLabel}, 리뷰 ${reviewCount}개${savedLabel}"><svg class="exo-marker-pin" viewBox="0 0 28 38" aria-hidden="true"><path d="M14 37C11 30 1 22 1 14a13 13 0 0 1 26 0c0 8-10 16-13 23Z"/><path class="exo-marker-letter" d="M10 8v13M18 8v13M10 14.5h8"/></svg></button>`
 }
 
 export function readStoredReviews() {

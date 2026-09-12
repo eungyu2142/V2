@@ -12,12 +12,11 @@ import type { HospitalRecommendationConcern, HospitalReview, HospitalSnapshot } 
 import NotificationOptInNudge from '../../components/notifications/NotificationOptInNudge'
 import { OptionalBadge } from '../../components/common/FieldMarkers'
 import { sanitizeImageFile } from '../../lib/imageStorage'
-import DiaryMobileScreen from './DiaryMobileScreen'
-import type { MobileDiaryAlert, MobileDiaryPrediction, MobileDiaryQuickAction, MobileDiaryRecord, MobileDiaryRoutine } from './DiaryMobileScreen'
+import DiaryMobileScreen, { DiarySubHeader } from './DiaryMobileScreen'
+import Mascot from '../../components/common/Mascot'
+import './diary-flow.css'
+import type { MobileDiaryAlert, MobileDiaryQuickAction, MobileDiaryRoutine } from './DiaryMobileScreen'
 import DiaryGlyph, { type DiaryGlyphName } from './DiaryGlyph'
-import 'react-calendar/dist/Calendar.css'
-import './DiaryPage.css'
-import './DiaryMobileScreen.css'
 
 export type DiaryPet = {
   id: string
@@ -241,6 +240,7 @@ function recordTypeGlyph(type: PetRecordType): DiaryGlyphName {
 }
 
 const routineGlyphs: Partial<Record<ReminderType, DiaryGlyphName>> = {
+  medicine: 'medicine', uvb_check: 'uvb', water_quality: 'water', filter_check: 'water', custom: 'other',
   feed: 'feed', water: 'water', mist: 'mist', weight: 'weight', temperature: 'temperature', water_temperature: 'temperature', humidity: 'humidity', cleaning: 'cleaning', partial_cleaning: 'cleaning', full_cleaning: 'cleaning', substrate_change: 'cleaning', structure_cleaning: 'cleaning', wall_wipe: 'cleaning', hospital: 'hospital',
 }
 
@@ -335,12 +335,6 @@ function isFullyAquaticTurtlePet(pet?: DiaryPet) {
 function isSemiAquaticTurtlePet(pet?: DiaryPet) {
   const species = normalizeFoodMatchText(pet?.species)
   return species.includes('반수생거북') || species.includes('semiaquaticturtle') || species.includes('terrapin')
-}
-
-function shouldHideShedForPet(pet?: DiaryPet) {
-  const species = pet?.species.trim().toLowerCase() ?? ''
-  if (!species) return false
-  return ['아홀로틀', 'axolotl', '거북', '거북이', '육지거북', '육지 거북', '수생거북', '수생 거북', '반수생 거북', 'turtle', 'tortoise', 'terrapin'].some((keyword) => species.includes(keyword))
 }
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
@@ -548,17 +542,6 @@ function environmentRiskLabel(level: RiskLevel) {
   return ['정상', '정상', '확인 필요', '조치 필요', '긴급 점검', '즉시 대응'][level]
 }
 
-function useDiaryMobileLayout() {
-  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 760px) and (orientation: portrait)').matches)
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 760px) and (orientation: portrait)')
-    const update = () => setMobile(media.matches)
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [])
-  return mobile
-}
-
 export default function DiaryPage({
   userId,
   pets,
@@ -595,7 +578,6 @@ export default function DiaryPage({
   onDeleteDraft?: (draftId: string) => void | Promise<void>
 }) {
   const today = toDateKey(new Date())
-  const mobileLayout = useDiaryMobileLayout()
   const [selectedPetId, setSelectedPetId] = useState(() => getInitialDiaryPetId(userId, pets, initialPetId))
   const [selectedDate, setSelectedDate] = useState(today)
   const [mobileView, setMobileView] = useState<'plan' | 'calendar'>('plan')
@@ -603,6 +585,7 @@ export default function DiaryPage({
   const [records, setRecords] = useState<PetRecord[]>([])
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([])
+  const [routineLoadError, setRoutineLoadError] = useState('')
   const [speciesCareProfiles, setSpeciesCareProfiles] = useState<SpeciesCareProfile[]>(fallbackSpeciesCareProfiles)
   const [usingCarePlans, setUsingCarePlans] = useState(false)
   const [createType, setCreateType] = useState<PetRecordType | null>(null)
@@ -627,6 +610,7 @@ export default function DiaryPage({
   const [visualizationOpen, setVisualizationOpen] = useState(false)
   const [completingReminder, setCompletingReminder] = useState<Reminder | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
+  const [routineManagerOpen, setRoutineManagerOpen] = useState(false)
   const [clinicEditorOpen, setClinicEditorOpen] = useState(false)
   const [clinicDraft, setClinicDraft] = useState<ClinicDraft | null>(null)
   const [clinicSaving, setClinicSaving] = useState(false)
@@ -637,6 +621,8 @@ export default function DiaryPage({
   const [petWarningOpen, setPetWarningOpen] = useState(false)
   const [petMenuOpen, setPetMenuOpen] = useState(false)
   const [smartSheet, setSmartSheet] = useState<SmartAddKind | null>(null)
+  const [smartMemo, setSmartMemo] = useState('')
+  const [smartPhoto, setSmartPhoto] = useState<string | undefined>()
   const [smartFoodKind, setSmartFoodKind] = useState('')
   const [smartFoodQuantity, setSmartFoodQuantity] = useState('1')
   const [smartFoodUnit, setSmartFoodUnit] = useState('마리')
@@ -720,10 +706,15 @@ export default function DiaryPage({
 
   useEffect(() => {
     if (initialAction !== 'routine-create' || !effectivePetId) return
-    setEditingReminder(null)
-    setRoutinePresetType(null)
-    setReminderFormOpen(true)
-    onInitialActionHandled?.()
+    let active = true
+    queueMicrotask(() => {
+      if (!active) return
+      setEditingReminder(null)
+      setRoutinePresetType(null)
+      setRoutineManagerOpen(true)
+      onInitialActionHandled?.()
+    })
+    return () => { active = false }
   }, [effectivePetId, initialAction, onInitialActionHandled])
   const recentFoods = Array.from(new Set(petRecords.flatMap((record) => record.type === 'food' ? record.foods ?? [] : []))).slice(0, 3)
   const matingPetCandidates = selectedPet ? pets.filter((pet) => sameSpecies(pet, selectedPet)) : []
@@ -798,13 +789,15 @@ export default function DiaryPage({
     .map((item) => ({ ...item, dailyTask: undefined }))
   const planReminders = [...dailyTaskPlanReminders, ...immediatePlanReminders]
     .filter((item) => !selectedPet || isReminderVisibleForPet(item.reminder, selectedPet, speciesCareProfiles))
-  const mobileRoutines: MobileDiaryRoutine[] = (selectedDate > today ? [] : planReminders.filter((item) => !item.overdue)).map((item) => ({
+  const mobileRoutines: MobileDiaryRoutine[] = (selectedDate > today ? [] : planReminders.filter((item) => !item.dailyTask || item.dailyTask.status !== 'skipped')).map((item) => ({
     id: item.dailyTask?.id ?? item.reminder.id,
     label: planLabel(item.reminder, selectedPet),
     time: item.reminder.reminderTime,
     icon: routineGlyphs[item.reminder.reminderType],
     completed: item.dailyTask ? item.dailyTask.status === 'completed' : item.reminder.completedAt?.slice(0, 10) === selectedDate,
-    disabled: selectedDate !== today,
+    disabled: readOnly || selectedDate !== today,
+    overdue: item.overdue,
+    requiresInput: reminderMeta[item.reminder.reminderType].inputType !== 'check',
   }))
   const mobileQuickActions: MobileDiaryQuickAction[] = [
     { id: 'food', label: '먹이', icon: 'feed', disabled: selectedDate !== today, onClick: () => openSmartAdd('food') },
@@ -820,8 +813,6 @@ export default function DiaryPage({
     { id: 'medicine', label: '약', icon: 'medicine', disabled: selectedDate !== today, onClick: () => openIncidentRoutine('medicine') },
     { id: 'other', label: '기타', icon: 'other', disabled: selectedDate !== today, onClick: () => { if (!selectedPet) return; setRecordDate(selectedDate); setRecordInitialDraft(createRecordDraftInitialValue('other', selectedPet)); setCreateType('other') } },
   ]
-  const mobileAgenda = mobileRecordsForDate(petRecords, selectedDate)
-  const mobilePredictions: MobileDiaryPrediction[] = calendarCyclePredictions.map((prediction) => ({ type: prediction.type, label: prediction.type === 'egg' ? '산란 예상 주기' : '탈피 예상 주기', startDate: prediction.startDate, endDate: prediction.endDate }))
   const mobileInsight = buildDiaryInsights(petRecords, selectedPet?.name ?? '펫', resolvedInsightIds)[0]
   const hasTemporaryPoopRoutine = petCarePlans.some((reminder) => reminder.isActive && reminder.purpose === 'poop_follow_up')
   const hasActiveMistRoutine = petCarePlans.some((reminder) => reminder.isActive && reminder.reminderType === 'mist')
@@ -835,6 +826,8 @@ export default function DiaryPage({
     actions: mobileInsight.poopRecovered ? [
       { label: '유지하기', onClick: () => { resolveDiaryInsight(mobileInsight.id); showSmartToast('임시 루틴을 유지합니다.') } },
       { label: '종료하기', onClick: () => { closeTemporaryPoopRoutines(); resolveDiaryInsight(mobileInsight.id) } },
+    // The factory only returns event callbacks; completion refs are read after a click.
+    // eslint-disable-next-line react-hooks/refs
     ] : buildMobileDiaryAlertActions({
       insight: mobileInsight,
       onOpenRecords: () => setVisualizationOpen(true),
@@ -852,6 +845,11 @@ export default function DiaryPage({
       },
       onAddTemporaryRoutine: (type) => addTemporaryPoopRoutine(type, mobileInsight.id.split('-').at(-1)),
     }),
+  } : undefined
+  const overdueRoutine = mobileRoutines.find((routine) => !routine.completed && (routine.overdue || Boolean(routine.time && routine.time < new Date().toTimeString().slice(0, 5))))
+  const routineDueAlert: MobileDiaryAlert | undefined = !readOnly && selectedDate === today && overdueRoutine ? {
+    severity: 'warning', badge: '루틴', title: overdueRoutine.label + ' 확인 시간이 지났어요.', body: '아직 ' + overdueRoutine.label + ' 루틴이 완료되지 않았어요.',
+    actions: [{ label: '확인하기', onClick: () => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === overdueRoutine.id); if (item) void completePlan(item.reminder, item.dailyTask) } }],
   } : undefined
   const selectedRecord = selectedRecordId ? records.find((record) => record.id === selectedRecordId) : null
 
@@ -910,7 +908,7 @@ export default function DiaryPage({
       toDateKey(new Date(monthStart.getTime() - 86400000 * 14)),
       toDateKey(new Date(monthEnd.getTime() + 86400000 * 14)),
       effectivePetId,
-    ).then(setDailyTasks).catch(() => setDailyTasks([]))
+    ).then((tasks) => { setDailyTasks(tasks); setRoutineLoadError('') }).catch(() => setRoutineLoadError('루틴 완료 상태를 불러오지 못했어요. 저장된 루틴 일정을 표시합니다.'))
   }, [effectivePetId, userId, usingCarePlans, visibleMonth])
 
   useEffect(() => {
@@ -1081,6 +1079,8 @@ export default function DiaryPage({
     }
     if (selectedDate > today) return
     setSmartSheet((current) => current === kind ? null : kind)
+    setSmartMemo('')
+    setSmartPhoto(undefined)
     setSmartFoodKind('')
     setSmartFoodQuantity('1')
     setSmartFoodUnit('마리')
@@ -1250,9 +1250,9 @@ export default function DiaryPage({
       petId: selectedPet.id,
       type,
       date: selectedDate,
-      memo,
+      memo: [memo, smartMemo.trim()].filter(Boolean).join(' · '),
       foods,
-      photoUrl: photo,
+      photoUrl: photo ?? smartPhoto,
       incidentRecord,
       createdAt: new Date().toISOString(),
     }, message)
@@ -1268,7 +1268,8 @@ export default function DiaryPage({
       petId: selectedPet.id,
       type: 'poop',
       date: selectedDate,
-      memo: statusLabel,
+      memo: [statusLabel, smartMemo.trim()].filter(Boolean).join(' · '),
+      photoUrl: smartPhoto,
       stoolRecord: { status, statusLabel },
       createdAt: new Date().toISOString(),
     }
@@ -1449,7 +1450,7 @@ export default function DiaryPage({
     showSmartToast(`${label} 완료 기록이 저장되었습니다`)
   }
 
-  const completeFeedingPlan = async () => {
+  const completeFeedingPlan = async (feedingAmount: string) => {
     if (!selectedPet || !feedingCompletion) return
     const customName = customFeedingName.trim()
     const foods: FeedingFoodItem[] = [
@@ -1474,6 +1475,7 @@ export default function DiaryPage({
         memo: planLabel(reminder),
         foods: foodNames,
         feedingFoods: foods,
+        feedingAmount: feedingAmount.trim() || undefined,
         dailyTaskId: dailyTask?.id,
         scheduledFor: dailyTask?.scheduledDate,
         occurredAt: completedAt,
@@ -1839,6 +1841,13 @@ export default function DiaryPage({
     )
   }
 
+  if (routineManagerOpen) return <main className="diary-create-screen diary-routine-manager">
+    <DiarySubHeader title="루틴 관리" onBack={() => setRoutineManagerOpen(false)} />
+    <CarePlanPanel plans={reminders} selectedPetId={effectivePetId} onAdd={openReminderCreate} onEdit={(reminder) => { setEditingReminder(reminder); setRoutinePresetType(null); setReminderFormOpen(true) }} onToggle={(plan) => saveReminderList(reminders.map((item) => item.id === plan.id ? { ...item, isActive: !item.isActive, updatedAt: new Date().toISOString() } : item))} onDelete={removePlan} />
+    {planReminders.some((item) => item.overdue) && <DailyPlan pet={selectedPet} tasks={planReminders.filter((item) => item.overdue)} selectedDate={selectedDate} hasCarePlans onAddPlan={openReminderCreate} onEditPlan={(reminder) => { setEditingReminder(reminder); setRoutinePresetType(null); setReminderFormOpen(true) }} onDeletePlan={removePlan} onComplete={(item) => completePlan(item.reminder, item.dailyTask)} onSkip={(item) => skipPlan(item.dailyTask)} />}
+    {!readOnly && <NotificationOptInNudge userId={userId} hasActiveRoutines={petCarePlans.some((reminder) => reminder.isActive)} />}
+  </main>
+
   const dateRecordsView = dateDetailsOpen ? (
     <DateRecordsScreen
       date={selectedDate}
@@ -1846,22 +1855,10 @@ export default function DiaryPage({
       onBack={() => setDateDetailsOpen(false)}
       onOpenRecord={(record) => setSelectedRecordId(record.sourceIds?.[0] ?? record.id)}
       onDelete={(recordIds) => { void removeRecords(recordIds) }}
-      onAddMemo={(memo) => {
-        if (!selectedPet) return
-        saveRecordList([{
-          id: crypto.randomUUID(),
-          userId,
-          petId: selectedPet.id,
-          type: 'other',
-          date: selectedDate,
-          memo,
-          createdAt: new Date().toISOString(),
-          status: 'manual',
-        }, ...records])
-      }}
       canWrite={!readOnly && selectedDate === today}
       onAddRecord={() => { if (selectedDate !== today) return; setDateDetailsOpen(false); setMobileRecordMenuOpen(true) }}
-      mobileActions={null}
+      routines={mobileRoutines}
+      onToggleRoutine={(id) => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id); if (item) void completePlan(item.reminder, item.dailyTask) }}
     />
   ) : null
 
@@ -1884,137 +1881,40 @@ export default function DiaryPage({
 
   return (
     <section className="diary-page">
-      {dateRecordsView ?? (mobileLayout ? (
-        <>
-          <DiaryMobileScreen
-            petName={selectedPet?.name ?? '펫 선택'}
-            canChangePet={!readOnly && pets.length > 1}
-            alert={mobileAlert}
-            routines={mobileRoutines}
-            quickActions={mobileQuickActions}
-            agenda={mobileAgenda}
-            selectedDateLabel={formatMobileAgendaDate(selectedDate)}
-            predictions={mobilePredictions}
-            calendar={<Calendar mobileMode month={visibleMonth} selectedDate={selectedDate} records={calendarPetRecords} cyclePredictions={calendarCyclePredictions} onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))} onSelect={(date) => { setSelectedDate(date); setDateDetailsOpen(true) }} />}
-            onChangePet={() => setPetMenuOpen(true)}
-            onToggleRoutine={(id) => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id); if (item) void completePlan(item.reminder, item.dailyTask) }}
-            onUndoRoutine={(id) => {
-              const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id)
-              if (!item) return
-              const linkedRecord = records.find((record) => item.dailyTask ? record.dailyTaskId === item.dailyTask.id : record.petId === item.reminder.petId && record.date === selectedDate && record.memo === planLabel(item.reminder, selectedPet))
-              if (linkedRecord) void removeRecords(linkedRecord.id)
-            }}
-            onAddRoutine={openReminderCreate}
-            onOpenRecords={() => setVisualizationOpen(true)}
-            recordMenuOpen={mobileRecordMenuOpen}
-            onRecordMenuChange={setMobileRecordMenuOpen}
-          />
-          {petMenuOpen && selectedPet && <PetMenuDrawer currentPet={selectedPet} pets={pets} selectedPetId={effectivePetId} onClose={() => setPetMenuOpen(false)} onSelect={switchPet} />}
-        </>
-      ) : (
-        <>
-      <div className={`diary-pet-bar ${!readOnly && pets.length > 1 ? 'has-menu' : 'single-pet'}`}>
-        {!readOnly && pets.length > 1 && (
-          <button className="diary-pet-menu-trigger" type="button" aria-label="펫 전환 메뉴 열기" aria-expanded={petMenuOpen} onClick={() => setPetMenuOpen(true)}>
-            <span />
-            <span />
-            <span />
-          </button>
-        )}
-        <div className="diary-pet-profile">
-          <PetAvatar pet={selectedPet} />
-          <span>
-            <span className="diary-pet-name-line">
-              <strong>{selectedPet?.name ?? '등록된 펫이 없어요'}</strong>
-              {selectedPet && <GenderMark gender={selectedPet.gender} />}
-            </span>
-            {selectedPet ? (
-              <>
-                <small>{selectedPet.species || '종 미등록'}</small>
-                <small>{formatPetMetrics(selectedPet) || '무게 · 나이 미입력'}</small>
-              </>
-            ) : <small>펫을 먼저 등록해 주세요</small>}
-          </span>
-        </div>
-        <button className="diary-record-top-button diary-record-desktop-button" type="button" onClick={() => setVisualizationOpen(true)}>기록 모아보기</button>
-      </div>
-      {petMenuOpen && selectedPet && (
-        <PetMenuDrawer
-          currentPet={selectedPet}
-          pets={pets}
-          selectedPetId={effectivePetId}
-          onClose={() => setPetMenuOpen(false)}
-          onSelect={switchPet}
+      {routineLoadError && <p role="status" className="px-4 py-2 text-sm text-(--color-text-secondary)">{routineLoadError}</p>}
+      {dateRecordsView ?? <>
+        <DiaryMobileScreen
+          petName={selectedPet?.name ?? '펫 선택'}
+          petPhoto={selectedPet?.photo}
+          canChangePet={!readOnly && pets.length > 1}
+          canWrite={!readOnly && selectedDate === today}
+          alert={mobileAlert ?? routineDueAlert}
+          routines={mobileRoutines}
+          quickActions={mobileQuickActions}
+          selectedDateLabel={formatMobileAgendaDate(selectedDate)}
+          calendarOpen={mobileView === 'calendar'}
+          onCalendarChange={(open) => { setMobileView(open ? 'calendar' : 'plan'); if (!open) setSelectedDate(today) }}
+          calendar={<Calendar month={visibleMonth} selectedDate={selectedDate} records={calendarPetRecords} cyclePredictions={calendarCyclePredictions} onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))} onSelect={(date) => { setSelectedDate(date); setDateDetailsOpen(true) }} />}
+          onChangePet={() => setPetMenuOpen(true)}
+          onToggleRoutine={(id) => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id); if (item) void completePlan(item.reminder, item.dailyTask) }}
+          onOpenCompletedRoutine={(id) => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id); if (!item) return; const record = records.find((entry) => item.dailyTask ? entry.dailyTaskId === item.dailyTask.id : entry.petId === item.reminder.petId && entry.date === selectedDate && entry.memo === planLabel(item.reminder, selectedPet)); if (record) setSelectedRecordId(record.id) }}
+          onAddRoutine={openReminderCreate}
+          onManageRoutines={() => setRoutineManagerOpen(true)}
+          recordMenuOpen={mobileRecordMenuOpen}
+          onRecordMenuChange={setMobileRecordMenuOpen}
         />
-      )}
-
-      <DiaryNotice
-        records={petRecords}
-        reminders={petCarePlans}
-        petName={selectedPet?.name ?? '펫'}
-        resolvedInsightIds={resolvedInsightIds}
-        followedUpInsightIds={followedUpInsightIds}
-        onShedComplete={() => saveShedCheckRecord('탈피 완료')}
-        onShedNotYet={() => saveShedCheckRecord('탈피 확인 · 완료 안됨')}
-        onFollowUpInsight={markDiaryInsightFollowUp}
-        onResolveInsight={resolveDiaryInsight}
-        onKeepInsight={keepDiaryInsight}
-        onCreateQna={selectedPet && onCreateQna ? (metric) => onCreateQna(selectedPet.id, metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : metric === 'poop' ? { category: '질병', title: '배변 관련 질문' } : undefined) : undefined}
-        onFindHospital={selectedPet && onFindHospital ? (concern) => onFindHospital(selectedPet.id, concern) : undefined}
-        onRecordEnvironment={() => {
-          const environmentRoutine = petCarePlans.find((reminder) => reminder.isActive && (reminder.reminderType === 'humidity' || reminder.reminderType === 'temperature'))
-          if (environmentRoutine) void completePlan(environmentRoutine)
-          else { setEditingReminder(null); setRoutinePresetType('humidity'); setReminderFormOpen(true) }
-        }}
-        onAddTemporaryRoutine={(type, sourceRecordId) => addTemporaryPoopRoutine(type, sourceRecordId)}
-        onOpenRecords={() => setVisualizationOpen(true)}
-        onKeepTemporaryRoutines={(insightId) => { resolveDiaryInsight(insightId); showSmartToast('임시 루틴을 유지합니다.') }}
-        onCloseTemporaryRoutines={(insightId) => { closeTemporaryPoopRoutines(); resolveDiaryInsight(insightId) }}
-      />
-
-      {!readOnly && (
-        <NotificationOptInNudge
-          userId={userId}
-          hasActiveRoutines={petCarePlans.some((reminder) => reminder.isActive)}
-        />
-      )}
-
-      <div className="diary-content-shell">
-        <div className="diary-main-flow">
-          <div className="diary-view-toolbar">
-            <div className="diary-mobile-tabs" role="tablist" aria-label="다이어리 보기">
-              <button type="button" className={mobileView === 'plan' ? 'active' : ''} onClick={() => setMobileView('plan')}>플랜</button>
-              <button type="button" className={mobileView === 'calendar' ? 'active' : ''} onClick={() => setMobileView('calendar')}>캘린더</button>
-            </div>
-          </div>
-
-          <div className={`diary-workspace mobile-${mobileView}`}>
-            <main className="diary-calendar-area">
-              <Calendar
-                key={effectivePetId}
-                month={visibleMonth}
-                selectedDate={selectedDate}
-                records={calendarPetRecords}
-                cyclePredictions={calendarCyclePredictions}
-                onMove={(amount) => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1))}
-                onSelect={(date) => { if (date === selectedDate) setDateDetailsOpen(true); else setSelectedDate(date) }}
-              />
-            </main>
-            <aside className="diary-detail-panel">
-              {!readOnly && <DailyPlan pet={selectedPet} tasks={planReminders} selectedDate={selectedDate} hasCarePlans={petCarePlans.length > 0} onAddPlan={openReminderCreate} onEditPlan={(reminder) => { setEditingReminder(reminder); setRoutinePresetType(null); setReminderFormOpen(true) }} onDeletePlan={removePlan} onComplete={(item) => completePlan(item.reminder, item.dailyTask)} onSkip={(item) => skipPlan(item.dailyTask)} />}
-              {!readOnly && <IncidentAddBar pet={selectedPet} disabled={selectedDate > today} onOpen={openSmartAdd} onOpenRoutine={openIncidentRoutine} />}
-            </aside>
-          </div>
-        </div>
-      </div>
-
-        </>
-      ))}
+        {petMenuOpen && selectedPet && <PetMenuDrawer currentPet={selectedPet} pets={pets} selectedPetId={effectivePetId} onClose={() => setPetMenuOpen(false)} onSelect={switchPet} />}
+      </>}
 
       {smartSheet && selectedPet && (
         <Overlay onClose={() => setSmartSheet(null)}>
           <SmartAddSheet
             kind={smartSheet}
+            date={selectedDate}
+            memo={smartMemo}
+            photo={smartPhoto}
+            onMemo={setSmartMemo}
+            onPhoto={setSmartPhoto}
             pet={selectedPet}
             recentFoods={recentFoods}
             matingPetCandidates={matingPetCandidates}
@@ -2421,7 +2321,6 @@ function CarePlanPanel({
   )
 }
 
-void CarePlanPanel
 
 function formatPlanDays(plan: Reminder) {
   if (plan.recurrenceType === 'interval') return `${Math.max(1, plan.recurrenceIntervalDays ?? 1)}일마다`
@@ -2620,35 +2519,8 @@ function ClinicRecordNextActions({
   )
 }
 
-function IncidentAddBar({
-  pet,
-  disabled,
-  onOpen,
-  onOpenRoutine,
-}: {
-  pet?: DiaryPet
-  disabled: boolean
-  onOpen: (kind: SmartAddKind) => void
-  onOpenRoutine: (kind: 'medicine' | 'hospital') => void
-}) {
-  const petGroup = pet?.group
-  const showShed = (petGroup === 'reptile' || petGroup === 'amphibian') && !shouldHideShedForPet(pet)
-  const recordItems: Array<{ kind: SmartAddKind; label: string; glyph: DiaryGlyphName }> = [
-    { kind: 'poop', label: '배변', glyph: 'poop' },
-    ...(showShed ? [{ kind: 'shed' as const, label: '탈피', glyph: 'shed' as const }] : []),
-    ...((petGroup === 'reptile' || petGroup === 'amphibian') ? [
-      { kind: 'mating' as const, label: '메이팅', glyph: 'mating' as const },
-      { kind: 'egg' as const, label: '산란', glyph: 'egg' as const },
-    ] : []),
-  ]
-  const routineItems: Array<{ kind: 'medicine' | 'hospital'; label: string; glyph: DiaryGlyphName }> = [
-    { kind: 'hospital', label: '진료', glyph: 'hospital' },
-  ]
-  return <section className="incident-add-panel"><header><h2>상황별 기록</h2></header><div className="incident-add-actions">{recordItems.map((item) => <button type="button" disabled={disabled} key={item.kind} onClick={() => onOpen(item.kind)}><DiaryGlyph className="incident-add-icon" name={item.glyph} />{item.label}</button>)}{routineItems.map((item) => <button type="button" key={item.kind} onClick={() => onOpenRoutine(item.kind)}><DiaryGlyph className="incident-add-icon" name={item.glyph} />{item.label}</button>)}</div></section>
-}
-
 function SmartAddSheet({
-  kind,
+  kind, date, memo, photo, onMemo, onPhoto,
   pet,
   recentFoods,
   matingPetCandidates,
@@ -2681,6 +2553,11 @@ function SmartAddSheet({
   onEggSave,
 }: {
   kind: SmartAddKind
+  date: string
+  memo: string
+  photo?: string
+  onMemo: (value: string) => void
+  onPhoto: (value?: string) => void
   pet: DiaryPet
   recentFoods: string[]
   matingPetCandidates: DiaryPet[]
@@ -2727,8 +2604,8 @@ function SmartAddSheet({
 
   return (
     <div className="smart-add-sheet">
-      <span className="sheet-handle" />
       <div className="smart-add-sheet-heading"><DiaryGlyph name={sheetGlyph} /><span><h2>{sheetTitle}</h2><p className="smart-add-sheet-pet">{pet.name}의 기록을 남겨요.</p></span></div>
+      <label className="smart-record-date">날짜<input type="date" value={date} readOnly /></label>
       {kind === 'food' && (
         <>
           {recentFoods.length > 0 && <div className="smart-recent-section"><strong>최근에 준 먹이</strong><div className="smart-choice-list">{recentFoods.map((food) => <button type="button" key={food} onClick={() => onFoodSave(food)}>{food}</button>)}</div></div>}
@@ -2737,17 +2614,20 @@ function SmartAddSheet({
           {foodValue && <button className="smart-save-button" type="button" onClick={() => onFoodSave(foodValue)}>이 내용으로 기록</button>}
         </>
       )}
-      {kind === 'poop' && <div className="smart-choice-list">{poopOptions.map((status) => <button type="button" className={poopStatus === status ? 'selected' : ''} key={status} onClick={() => { onPoopStatus(status); onPoopSave(status) }}>{status}</button>)}</div>}
+      {kind === 'poop' && <div className="smart-choice-list">{poopOptions.map((status) => <button type="button" className={poopStatus === status ? 'selected' : ''} key={status} aria-pressed={poopStatus === status} onClick={() => onPoopStatus(status)}>{status}</button>)}</div>}
       {kind === 'shed' && <div className="smart-choice-list">{shedOptions.map((status) => {
         const disabled = status === '탈피 완료' && !canCompleteShed
-        return <button type="button" className={shedStatus === status ? 'selected' : ''} key={status} disabled={disabled} aria-disabled={disabled} title={disabled ? '탈피 시작을 먼저 기록해주세요' : undefined} onClick={() => { onShedStatus(status); onShedSave(status) }}>{status}</button>
+        return <button type="button" className={shedStatus === status ? 'selected' : ''} key={status} disabled={disabled} aria-disabled={disabled} title={disabled ? '탈피 시작을 먼저 기록해주세요' : undefined} aria-pressed={shedStatus === status} onClick={() => onShedStatus(status)}>{status}</button>
       })}</div>}
+      {(kind === 'poop' || kind === 'shed') && <details className="diary-record-details"><summary>상세 기록하기 (선택)<GuideAction symbol="⌄" /></summary><label>메모<textarea value={memo} onChange={(event) => onMemo(event.target.value)} placeholder="내용을 입력하세요." /></label><PhotoPicker value={photo} onChange={onPhoto} /></details>}
+      {kind === 'poop' && <button className="smart-save-button" type="button" disabled={!poopStatus} onClick={() => onPoopSave(poopStatus)}>저장하기</button>}
+      {kind === 'shed' && <button className="smart-save-button" type="button" disabled={!shedStatus} onClick={() => onShedSave(shedStatus)}>저장하기</button>}
       {kind === 'mating' && (
         <div className="smart-pair-fields">
           <label>암컷<select value={matingFemaleId} onChange={(event) => onMatingFemale(event.target.value)}><option value="">선택</option>{femaleCandidates.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.name} · {candidate.species}</option>)}</select></label>
           <label>수컷<select value={matingMaleId} onChange={(event) => onMatingMale(event.target.value)}><option value="">선택</option>{maleCandidates.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.name} · {candidate.species}</option>)}</select></label>
           {(!femaleCandidates.length || !maleCandidates.length) && <p className="smart-empty">같은 종의 암컷과 수컷이 모두 있어야 기록할 수 있어요.</p>}
-          {matingReady && <button className="smart-save-button" type="button" onClick={onMatingSave}>메이팅 기록</button>}
+          {matingReady && <button className="smart-save-button" type="button" onClick={onMatingSave}>저장하기</button>}
         </div>
       )}
       {kind === 'egg' && (
@@ -2759,7 +2639,7 @@ function SmartAddSheet({
           </div>
           {matingOptions.length === 0 && <p className="smart-empty">메이팅 기록이 없어 무정란만 기록할 수 있어요.</p>}
           {eggFertility === 'fertilized' && matingOptions.length > 0 && <><strong>연결할 메이팅</strong><div className="smart-choice-list">{matingOptions.map((option) => <button type="button" className={eggMatingId === option.id ? 'selected' : ''} key={option.id} onClick={() => onEggMating(option.id)}>{option.label}</button>)}</div></>}
-          {eggReady && <button className="smart-save-button" type="button" onClick={onEggSave}>산란 기록</button>}
+          {eggReady && <button className="smart-save-button" type="button" onClick={onEggSave}>저장하기</button>}
         </div>
       )}
       {kind === 'water' && <div className="smart-choice-list">{waterOptions.map((option) => <button type="button" key={option} onClick={() => onWaterSave(option)}>{option}</button>)}</div>}
@@ -2850,8 +2730,8 @@ function Calendar({
           const predictionTypes = cyclePredictions.flatMap((prediction) => key >= prediction.startDate && key <= prediction.endDate ? [
             `expected-${prediction.type}`,
             `expected-range-${prediction.type}`,
-            key === prediction.startDate ? 'expected-range-start' : '',
-            key === prediction.endDate ? 'expected-range-end' : '',
+            key === prediction.startDate || date.getDay() === (mobileMode ? 1 : 0) ? 'expected-range-start' : '',
+            key === prediction.endDate || date.getDay() === (mobileMode ? 0 : 6) ? 'expected-range-end' : '',
           ] : []).filter(Boolean).join(' ')
           const hasClinicPlan = records.some((record) => record.date === key && record.type === 'hospital' && record.memo === '진료 예정')
           return `calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${date.getMonth() !== month.getMonth() ? 'muted' : ''} ${predictionTypes} ${hasClinicPlan ? 'expected-clinic' : ''}`
@@ -2898,7 +2778,7 @@ function RecordDetailScreen({
           <div><dt>종류</dt><dd>{recordMeta[record.type].label}</dd></div>
           <div><dt>날짜</dt><dd>{formatDate(record.date)}</dd></div>
           {record.type === 'weight' && record.weight !== undefined && <div><dt>무게</dt><dd>{formatWeightValue(record.weight)}g</dd></div>}
-          {getRecordFoodNames(record).length ? <div><dt>먹이</dt><dd>{getRecordFoodNames(record).join(' · ')}</dd></div> : null}
+          {getRecordFoodNames(record).length ? <div><dt>먹이</dt><dd>{getRecordFoodNames(record).join(' · ')}{record.feedingAmount ? ' · ' + record.feedingAmount : ''}</dd></div> : null}
           {record.environmentRecord && (
             <>
               <div><dt>{getEnvironmentRecordTitle(record.environmentRecord)}</dt><dd>{formatEnvironmentValue(record.environmentRecord)}</dd></div>
@@ -3300,117 +3180,21 @@ function PhotoPicker({ value, onChange }: { value?: string; onChange: (value?: s
   )
 }
 
-function DateRecordsScreen({ date, records, mobileActions, canWrite, onBack, onOpenRecord, onDelete, onAddMemo, onAddRecord }: { date: string; records: DisplayPetRecord[]; mobileActions?: ReactNode; canWrite: boolean; onBack: () => void; onOpenRecord: (record: DisplayPetRecord) => void; onDelete: (id: string | string[]) => void; onAddMemo: (memo: string) => void; onAddRecord: () => void }) {
-  const [memo, setMemo] = useState('')
+function DateRecordsScreen({ date, records, routines, canWrite, onBack, onOpenRecord, onDelete, onAddRecord, onToggleRoutine }: { date: string; records: DisplayPetRecord[]; routines: MobileDiaryRoutine[]; canWrite: boolean; onBack: () => void; onOpenRecord: (record: DisplayPetRecord) => void; onDelete: (id: string | string[]) => void; onAddRecord: () => void; onToggleRoutine: (id: string) => void }) {
   const [filter, setFilter] = useState<'routine' | 'record'>('record')
-  const saveMemo = () => {
-    const nextMemo = memo.trim()
-    if (!nextMemo) return
-    onAddMemo(nextMemo)
-    setMemo('')
-  }
-
-  const isRoutineRecord = (record: DisplayPetRecord) => Boolean(record.dailyTaskId || getRoutineTypeFromRecord(record))
-  const filteredRecords = records
-    .filter((record) => filter === 'routine' ? isRoutineRecord(record) : !isRoutineRecord(record))
-    .slice()
-    .sort((a, b) => (a.occurredAt ?? a.createdAt).localeCompare(b.occurredAt ?? b.createdAt))
-  return <main className="diary-create-screen date-records-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}><GuideAction symbol="‹" /></button><strong>{formatDate(date)}</strong><span /></header><div className="date-record-filters" role="group" aria-label="기록 필터"><button type="button" className={filter === 'routine' ? 'active' : ''} onClick={() => setFilter('routine')}>루틴</button><button type="button" className={filter === 'record' ? 'active' : ''} onClick={() => setFilter('record')}>기록</button></div><section className="date-records-content compact-date-records">{filteredRecords.length ? filteredRecords.map((record) => {
-    const tag = calendarRecordTag(record)
-    return <article key={record.id}><button type="button" onClick={() => onOpenRecord(record)}><span className="date-record-mark" aria-hidden="true">{tag.glyph ? <DiaryGlyph name={tag.glyph} /> : tag.iconSrc ? <img className={tag.iconIsRoutineCard ? 'routine-record-mark-image' : ''} src={tag.iconSrc} alt="" /> : tag.icon}</span><span className="date-record-copy"><strong>{tag.label}</strong><small>{formatMobileDiaryTime(record)}{record.memo ? ` · ${record.memo}` : ''}</small></span>{record.photoUrl ? <img className="date-record-thumbnail" src={record.photoUrl} alt="" /> : <GuideAction symbol="›" />}</button>{canWrite && <button type="button" aria-label={`${tag.label} 기록 삭제`} onClick={() => onDelete(record.sourceIds ?? record.id)}><GuideAction symbol="×" /></button>}</article>
-  }) : <div className="date-records-empty"><DiaryGlyph name="other" /><strong>아직 기록이 없어요.</strong><small>아이의 변화를 함께 확인해 보세요.</small></div>}</section>{canWrite && <button className="date-record-add-button" type="button" onClick={onAddRecord}>＋ 기록 추가하기</button>}{mobileActions ? <section className="date-records-mobile-actions">{mobileActions}</section> : null}{canWrite && <section className="date-memo-composer"><label>메모<textarea value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="이 날짜에 남길 메모" /></label><button type="button" disabled={!memo.trim()} onClick={saveMemo}>메모 추가</button></section>}</main>
-}
-
-function DiaryNotice({
-  records,
-  reminders,
-  petName,
-  resolvedInsightIds = [],
-  followedUpInsightIds = [],
-  onShedComplete,
-  onShedNotYet,
-  onFollowUpInsight,
-  onResolveInsight,
-  onKeepInsight,
-  onCreateQna,
-  onFindHospital,
-  onRecordEnvironment,
-  onAddTemporaryRoutine,
-  onOpenRecords,
-  onKeepTemporaryRoutines,
-  onCloseTemporaryRoutines,
-}: {
-  records: PetRecord[]
-  reminders: Reminder[]
-  petName: string
-  resolvedInsightIds?: string[]
-  followedUpInsightIds?: string[]
-  onShedComplete?: () => void
-  onShedNotYet?: () => void
-  onFollowUpInsight?: (insightId: string) => void
-  onResolveInsight?: (insightId: string) => void
-  onKeepInsight?: (insightId: string) => void
-  onCreateQna?: (metric?: DiaryInsight['metric']) => void
-  onFindHospital?: (concern?: HospitalRecommendationConcern) => void
-  onRecordEnvironment?: () => void
-  onAddTemporaryRoutine?: (type: 'mist' | 'water', sourceRecordId: string) => void
-  onOpenRecords?: () => void
-  onKeepTemporaryRoutines?: (insightId: string) => void
-  onCloseTemporaryRoutines?: (insightId: string) => void
-}) {
-  const hasTemporaryPoopRoutine = reminders.some((reminder) => reminder.isActive && reminder.purpose === 'poop_follow_up')
-  const insights = buildDiaryInsights(records, petName, resolvedInsightIds)
-    .filter((insight) => !insight.poopRecovered || hasTemporaryPoopRoutine)
-  if (insights.length === 0) {
-    const notice = buildDiaryNotice(records, resolvedInsightIds)
-    return <div className="diary-notice-line"><strong>NOTICE</strong><span>{notice.message}</span></div>
-  }
-  return (
-    <section className="diary-notice-line diary-notice-alerts" aria-label="다이어리 알림">
-      <strong>NOTICE</strong>
-      <div className="diary-notice-items">
-        {insights.map((insight) => {
-          const stage = noticeStageFromTitle(insight.title)
-          const followedUp = followedUpInsightIds.includes(insight.id)
-          const hasTemporaryRoutine = reminders.some((reminder) => reminder.isActive && reminder.purpose === 'poop_follow_up')
-          const isRepeatedPoop = insight.metric === 'poop' && insight.poopFollowUpStage === 2
-          return (
-            <div className="diary-notice-item" key={insight.id}>
-              <div className="diary-notice-copy">
-                <div className="diary-notice-heading">{stage ? <b className={`notice-stage stage-${stage}`}>{stage}단계</b> : null}<b>{insight.title}</b></div>
-                <p>{insight.body}</p>
-              </div>
-              <div className="diary-notice-actions">
-                {(insight.action === 'shed-check' || insight.action === 'shed-cycle-check') && onShedComplete && onShedNotYet ? (
-                  insight.action === 'shed-cycle-check'
-                    ? <><button type="button" onClick={onShedComplete}>예</button><button type="button" onClick={onShedNotYet}>아니요</button></>
-                    : <><button type="button" onClick={onShedNotYet}>탈피 중</button><button type="button" onClick={onShedComplete}>탈피 완료</button></>
-                ) : followedUp && onResolveInsight && onKeepInsight ? (
-                  <><b>해결됐나요?</b><button type="button" onClick={() => onResolveInsight(insight.id)}>예</button><button type="button" onClick={() => onKeepInsight(insight.id)}>아니오</button></>
-                ) : (
-                  <>
-                    {insight.metric === 'poop' && insight.poopRecovered && hasTemporaryRoutine && onKeepTemporaryRoutines && <button type="button" onClick={() => onKeepTemporaryRoutines(insight.id)}>유지하기</button>}
-                    {insight.metric === 'poop' && insight.poopRecovered && hasTemporaryRoutine && onCloseTemporaryRoutines && <button type="button" onClick={() => onCloseTemporaryRoutines(insight.id)}>종료하기</button>}
-                    {insight.metric === 'poop' && insight.poopFollowUpStage === 1 && onRecordEnvironment && <button type="button" onClick={onRecordEnvironment}>온습도 기록하기</button>}
-                    {insight.metric === 'poop' && insight.poopFollowUpStage === 1 && insight.poopStatus === 'dry' && onAddTemporaryRoutine && <button type="button" onClick={() => onAddTemporaryRoutine('mist', insight.id.replace('poop-dry-', ''))}>분무 루틴</button>}
-                    {insight.metric === 'poop' && insight.poopFollowUpStage === 1 && insight.poopStatus === 'dry' && onAddTemporaryRoutine && <button type="button" onClick={() => onAddTemporaryRoutine('water', insight.id.replace('poop-dry-', ''))}>물그릇 루틴</button>}
-                    {isRepeatedPoop && onOpenRecords && <button type="button" onClick={onOpenRecords}>기록 모아보기</button>}
-                    {isRepeatedPoop && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
-                    {isRepeatedPoop && onFindHospital && <button type="button" onClick={() => onFindHospital('poop')}>병원 찾기</button>}
-                    {insight.metric === 'poop' && insight.level === 'urgent' && insight.poopStatus === 'foreign_body' && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
-                    {insight.metric === 'poop' && insight.level === 'urgent' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital('poop') }}>병원 찾기</button>}
-                    {insight.metric === 'poop' && insight.level === 'urgent' && insight.poopStatus !== 'foreign_body' && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
-                    {insight.metric !== 'poop' && onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>Q&A</button>}
-                    {insight.metric !== 'poop' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital(insight.metric === 'shed' ? 'shed' : undefined) }}>병원 찾기</button>}
-                  </>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+  const routineRecords = records.filter((record) => Boolean(record.dailyTaskId || getRoutineTypeFromRecord(record)))
+  const incidentRecords = records.filter((record) => !record.dailyTaskId && !getRoutineTypeFromRecord(record))
+  const visibleRecords = filter === 'record' ? [...routineRecords, ...incidentRecords] : []
+  return <main className="diary-create-screen date-records-screen">
+    <DiarySubHeader title={formatMobileAgendaDate(date)} onBack={onBack} />
+    <div className="date-record-filters" role="tablist" aria-label="날짜 기록 보기"><button type="button" role="tab" aria-selected={filter === 'routine'} className={filter === 'routine' ? 'active' : ''} onClick={() => setFilter('routine')}>루틴</button><button type="button" role="tab" aria-selected={filter === 'record'} className={filter === 'record' ? 'active' : ''} onClick={() => setFilter('record')}>기록</button></div>
+    <section className="date-records-content compact-date-records" role="tabpanel">
+      {filter === 'routine' && routines.map((routine) => <article key={routine.id}><button type="button" disabled={!canWrite || routine.disabled} onClick={() => { const record = routineRecords.find((item) => item.dailyTaskId === routine.id || getRoutineTypeFromRecord(item) && calendarRecordTag(item).label === routine.label); if (routine.completed && record) onOpenRecord(record); else if (!routine.completed) onToggleRoutine(routine.id) }}><span className="date-record-mark">{routine.icon && <DiaryGlyph name={routine.icon} />}</span><span className="date-record-copy"><strong>{routine.label}</strong><small>{routine.time}</small></span><span className={routine.completed ? 'diary-routine-checkmark complete' : 'diary-routine-checkmark'}>{routine.completed && <DiaryGlyph name="check" />}</span></button></article>)}
+      {visibleRecords.sort(compareRecordTime).map((record) => { const tag = calendarRecordTag(record); return <article key={record.id}><button type="button" onClick={() => onOpenRecord(record)}><span className="date-record-mark" aria-hidden="true">{tag.glyph ? <DiaryGlyph name={tag.glyph} /> : tag.iconSrc ? <img src={tag.iconSrc} alt="" /> : tag.icon}</span><span className="date-record-copy"><strong>{tag.label}</strong><small>{formatMobileDiaryTime(record)}{record.memo ? ' · ' + record.memo : ''}</small></span>{record.photoUrl ? <img className="date-record-thumbnail" src={record.photoUrl} alt="" /> : <GuideAction symbol="›" />}</button>{canWrite && <button className="date-record-delete" type="button" aria-label={tag.label + ' 기록 삭제'} onClick={() => onDelete(record.sourceIds ?? record.id)}><GuideAction symbol="×" /></button>}</article> })}
+      {(filter === 'routine' ? routines.length === 0 : visibleRecords.length === 0) && <p className="diary-empty">아직 {filter === 'routine' ? '예정된 루틴' : '기록'}이 없어요.</p>}
     </section>
-  )
+    {canWrite && <button className="diary-round-add date-record-add" type="button" aria-label="기록 추가하기" onClick={onAddRecord}><GuideAction symbol="+" /></button>}
+  </main>
 }
 
 function PoopFollowUpPanel({ followUp, records, reminders, onClose, onOpenRecords, onCreateQna, onFindHospital, onAddRoutine, onKeepRoutines, onCloseRoutines }: {
@@ -3439,88 +3223,8 @@ function buildRecentPoopContext(records: PetRecord[], date: string) {
   return [temperature?.environmentRecord ? `최근 온도 ${temperature.environmentRecord.value}℃` : '최근 온도 기록 없음', humidity?.environmentRecord ? `최근 습도 ${humidity.environmentRecord.value}%` : '최근 습도 기록 없음', food ? `최근 먹이 ${food.feedingFoods?.map((item) => item.foodName).join(' · ') || food.foods?.join(' · ') || '기록 있음'}` : '최근 먹이 기록 없음', water ? `최근 수분 공급 ${formatDate(water.date)}` : '최근 수분 공급 기록 없음']
 }
 
-function DiaryInsightBanner({
-  records,
-  petName,
-  onShedComplete,
-  onShedNotYet,
-  resolvedInsightIds = [],
-  followedUpInsightIds = [],
-  onFollowUpInsight,
-  onResolveInsight,
-  onKeepInsight,
-  onCreateQna,
-  onFindHospital,
-  onOpenRecords,
-}: {
-  records: PetRecord[]
-  petName: string
-  onShedComplete?: () => void
-  onShedNotYet?: () => void
-  resolvedInsightIds?: string[]
-  followedUpInsightIds?: string[]
-  onFollowUpInsight?: (insightId: string) => void
-  onResolveInsight?: (insightId: string) => void
-  onKeepInsight?: (insightId: string) => void
-  onCreateQna?: (metric?: DiaryInsight['metric']) => void
-  onFindHospital?: (concern?: HospitalRecommendationConcern) => void
-  onOpenRecords?: () => void
-}) {
-  const insights = buildDiaryInsights(records, petName, resolvedInsightIds).filter((insight) => insight.metric !== 'poop')
-  if (insights.length === 0) return null
-  return (
-    <section className="diary-insight-banner" aria-label="다이어리 경고와 변화">
-      {insights.map((insight) => (
-        <article className={`diary-insight-card ${insight.level}`} key={insight.id}>
-          <small>{insightLabel(insight.metric)}</small>
-          <strong>{insight.title}</strong>
-          <span>{insight.body}</span>
-          {insight.sourceUrl && <a href={insight.sourceUrl} target="_blank" rel="noreferrer">참고 자료</a>}
-          {(insight.action === 'shed-check' || insight.action === 'shed-cycle-check') && onShedComplete && onShedNotYet && (
-            <div className="diary-insight-actions" aria-label="탈피 완료 확인">
-              {insight.action === 'shed-cycle-check'
-                ? <><button type="button" onClick={onShedComplete}>예</button><button type="button" onClick={onShedNotYet}>아니요</button></>
-                : <><button type="button" onClick={onShedNotYet}>탈피 중</button><button type="button" onClick={onShedComplete}>탈피 완료</button></>}
-            </div>
-          )}
-          {insight.action !== 'shed-check' && insight.action !== 'shed-cycle-check' && followedUpInsightIds.includes(insight.id) && onResolveInsight && onKeepInsight && (
-            <div className="diary-insight-resolution">
-              <b>해결됐나요?</b>
-              <div className="diary-insight-actions" aria-label="경고 해결 여부">
-                <button type="button" onClick={() => onResolveInsight(insight.id)}>예</button>
-                <button type="button" onClick={() => onKeepInsight(insight.id)}>아니오</button>
-              </div>
-            </div>
-          )}
-          {insight.action !== 'shed-check' && insight.action !== 'shed-cycle-check' && !followedUpInsightIds.includes(insight.id) && (onCreateQna || onFindHospital) && (
-            <div className="diary-insight-actions">
-              {insight.metric === 'poop' && !isRepeatedPoopInsight(insight) && insight.level !== 'urgent' && onResolveInsight && <button type="button" onClick={() => onResolveInsight(insight.id)}>확인했어요</button>}
-              {isRepeatedPoopInsight(insight) && onOpenRecords && <button type="button" onClick={onOpenRecords}>기록 모아보기</button>}
-              {isRepeatedPoopInsight(insight) && onCreateQna && <button type="button" onClick={() => onCreateQna('poop')}>Q&A 작성하기</button>}
-              {isRepeatedPoopInsight(insight) && onFindHospital && <button type="button" onClick={() => onFindHospital('poop')}>병원 찾기</button>}
-              {insight.metric === 'poop' && insight.level === 'urgent' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital('poop') }}>병원 찾으러 가기</button>}
-              {insight.metric !== 'poop' && onCreateQna && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onCreateQna(insight.metric) }}>{insight.metric === 'shed' ? '탈피 질문 작성' : 'Q&A에 도움받기'}</button>}
-              {insight.metric !== 'poop' && onFindHospital && <button type="button" onClick={() => { onFollowUpInsight?.(insight.id); onFindHospital(insight.metric === 'shed' ? 'shed' : undefined) }}>병원 찾으러 가기</button>}
-            </div>
-          )}
-        </article>
-      ))}
-    </section>
-  )
-}
-
 export function DataVisualization({
   records,
-  petName,
-  onCreateQna,
-  onShedComplete,
-  onShedNotYet,
-  resolvedInsightIds = [],
-  followedUpInsightIds = [],
-  onFollowUpInsight,
-  onResolveInsight,
-  onKeepInsight,
-  onFindHospital,
 }: {
   records: PetRecord[]
   petName: string
@@ -3549,7 +3253,7 @@ export function DataVisualization({
   const matingRecords = records.filter(isMatingRecord).sort(compareRecordTime)
   const eggRecords = records.filter(isEggRecord).sort(compareRecordTime)
   const hasAnyData = environmentRecords.length > 0 || weightRecords.length > 0 || shedSummary.count > 0 || poopRecords.length > 0 || matingRecords.length > 0 || eggRecords.length > 0
-  if (!hasAnyData) return <div className="data-visualization"><DataVisualizationHeader petName={petName} onCreateQna={onCreateQna} /><div className="data-visualization-empty">아직 모아볼 기록이 없어요.</div></div>
+  if (!hasAnyData) return <div className="data-visualization"><div className="data-visualization-empty">아직 모아볼 기록이 없어요.</div></div>
   const metricCounts = {
     shed: shedSummary.count,
     environment: environmentRecords.length,
@@ -3562,8 +3266,6 @@ export function DataVisualization({
   const selectedMetric = metricCounts[activeMetric] > 0 ? activeMetric : firstAvailableMetric
   return (
     <div className="data-visualization">
-      <DataVisualizationHeader petName={petName} onCreateQna={onCreateQna} />
-      <DiaryInsightBanner records={records} petName={petName} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} onCreateQna={onCreateQna} onFindHospital={onFindHospital} onOpenRecords={() => setActiveMetric('poop')} />
       <div className="record-collection-tabs" aria-label="모아보기 항목">
         <button className={selectedMetric === 'shed' ? 'active' : ''} type="button" onClick={() => setActiveMetric('shed')}>
           탈피 <span>{metricCounts.shed}</span>
@@ -3588,15 +3290,6 @@ export function DataVisualization({
   )
 }
 
-function DataVisualizationHeader({ petName, onCreateQna }: { petName: string; onCreateQna?: (metric?: DiaryInsight['metric']) => void }) {
-  return (
-    <header className="data-visualization-heading">
-      <div><h2>{petName} 기록 모아보기</h2></div>
-      {onCreateQna && <button className="record-collection-qna" type="button" onClick={() => onCreateQna()}>Q&A 작성하기</button>}
-    </header>
-  )
-}
-
 function MetricEmpty({ label }: { label: string }) {
   return <div className="data-visualization-empty">{label}이 아직 없어요.</div>
 }
@@ -3612,40 +3305,6 @@ function buildDiaryInsights(records: PetRecord[], petName: string, resolvedInsig
     .filter((value) => !resolvedInsightIds.includes(value.id))
   const priority: Record<DiaryInsightLevel, number> = { urgent: 0, caution: 1, notice: 2, normal: 3 }
   return insights.sort((a, b) => priority[a.level] - priority[b.level]).slice(0, 3)
-}
-
-function buildDiaryNotice(records: PetRecord[], resolvedInsightIds: string[] = []): { message: string; stage?: RiskLevel } {
-  const stagedInsight = buildDiaryInsights(records, '펫', resolvedInsightIds).find((insight) => {
-    const stage = noticeStageFromTitle(insight.title)
-    return stage !== undefined && stage > 0
-  })
-  if (stagedInsight) {
-    const stage = noticeStageFromTitle(stagedInsight.title)
-    return {
-      message: stage === 5 ? '빠르게 확인하세요.' : stagedInsight.body,
-      stage,
-    }
-  }
-  const sortedRecords = records.slice().sort(compareRecordTime)
-  const foodRecord = sortedRecords.filter((record) => record.type === 'food').at(-1)
-  if (foodRecord) return { message: elapsedNotice('마지막 먹이 급여', foodRecord.date) }
-  const poopRecord = sortedRecords.filter((record) => record.type === 'poop').at(-1)
-  if (poopRecord) return { message: elapsedNotice('마지막 배변 기록', poopRecord.date) }
-  const shedRecord = sortedRecords.filter((record) => record.type === 'shed').at(-1)
-  if (shedRecord) return { message: elapsedNotice('마지막 탈피 기록', shedRecord.date) }
-  return { message: '아직 다이어리 기록이 없어요.' }
-}
-
-function noticeStageFromTitle(title: string): RiskLevel | undefined {
-  const match = title.match(/([1-5])단계/)
-  if (!match) return undefined
-  return Number(match[1]) as RiskLevel
-}
-
-function elapsedNotice(label: string, date: string) {
-  const days = Math.max(0, daysBetween(date, toDateKey(new Date())))
-  if (days === 0) return `${label}이 오늘 있었어요.`
-  return `${label} 후 ${days}일이 지났어요.`
 }
 
 function buildWeightInsight(records: PetRecord[], petName: string): DiaryInsight | null {
@@ -3882,13 +3541,6 @@ function describeRecentFeeding(records: PetRecord[], referenceDate = toDateKey(n
   return `최근 급이는 ${elapsed === 0 ? '같은 날' : `${elapsed}일 전`} 기록됐${names ? `고 먹이는 ${names}였` : ''}어요.`
 }
 
-function insightLabel(metric: DiaryInsight['metric']) {
-  if (metric === 'shed') return '탈피'
-  if (metric === 'environment') return '온습도 변화'
-  if (metric === 'weight') return '체중 변화'
-  return '배변 상태'
-}
-
 function isRepeatedPoopInsight(insight: DiaryInsight) {
   return insight.metric === 'poop' && insight.title.includes('반복')
 }
@@ -3902,24 +3554,6 @@ function formatMobileDiaryTime(record: PetRecord) {
   if (!value) return '--'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '--' : date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
-}
-
-function formatMobileDiarySummary(record: PetRecord) {
-  if (record.environmentRecord) return formatEnvironmentValue(record.environmentRecord)
-  if (record.weight !== undefined) return `${formatWeightValue(record.weight)}g`
-  const foods = getRecordFoodNames(record)
-  return foods.length > 0 ? foods.join(' · ') : record.memo?.trim() || undefined
-}
-
-function mobileRecordsForDate(records: PetRecord[], date: string): MobileDiaryRecord[] {
-  return records.filter((record) => record.date === date).sort((a, b) => compareRecordTime(a, b)).map((record) => ({
-    id: record.id,
-    date: '',
-    time: formatMobileDiaryTime(record),
-    type: calendarRecordTag(record).label,
-    summary: formatMobileDiarySummary(record),
-    photo: record.photoUrl,
-  }))
 }
 
 function formatMobileAgendaDate(date: string) {
@@ -4102,8 +3736,8 @@ function getShedCyclePrediction(records: PetRecord[]) {
   const expected = new Date(`${lastCompletedDate}T00:00:00`)
   expected.setDate(expected.getDate() + averageCycleDays)
   const expectedDate = toDateKey(expected)
-  const expectedStartDate = addDaysToDateKey(lastCompletedDate, Math.min(...intervals))
-  const expectedEndDate = addDaysToDateKey(lastCompletedDate, Math.max(...intervals))
+  const expectedStartDate = addDaysToDateKey(expectedDate, -2)
+  const expectedEndDate = addDaysToDateKey(expectedDate, 2)
   return {
     averageCycleDays,
     expectedDate,
@@ -4164,7 +3798,7 @@ function SimpleLineChart({ title, subtitle = '날짜별 변화', unit, records, 
   const path = values.map((value, index) => `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(value)}`).join(' ')
   return (
     <section className="environment-chart">
-      <header><strong>{title}</strong><span>{subtitle}</span></header>
+      <header><strong>{title}</strong><span className="sr-only">{subtitle}</span></header>
       <div className="environment-chart-wrap">
         <svg className="line-chart environment-line-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${title} 꺾은선 그래프`}>
           <line x1="28" y1="18" x2="28" y2={height - 26} />
@@ -4174,9 +3808,7 @@ function SimpleLineChart({ title, subtitle = '날짜별 변화', unit, records, 
         </svg>
         <div className="line-chart-scale"><span>{formatWeightValue(max)}{unit}</span><span>{formatWeightValue(min)}{unit}</span></div>
       </div>
-      <div className="environment-chart-labels">
-        {records.map((record, index) => <span key={`${record.id}-simple-label`}><strong>{formatDate(record.date)}</strong><b>{formatWeightValue(values[index])}{unit}</b></span>)}
-      </div>
+      <div className="environment-chart-labels">{records.map((record, index) => <span key={`${record.id}-simple-label`}><strong>{formatDate(record.date)}</strong><b>{formatWeightValue(values[index])}{unit}</b></span>)}</div>
     </section>
   )
 }
@@ -4246,7 +3878,7 @@ function EnvironmentLineChart({ title, records }: { title: string; records: PetR
 
   return (
     <section className="environment-chart">
-      <header><strong>{title}</strong><span>기록 당시 정상 범위 기준</span></header>
+      <header><strong>{title}</strong></header>
       <div className="environment-chart-wrap">
         <svg className="line-chart environment-line-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${title} 꺾은선 그래프`}>
           <line x1="28" y1="18" x2="28" y2={height - 26} />
@@ -4264,7 +3896,7 @@ function EnvironmentLineChart({ title, records }: { title: string; records: PetR
         <div className="line-chart-scale"><span>{formatWeightValue(max)}{unit}</span><span>{formatWeightValue(min)}{unit}</span></div>
       </div>
       <div className="environment-chart-labels">
-        {values.map((record, index) => <span key={`${records[index].id}-label`}><strong>{formatDate(records[index].date)}</strong><b>{formatEnvironmentValue(record)}</b><em>{record.riskLevel <= 1 ? '1단계 정상' : `${record.riskLevel}단계 ${environmentRiskLabel(record.riskLevel)}`}</em></span>)}
+        {values.map((record, index) => <span key={`${records[index].id}-label`}><strong>{formatDate(records[index].date)}</strong><b>{formatEnvironmentValue(record)}</b></span>)}
       </div>
     </section>
   )
@@ -4277,17 +3909,11 @@ function DataVisualizationScreen({ records, petName, onBack, onCreateQna, onFind
   if (range === 'month') cutoff.setMonth(cutoff.getMonth() - 1)
   const cutoffKey = toDateKey(cutoff)
   const visibleRecords = range === 'all' ? records : records.filter((record) => record.date >= cutoffKey)
-  const summaryItems = [
-    { label: '먹이', count: visibleRecords.filter((record) => record.type === 'food').length, glyph: 'feed' as const },
-    { label: '분무', count: visibleRecords.filter((record) => getRoutineTypeFromRecord(record) === 'mist').length, glyph: 'mist' as const },
-    { label: '배변', count: visibleRecords.filter((record) => record.type === 'poop').length, glyph: 'poop' as const },
-    { label: '온습도', count: visibleRecords.filter((record) => record.environmentRecord).length, glyph: 'humidity' as const },
-  ]
-  return <main className="diary-create-screen data-visualization-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}><GuideAction symbol="←" /></button><strong>기록 모아보기</strong><span /></header><div className="visualization-range-tabs" role="group" aria-label="분석 기간"><button type="button" className={range === 'week' ? 'active' : ''} onClick={() => setRange('week')}>주간</button><button type="button" className={range === 'month' ? 'active' : ''} onClick={() => setRange('month')}>월간</button><button type="button" className={range === 'all' ? 'active' : ''} onClick={() => setRange('all')}>전체</button></div><section className="visualization-count-summary" aria-label="기간별 기록 요약">{summaryItems.map((item) => <article key={item.label}><DiaryGlyph name={item.glyph} /><span>{item.label}<strong>{item.count}회</strong></span></article>)}</section><DataVisualization records={visibleRecords} petName={petName} onCreateQna={onCreateQna} onFindHospital={onFindHospital} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} /></main>
+  return <main className="diary-create-screen data-visualization-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}><GuideAction symbol="←" /></button><strong>기록 모아보기</strong><span /></header><div className="visualization-range-tabs" role="group" aria-label="분석 기간"><button type="button" className={range === 'week' ? 'active' : ''} onClick={() => setRange('week')}>주간</button><button type="button" className={range === 'month' ? 'active' : ''} onClick={() => setRange('month')}>월간</button><button type="button" className={range === 'all' ? 'active' : ''} onClick={() => setRange('all')}>전체</button></div><DataVisualization records={visibleRecords} petName={petName} onCreateQna={onCreateQna} onFindHospital={onFindHospital} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} /></main>
 }
 
 function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return <div className="diary-overlay"><button className="diary-dim" aria-label="닫기" onClick={onClose} /><section className="diary-modal"><button className="diary-modal-close" type="button" aria-label="닫기" onClick={onClose}><GuideAction symbol="×" /></button>{children}</section></div>
+  return <div className="diary-overlay"><section className="diary-modal"><button className="diary-modal-close" type="button" aria-label="뒤로가기" onClick={onClose}><GuideAction symbol="‹" /></button>{children}</section></div>
 }
 
 function FeedingFoodDialog({
@@ -4311,8 +3937,9 @@ function FeedingFoodDialog({
   onSelectedFoodsChange: (foods: FeedingFoodItem[]) => void
   onCustomFoodNameChange: (value: string) => void
   onCancel: () => void
-  onComplete: () => void
+  onComplete: (feedingAmount: string) => void
 }) {
+  const [feedingAmount, setFeedingAmount] = useState('')
   const [customOpen, setCustomOpen] = useState(Boolean(customFoodName))
   const options = getFeedingFoodOptions(pet, speciesCareProfiles)
   const customName = customFoodName.trim()
@@ -4339,11 +3966,12 @@ function FeedingFoodDialog({
 
   return (
     <div className="feeding-food-dialog" role="dialog" aria-modal="true" aria-labelledby="feeding-food-title">
-      <span className="sheet-handle" />
+      <Mascot className="diary-check-mascot" />
       <header>
-        <h2 id="feeding-food-title">오늘 무엇을 먹였나요?</h2>
+        <h2 id="feeding-food-title">먹이</h2>
         <p>{pet.name}</p>
       </header>
+      <label className="feeding-amount-field">급여량<input value={feedingAmount} onChange={(event) => setFeedingAmount(event.target.value)} placeholder="예) 5마리" /></label>
       <div className="feeding-food-options" aria-label="먹이 선택">
         {options.map((option) => {
           const selected = option.key === customFoodOptionKey ? customOpen : selectedFoods.some((food) => food.foodKey === option.key)
@@ -4368,8 +3996,7 @@ function FeedingFoodDialog({
       )}
       {error && <p className="feeding-food-error" role="alert">{error}</p>}
       <footer>
-        <button type="button" className="step-secondary" disabled={saving} onClick={onCancel}>취소</button>
-        <button type="button" className="step-primary" disabled={!canComplete || saving} aria-busy={saving} onClick={onComplete}>{saving ? '저장 중' : '기록 완료'}</button>
+        <button type="button" className="step-primary" disabled={!canComplete || saving} aria-busy={saving} onClick={() => onComplete(feedingAmount)}>{saving ? '저장 중' : '완료'}</button>
       </footer>
     </div>
   )
@@ -4733,4 +4360,3 @@ function defaultPetImage(group: DiaryPet['group']) {
   if (group === 'amphibian') return '/assets/pet-default-amphibian.png'
   return '/assets/pet-default-reptile.png'
 }
-

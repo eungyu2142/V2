@@ -1,53 +1,76 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import GuideAction from '../../components/common/GuideAction'
 import DiaryGlyph, { type DiaryGlyphName } from './DiaryGlyph'
+import { ReferenceIcon } from '../../components/common/ReferenceIcon'
+import Mascot from '../../components/common/Mascot'
+import { FlowHeader } from '../../components/ui/FlowHeader'
+import { ProgressBar } from '../../components/ui/ProgressBar'
 
 export type MobileDiaryDay = { key: string; weekday: string; day: number; selected: boolean; today: boolean; indicators: Array<'record' | 'egg' | 'shed'> }
-export type MobileDiaryRoutine = { id: string; label: string; time?: string; icon?: DiaryGlyphName; completed: boolean; disabled: boolean }
+export type MobileDiaryRoutine = { id: string; label: string; time?: string; icon?: DiaryGlyphName; completed: boolean; disabled: boolean; requiresInput?: boolean; overdue?: boolean }
 export type MobileDiaryQuickAction = { id: string; label: string; icon: DiaryGlyphName; disabled?: boolean; onClick: () => void }
 export type MobileDiaryRecord = { id: string; date: string; time: string; type: string; summary?: string; photo?: string }
 export type MobileDiaryAlert = { severity: 'critical' | 'warning' | 'caution' | 'info' | 'complete'; badge: string; title: string; body: string; actions: Array<{ label: string; onClick: () => void }> }
 export type MobileDiaryPrediction = { type: 'egg' | 'shed'; label: string; startDate: string; endDate: string }
 
-type Props = { petName: string; canChangePet: boolean; alert?: MobileDiaryAlert; routines: MobileDiaryRoutine[]; quickActions: MobileDiaryQuickAction[]; agenda: MobileDiaryRecord[]; selectedDateLabel: string; predictions: MobileDiaryPrediction[]; calendar: ReactNode; onChangePet: () => void; onToggleRoutine: (id: string) => void; onUndoRoutine: (id: string) => void; onAddRoutine: () => void; onOpenRecords: () => void; recordMenuOpen: boolean; onRecordMenuChange: (open: boolean) => void }
+type Props = {
+  petName: string
+  petPhoto?: string
+  canChangePet: boolean
+  canWrite: boolean
+  alert?: MobileDiaryAlert
+  routines: MobileDiaryRoutine[]
+  quickActions: MobileDiaryQuickAction[]
+  selectedDateLabel: string
+  calendar: ReactNode
+  calendarOpen: boolean
+  onCalendarChange: (open: boolean) => void
+  onChangePet: () => void
+  onToggleRoutine: (id: string) => void
+  onOpenCompletedRoutine: (id: string) => void
+  onAddRoutine: () => void
+  onManageRoutines: () => void
+  recordMenuOpen: boolean
+  onRecordMenuChange: (open: boolean) => void
+}
 
 const recordActionOrder = ['shed', 'poop', 'mating', 'egg', 'hospital']
-const recordActionCopy: Record<string, string> = { shed: '탈피 과정을 기록해요.', poop: '배변 상태를 기록해요.', mating: '메이팅 기록을 남겨요.', egg: '산란 기록을 남겨요.', hospital: '병원 방문과 진료 내용을 기록해요.' }
-const recordActionLabel: Record<string, string> = { shed: '탈피 기록', poop: '배변 기록', mating: '메이팅 기록', egg: '산란 기록', hospital: '진료 기록' }
+const recordActionLabel: Record<string, string> = { shed: '탈피', poop: '배변', mating: '메이팅', egg: '산란', hospital: '진료' }
 
-export default function DiaryMobileScreen({ petName, canChangePet, alert, routines, quickActions, agenda, selectedDateLabel, predictions, calendar, onChangePet, onToggleRoutine, onUndoRoutine, onAddRoutine, onOpenRecords, recordMenuOpen, onRecordMenuChange }: Props) {
+export default function DiaryMobileScreen({ petName, petPhoto, canChangePet, canWrite, alert, routines, quickActions, selectedDateLabel, calendar, calendarOpen, onCalendarChange, onChangePet, onToggleRoutine, onOpenCompletedRoutine, onAddRoutine, onManageRoutines, recordMenuOpen, onRecordMenuChange }: Props) {
   const [selectedRoutine, setSelectedRoutine] = useState<MobileDiaryRoutine | null>(null)
-  const [completedRoutine, setCompletedRoutine] = useState<MobileDiaryRoutine | null>(null)
-  const [showAllComplete, setShowAllComplete] = useState(false)
-  const completedCount = routines.filter((routine) => routine.completed).length
-  const recordActions = useMemo(() => recordActionOrder.map((id) => quickActions.find((action) => action.id === id)).filter((action): action is MobileDiaryQuickAction => Boolean(action)), [quickActions])
-
-  const completeRoutine = () => {
-    if (!selectedRoutine || selectedRoutine.completed || selectedRoutine.disabled) return
-    onToggleRoutine(selectedRoutine.id)
-    const isLastRoutine = routines.length > 0 && completedCount + 1 >= routines.length
-    setCompletedRoutine(selectedRoutine)
-    setSelectedRoutine(null)
-    setShowAllComplete(isLastRoutine)
+  const [warningOpen, setWarningOpen] = useState(false)
+  const [warningDetails, setWarningDetails] = useState(false)
+  const [dismissedWarning, setDismissedWarning] = useState('')
+  const completedCount = routines.filter((routine) => routine.completed && !routine.overdue).length
+  const todayRoutines = routines.filter((routine) => !routine.overdue)
+  const pendingRoutines = routines.filter((routine) => !routine.completed)
+  const recordActions = recordActionOrder.map((id) => quickActions.find((action) => action.id === id)).filter((action): action is MobileDiaryQuickAction => Boolean(action))
+  const openRoutine = (routine: MobileDiaryRoutine) => {
+    if (routine.completed) { onOpenCompletedRoutine(routine.id); return }
+    if (routine.disabled) return
+    if (routine.requiresInput) onToggleRoutine(routine.id)
+    else setSelectedRoutine(routine)
   }
 
-  if (showAllComplete) return <main className="mobile-diary mobile-diary-all-complete"><div className="mobile-diary-confetti" aria-hidden="true">◆ · ◆ ·</div><h1>오늘의 루틴을<br />모두 완료했어요!</h1><div className="mobile-diary-mascot" aria-hidden="true"><DiaryGlyph name="check" /></div><p>꾸준한 관리가<br />건강한 아이를 만들어요.</p><button type="button" onClick={() => setShowAllComplete(false)}>확인</button></main>
+  if (selectedRoutine) return <main className="mobile-diary diary-routine-check">
+    <DiarySubHeader title={selectedRoutine.label} onBack={() => setSelectedRoutine(null)} />
+    <section className="diary-check-content"><Mascot className="diary-check-mascot" /><h2>{selectedRoutine.label}</h2><p>{selectedRoutine.time || '오늘'} {selectedRoutine.overdue ? '확인이 필요한 루틴이에요.' : '예정된 루틴이에요.'}</p><button className="diary-primary" type="button" onClick={() => { onToggleRoutine(selectedRoutine.id); setSelectedRoutine(null) }}>완료</button></section>
+  </main>
 
-  if (completedRoutine) return <main className="mobile-diary mobile-diary-routine-result"><SubHeader title="루틴" onBack={() => setCompletedRoutine(null)} /><RoutineSummary routine={completedRoutine} /><div className="mobile-diary-result-check"><DiaryGlyph name="check" /></div><h2>오늘의 루틴을<br />완료했어요!</h2><p>{completedRoutine.time ? `${completedRoutine.time}에 완료했어요.` : '오늘 완료했어요.'}<br />내일도 잊지 말고 챙겨주세요!</p><div className="mobile-diary-result-actions"><button type="button" onClick={() => { onUndoRoutine(completedRoutine.id); setCompletedRoutine(null) }}>완료 취소하기</button><button type="button" onClick={() => setCompletedRoutine(null)}>닫기</button></div></main>
+  if (recordMenuOpen) return <main className="mobile-diary diary-record-menu"><DiarySubHeader title="기록하기" onBack={() => onRecordMenuChange(false)} /><section className="diary-record-kind-list" aria-label="기록 종류">{recordActions.map((action) => <button type="button" disabled={action.disabled} onClick={() => { onRecordMenuChange(false); action.onClick() }} key={action.id}><DiaryGlyph name={action.icon} /><strong>{recordActionLabel[action.id]}</strong><GuideAction symbol="›" /></button>)}</section></main>
 
-  if (selectedRoutine) return <main className="mobile-diary mobile-diary-routine-check"><SubHeader title="루틴" onBack={() => setSelectedRoutine(null)} /><RoutineSummary routine={selectedRoutine} /><div className="mobile-diary-result-check"><DiaryGlyph name="check" /></div><h2>{selectedRoutine.completed ? <>오늘의 루틴을<br />완료했어요!</> : '루틴을 완료할까요?'}</h2><p>{selectedRoutine.time ? `${selectedRoutine.time} 예정이에요.` : '오늘 예정된 루틴이에요.'}<br />잊지 말고 챙겨주세요!</p><div className="mobile-diary-result-actions"><button type="button" className="primary" disabled={selectedRoutine.completed || selectedRoutine.disabled} onClick={completeRoutine}>{selectedRoutine.completed ? '완료됨' : '완료하기'}</button><button type="button" onClick={() => setSelectedRoutine(null)}>닫기</button></div></main>
+  if (warningOpen && alert) return <main className="mobile-diary diary-warning-page"><DiarySubHeader title="루틴 확인" onBack={() => { setWarningOpen(false); setWarningDetails(false) }} /><section className="diary-warning-content"><div className="diary-warning-icon" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="29" cy="32" r="21" /><path d="M24 5h10M29 5v6M29 19v14l7 7M45 11l5 5M43 52l8-14 8 14Z" /><path d="M51 43v4M51 49v1" /></svg></div><h2>{alert.title}</h2><p>{alert.body}</p>{warningDetails ? <div className="diary-warning-actions">{alert.actions.map((action) => <button type="button" className="diary-primary" key={action.label} onClick={() => { action.onClick(); setWarningOpen(false); setWarningDetails(false) }}>{action.label}</button>)}</div> : <button className="diary-primary" type="button" onClick={() => { if (alert.actions.length === 1) { alert.actions[0].onClick(); setWarningOpen(false) } else if (alert.actions.length > 1) setWarningDetails(true); else setWarningOpen(false) }}>확인하기</button>}<button className="diary-secondary" type="button" onClick={() => { setDismissedWarning(alert.title); setWarningOpen(false); setWarningDetails(false) }}>나중에</button><Mascot mood="thinking" className="diary-warning-mascot" /></section></main>
 
-  if (recordMenuOpen) return <main className="mobile-diary mobile-diary-record-menu-page"><SubHeader title="기록 추가하기" onBack={() => onRecordMenuChange(false)} /><section className="mobile-diary-record-list" aria-label="기록 종류">{recordActions.map((action) => <button type="button" disabled={action.disabled} onClick={action.onClick} key={action.id}><span><DiaryGlyph name={action.icon} /></span><span><strong>{recordActionLabel[action.id]}</strong><small>{recordActionCopy[action.id]}</small></span><GuideAction symbol="›" /></button>)}</section></main>
+  if (calendarOpen) return <main className="mobile-diary diary-calendar-page"><DiarySubHeader title="캘린더" onBack={() => onCalendarChange(false)} /><div className="diary-calendar-full">{calendar}</div></main>
 
-  return <main className="mobile-diary mobile-diary-home">
-    <header className="mobile-diary-header"><div><h1>다이어리</h1><p>{petName}의 하루를 기록해요</p></div><button type="button" aria-label="펫 선택" disabled={!canChangePet} onClick={onChangePet}><DiaryGlyph name="poop" /></button></header>
-    <section className="mobile-diary-calendar" aria-label="월간 기록 캘린더">{calendar}{predictions.length > 0 && <div className="mobile-diary-predictions">{predictions.map((item) => <article className={item.type} key={`${item.type}-${item.startDate}`}><strong>{item.label}</strong><span>{item.startDate.slice(5).replace('-', '.')} - {item.endDate.slice(5).replace('-', '.')}</span></article>)}</div>}</section>
-    {alert && <article className={`mobile-diary-alert ${alert.severity}`}><span>{alert.badge}</span><h2>{alert.title}</h2><p>{alert.body}</p>{alert.actions.length > 0 && <div>{alert.actions.slice(0, 2).map((action) => <button type="button" onClick={action.onClick} key={action.label}>{action.label}</button>)}</div>}</article>}
-    <section className="mobile-diary-section mobile-diary-routines"><header><h2>오늘의 루틴 <small>{completedCount}/{routines.length}</small></h2><button type="button" onClick={onAddRoutine}>루틴 관리 <GuideAction symbol="›" /></button></header><div className="mobile-diary-routine-progress"><i style={{ width: `${routines.length ? completedCount / routines.length * 100 : 0}%` }} /></div>{routines.length > 0 ? <ul>{routines.slice(0, 4).map((routine) => <li key={routine.id}><button type="button" disabled={routine.disabled} onClick={() => setSelectedRoutine(routine)}><span className="mobile-diary-routine-icon">{routine.icon ? <DiaryGlyph name={routine.icon} /> : null}</span><span><strong>{routine.label}</strong><small>{routine.time ?? '시간 미지정'}</small></span><em className={routine.completed ? 'complete' : 'pending'}>{routine.completed ? '완료' : '미완료'}</em></button></li>)}</ul> : <div className="mobile-diary-empty"><strong>오늘 예정된 루틴이 없어요.</strong><button type="button" onClick={onAddRoutine}>루틴 추가하기</button></div>}</section>
-    <section className="mobile-diary-section mobile-diary-quick"><header><div><h2>상황별 기록</h2><p>필요할 때 바로 기록해보세요.</p></div></header><div>{recordActions.map((action) => <button type="button" disabled={action.disabled} onClick={action.onClick} key={action.id}><span className="mobile-diary-action-icon"><DiaryGlyph name={action.icon}/></span><span><strong>{action.label}</strong><small>{recordActionCopy[action.id]}</small></span></button>)}</div></section>
-    <section className="mobile-diary-collection"><div><h2>기록 모아보기</h2><p>{agenda.length ? `${selectedDateLabel} 기록 ${agenda.length}개가 있어요.` : '기록의 변화를 한눈에 확인해요.'}</p></div><button type="button" onClick={onOpenRecords}>그래프 보기</button></section>
+  return <main className="mobile-diary diary-home">
+    <header className="diary-home-header"><h1>다이어리</h1><div>{canChangePet && <button className="diary-home-pet" type="button" aria-label={`${petName}, 펫 선택`} onClick={onChangePet}>{petPhoto ? <img src={petPhoto} alt="" /> : <Mascot />}</button>}<button className="diary-calendar-trigger" type="button" aria-label="캘린더 열기" onClick={() => onCalendarChange(true)}><DiaryGlyph name="calendar" /></button>{canWrite && <button className="diary-round-add" type="button" aria-label="루틴 추가하기" onClick={onAddRoutine}><GuideAction symbol="+" /></button>}</div></header>
+    <button className="diary-date-button" type="button" aria-label={`${selectedDateLabel}, 캘린더 열기`} onClick={() => onCalendarChange(true)}>{selectedDateLabel}</button>
+    <section className="diary-today-routines"><div className="flex items-center justify-between"><h2>오늘의 루틴 <span>{completedCount}/{todayRoutines.length}</span></h2>{canWrite && <button type="button" aria-label="루틴 관리" className="flex size-11 items-center justify-center" onClick={onManageRoutines}><ReferenceIcon name="settings" className="size-6" /></button>}</div><ProgressBar done={completedCount} total={todayRoutines.length} label="오늘의 루틴 완료" className="mb-4" />{completedCount > 0 && <h3>오늘 할 일</h3>}<ul className={`diary-routine-list ${completedCount ? 'diary-routine-list--remaining' : ''}`}>{(completedCount ? pendingRoutines : routines).map((routine) => <li key={routine.id}><button type="button" disabled={routine.disabled} onClick={() => openRoutine(routine)}><span className="diary-routine-icon">{routine.icon && <DiaryGlyph name={routine.icon} />}</span><strong>{routine.label}</strong><time>{routine.time || '시간 미지정'}</time><span className={`diary-routine-checkmark ${routine.completed ? 'complete' : ''}`} aria-label={routine.completed ? '완료' : '미완료'}>{routine.completed && <DiaryGlyph name="check" />}</span></button></li>)}</ul>{routines.length === 0 && <div className="diary-empty"><p>오늘 예정된 루틴이 없어요.</p>{canWrite && <button type="button" className="diary-secondary" onClick={onAddRoutine}>루틴 추가</button>}</div>}{routines.length > 0 && pendingRoutines.length === 0 && <p className="diary-empty">오늘의 루틴을 모두 완료했어요.</p>}</section>
+    {canWrite && <button className="diary-record-add-button" type="button" onClick={() => onRecordMenuChange(true)}>기록하기</button>}
+    {alert && dismissedWarning !== alert.title && <button className={`diary-notice-entry ${alert.severity}`} type="button" onClick={() => setWarningOpen(true)}><span><small>NOTICE</small><strong>{alert.title}</strong></span><GuideAction symbol="›" /></button>}
   </main>
 }
 
-function SubHeader({ title, onBack }: { title: string; onBack: () => void }) { return <header className="mobile-diary-subheader"><button type="button" aria-label="뒤로가기" onClick={onBack}><GuideAction symbol="‹" /></button><div><h1>{title}</h1></div><span /></header> }
-function RoutineSummary({ routine }: { routine: MobileDiaryRoutine }) { return <section className="mobile-diary-routine-summary"><span>{routine.icon ? <DiaryGlyph name={routine.icon} /> : null}</span><div><strong>{routine.label}</strong><small>{routine.time ?? '시간 미지정'}</small></div></section> }
+export const DiarySubHeader = FlowHeader

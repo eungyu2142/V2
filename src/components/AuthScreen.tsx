@@ -1,5 +1,4 @@
 import { type FormEvent, useState } from 'react'
-import './account/AuthScreen.css'
 import {
   findUsernameByNicknameAndPet,
   resetPasswordByUsernameAndPet,
@@ -7,6 +6,9 @@ import {
   signUpWithUsername,
 } from '../lib/auth'
 import { RequiredMark } from './common/FieldMarkers'
+import Mascot from './common/Mascot'
+import { Button } from './ui/Button'
+import { FlowHeader } from './ui/FlowHeader'
 
 type AuthMode = 'login' | 'signup' | 'find-id' | 'reset-password'
 
@@ -38,6 +40,7 @@ export default function AuthScreen() {
     setSubmitting(true)
     try {
       if (mode === 'signup') {
+        if (password !== confirmPassword) throw new Error('비밀번호가 서로 일치하지 않습니다.')
         await signUpWithUsername(username, nickname, password)
         return
       }
@@ -62,7 +65,7 @@ export default function AuthScreen() {
   }
 
   const submitLabel = mode === 'signup'
-    ? '회원가입'
+    ? '가입하기'
     : mode === 'find-id'
       ? '아이디 찾기'
       : mode === 'reset-password'
@@ -70,39 +73,35 @@ export default function AuthScreen() {
         : '로그인'
 
   return (
-    <main className="auth-screen">
-      <section className="auth-panel">
-        <div className="auth-brand"><img src="/pajak-icon-v2.png" alt="" /><strong>파작파작</strong><span>양서파충류 케어</span></div>
-        <div className="auth-tabs" role="tablist">
-          <button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => switchMode('login')}>로그인</button>
-          <button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => switchMode('signup')}>회원가입</button>
-        </div>
-        <form onSubmit={submit}>
+    <main className="grid min-h-dvh place-items-center bg-[var(--color-surface)] px-6 py-8">
+      <section className={`w-full max-w-[360px] ${mode === 'login' ? 'py-6' : 'self-start pt-3'}`}>
+        {mode === 'login' ? <div className="mb-9 flex flex-col items-center gap-3 text-[var(--color-primary-900)] [&>strong]:text-4xl [&>strong]:font-black [&>strong]:tracking-tight"><Mascot mood="happy" /><strong>파작파작</strong></div> : <FlowHeader title={mode === 'signup' ? '회원가입' : mode === 'find-id' ? '아이디 찾기' : '비밀번호 재설정'} onBack={() => switchMode('login')} />}
+        <form className="grid gap-4 [&>label]:grid [&>label]:gap-2" onSubmit={submit}>
           {(mode === 'login' || mode === 'signup' || mode === 'reset-password') && (
-            <label><span className="auth-field-label">아이디<RequiredMark /></span><input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="영문 소문자, 숫자, 밑줄 4~20자" required /></label>
+            <label><span className="sr-only">아이디<RequiredMark /></span><input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="아이디" required /></label>
           )}
           {(mode === 'signup' || mode === 'find-id') && (
-            <label><span className="auth-field-label">닉네임<RequiredMark /></span><input autoComplete="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="앱에서 사용할 이름" required /></label>
+            <label><span className="sr-only">닉네임<RequiredMark /></span><input autoComplete="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="닉네임" required /></label>
           )}
           {(mode === 'find-id' || mode === 'reset-password') && (
-            <label><span className="auth-field-label">반려동물 이름<RequiredMark /></span><input value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="등록한 반려동물 이름" required /></label>
+            <label><span className="sr-only">반려동물 이름<RequiredMark /></span><input value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="등록한 반려동물 이름" required /></label>
           )}
           {(mode === 'login' || mode === 'signup') && (
-            <label><span className="auth-field-label">비밀번호<RequiredMark /></span><input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="6자 이상" minLength={6} required /></label>
+            <label><span className="sr-only">비밀번호<RequiredMark /></span><input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="비밀번호 (6자 이상)" minLength={6} required /></label>
           )}
+          {mode === 'signup' && <label><span className="sr-only">비밀번호 확인<RequiredMark /></span><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="비밀번호 확인" minLength={6} required /></label>}
           {mode === 'reset-password' && (
             <>
-              <label><span className="auth-field-label">새 비밀번호<RequiredMark /></span><input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="6자 이상" minLength={6} required /></label>
-              <label><span className="auth-field-label">새 비밀번호 확인<RequiredMark /></span><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="새 비밀번호 재입력" minLength={6} required /></label>
+              <label><span className="sr-only">새 비밀번호<RequiredMark /></span><input type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="비밀번호 (6자 이상)" minLength={6} required /></label>
+              <label><span className="sr-only">새 비밀번호 확인<RequiredMark /></span><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="새 비밀번호 재입력" minLength={6} required /></label>
             </>
           )}
-          {foundUsername && <p className="auth-result">아이디: <strong>{foundUsername}</strong></p>}
-          {message && <p className="auth-message" role="alert">{message}</p>}
-          <button className="auth-submit" disabled={submitting}>{submitting ? '처리 중...' : submitLabel}</button>
+          {foundUsername && <p className="rounded-[var(--radius-control)] bg-[var(--color-primary-50)] p-3 text-[var(--color-primary-700)]">아이디: <strong>{foundUsername}</strong></p>}
+          {message && <p className="text-sm text-[var(--color-error-600)]" role="alert">{message}</p>}
+          <Button className="mt-3" fullWidth type="submit" disabled={submitting}>{submitting ? '처리 중...' : submitLabel}</Button>
         </form>
-        <div className="auth-links">
-          <button type="button" onClick={() => switchMode('find-id')}>아이디 찾기</button>
-          <button type="button" onClick={() => switchMode('reset-password')}>비밀번호 재설정</button>
+        <div className="mt-5 flex items-center justify-center gap-3 text-xs text-[var(--color-text-secondary)] [&>button]:min-h-10">
+          {mode === 'login' ? <><button type="button" onClick={() => switchMode('signup')}>회원가입</button><span aria-hidden="true">|</span><button type="button" onClick={() => switchMode('find-id')}>아이디 찾기</button></> : mode === 'find-id' ? <button type="button" onClick={() => switchMode('reset-password')}>비밀번호 재설정</button> : null}
         </div>
       </section>
     </main>

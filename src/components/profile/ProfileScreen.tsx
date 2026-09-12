@@ -1,5 +1,4 @@
 import { type ChangeEvent, type KeyboardEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import './Profile.css'
 import {
   disablePushNotifications,
   enablePushNotifications,
@@ -9,6 +8,7 @@ import {
 import type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, QnaComment, QnaPost } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
 import { getMyQnaWarningCount } from '../../lib/qnaModeration'
+import './profile-flow.css'
 
 type ProfileTab = 'posts' | 'drafts' | 'likes' | 'accepted' | 'settings'
 type WrittenFilter = 'qna' | 'reviews'

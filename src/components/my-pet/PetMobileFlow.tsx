@@ -1,89 +1,118 @@
+import { petRoutineSummary } from '../../features/diary/routineSchedule'
 import { useState } from 'react'
 import type { CarePlan, DailyTask, PetRecord } from '../../features/diary/diaryTypes'
 import type { Pet } from '../../types/app'
-import { PetIcon, PetIconMark, type PetIconName } from './PetIcons'
+import Mascot from '../common/Mascot'
+import { PetIcon, type PetIconName } from './PetIcons'
+import './PetFlow.css'
+import { ProgressBar } from '../ui/ProgressBar'
+import { FlowHeader } from '../ui/FlowHeader'
 
 export type PetMobileView = 'main' | 'detail' | 'records' | 'growth' | 'routines'
-type DetailTab = 'profile' | 'records' | 'routine' | 'stats'
+type RecordTab = 'temperature' | 'humidity' | 'weight' | 'shed' | 'poop' | 'mating' | 'egg'
 type Props = { pets: Pet[]; selectedPetId: string; view: PetMobileView; tasks: DailyTask[]; plans: CarePlan[]; records: PetRecord[]; onSelectPet: (id: string) => void; onView: (view: PetMobileView) => void; onRegisterPet: () => void; onEditPet: (pet: Pet) => void; onDeletePet: (petId: string) => void | Promise<void>; onOpenDiary: (petId: string, action?: 'routine-create') => void }
 
-const routineLabels: Record<string, string> = { feed: '먹이 급여', mist: '분무', water: '물그릇 교체', weight: '체중', humidity: '습도 확인', temperature: '온도 확인', water_temperature: '수온 확인', cleaning: '청소', partial_cleaning: '부분 청소', full_cleaning: '전체 청소', medicine: '약', hospital: '병원 방문' }
-const routineIcons: Record<string, PetIconName> = { feed: 'feed', mist: 'mist', water: 'mist', weight: 'weight', humidity: 'temperature', temperature: 'temperature', water_temperature: 'temperature', cleaning: 'routine', partial_cleaning: 'routine', full_cleaning: 'routine' }
-const recordLabels: Record<string, string> = { food: '먹이 급여', water: '물그릇', cleaning: '청소', temperature: '온도', humidity: '습도', weight: '체중', poop: '배변', shed: '탈피', mating: '메이팅', egg: '산란', medicine: '약', hospital: '병원' }
-const dateLabel = (value?: string) => value ? value.slice(0, 10).replaceAll('-', '. ') : '-'
+const routineLabels: Record<string, string> = { feed: '먹이', mist: '분무', water: '물그릇', weight: '무게', humidity: '습도', temperature: '온도', water_temperature: '수온', cleaning: '청소', partial_cleaning: '청소', full_cleaning: '청소', medicine: '약', hospital: '진료', uvb_check: 'UVB', water_quality: '수질 확인', filter_check: '여과기 확인', custom: '직접 입력' }
+const routineIcons: Record<string, PetIconName> = { feed: 'feed', mist: 'mist', water: 'water', weight: 'weight', humidity: 'mist', temperature: 'temperature', water_temperature: 'temperature', cleaning: 'cleaning', partial_cleaning: 'cleaning', full_cleaning: 'cleaning', uvb_check: 'uvb', medicine: 'medicine' }
+const recordTabs: Array<[RecordTab, string]> = [['temperature', '온도'], ['humidity', '습도'], ['weight', '무게'], ['shed', '탈피'], ['poop', '배변'], ['mating', '메이팅'], ['egg', '산란']]
+const dateLabel = (value?: string) => value ? value.slice(0, 10).replaceAll('-', '.') : '-'
 const genderLabel = (gender: Pet['gender']) => gender === 'male' ? '수컷' : gender === 'female' ? '암컷' : '미구분'
+const todayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 
-function ageLabel(birthday?: string) {
-  if (!birthday) return ''
-  const birth = new Date(`${birthday}T00:00:00`)
-  if (Number.isNaN(birth.getTime())) return ''
-  let age = new Date().getFullYear() - birth.getFullYear()
-  const beforeBirthday = new Date().getMonth() < birth.getMonth() || (new Date().getMonth() === birth.getMonth() && new Date().getDate() < birth.getDate())
-  if (beforeBirthday) age -= 1
-  return `${Math.max(0, age)}살`
+function tasksForPet(petId: string, tasks: DailyTask[], plans: CarePlan[]) {
+  return petRoutineSummary(petId, todayKey(), tasks, plans).map((task) => ({ ...task, label: task.title || routineLabels[task.taskType.split('|')[0]] || task.taskType }))
 }
+
+function PetPhoto({ pet }: { pet: Pet }) {
+  return <span className="pet-flow-photo">{pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} style={{ objectPosition: `${pet.photoPosition?.x ?? 50}% ${pet.photoPosition?.y ?? 50}%` }}/> : <Mascot/>}</span>
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return <button className="pet-flow-icon-button" type="button" aria-label="뒤로가기" onClick={onClick}><PetIcon name="back"/></button>
+}
+
 
 function recordSummary(record: PetRecord) {
   if (record.weight !== undefined) return `${record.weight}g`
   if (record.environmentRecord) return `${record.environmentRecord.value}${record.environmentRecord.unit === 'percent' ? '%' : '℃'}`
-  if (record.feedingFoods?.length) return record.feedingFoods.map((food) => food.foodName).join(' · ')
-  if (record.foods?.length) return record.foods.join(' · ')
+  if (record.stoolRecord) return record.stoolRecord.statusLabel
+  if (record.incidentRecord?.kind === 'mating') return `${record.incidentRecord.femaleName} · ${record.incidentRecord.maleName}`
+  if (record.incidentRecord?.kind === 'egg') return record.incidentRecord.fertility === 'fertilized' ? '유정란' : '무정란'
   return record.memo || '기록됨'
 }
 
-function PetPhoto({ pet, circle = false }: { pet: Pet; circle?: boolean }) {
-  return <span className={`pet-reference-photo-content ${circle ? 'is-circle' : ''}`}>{pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} style={{ objectPosition: `${pet.photoPosition?.x ?? 50}% ${pet.photoPosition?.y ?? 50}%` }}/> : <span>{pet.name.trim().slice(0, 1) || '?'}</span>}</span>
-}
-
-function BackButton({ onClick }: { onClick: () => void }) {
-  return <button className="pet-detail-circle-button" type="button" aria-label="뒤로가기" onClick={onClick}><PetIcon name="back"/></button>
+function PetRecordChart({ records, tab }: { records: PetRecord[]; tab: RecordTab }) {
+  const values = records.flatMap((record) => {
+    const value = tab === 'weight' ? record.weight : record.environmentRecord?.value
+    return value !== undefined && Number.isFinite(value) ? [{ record, value }] : []
+  }).reverse()
+  const unit = tab === 'weight' ? 'g' : tab === 'humidity' ? '%' : '℃'
+  const title = recordTabs.find(([id]) => id === tab)?.[1] ?? ''
+  if (!values.length) return <p className="pet-flow-empty">아직 {title} 기록이 없어요.</p>
+  const min = Math.min(...values.map(({ value }) => value))
+  const max = Math.max(...values.map(({ value }) => value))
+  const padding = Math.max((max - min) * 0.2, 1)
+  const floor = Math.max(0, min - padding)
+  const ceiling = max + padding
+  const point = (value: number, index: number) => ({ x: values.length === 1 ? 310 : 64 + index / (values.length - 1) * 496, y: 224 - (value - floor) / (ceiling - floor) * 190 })
+  return <figure className="pet-flow-chart"><figcaption>{title} 변화 ({unit})</figcaption><svg viewBox="0 0 600 275" role="img" aria-label={`${title} 변화 그래프. ${values.length}개 기록, 최근 ${values.at(-1)?.value}${unit}`}>
+    {[0, 1, 2, 3, 4].map((tick) => { const y = 224 - tick * 47.5; const value = floor + (ceiling - floor) * tick / 4; return <g key={tick}><line className="pet-chart-grid" x1="64" x2="560" y1={y} y2={y}/><text x="48" y={y + 4} textAnchor="end">{Number(value.toFixed(1))}</text></g> })}
+    <polyline className="pet-chart-line" points={values.map(({ value }, index) => { const p = point(value, index); return `${p.x},${p.y}` }).join(' ')}/>
+    {values.map(({ record, value }, index) => { const p = point(value, index); const showLabel = values.length <= 6 || index === 0 || index === values.length - 1 || index % Math.ceil(values.length / 5) === 0; return <g key={record.id}><circle className="pet-chart-dot" cx={p.x} cy={p.y} r="4"><title>{dateLabel(record.date)}: {value}{unit}</title></circle>{showLabel ? <text x={p.x} y="252" textAnchor="middle">{record.date.slice(5).replace('-', '/')}</text> : null}</g> })}
+  </svg></figure>
 }
 
 export default function PetMobileFlow({ pets, selectedPetId, view, tasks, plans, records, onSelectPet, onView, onRegisterPet, onEditPet, onDeletePet, onOpenDiary }: Props) {
-  const [tab, setTab] = useState<DetailTab>('profile')
+  const [recordTab, setRecordTab] = useState<RecordTab>('weight')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const pet = pets.find((item) => item.id === selectedPetId) ?? pets[0]
 
-  if (!pet) return <main className="pet-reference-list empty"><header><h1>마이 펫</h1><button type="button" onClick={onRegisterPet} aria-label="반려동물 등록"><PetIcon name="add"/></button></header><section><PetIconMark name="pet" className="size-20"/><h2>등록된 반려동물이 없어요</h2><button type="button" onClick={onRegisterPet}>반려동물 등록하기</button></section></main>
-
-  const petRecords = records.filter((item) => item.petId === pet.id).sort((a, b) => `${b.date}${b.createdAt}`.localeCompare(`${a.date}${a.createdAt}`))
-  const petPlans = plans.filter((item) => item.petId === pet.id && item.isActive)
-  const petTasks = tasks.filter((item) => item.petId === pet.id)
-  const weights = petRecords.filter((item) => item.type === 'weight' && item.weight !== undefined).slice(0, 8).reverse()
-  const maxWeight = Math.max(...weights.map((item) => item.weight ?? 0), 1)
-  const minWeight = Math.min(...weights.map((item) => item.weight ?? 0), maxWeight)
-  const weightRange = Math.max(1, maxWeight - minWeight)
-  const graphPoints = weights.map((item, index) => `${weights.length < 2 ? 50 : 8 + index * 84 / (weights.length - 1)},${82 - ((item.weight ?? 0) - minWeight) / weightRange * 60}`).join(' ')
-
-  if (view === 'main') {
-    const completed = petTasks.filter((item) => item.status === 'completed').length
-    const completion = petTasks.length ? Math.round(completed / petTasks.length * 100) : 0
-    const latestWeight = petRecords.find((item) => item.type === 'weight' && item.weight !== undefined)?.weight
-    return <main className="pet-mobile-home">
-      <header><h1>마이 펫</h1><button type="button" onClick={onRegisterPet} aria-label="반려동물 등록"><PetIcon name="add"/></button></header>
-      <section className="pet-mobile-selector" aria-label="관리할 반려동물 선택">
-        {pets.map((item) => <button className={item.id === pet.id ? 'active' : ''} type="button" key={item.id} onClick={() => onSelectPet(item.id)}><span><PetPhoto pet={item} circle/></span><strong>{item.name}</strong><small>{item.species}</small></button>)}
-        <button type="button" onClick={onRegisterPet}><span className="add"><PetIcon name="add"/></span><strong>펫 추가</strong><small>새 친구</small></button>
-      </section>
-      <button className="pet-mobile-summary" type="button" onClick={() => onView('detail')}>
-        <span className="photo"><PetPhoto pet={pet}/></span><span className="copy"><small>현재 관리 중</small><strong>{pet.name}</strong><span>{pet.species} · {genderLabel(pet.gender)}</span><span>{[ageLabel(pet.birthday), latestWeight !== undefined ? `${latestWeight}g` : ''].filter(Boolean).join(' · ') || '기본 정보를 확인해 주세요'}</span></span><PetIcon name="chevron"/>
+  if (view === 'main' || !pet) return <main className="pet-flow pet-flow-list">
+    <header className="pet-flow-header"><h1>내 펫</h1><button className="pet-flow-add" type="button" aria-label="펫 추가" onClick={onRegisterPet}><PetIcon name="add"/></button></header>
+    {pets.length ? <div className="pet-flow-cards">{pets.map((item) => {
+      const todayTasks = tasksForPet(item.id, tasks, plans)
+      const completed = todayTasks.filter((task) => task.status === 'completed').length
+      const remaining = todayTasks.filter((task) => task.status === 'pending')
+      return <button className="pet-flow-card" type="button" key={item.id} aria-label={`${item.name} 상세 보기`} onClick={() => { onSelectPet(item.id); onView('detail') }}>
+        <span className="pet-flow-card-identity"><PetPhoto pet={item}/><span><strong>{item.name}</strong><small>{item.species} <PetIcon name={item.gender === 'male' ? 'male' : item.gender === 'female' ? 'female' : 'unknown'} aria-label={genderLabel(item.gender)}/></small></span></span>
+        <span className="pet-flow-card-progress"><ProgressBar done={completed} total={todayTasks.length} label={`${item.name} 오늘 루틴 진행률`}/><strong>{completed}/{todayTasks.length}</strong></span>
+        {remaining.length ? <span className="pet-flow-remaining"><strong>남은 루틴</strong><span>{remaining.map((task) => <span title={task.label} key={task.id}><PetIcon name={routineIcons[task.taskType.split('|')[0]] ?? 'routine'}/><span className="sr-only">{task.label}</span></span>)}</span></span> : <span className="pet-flow-card-status">{todayTasks.length && completed === todayTasks.length ? <PetIcon name="check" aria-label="오늘 루틴 완료"/> : <small>오늘 예정된 루틴이 없어요.</small>}</span>}
       </button>
-      <section className="pet-mobile-care"><header><div><h2>오늘 할 일</h2><span>{completed}/{petTasks.length} 완료</span></div><button type="button" onClick={() => onOpenDiary(pet.id)}>전체 보기 <PetIcon name="chevron"/></button></header>
-        {petTasks.length ? <div>{petTasks.slice(0, 3).map((task) => <button type="button" key={task.id} onClick={() => onOpenDiary(pet.id)}><PetIconMark name={routineIcons[task.taskType] ?? 'routine'}/><span><strong>{routineLabels[task.taskType] || task.taskType}</strong><small>{task.status === 'completed' ? '완료한 관리' : '오늘 예정'}</small></span><i className={task.status === 'completed' ? 'done' : ''}>{task.status === 'completed' ? '✓' : ''}</i></button>)}</div> : <p>오늘 예정된 관리가 없어요.</p>}
-      </section>
-      <section className="pet-mobile-progress"><header><h2>이번 주 케어 달성률</h2><strong>{completion}%</strong></header><div><i style={{ width: `${completion}%` }}/></div><button type="button" onClick={() => onOpenDiary(pet.id)}>다이어리에서 관리하기 <PetIcon name="chevron"/></button></section>
-    </main>
+    })}</div> : <section className="pet-flow-empty-home"><Mascot/><p>등록된 펫이 없어요.</p></section>}
+  </main>
+
+  const petTasks = tasksForPet(pet.id, tasks, plans)
+  const completed = petTasks.filter((task) => task.status === 'completed').length
+  const remaining = petTasks.filter((task) => task.status === 'pending')
+  const petPlans = plans.filter((plan) => plan.petId === pet.id && plan.isActive)
+  const petRecords = records.filter((record) => record.petId === pet.id).sort((a, b) => `${b.date}${b.createdAt}`.localeCompare(`${a.date}${a.createdAt}`))
+  const filteredRecords = petRecords.filter((record) => recordTab === 'temperature' || recordTab === 'humidity' ? record.environmentRecord?.metricType === recordTab : recordTab === 'mating' || recordTab === 'egg' ? record.incidentRecord?.kind === recordTab : record.type === recordTab)
+  const backToDetail = () => { setMenuOpen(false); onView('detail') }
+  const deletePet = async () => {
+    if (!window.confirm(`'${pet.name}'을 삭제하시겠습니까?`)) return
+    try { await onDeletePet(pet.id); setMenuOpen(false); onView('main') } catch { setDeleteError('펫을 삭제하지 못했어요. 다시 시도해주세요.') }
   }
 
-  return <main className="pet-reference-detail">
-    <section className="pet-reference-hero"><div className="pet-reference-hero-photo"><PetPhoto pet={pet}/></div><BackButton onClick={() => { setMenuOpen(false); onView('main') }}/><button className="pet-detail-circle-button menu" type="button" aria-label="펫 메뉴" onClick={() => setMenuOpen((value) => !value)}>•••</button>{menuOpen ? <div className="pet-reference-detail-menu"><button type="button" onClick={() => onEditPet(pet)}><PetIcon name="edit"/>수정</button><button type="button" onClick={() => { if (window.confirm(`'${pet.name}'을 삭제하시겠습니까?`)) void onDeletePet(pet.id) }}><PetIcon name="delete"/>삭제</button></div> : null}<button className="pet-reference-edit-pill" type="button" onClick={() => onEditPet(pet)}><PetIcon name="edit"/>수정</button></section>
-    <section className="pet-reference-identity"><h1>{pet.name}</h1><p>{pet.species} | {genderLabel(pet.gender)}</p><p>{dateLabel(pet.birthday)} {ageLabel(pet.birthday) ? `(${ageLabel(pet.birthday)})` : ''}</p></section>
-    <nav className="pet-reference-tabs" aria-label="펫 상세 탭">{([['profile','profile','프로필'],['records','record','기록'],['routine','pet','루틴'],['stats','stats','통계']] as Array<[DetailTab, PetIconName, string]>).map(([id, icon, label]) => <button className={tab === id ? 'active' : ''} type="button" key={id} onClick={() => setTab(id)}><PetIconMark name={icon}/><span>{label}</span></button>)}</nav>
+  if (view === 'records' || view === 'growth') return <main className="pet-flow pet-flow-records">
+    <FlowHeader title="기록 모아보기" onBack={backToDetail}/>
+    <nav className="pet-flow-record-tabs" aria-label="기록 종류">{recordTabs.map(([id, label]) => <button type="button" className={recordTab === id ? 'active' : ''} aria-pressed={recordTab === id} key={id} onClick={() => setRecordTab(id)}>{label}</button>)}</nav>
+    {recordTab === 'weight' || recordTab === 'temperature' || recordTab === 'humidity' ? <PetRecordChart records={filteredRecords} tab={recordTab}/> : <h2 className="pet-flow-record-heading">{recordTabs.find(([id]) => id === recordTab)?.[1]} 기록</h2>}
+    {filteredRecords.length ? <div className="pet-flow-record-list">{filteredRecords.map((record) => <button type="button" key={record.id} onClick={() => onOpenDiary(pet.id)}><span><strong>{dateLabel(record.date)}</strong><small>{recordSummary(record)}</small></span>{record.photoUrl ? <img src={record.photoUrl} alt="기록 사진"/> : null}<PetIcon name="chevron"/></button>)}</div> : recordTab !== 'weight' && recordTab !== 'temperature' && recordTab !== 'humidity' ? <p className="pet-flow-empty">아직 기록이 없어요.</p> : null}
+  </main>
 
-    {tab === 'profile' ? <section className="pet-reference-panel"><h2>기본 정보</h2><dl>{[['종', pet.species], ['성별', genderLabel(pet.gender)], ['생년월일', dateLabel(pet.birthday)], ['입양일', dateLabel(pet.adoptionDate)], ['특징', pet.description || '-'], ['메모', pet.memo || '-']].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section> : null}
-    {tab === 'records' ? <section className="pet-reference-panel"><header><h2>최근 기록</h2><button type="button" onClick={() => onOpenDiary(pet.id)}>더보기 <PetIcon name="chevron"/></button></header>{petRecords.length ? <div className="pet-reference-record-list">{petRecords.slice(0, 6).map((record) => <button type="button" key={record.id} onClick={() => onOpenDiary(pet.id)}><PetIconMark name={routineIcons[record.type] ?? (record.type === 'weight' ? 'weight' : 'record')}/><span><strong>{recordLabels[record.type] ?? '기록'}</strong><small>{dateLabel(record.date)}{record.occurredAt ? ` ${new Date(record.occurredAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}` : ''}</small></span><small>{recordSummary(record)}</small><PetIcon name="chevron"/></button>)}</div> : <p className="pet-reference-empty">아직 기록이 없어요.</p>}</section> : null}
-    {tab === 'routine' ? <section className="pet-reference-panel"><header><h2>루틴 관리</h2><button className="pet-reference-add-routine" type="button" onClick={() => onOpenDiary(pet.id, 'routine-create')}>추가 <PetIcon name="add"/></button></header>{petPlans.length ? <div className="pet-reference-routine-list">{petPlans.map((plan) => <button type="button" key={plan.id} onClick={() => onOpenDiary(pet.id)}><PetIconMark name={routineIcons[plan.taskType] ?? 'routine'}/><span><strong>{plan.title || routineLabels[plan.taskType] || plan.taskType}</strong><small>{plan.notificationTime || '시간 미지정'}</small></span><i aria-label="사용 중"/></button>)}</div> : <p className="pet-reference-empty">등록된 루틴이 없어요.</p>}</section> : null}
-    {tab === 'stats' ? <section className="pet-reference-panel stats"><div className="pet-reference-period"><button type="button">1주</button><button className="active" type="button">1개월</button><button type="button">3개월</button><button type="button">전체</button></div><article><h2><PetIconMark name="weight"/>체중 변화</h2>{weights.length ? <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="체중 변화 그래프"><polyline points={graphPoints} fill="none" stroke="var(--color-primary-700)" strokeWidth="2"/><circle cx={graphPoints.split(' ').at(-1)?.split(',')[0]} cy={graphPoints.split(' ').at(-1)?.split(',')[1]} r="2.5" fill="var(--color-primary-700)"/></svg> : <p className="pet-reference-empty">체중 기록이 없어요.</p>}</article>{['temperature','poop','food'].map((type) => <button className="pet-reference-stat-link" type="button" key={type} onClick={() => onOpenDiary(pet.id)}><PetIconMark name={type === 'temperature' ? 'temperature' : type === 'food' ? 'feed' : 'record'}/><strong>{type === 'temperature' ? '온습도 추가' : type === 'poop' ? '배변 기록' : '먹이 급여'}</strong><PetIcon name="chevron"/></button>)}</section> : null}
-    <span className="sr-only">이번 주 루틴 {petTasks.filter((item) => item.status === 'completed').length}개 완료</span>
+  if (view === 'routines') return <main className="pet-flow pet-flow-routines">
+    <header className="pet-flow-header centered"><BackButton onClick={backToDetail}/><h1>루틴 관리</h1><button className="pet-flow-add" type="button" aria-label="루틴 추가" onClick={() => onOpenDiary(pet.id, 'routine-create')}><PetIcon name="add"/></button></header>
+    <div className="pet-flow-routine-list">{petPlans.length ? petPlans.map((plan) => <button type="button" key={plan.id} onClick={() => onOpenDiary(pet.id, 'routine-create')}><PetIcon name={routineIcons[plan.taskType] ?? 'routine'}/><span><strong>{plan.title || routineLabels[plan.taskType] || plan.taskType}</strong><small>{plan.notificationTime}</small></span><PetIcon name="chevron"/></button>) : <p className="pet-flow-empty">등록된 루틴이 없어요.</p>}</div>
+  </main>
+
+  return <main className="pet-flow pet-flow-detail">
+    <header className="pet-flow-header centered"><BackButton onClick={() => { setMenuOpen(false); onView('main') }}/><h1>{pet.name}</h1><div className="pet-flow-header-actions"><button className="pet-flow-icon-button" type="button" aria-label="펫 정보 수정" onClick={() => onEditPet(pet)}><PetIcon name="edit"/></button><button className="pet-flow-icon-button" type="button" aria-label="펫 더보기" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>⋮</button></div></header>
+    {menuOpen ? <section className="pet-flow-more"><dl>{[['생년월일', dateLabel(pet.birthday)], ['입양일', dateLabel(pet.adoptionDate)], ['무게', pet.weight ? `${pet.weight}${pet.weightUnit || 'g'}` : '-'], ['특징', pet.description || '-'], ['메모', pet.memo || '-']].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><button type="button" className="pet-flow-delete" onClick={() => void deletePet()}><PetIcon name="delete"/>펫 삭제</button>{deleteError ? <p role="alert">{deleteError}</p> : null}</section> : null}
+    <section className="pet-flow-detail-content"><div className="pet-flow-hero"><PetPhoto pet={pet}/></div><div className="pet-flow-detail-body">
+      <section className="pet-flow-identity"><div><h2>{pet.name}</h2><p>{pet.species} · {genderLabel(pet.gender)}</p></div><button className="pet-flow-icon-button" type="button" aria-label="펫 정보 수정" onClick={() => onEditPet(pet)}><PetIcon name="settings"/></button></section>
+      <section className="pet-flow-today"><h2>오늘의 루틴 <strong>{completed}/{petTasks.length}</strong></h2><ProgressBar done={completed} total={petTasks.length} label={`${pet.name} 오늘 루틴 진행률`}/><h3>남은 루틴</h3>{remaining.length ? <div className="pet-flow-routine-pills">{remaining.map((task) => <button type="button" key={task.id} onClick={() => onOpenDiary(pet.id)}><PetIcon name={routineIcons[task.taskType.split('|')[0]] ?? 'routine'}/>{task.label}</button>)}</div> : <p>{petTasks.length && completed === petTasks.length ? '오늘의 루틴을 모두 완료했어요!' : '오늘 예정된 루틴이 없어요.'}</p>}</section>
+      <nav className="pet-flow-detail-links" aria-label="펫 관리"><button type="button" onClick={() => onView('routines')}><PetIcon name="routine"/><span>루틴 관리</span><PetIcon name="chevron"/></button><button type="button" onClick={() => onView('records')}><PetIcon name="record"/><span>기록 모아보기</span><PetIcon name="chevron"/></button><button type="button" onClick={() => onEditPet(pet)}><PetIcon name="settings"/><span>펫 정보 수정</span><PetIcon name="chevron"/></button></nav>
+    </div></section>
   </main>
 }

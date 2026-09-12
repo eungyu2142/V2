@@ -65,5 +65,6 @@ export type NaverMapApi = {
 declare global {
   interface Window {
     naver?: NaverMapApi
+    navermap_authFailure?: () => void
   }
 }

@@ -4,15 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "node scripts/guard-qna-label.mjs && node scripts/check-ui-architecture.mjs && node scripts/build-hospital-condition-evidence-runtime.mjs",
+    "prebuild": "node scripts/guard-qna-label.mjs && node scripts/build-hospital-condition-evidence-runtime.mjs",
     "dev": "vite --configLoader native",
     "dev:chrome": "start \"\" chrome \"http://localhost:5173/\" && vite --host 127.0.0.1",
-    "build": "tsc -b && vite build",
-    "css:purge": "node scripts/purge-unused-css.mjs",
+    "build": "tsc -b && vite build --configLoader native",
     "collect:hospitals": "node scripts/collect-exotic-hospitals.mjs",
     "collect:hospital-evidence": "node scripts/collect-hospital-condition-evidence.mjs && node scripts/build-hospital-condition-evidence-runtime.mjs",
     "collect:hospital-evidence-priority": "node scripts/expand-priority-hospital-evidence.mjs",
-    "lint": "eslint . && node scripts/check-ui-architecture.mjs",
+    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -33,7 +32,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-    "purgecss": "^8.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",

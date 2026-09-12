@@ -1,13 +1,17 @@
 import { type ChangeEvent, type PointerEvent, type ReactNode, useEffect, useRef, useState } from 'react'
-import './MyPet.css'
 import type { AnimalCategory, DraftItem, Pet } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
 import { RequiredMark } from '../common/FieldMarkers'
-import { PetIcon, PetIconMark } from './PetIcons'
+import { saveCarePlan } from '../../features/diary/diaryService'
+import type { CareTaskType } from '../../features/diary/diaryTypes'
+import Mascot from '../common/Mascot'
+import { PetIcon, type PetIconName } from './PetIcons'
+import './PetFlow.css'
 
 type SupportedPetCategory = 'reptile' | 'amphibian'
 type PendingPhoto = { url: string; file: File; position: { x: number; y: number } }
 type Props = {
+  userId: string
   initialPet: Pet | null
   initialDraft?: DraftItem | null
   categoryOptions: Exclude<AnimalCategory, 'all'>[]
@@ -20,6 +24,19 @@ type Props = {
 }
 
 const defaultPosition = { x: 50, y: 50 }
+const routineOptions: Array<{ key: string; type: CareTaskType; label: string; icon: PetIconName }> = [
+  { key: 'feed', type: 'feed', label: '먹이', icon: 'feed' },
+  { key: 'mist', type: 'mist', label: '분무', icon: 'mist' },
+  { key: 'water', type: 'water', label: '물그릇', icon: 'water' },
+  { key: 'temperature', type: 'temperature', label: '온도', icon: 'temperature' },
+  { key: 'humidity', type: 'humidity', label: '습도', icon: 'mist' },
+  { key: 'cleaning', type: 'cleaning', label: '청소', icon: 'cleaning' },
+  { key: 'uvb_check', type: 'uvb_check', label: 'UVB', icon: 'uvb' },
+  { key: 'spot', type: 'custom', label: '스팟', icon: 'spot' },
+  { key: 'water_temperature', type: 'water_temperature', label: '수온', icon: 'temperature' },
+  { key: 'weight', type: 'weight', label: '무게', icon: 'weight' },
+  { key: 'medicine', type: 'medicine', label: '약', icon: 'medicine' },
+]
 function isSupported(value?: AnimalCategory | ''): value is SupportedPetCategory {
   return value === 'reptile' || value === 'amphibian'
 }
@@ -30,15 +47,20 @@ function sanitizeDecimal(value: string) {
   return decimal.length ? `${integer.slice(0, 5)}.${decimal.join('').slice(0, 2)}` : integer.slice(0, 5)
 }
 
-export default function PetCreateFlow({ initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave }: Props) {
+export default function PetCreateFlow({ userId, initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave }: Props) {
   const initialGroup = isSupported(initialPet?.group) ? initialPet.group : ''
-  const [step, setStep] = useState(Math.min(initialDraft?.step ?? 0, 1))
+  const [step, setStep] = useState(initialPet || initialDraft ? 1 : 0)
+  const [petId] = useState(initialPet?.id ?? crypto.randomUUID())
+  const [selectedRoutines, setSelectedRoutines] = useState<string[]>([])
+  const [routineIds] = useState(() => Object.fromEntries(routineOptions.map((option) => [option.key, crypto.randomUUID()])))
+  const [saving, setSaving] = useState(false)
   const [completedPet, setCompletedPet] = useState<Pet | null>(null)
   const [name, setName] = useState(initialPet?.name ?? '')
   const [group, setGroup] = useState<SupportedPetCategory | ''>(initialGroup)
   const knownInitialSpecies = initialGroup && speciesOptions[initialGroup].includes(initialPet?.species ?? '')
   const [species, setSpecies] = useState(knownInitialSpecies ? initialPet?.species ?? '' : '')
   const [customSpecies, setCustomSpecies] = useState(knownInitialSpecies ? '' : initialPet?.species ?? '')
+  const [customSpeciesMode, setCustomSpeciesMode] = useState(Boolean(initialPet?.species && !knownInitialSpecies))
   const [gender, setGender] = useState<Pet['gender'] | ''>(initialPet?.gender ?? '')
   const [photo, setPhoto] = useState(initialPet?.photo)
   const [photoFile, setPhotoFile] = useState<File>()
@@ -115,49 +137,67 @@ export default function PetCreateFlow({ initialPet, initialDraft, categoryOption
   }
 
   const buildPet = (): Pet => ({
-    id: initialPet?.id ?? crypto.randomUUID(), name: name.trim().slice(0, 24), group: group || 'reptile', species: resolvedSpecies,
+    ...initialPet, id: petId, name: name.trim().slice(0, 24), group: group || 'reptile', species: resolvedSpecies,
     gender: gender || 'unknown', photo, photoPosition, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined,
     description: description.trim().slice(0, 80) || undefined, memo: memo.trim().slice(0, 300) || undefined,
     weight: weight || undefined, weightUnit, registeredAt: initialPet?.registeredAt ?? new Date().toISOString(),
   })
 
   const save = async () => {
-    if (!canContinue) return
+    if (!canContinue || saving) return
     try {
+      setSaving(true)
       setSaveError('')
       const pet = buildPet()
       await onSave(pet, photoFile)
+      if (!initialPet) {
+        const now = new Date().toISOString()
+        const startDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+        for (const option of routineOptions.filter((item) => selectedRoutines.includes(item.key))) {
+          await saveCarePlan(userId, { id: routineIds[option.key], userId, petId: pet.id, taskType: option.type, title: option.label, repeatDays: [0, 1, 2, 3, 4, 5, 6], recurrenceType: 'weekdays', startDate, notificationTime: '09:00', isActive: true, createdAt: now, updatedAt: now })
+        }
+      }
       if (initialPet) onClose()
       else setCompletedPet(pet)
     } catch {
-      setSaveError('반려동물 정보를 저장하지 못했어요. 다시 시도해주세요.')
+      setSaveError('펫 정보 또는 선택한 루틴을 저장하지 못했어요. 입력 내용은 유지돼요. 다시 시도해주세요.')
+    } finally {
+      setSaving(false)
     }
   }
 
-  if (completedPet) return <main className="pet-reference-complete"><section><PetIconMark name="pet" className="pet-reference-complete-mark"/><PetIconMark name="check" className="pet-reference-complete-check"/><h1>반려동물이<br/>정상적으로 등록되었어요!</h1><button type="button" onClick={onClose}>확인</button></section></main>
+  if (completedPet) return <main className="pet-flow pet-flow-create pet-flow-complete"><section><Mascot mood="happy"/><h1>{completedPet.name}가 등록되었어요!</h1></section><footer className="pet-flow-footer"><button className="pet-flow-primary" type="button" onClick={onClose}>내 펫 보기</button></footer></main>
+
+  if (step === 0) return <main className="pet-flow pet-flow-create pet-flow-intro"><header className="pet-flow-header centered"><button className="pet-flow-icon-button" type="button" aria-label="뒤로가기" onClick={onClose}><PetIcon name="back"/></button><h1>펫 추가</h1><span/></header><section><Mascot mood="welcome"/><h2>새로운 가족을 맞이해요!</h2></section><footer className="pet-flow-footer"><button className="pet-flow-primary" type="button" onClick={() => setStep(1)}>시작하기</button></footer></main>
 
   const categories = categoryOptions.filter(isSupported)
-  return <main className="pet-reference-create">
-    <header><button type="button" onClick={onClose}>취소</button><h1>{initialPet ? '반려동물 수정' : '반려동물 등록'}</h1><span /></header>
-    <form onSubmit={(event) => { event.preventDefault(); if (step === 0) setStep(1); else void save() }}>
-      <section className="pet-reference-form-body">
-        <p className="pet-reference-step-label">{step + 1}/2 {step === 0 ? '기본 정보' : '추가 정보'}</p>
-        {step === 0 ? <>
-          <label className="pet-reference-photo"><input type="file" accept="image/*" onChange={attachPhoto}/><span>{photo ? <img src={photo} alt="반려동물 사진 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }}/> : <PetIcon name="camera"/>}</span><small>사진을 추가해주세요<br/>(선택)</small></label>
-          <label className="pet-reference-field"><span>이름 <RequiredMark/></span><input value={name} maxLength={24} onChange={(event) => setName(event.target.value)} placeholder="이름을 입력해주세요"/></label>
-          <label className="pet-reference-field"><span>종 <RequiredMark/></span><select value={species ? `${group}|${species}` : customSpecies ? 'custom' : ''} onChange={(event) => { if (event.target.value === 'custom') { setSpecies(''); setCustomSpecies(''); return } const [nextGroup, nextSpecies] = event.target.value.split('|') as [SupportedPetCategory, string]; setGroup(nextGroup); setSpecies(nextSpecies); setCustomSpecies('') }}><option value="">종을 선택해주세요</option>{categories.map((category) => <optgroup label={categoryLabels[category]} key={category}>{speciesOptions[category].map((item) => <option value={`${category}|${item}`} key={item}>{item}</option>)}</optgroup>)}<option value="custom">직접 입력</option></select></label>
-          {(!species && (customSpecies || group)) ? <div className="pet-reference-custom"><div>{categories.map((category) => <button className={group === category ? 'active' : ''} type="button" key={category} onClick={() => setGroup(category)}>{categoryLabels[category]}</button>)}</div><input value={customSpecies} maxLength={40} onChange={(event) => setCustomSpecies(event.target.value)} placeholder="종을 직접 입력해주세요" aria-label="종 직접 입력"/></div> : null}
-          <fieldset className="pet-reference-gender"><legend>성별 <RequiredMark/></legend><div>{(['male','female','unknown'] as const).map((value) => <button className={gender === value ? 'active' : ''} type="button" key={value} aria-pressed={gender === value} onClick={() => setGender(value)}><PetIcon name={value === 'male' ? 'male' : value === 'female' ? 'female' : 'unknown'}/>{value === 'male' ? '수컷' : value === 'female' ? '암컷' : '미구분'}</button>)}</div></fieldset>
-          <label className="pet-reference-field optional"><span>현재 몸무게 (선택)</span><div className="pet-reference-weight"><input inputMode="decimal" value={weight} onChange={(event) => setWeight(sanitizeDecimal(event.target.value))} placeholder="숫자 입력"/><div>{(['g','kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</div></div></label>
+  return <main className="pet-flow pet-flow-create">
+    <header className="pet-flow-header centered"><button className="pet-flow-icon-button" type="button" aria-label="뒤로가기" disabled={saving} onClick={() => { if (initialPet) onClose(); else setStep((current) => current - 1) }}><PetIcon name="back"/></button><h1>{step === 2 ? '루틴 설정 (선택)' : initialPet ? '펫 정보 수정' : '펫 정보 입력'}</h1><span/></header>
+    <form onSubmit={(event) => { event.preventDefault(); if (!canContinue) return; if (step === 1 && !initialPet) setStep(2); else void save() }}>
+      <section className="pet-flow-form-body">
+        {step === 1 ? <>
+          <label className="pet-flow-photo-input"><input type="file" accept="image/*" aria-label="펫 사진 선택" onChange={attachPhoto}/><span>{photo ? <img src={photo} alt="반려동물 사진 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }}/> : <PetIcon name="camera"/>}</span></label>
+          <div className="pet-flow-fields">
+            <label className="pet-flow-field"><span>이름 <RequiredMark/></span><input value={name} maxLength={24} onChange={(event) => setName(event.target.value)} placeholder="예) 청단이" required/></label>
+            <label className="pet-flow-field"><span>세부 종명 <RequiredMark/></span><select value={customSpeciesMode ? 'custom' : species ? `${group}|${species}` : ''} onChange={(event) => { if (event.target.value === 'custom') { setCustomSpeciesMode(true); setSpecies(''); setGroup((current) => current || 'reptile'); return } const [nextGroup, nextSpecies] = event.target.value.split('|') as [SupportedPetCategory, string]; setGroup(nextGroup || ''); setSpecies(nextSpecies || ''); setCustomSpecies(''); setCustomSpeciesMode(false) }} required><option value="">예) 크레스티드 게코</option>{categories.map((category) => <optgroup label={categoryLabels[category]} key={category}>{speciesOptions[category].filter((item) => item !== '직접 입력').map((item) => <option value={`${category}|${item}`} key={item}>{item}</option>)}</optgroup>)}<option value="custom">직접 입력</option></select></label>
+            {customSpeciesMode ? <div className="pet-flow-custom"><label className="pet-flow-field"><span>동물 분류</span><select value={group} onChange={(event) => setGroup(event.target.value as SupportedPetCategory)}>{categories.map((category) => <option value={category} key={category}>{categoryLabels[category]}</option>)}</select></label><label className="pet-flow-field"><span>종 직접 입력</span><input value={customSpecies} maxLength={40} onChange={(event) => setCustomSpecies(event.target.value)} placeholder="세부 종명을 입력해주세요" required/></label></div> : null}
+            <fieldset className="pet-flow-gender"><legend>성별 <RequiredMark/></legend><div>{(['male', 'female', 'unknown'] as const).map((value) => <button className={gender === value ? 'active' : ''} type="button" key={value} aria-pressed={gender === value} onClick={() => setGender(value)}><PetIcon name={value === 'male' ? 'male' : value === 'female' ? 'female' : 'unknown'}/>{value === 'male' ? '수컷' : value === 'female' ? '암컷' : '미구분'}</button>)}</div></fieldset>
+            <label className="pet-flow-field"><span>생년월일</span><input type="date" value={birthday} max={new Intl.DateTimeFormat('en-CA').format(new Date())} onChange={(event) => setBirthday(event.target.value)}/></label>
+            <details className="pet-flow-extra"><summary>추가 정보 (선택)</summary><div>
+              <label className="pet-flow-field"><span>현재 몸무게</span><span className="pet-flow-weight"><input inputMode="decimal" value={weight} aria-label="현재 몸무게" onChange={(event) => setWeight(sanitizeDecimal(event.target.value))} placeholder="숫자 입력"/><span>{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} aria-pressed={weightUnit === unit} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</span></span></label>
+              <label className="pet-flow-field"><span>입양일</span><input type="date" value={adoptionDate} onChange={(event) => setAdoptionDate(event.target.value)}/></label>
+              <label className="pet-flow-field"><span>특징</span><textarea value={description} maxLength={80} onChange={(event) => setDescription(event.target.value)} placeholder="예) 색, 크기, 성격 등"/></label>
+              <label className="pet-flow-field"><span>메모</span><textarea value={memo} maxLength={300} onChange={(event) => setMemo(event.target.value)} placeholder="추가로 기록할 내용을 입력해주세요"/></label>
+            </div></details>
+          </div>
         </> : <>
-          <label className="pet-reference-field"><span>생년월일</span><span className="pet-reference-date"><input type="date" value={birthday} onChange={(event) => setBirthday(event.target.value)}/><PetIcon name="calendar"/></span></label>
-          <label className="pet-reference-field"><span>입양일</span><span className="pet-reference-date"><input type="date" value={adoptionDate} onChange={(event) => setAdoptionDate(event.target.value)}/><PetIcon name="calendar"/></span></label>
-          <label className="pet-reference-field"><span>특징 (선택)</span><textarea value={description} maxLength={80} onChange={(event) => setDescription(event.target.value)} placeholder="예) 색, 크기, 성격 등"/></label>
-          <label className="pet-reference-field"><span>메모 (선택)</span><textarea value={memo} maxLength={300} onChange={(event) => setMemo(event.target.value)} placeholder="추가로 기록할 내용이 있나요?"/></label>
+          <p className="pet-flow-routine-help">필요한 루틴만 선택해주세요.</p>
+          <div className="pet-flow-routine-options">{routineOptions.map((option) => <label key={option.key}><PetIcon name={option.icon}/><span>{option.label}</span><input type="checkbox" checked={selectedRoutines.includes(option.key)} onChange={(event) => setSelectedRoutines((current) => event.target.checked ? [...current, option.key] : current.filter((key) => key !== option.key))}/></label>)}</div>
+          <p className="pet-flow-form-note">선택한 루틴은 매일 오전 9시로 등록돼요. 루틴 관리에서 요일과 시간을 변경할 수 있어요.</p>
         </>}
-        {saveError ? <p className="pet-reference-error" role="alert">{saveError}</p> : null}
+        {saveError ? <p className="pet-flow-error" role="alert">{saveError}</p> : null}
       </section>
-      <footer>{step === 1 ? <button className="secondary" type="button" onClick={() => setStep(0)}>이전</button> : null}<button className="primary" type="submit" disabled={step === 0 && !canContinue}>{step === 0 ? '다음' : initialPet ? '저장' : '등록 완료'}</button></footer>
+      <footer className="pet-flow-footer"><button className="pet-flow-primary" type="submit" disabled={!canContinue || saving}>{saving ? '저장 중…' : initialPet ? '저장하기' : '다음'}</button></footer>
     </form>
     {pendingPhoto ? <div className="pet-photo-preview-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) cancelPhoto() }}><section className="pet-photo-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-photo-preview-title"><div className="pet-photo-preview-header"><button type="button" onClick={cancelPhoto}>취소</button><h2 id="pet-photo-preview-title">사진 조정</h2><button type="button" onClick={applyPhoto}>적용</button></div><div className="pet-photo-preview-body"><p>사진을 움직여 위치를 맞춰주세요.</p><div className="pet-photo-preview-frame" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); movePendingPhoto(event) }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePendingPhoto(event) }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><img src={pendingPhoto.url} alt="조정 중인 반려동물 사진" style={{ objectPosition: `${pendingPhoto.position.x}% ${pendingPhoto.position.y}%` }} draggable={false}/><span className="pet-photo-preview-guide" aria-hidden="true"/></div><small>상하좌우로 드래그해 조정할 수 있어요.</small></div></section></div> : null}
   </main>

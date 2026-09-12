@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Stepper } from '../ui'
+import { FlowHeader } from '../ui/FlowHeader'
 
 type StepShellProps = {
   title: string
@@ -55,13 +56,8 @@ export default function StepShell({
 
   return (
     <main className={`step-screen ${title.includes('질문') ? 'qna-create-screen' : ''}`}>
-      <header className="step-header">
-        <button className="back" type="button" aria-label="뒤로가기" onClick={onBack}>
-          ←
-        </button>
-        <strong>{title}</strong>
-      </header>
-      {!stepLabels && <p className="step-keyword" aria-label="작성 키워드">{keyword}</p>}
+      <FlowHeader title={title} onBack={onBack} />
+      {!stepLabels && !hideProgress && <p className="step-keyword" aria-label="작성 키워드">{keyword}</p>}
       {!hideProgress && currentStep !== undefined && stepCount && (
         <Stepper currentStep={currentStep} stepCount={stepCount} labels={stepLabels} onStepChange={onStepChange} />
       )}

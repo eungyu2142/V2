@@ -25,7 +25,7 @@ export function FormActions({
   className = '',
 }: FormActionsProps) {
   return (
-    <div className={`mt-5 flex w-full items-stretch gap-2 [&>*]:min-w-0 [&>*]:flex-1 ${className}`.trim()}>
+    <div className={`mt-6 flex w-full gap-2.5 [&>*]:min-w-0 [&>*]:flex-1 ${className}`.trim()}>
       {extra}
       {onPrevious && <Button variant="secondary" type="button" disabled={previousDisabled} onClick={onPrevious}>{previousLabel}</Button>}
       <Button type={primaryType} disabled={primaryDisabled} onClick={onPrimary}>{primaryLabel}</Button>

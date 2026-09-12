@@ -109,6 +109,7 @@ export type PetRecord = {
   weight?: number
   foods?: string[]
   feedingFoods?: FeedingFoodItem[]
+  feedingAmount?: string
   environmentRecord?: EnvironmentRecord
   clinicDetails?: ClinicRecordDetails
   incidentRecord?: IncidentRecordData

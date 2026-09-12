@@ -12,8 +12,9 @@ const runtimeData = {
     id: hospital.id,
     name: hospital.name,
     address: hospital.address,
-    shedding: hospital.conditions?.shedding?.evidenceCount ?? 0,
-    defecation: hospital.conditions?.defecation?.evidenceCount ?? 0,
+    conditions: Object.fromEntries(
+      Object.entries(hospital.conditions ?? {}).map(([id, condition]) => [id, condition?.evidenceCount ?? 0]),
+    ),
   })),
 }
 

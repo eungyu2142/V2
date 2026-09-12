@@ -6075,3 +6075,119 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 핵심 변경: 마이펫을 펫 선택기, 대표 펫 카드, 오늘 할 일, 주간 달성률 순서로 재구성했다. 다이어리를 월간 캘린더와 예측 기간, 경고, 루틴 미리보기, 상황별 기록, 기록 모아보기 순서로 재구성했다. 모든 색은 기존 디자인 토큰을 사용했다.
 - 검증 결과: `npm run build` 성공, TypeScript 및 Vite production build 오류 없음.
 - 남은 작업: 인증된 실제 모바일 세션에서 터치 동선과 375~430px 시각 검증이 필요하다.
+## 2026-09-08 전체 UX 플로우 교체 준비 및 CSS 정리
+
+- 요청 요약: 첨부된 전체 플로우와 하단 아이콘·캐릭터 가이드를 기준으로 기존 UI 디자인을 폐기하고 기능만 보존한다.
+- 분석 및 판단: 화면 CSS가 과거 덮어쓰기 규칙으로 누적되어 새 디자인이 일관되게 적용되지 않았다. 새 화면 작성 전에 실제 JSX에서 사용하지 않는 선택자를 제거하고 공통 캐릭터·아이콘 계층을 분리했다.
+- 수정 파일: 앱의 기존 화면 CSS 파일들, `src/components/common/Mascot.tsx`, `src/components/common/Mascot.css`, `src/components/AuthScreen.tsx`, `src/features/diary/DiaryMobileScreen.tsx`.
+- 핵심 변경: 프로젝트의 PurgeCSS 절차로 미사용 스타일을 제거했다. 캐릭터 표시를 공통 컴포넌트로 만들고 로그인과 루틴 완료 화면에 연결했다. 투명도가 보장되지 않은 생성 자산은 검사 후 즉시 제외했다.
+- 검증 결과: UI 구조 검사, TypeScript, Vite production build 성공.
+- 남은 작업: 로그인부터 Q&A 상세까지 각 화면 JSX를 새 플로우 기준으로 교체하고 인증된 모바일 환경에서 시각·터치 검증한다. 전체 완료 전에는 운영 배포하지 않는다.
+## 2026-09-08 디자인 계층 전체 제거
+
+- 요청 요약: 화면·컴포넌트 CSS와 Tailwind를 포함한 기존 디자인 관련 코드를 전부 삭제한다.
+- 분석 및 판단: 기능 로직을 보존하기 위해 TSX의 데이터 처리, 이벤트 핸들러, 라우팅은 유지하고 스타일 파일·스타일 import·스타일 빌드 도구만 제거했다.
+- 수정 파일: 모든 `src/**/*.css`, CSS를 import하던 TSX, `vite.config.ts`, `package.json`, `package-lock.json`, 디자인 검사 스크립트.
+- 핵심 변경: CSS 파일 16개와 모든 CSS import를 제거했다. Tailwind 및 PurgeCSS 패키지와 Vite 플러그인, CSS 정리·검사 스크립트를 제거했다.
+- 검증 결과: `src` 내부 CSS 파일 0개, Tailwind/PurgeCSS 참조 0개, TypeScript 및 Vite production build 성공.
+- 남은 작업: 현재는 브라우저 기본 스타일 상태이며 새 UI/UX를 처음부터 구현해야 한다.
+
+## 2026-09-10 전체 화면 시안 인계 및 Tailwind 공통화
+
+- 요청 요약: 이전 `전체화면 UI UX 재구성`과 `전체 화면` 작업의 사용자 요청을 확인하고 첨부 플로우만 기준으로 기존 구현을 이어간다. React·Tailwind를 사용하며 중복 스타일·컴포넌트를 줄인다.
+- 분석·판단 이유: 기존 작업에는 과거 CSS 삭제와 신규 화면 구현이 함께 미완료 변경으로 남아 있었고 Tailwind 의존성은 제거돼 있었다. 최신 시안과 충돌하는 이전 색상·내비게이션 요구는 다시 적용하지 않았다. 인증·저장·푸시·좋아요 데이터 경로는 재작성하지 않았다.
+- 수정 파일: package.json, package-lock.json, vite.config.ts, src/index.css, AuthScreen, StepShell, AppNavigation, 공통 Button/Field/ChoiceGroup/FormActions, FlowHeader, ProgressBar, Mascot, ReferenceIcon, GuideAction, HeartIcon, PetIcons, PetMobileFlow, PetCreateFlow, DiaryGlyph, DiaryMobileScreen, DiaryPage, QnaScreen, 화면별 flow CSS, UI 라이브러리 README, APP_REQUIREMENTS.
+- 핵심 변경 내용: Tailwind Vite 플러그인을 복구하고 기본 스타일·화면 스타일·유틸리티의 cascade layer를 분리했다. 로그인·가입과 내비게이션 및 공통 컨트롤을 Tailwind로 전환했다. 뒤로가기 헤더와 루틴 진행 막대를 공통화했다. 흰 하단 내비게이션, 민트 활성 아이콘, 시안의 진한 본문색을 적용했다. 첨부 원본의 캐릭터·케어 마크를 SVG viewport로 표시하여 새 그림을 만들지 않고 중복된 아이콘 구현을 줄였다. 약·UVB 루틴 마크와 펼치기 화살표를 복구하고 중복된 종 직접 입력 선택지를 정리했다. 별도 인증 CSS를 제거했다.
+- 검증 결과: TypeScript 및 Vite 프로덕션 빌드 성공. 변경 컴포넌트 ESLint 통과. agent-browser 390×844에서 로그인, 내 펫 목록·상세·그래프, 펫 등록 기본 정보→루틴 선택→완료, 다이어리→기록 선택→배변 폼, Q&A 목록→작성, 병원 목록→상세 전환을 확인했다. 이 전환 검증은 .tmp/ui-flow-preview의 테스트 데이터이며 실제 DB 저장 성공을 의미하지 않는다.
+- 남은 작업: 회원가입 시안의 중복확인은 현재 Supabase 인증 전환 migration에서 기존 RPC가 제거된 상태이므로 서버 연결이 필요하다. 실제 로그인 계정의 업로드·저장·푸시와 지도 타일 표시를 실환경에서 검증해야 한다. 상세 화면 고유 CSS는 남아 있으며 전부 Tailwind로 전환했다고 주장하지 않는다.
+
+
+### 2026-09-10 — 지도 연결 및 루틴 프론트엔드 후속 반영
+- 요청: 기존 전체 화면 재구성을 이어가며 지도 연결과 루틴 노출을 수정.
+- 분석·판단: 네이버 SDK가 지도 컨테이너를 relative로 바꾸면서 높이가 0이 됨. 내 펫은 daily_tasks만 표시하여 저장된 care_plans가 있어도 일정 생성 전에는 비어 보임.
+- 수정 파일: src/components/hospital-map/map-flow.css, MapScreen.tsx, mapDependencies.tsx, src/types/map.ts, src/components/my-pet/PetMobileFlow.tsx, src/features/diary/routineSchedule.ts, DiaryMobileScreen.tsx, DiaryPage.tsx.
+- 변경: 지도 영역에 명시적 전체 높이 적용. 참조 이미지에 없는 긴 확대 컨트롤을 숨기고 터치 확대 유지. 루틴 관리 버튼은 제공 이미지의 설정 아이콘 재사용. 저장된 루틴을 오늘 일정에 맞춰 내 펫에 표시.
+- 검증: localhost:5173 모바일 390×844에서 실제 네이버 타일·병원 마커 표시 확인. 다이어리 2/6 및 물그릇·습도·UVB·약 표시, 루틴 관리 진입 확인(테스트 데이터). 일정 요일/기간/비활성/간격/대체 표시/중복 방지 검증 통과.
+- 남은 작업: 실제 로그인 계정에서 저장·수정·완료의 서버 왕복 검증은 별도 필요.
+
+
+### 2026-09-10 — 내 위치 표시 및 참조 병원 핀
+- 요청: 내 위치가 보이지 않는 문제 수정, 사진의 병원 마커 반영.
+- 분석: current-location-marker의 CSS가 누락되어 좌표 수신 후에도 점 크기와 색이 없었음. 병원 마커에는 사진에 없는 숫자·하트 배지 및 회전된 비대칭 형태가 남아 있었음.
+- 수정 파일: src/index.css, src/components/hospital-map/map-flow.css, mapDependencies.tsx, MapScreen.tsx.
+- 변경: 사진의 파란 위치 점·흰 테두리·반투명 원을 위치 전용 토큰으로 복구. 병원 핀을 민트색 대칭 물방울과 흰 H로 재현하고 배지 제거. 핀 끝과 위치 점 중심을 지도 좌표에 정렬. 위치 점이 핀 아래에 가려지지 않도록 우선순위 조정.
+- 검증: 5173 모바일에서 실제 네이버 지도·핀 확인. 검증 페이지에 테스트 좌표를 주입해 30×30 위치 점이 화면 중앙에 표시됨을 확인. 숫자·하트 배지 0개. ESLint 및 프로덕션 빌드 통과.
+- 남은 작업: 사용자 기기의 실제 GPS 정확도는 기기 위치 권한·환경에 따름.
+## 2026-09-12 병원 목록 모바일 바텀시트 적용
+
+- 요청 요약: 병원 찾기에서 별도 목록 버튼을 눌러야 병원 목록이 나오는 구조를 모바일 바텀시트로 변경한다.
+- 분석·판단 이유: 드래그 높이 상태는 이미 구현되어 있었지만 모바일 목록 CSS가 없어 지도 모드에서 목록 전체가 숨겨지고 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 지도 하단에 주변 병원 수가 표시되는 목록 시트를 기본 노출하고, 손잡이 드래그에 따라 높이가 바뀌도록 기존 상태를 실제 레이아웃에 연결했다. 모바일 목록 보기 버튼은 숨기고 데스크톱 전환 구조는 유지했다.
+- 검증 결과: 변경 컴포넌트 ESLint, TypeScript 검사와 프로덕션 빌드를 통과했다. `git diff --check`는 이번 변경과 무관한 기존 Q&A 파일의 후행 공백을 보고했다.
+- 남은 작업: 인증된 모바일 실기기에서 시트 드래그와 목록 스크롤을 최종 확인한다.
+
+## 2026-09-12 병원 바텀시트 상단 경계와 필터 정리
+
+- 요청 요약: 바텀시트가 상단 필터를 덮지 않게 제한하고 지도 필터와 정렬 버튼 구성을 단순화한다.
+- 분석·판단 이유: 시트 최대 높이가 화면 기준 96%여서 검색·필터 영역까지 가릴 수 있었고, 분류 필터와 정렬의 위치가 혼재되어 있었다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 모바일 시트의 최대 상단을 필터 영역 아래 150px 경계로 제한했다. 지도 위에는 `영업 중`만 남기고 시트에는 `거리순`, `평점순` 순서로 정렬 버튼을 배치했다.
+- 검증 결과: 관련 컴포넌트 ESLint, TypeScript 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 모바일 높이별 시트 상단 경계를 확인한다.
+### 2026-09-12 · 다이어리 상단 버튼과 예상 주기 캘린더
+
+- 요청 요약: 상단 `+`를 루틴 추가로 바꾸고 별도 캘린더 버튼과 산란·탈피 예상 기간 색상을 추가했다.
+- 분석·판단: 기존 `+`가 기록 추가인지 루틴 추가인지 시각적으로 모호해 주요 행동을 기능별로 분리할 필요가 있었다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: `+`의 라벨과 연결을 루틴으로 교체하고 캘린더 아이콘, 별도 기록하기 버튼, 민트·Accent 예상 기간과 범례를 적용했다.
+- 검증 결과: 변경한 다이어리 모바일 컴포넌트 ESLint 통과. 전체 TypeScript 검사는 기존 지도 화면의 미사용 변수 오류 4건으로 중단됐다.
+- 남은 작업: 실제 모바일 너비에서 헤더 버튼 3개의 간격과 예상 기간 연속 배경을 확인한다.
+## 2026-09-12 증상·질병별 병원 TOP 5 화면
+
+- 요청 요약: 거식, 탈피, 배변, 산란과 리뷰 작성에 있는 질병별로 관련 병원 5순위를 병원 목록에서 따로 확인할 수 있게 한다.
+- 분석·판단 이유: 병원명·거리 중심 목록만으로는 특정 증상 진료 경험을 비교하기 어렵고, 원본 공개 근거 데이터의 질병 항목 대부분이 앱용 변환 단계에서 누락되어 있었다.
+- 수정 파일: `src/features/hospital-map/hospitalConditionCatalog.ts`, `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `scripts/build-hospital-condition-evidence-runtime.mjs`, `public/data/hospital-condition-evidence.json`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 바텀시트에 `증상·질병별 병원` 영역과 증상·진단명 선택기를 추가했다. 관련 리뷰의 진단명·태그·본문·처방 키워드와 공개 검색 근거 건수를 합쳐 최대 5곳을 표시하고, 근거가 없으면 순위를 임의로 만들지 않고 빈 상태를 표시한다.
+- 검증 결과: 관련 ESLint, TypeScript 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 리뷰 데이터가 누적된 계정에서 동률 병원의 거리순 정렬을 확인한다.
+### 2026-09-12 · 상단 + 버튼 루틴 작성 직행
+
+- 요청 요약: 다이어리 상단 `+`가 설정 화면이 아니라 새 루틴 추가 화면으로 바로 이동하게 했다.
+- 분석·판단: 추가와 관리가 같은 콜백을 사용해 `+`와 톱니바퀴가 동일한 루틴 관리 화면을 열고 있었다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: `onAddRoutine`과 `onManageRoutines`를 분리해 `+`는 작성 폼, 톱니바퀴는 관리 목록으로 연결했다.
+- 검증 결과: ESLint와 TypeScript 프로젝트 검사 통과.
+- 남은 작업: 없음.
+### 2026-09-12 · 탈피 예상일 파란색 범위 표시
+
+- 요청 요약: 탈피 예상일을 기준으로 전후 2일을 파란색으로 칠했다.
+- 분석·판단: 과거 주기의 최소·최대 간격을 범위로 사용하면 예상 구간이 지나치게 넓어질 수 있어 계산된 중심 예상일 기준의 고정 범위가 더 명확하다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 탈피 예상 구간을 총 5일로 변경하고 달력 배경, 기록 점, 범례를 `--color-location-*` 파란색 토큰으로 통일했다.
+- 검증 결과: TypeScript, DiaryPage ESLint, diff 검사 통과.
+- 남은 작업: 없음.
+### 2026-09-12 · 기록 모아보기 그래프 중심 UI
+
+- 요청 요약: 기록 모아보기의 긴 텍스트를 제거하고 실제 그래프가 보이도록 변경했다.
+- 분석·판단: SVG 전용 크기와 path 스타일이 없어 선은 표시되지 않고 기본 검은 점만 축소되어 보였으며 분석 배너와 요약 카드가 화면을 먼저 차지했다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 분석 배너·Q&A 문구·횟수 요약을 제거하고 그래프 카드, 전체 폭 SVG, 민트 선과 점, 기준선, 간결한 날짜·값 라벨을 추가했다.
+- 검증 결과: TypeScript, DiaryPage ESLint, diff 검사 통과.
+- 남은 작업: 없음.
+### 2026-09-12 · 캘린더 예상 기간 띠 디자인 보정
+
+- 요청 요약: 날짜별로 둥글게 반복되던 탈피 예상 기간 UI를 정돈했다.
+- 분석·판단: 예상 색상을 날짜 타일 배경에 직접 적용해 기본 타일 radius가 날짜마다 반복된 것이 원인이었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 타일 배경 대신 숫자 뒤의 pseudo-element로 연속 띠를 그리고 시작·끝 및 주 경계에만 둥근 모서리를 적용했다.
+- 검증 결과: TypeScript, DiaryPage ESLint, diff 검사 통과.
+- 남은 작업: 없음.
+### 2026-09-12 · 예상 기간 첫 날짜 고립 수정
+
+- 요청 요약: 탈피 예상 범위에서 첫 날짜만 별도 캡슐로 고립되는 문제를 수정했다.
+- 분석·판단: 실제 캘린더는 일요일 시작인데 범위의 주 경계를 월요일 시작 기준으로 계산해 일요일을 시작과 끝으로 동시에 처리하고 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`.
+- 핵심 변경: Gregorian 달력은 일요일 시작·토요일 끝, ISO 달력은 월요일 시작·일요일 끝으로 각각 경계를 계산한다.
+- 검증 결과: TypeScript, DiaryPage ESLint, diff 검사 통과.
+- 남은 작업: 없음.

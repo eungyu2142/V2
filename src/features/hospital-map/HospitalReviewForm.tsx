@@ -3,6 +3,7 @@
 import { Stepper } from '../../components/ui/Stepper'
 import type { ChangeEvent } from 'react'
 import { specialistReviewTags } from './reviewTagOptions'
+import { reviewDiagnosisOptions } from './hospitalConditionCatalog'
 
 export type ReviewAnimalCategory = 'all' | 'reptile' | 'bird' | 'rodent' | 'amphibian' | 'other'
 
@@ -75,12 +76,6 @@ const generalReviewTags = [
   '\uC9D1\uC5D0\uC11C \uAD00\uB9AC\uD558\uB294 \uBC95\uC744 \uC54C\uB824\uC918\uC694',
   '\uACFC\uC789\uC9C4\uB8CC\uAC00 \uC5C6\uC5B4\uC694',
   '\uC7AC\uBC29\uBB38\uD558\uACE0 \uC2F6\uC5B4\uC694',
-]
-
-const diagnosisOptions = [
-  'MBD(대사성 골질환)', '난산/에그바인딩', '탈피부전', '구내염', '호흡기 감염', '폐렴',
-  '장폐색/임팩션', '탈항', '내부기생충', '외부기생충', '피부염', '진균성 질환', '농양',
-  '골절', '탈수', '저칼슘혈증', '난포 정체', '생식기 탈출', '기타',
 ]
 
 const prescriptionOptions = [
@@ -192,7 +187,7 @@ export default function HospitalReviewForm({
           <span>{text.diagnosis}</span>
           <input list="review-diagnosis-options" value={diagnosis} onChange={(event) => onDiagnosisChange(event.target.value)} placeholder={text.diagnosisPlaceholder} />
           <datalist id="review-diagnosis-options">
-            {diagnosisOptions.map((option) => <option value={option} key={option} />)}
+            {reviewDiagnosisOptions.map((option) => <option value={option} key={option} />)}
           </datalist>
         </label>
         <label className="review-clinical-field">

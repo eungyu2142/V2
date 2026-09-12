@@ -20,12 +20,12 @@ export function ChoiceGroup({ label, options, value, onChange, multiple = false,
     onChange(values.includes(option) ? values.filter((item) => item !== option) : [...values, option])
   }
   return (
-    <fieldset className={`m-0 min-w-0 border-0 p-0 ${className}`.trim()}>
-      <legend className="mb-3 p-0"><FieldLabel required={required}>{label}</FieldLabel></legend>
+    <fieldset className={`[&>legend]:mb-2.5 ${className}`.trim()}>
+      <legend><FieldLabel required={required}>{label}</FieldLabel></legend>
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const selected = values.includes(option.value)
-          return <button className={`${compact ? 'min-h-9 rounded-full' : 'min-h-10 rounded-control'} border px-3 text-[var(--font-size-body)] font-bold ${selected ? 'border-brand-600 bg-brand-600 text-app-surface' : 'border-app-border bg-app-surface text-app-ink'}`} type="button" aria-pressed={selected} key={option.value} onClick={() => toggle(option.value)}>{option.label}</button>
+          return <button className={`border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-sm aria-pressed:border-[var(--color-primary-600)] aria-pressed:bg-[var(--color-primary-600)] aria-pressed:text-[var(--color-on-primary)] ${compact ? 'min-h-9 rounded-full' : 'min-h-10 rounded-[var(--radius-control)]'}`} type="button" aria-pressed={selected} key={option.value} onClick={() => toggle(option.value)}>{option.label}</button>
         })}
       </div>
     </fieldset>

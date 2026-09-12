@@ -1,0 +1,121 @@
+@layer components {
+.qna-feed-page, .qna-detail, .qna-search-screen { min-height:calc(100dvh - var(--app-header-height) - var(--app-nav-clearance)); width:100%; padding:24px clamp(22px,5vw,80px) 40px; background:var(--color-surface); }
+.qna-feed-head, .qna-detail-header, .qna-search-screen > header { display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:44px; margin-bottom:20px; }
+.qna-feed-head h2 { font-size:25px; }
+.qna-feed-head button, .qna-detail-header button { width:44px; height:44px; display:grid; place-items:center; border-radius:var(--radius-control); }
+.qna-feed-page svg, .qna-detail svg, .qna-search-screen svg, .qna-create-screen svg { width:24px; height:24px; }
+.qna-feed-search { display:flex; align-items:center; gap:10px; border:1px solid var(--color-border); border-radius:var(--radius-control); padding:0 14px; }
+.qna-feed-search input { border:0 !important; box-shadow:none; padding-left:0 !important; }
+.qna-home-filters, .qna-search-chips, .qna-record-type-filters { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 18px; }
+.qna-home-filters button, .qna-search-chips button, .qna-record-type-filters button { min-height:36px; border-radius:var(--radius-control); padding:6px 14px; background:var(--color-neutral-100); color:var(--color-text-secondary); font-size:13px; }
+.qna-home-filters button.active, .qna-search-chips button.active, .qna-record-type-filters button.active { background:var(--color-primary-600); color:var(--color-on-primary); }
+.qna-help-card { display:flex; align-items:center; text-align:left; gap:20px; width:100%; padding:20px 10px; border-bottom:1px solid var(--color-border); }
+.qna-help-card:hover { background:var(--color-neutral-50); }
+.qna-card-copy { flex:1; display:grid; gap:5px; min-width:0; }
+.qna-card-copy > strong { font-size:17px; overflow-wrap:anywhere; }
+.qna-card-copy > small { color:var(--color-text-secondary); font-size:12px; }
+.qna-card-chevron { font-size:25px; color:var(--color-primary-700); }
+.post-meta { display:flex; align-items:center; flex-wrap:wrap; gap:12px; color:var(--color-text-secondary); font-size:12px; }
+.post-meta > span { display:inline-flex; align-items:center; gap:4px; }
+.post-meta svg { width:14px; height:14px; }
+.qna-load-more { display:block; margin:24px auto; min-height:44px; color:var(--color-primary-700); padding:8px 30px; }
+.qna-empty-state { display:grid; justify-items:center; gap:12px; padding:70px 20px; text-align:center; color:var(--color-text-secondary); }
+.qna-empty-icon { color:var(--color-primary-600); }
+.qna-mobile-fab { position:fixed; right:32px; bottom:calc(var(--app-nav-clearance) + 24px); z-index:20; display:grid; place-items:center; width:54px; height:54px; border-radius:50%; background:var(--color-primary-600); color:var(--color-on-primary); box-shadow:var(--shadow-card); }
+.qna-mobile-fab:hover { background:var(--color-primary-700); }
+.qna-mobile-fab .guide-icon { color:var(--color-on-primary); } .qna-mobile-fab .guide-icon-disc { fill:none; }
+.qna-detail-header { display:grid; grid-template-columns:44px 1fr 44px; text-align:center; }
+.qna-detail-post { padding:10px 0 24px; }
+.qna-detail-badges { display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:12px; }
+.qna-category, .qna-status { padding:4px 10px; background:var(--color-neutral-100); border-radius:var(--radius-control); color:var(--color-text-secondary); }
+.qna-detail-resolve-button { margin-left:auto; padding:8px 15px; border-radius:var(--radius-control); background:var(--color-primary-600); color:var(--color-on-primary); font-size:12px; }
+.qna-author { display:flex; align-items:center; gap:12px; margin:18px 0; }
+.user-avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; flex:none; }
+.user-avatar-fallback { display:grid; place-items:center; background:var(--color-primary-50); color:var(--color-primary-900); font-weight:700; }
+.qna-author > div, .qna-comment-author > span { display:grid; gap:3px; }
+.qna-author strong { font-size:13px; } .qna-author span, .qna-comment-author time { font-size:12px; color:var(--color-text-secondary); }
+.qna-detail-post > p { white-space:pre-wrap; overflow-wrap:anywhere; margin:20px 0; }
+.qna-detail-image-grid { display:flex; gap:12px; }
+.qna-detail-image-button { width:min(33%,220px); height:160px; padding:0; border-radius:var(--radius-control); overflow:hidden; }
+.qna-detail-image-button img { width:100%; height:100%; object-fit:cover; }
+.qna-detail-actions { display:flex; gap:15px; margin-top:20px; }
+.qna-detail-actions button, .qna-comment-like { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--color-text-secondary); min-height:40px; }
+.qna-detail-actions .active, .qna-comment-like.active { color:var(--color-accent-600); }
+.qna-comments { border-top:1px solid var(--color-border); padding-top:24px; }
+.qna-comments-heading, .qna-comment-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.qna-comments-heading > div { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--color-text-secondary); }
+.qna-comments-heading button.active { color:var(--color-primary-700); font-weight:700; }
+.qna-comments > article { position:relative; border-bottom:1px solid var(--color-border); padding:22px 0 12px; }
+.qna-comment-author { display:flex; align-items:center; gap:10px; font-size:13px; }
+.qna-comments article p { margin:14px 0 8px; font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.qna-accept-button { float:right; padding:8px 12px; border-radius:var(--radius-control); background:var(--color-primary-600); color:var(--color-on-primary); font-size:12px; }
+.accepted-answer-chip { display:inline-block; color:var(--color-primary-700); font-size:12px; margin-top:10px; }
+.qna-comment-menu { position:relative; } .qna-comment-menu > div { position:absolute; right:0; top:38px; background:var(--color-surface); border:1px solid var(--color-border); padding:12px; width:130px; box-shadow:var(--shadow-card); border-radius:var(--radius-control); z-index:5; }
+.qna-comment-tools { display:flex; gap:10px; margin:20px 0 8px; font-size:12px; color:var(--color-primary-700); }
+.qna-comment-input-row { display:flex; gap:8px; }
+.qna-comment-input-row button { flex:none; border-radius:var(--radius-control); background:var(--color-primary-600); color:var(--color-on-primary); padding:8px 18px; }
+.qna-action-overlay, .hospital-picker-overlay, .record-picker-overlay { position:fixed; inset:0; z-index:120; display:grid; align-items:center; justify-items:center; padding:24px; background:var(--color-overlay); }
+.qna-action-sheet, .hospital-picker, .record-picker-sheet { position:relative; z-index:1; width:min(100%,640px); max-height:calc(100dvh - 48px); overflow:auto; background:var(--color-surface); border-radius:var(--radius-modal); padding:24px; }
+.qna-action-sheet { display:grid; gap:8px; } .qna-action-sheet > button { min-height:46px; text-align:left; padding:8px 12px; border-bottom:1px solid var(--color-border); }
+.qna-action-sheet > div { display:flex; gap:12px; justify-content:flex-end; margin-top:16px; }
+.qna-action-sheet .danger { color:var(--color-error-600); }
+.qna-report-sheet button.active { color:var(--color-primary-700); background:var(--color-primary-50); }
+.record-picker-dim { position:absolute; inset:0; width:100%; }
+.qna-hospital-picker-heading, .qna-record-attach-sheet > header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+.qna-hospital-search { display:flex; align-items:center; gap:10px; }
+.qna-hospital-picker-list { display:grid; margin-top:14px; }
+.qna-hospital-picker-item { display:grid; gap:6px; padding:15px 0; border-bottom:1px solid var(--color-border); text-align:left; }
+.qna-hospital-picker-item span { color:var(--color-text-secondary); font-size:13px; }
+.qna-hospital-picker-more { display:block; padding:12px; margin:auto; color:var(--color-primary-700); }
+.qna-lightbox { position:fixed; inset:0; z-index:160; background:var(--color-primary-900); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px 100px; color:var(--color-on-primary); }
+.qna-lightbox > img { max-width:100%; max-height:70dvh; object-fit:contain; }
+.qna-lightbox-close { position:absolute; right:20px; top:15px; } .qna-lightbox-count { position:absolute; top:20px; }
+.qna-lightbox-thumbnails { display:flex; gap:10px; margin-top:20px; } .qna-lightbox-thumbnails img { width:55px; height:55px; object-fit:cover; } .qna-lightbox-thumbnails .active { outline:2px solid var(--color-on-primary); }
+.qna-search-screen > header { display:flex; } .qna-search-screen > header form { display:flex; flex:1; gap:10px; }
+.qna-search-section { margin:28px 0; } .qna-search-section h2 { font-size:16px; }
+.qna-recent-row { display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
+.qna-recent-row button { display:flex; align-items:center; gap:8px; font-size:13px; }
+.qna-search-options { display:grid; gap:15px; } .qna-search-options label { display:flex; justify-content:space-between; }
+.qna-search-submit { margin-top:30px; width:100%; padding:12px; background:var(--color-primary-600); color:var(--color-on-primary); border-radius:var(--radius-control); }
+.step-screen { min-height:100dvh; padding:24px clamp(22px,5vw,80px) 100px; background:var(--color-surface); }
+.step-header { display:grid; grid-template-columns:44px 1fr 44px; align-items:center; text-align:center; margin-bottom:28px; min-height:44px; }
+.step-header .back { width:44px; height:44px; font-size:24px; } .step-header > strong { font-size:21px; }
+.step-card { max-width:900px; margin:auto; } .step-field { display:grid; gap:8px; }
+.qna-compose-selects { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:22px; }
+.qna-compose-selects label { display:grid; gap:8px; font-weight:700; }
+.qna-compose-fields { display:grid; gap:20px; }
+.qna-character-count { display:block; text-align:right; color:var(--color-text-secondary); font-size:11px; margin-top:5px; }
+.qna-condition-hospital { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0; padding:14px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-background); }
+.qna-condition-hospital > span { display:grid; gap:4px; }
+.qna-condition-hospital small { color:var(--color-text-secondary); font-size:11px; line-height:1.45; }
+.qna-condition-hospital button { flex:none; min-height:38px; padding:0 12px; border:1px solid var(--color-primary-600); border-radius:var(--radius-control); background:var(--color-primary-600); color:var(--color-on-primary); font-size:12px; font-weight:700; }
+.qna-content-field textarea { min-height:200px; }
+.qna-field-error { color:var(--color-error-600); font-size:13px; }
+.attach-file-field { position:relative; } .attach-file-field input { position:absolute; opacity:0; width:1px; height:1px; }
+.attach-file-field > small { color:var(--color-text-secondary); font-size:12px; }
+.attach-file-button { display:grid; place-items:center; width:120px; min-height:44px; border:1px solid var(--color-border); border-radius:var(--radius-control); cursor:pointer; font-size:13px; color:var(--color-primary-700); }
+.qna-compose-tools button { min-height:42px; padding:8px 18px; border:1px solid var(--color-primary-200); color:var(--color-primary-700); border-radius:var(--radius-control); }
+.qna-compose-upload-list { display:grid; gap:10px; } .qna-compose-upload-item { display:flex; align-items:center; gap:12px; }
+.qna-compose-upload-item > img { width:65px; height:65px; object-fit:cover; border-radius:var(--radius-control); }
+.qna-compose-upload-status { display:grid; gap:4px; flex:1; font-size:12px; } .qna-compose-upload-status small { color:var(--color-error-600); }
+.step-actions { display:flex; gap:10px; margin-top:28px; }
+.step-primary, .step-secondary { display:flex; align-items:center; justify-content:center; min-height:46px; border-radius:var(--radius-control); padding:11px 20px; font-weight:700; }
+.step-primary { background:var(--color-primary-600); color:var(--color-on-primary); } .step-primary:hover { background:var(--color-primary-700); }
+.step-secondary { background:var(--color-neutral-100); color:var(--color-primary-700); }
+.step-actions > * { flex:1; }
+.qna-record-check-row { display:flex; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--color-border); }
+.qna-record-check-row > span { display:grid; flex:1; gap:3px; } .qna-record-check-row small { color:var(--color-text-secondary); }
+.qna-record-date-group { margin-top:20px; } .qna-record-selected-summary { display:flex; justify-content:space-between; gap:12px; font-size:12px; color:var(--color-text-secondary); }
+.qna-record-attach-actions { display:flex; gap:10px; margin-top:25px; } .qna-record-attach-actions button { flex:1; background:var(--color-primary-600); color:var(--color-on-primary); padding:12px; border-radius:var(--radius-control); }
+.qna-record-attached-state { display:flex; gap:12px; font-size:12px; color:var(--color-primary-700); }
+.qna-diary-attachment, .qna-record-attachment, .qna-hospital-attachment { padding:18px; border:1px solid var(--color-border); border-radius:var(--radius-card); margin:15px 0; }
+.qna-diary-attachment > header, .qna-hospital-attachment-main, .qna-diary-attachment-actions { display:flex; gap:10px; align-items:center; }
+.qna-record-attachment { display:grid; gap:8px; } .qna-record-attachment span { color:var(--color-text-secondary); font-size:12px; }
+.qna-diary-attachment-records { display:grid; gap:8px; margin-top:12px; }
+.qna-diary-attachment-records article { display:flex; gap:12px; border-bottom:1px solid var(--color-border); padding:12px 0; }
+.qna-diary-attachment-records img { width:60px; height:60px; object-fit:cover; }
+.qna-toast { position:fixed; z-index:130; left:50%; bottom:calc(var(--app-nav-clearance) + 15px); transform:translateX(-50%); padding:12px 20px; border-radius:var(--radius-control); background:var(--color-primary-900); color:var(--color-on-primary); }
+@media(max-width:700px) { .qna-feed-page, .qna-detail, .qna-search-screen { padding:18px 20px 28px; } .qna-feed-head { margin-bottom:14px; } .qna-feed-head h2 { font-size:22px; } .qna-home-filters { gap:6px; } .qna-home-filters button { flex:1; padding:6px 8px; } .qna-help-card { padding:16px 2px; } .qna-card-copy > strong { font-size:15px; } .qna-mobile-fab { right:20px; bottom:calc(var(--app-nav-clearance) + 18px); width:48px; height:48px; } .qna-detail-image-button { height:110px; } .step-screen { padding:18px 20px 90px; } .qna-content-field textarea { min-height:150px; } .qna-compose-selects { gap:12px; } .qna-action-overlay, .hospital-picker-overlay, .record-picker-overlay { padding:0; align-items:end; } .qna-action-sheet, .hospital-picker, .record-picker-sheet { border-radius:var(--radius-modal) var(--radius-modal) 0 0; max-height:90dvh; padding:22px 20px; } }
+
+
+}

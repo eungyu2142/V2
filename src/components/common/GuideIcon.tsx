@@ -1,5 +1,4 @@
 import type { ReactNode, SVGProps } from 'react'
-import './GuideIcon.css'
 
 export type GuideTone = 'mint' | 'red' | 'blue' | 'gold' | 'brown' | 'neutral'
 
