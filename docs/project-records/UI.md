@@ -1,5 +1,68 @@
 # UI 작업 기록
 
+## 2026-09-19 밀린 루틴 완료 행 유지
+
+- 요청 요약: 가장 오래 밀린 루틴을 완료해도 사라지지 않고 체크된 행으로 남기게 했다.
+- 분석·판단 이유: 통합 처리 후 오늘의 skipped task가 대표로 선택되면 필터에서 제거되어 완료 행도 함께 사라졌다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: pending 이후에는 completed 항목을 skipped보다 우선 선택하고, 밀린 완료 항목도 루틴 패널에서 체크 행으로 렌더링한다.
+- 검증 결과: TypeScript와 `DiaryPage.tsx` ESLint로 확인한다.
+- 남은 작업: 없음.
+
+## 2026-09-19 루틴 체크 아이콘 벡터화
+
+- 요청 요약: 루틴 완료 체크 표시가 깨져 보이는 문제를 수정했다.
+- 분석·판단 이유: 기존 체크는 큰 참고 이미지의 작은 일부를 SVG viewport로 잘라 쓰어 작은 크기에서 화질이 저하됐다.
+- 수정 파일: `src/features/diary/DiaryGlyph.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: `check` 글리프를 독립 SVG path로 교체하고 오늘 루틴과 밀린 루틴 행에 공통 적용했다.
+- 검증 결과: TypeScript, ESLint, 프로덕션 빌드로 확인한다.
+- 남은 작업: 없음.
+
+## 2026-09-19 중복 밀린 루틴 단일 표시
+
+- 요청 요약: 같은 종류의 루틴이 여러 번 밀렸을 때 가장 오래된 항목만 보이게 했다.
+- 분석·판단 이유: 기존에는 care plan ID별로 묶어 같은 먹이 루틴이 서로 다른 plan에서 생성되면 중복 행이 노출됐다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diaryService.ts`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 펫과 task type을 기준으로 묶어 가장 오래된 pending 항목을 선택하고, 직접 입력과 처방약은 별도 그룹으로 유지했다.
+- 검증 결과: TypeScript와 관련 파일 ESLint를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-09-19 오늘 할 일 패널 반응형 복구
+
+- 요청 요약: 오늘 할 일 제목과 날짜, 개수, 탭이 붙어 보이는 깨진 UI를 수정했다.
+- 분석·판단 이유: `DailyPlan`이 구조만 있고 전용 CSS가 없어 브라우저 기본 흐름으로 모든 요소가 붙어 렌더링되고 있었다.
+- 수정 파일: `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 제목·날짜·개수 배치, 2분할 액션, 루틴 행, 체크, 더보기 메뉴, 빈 상태에 카드와 모바일 반응형 스타일을 추가했다.
+- 검증 결과: TypeScript, ESLint, 프로덕션 빌드로 확인한다.
+- 남은 작업: 없음.
+
+## 2026-09-19 상단 알림 배너와 밀림 단계 색상
+
+- 요청 요약: 알림이 꺼져 있을 때 시스템 팝업 대신 상단에서 내려오는 자체 경고창을 만들고, 밀린 루틴을 일수별 색으로 구분했다.
+- 분석·판단 이유: 권한 요청의 맥락을 먼저 제공하고, 밀린 정도를 목록에서 즉시 파악할 수 있어야 한다.
+- 수정 파일: `src/components/notifications/NotificationOptInNudge.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 벨 아이콘·설명·나중에·허용하기로 구성된 고정형 상단 배너와 하향 애니메이션을 추가했다. 루틴 이름과 시간은 1일 골드, 2일 다크 오렌지, 3일 이상 에러 레드 토큰을 사용한다.
+- 검증 결과: TypeScript와 관련 TSX ESLint를 실행했다.
+- 남은 작업: 없음.
+
+## 2026-09-19 먹이 급여량 UI 제거
+
+- 요청 요약: 먹이 기록에서 급여량을 제거했다.
+- 분석·판단 이유: 먹이 종류 선택만으로 완료 기록을 남길 수 있게 해 루틴 완료 입력을 간결하게 만든다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 먹이 선택 모달의 급여량 입력창과 상세 화면의 급여량 표시를 제거했다.
+- 검증 결과: TypeScript, ESLint, 프로덕션 빌드로 확인한다.
+- 남은 작업: 없음.
+
+## 2026-09-19 기록 모아보기 차트 선택 UI
+
+- 요청 요약: 기록 시각화를 라인으로만 고정하지 말고 AREA, BAR, COLUMN도 선택할 수 있게 했다.
+- 분석·판단 이유: 기간별 추이는 선과 면, 항목 간 비교는 막대가 적합하므로 데이터를 바꾸지 않고 표현 방식만 전환하도록 했다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `package.json`, `package-lock.json`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: Recharts 기반의 LINE·AREA·가로 BAR·세로 COLUMN 렌더러와 4분할 선택 탭을 추가했다. 모든 색상과 표면은 기존 디자인 토큰을 사용했다.
+- 검증 결과: TypeScript 프로젝트 검사와 `DiaryPage.tsx` ESLint를 통과했다.
+- 남은 작업: 실제 모바일 데이터가 많은 경우 축 레이블 밀도를 추가 확인한다.
+
 ## 2026-08-20 - 자기 댓글 채택 버튼 차단
 
 - 요청 요약: 질문 작성자가 자기 댓글을 답변으로 채택하지 못하게 한다.
@@ -6190,4 +6253,138 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 수정 파일: `src/features/diary/DiaryPage.tsx`.
 - 핵심 변경: Gregorian 달력은 일요일 시작·토요일 끝, ISO 달력은 월요일 시작·일요일 끝으로 각각 경계를 계산한다.
 - 검증 결과: TypeScript, DiaryPage ESLint, diff 검사 통과.
+- 남은 작업: 없음.
+
+### 2026-09-12 · 마이 펫 원형 진행도 카드
+
+- 요청 요약: 마이 펫 카드의 가로 진행 막대를 없애고 첨부 이미지처럼 펫 사진 테두리에 진행도를 표시했다.
+- 분석·판단: 가로 막대와 남은 루틴 아이콘이 카드 안에서 같은 상태를 반복해 정보 밀도가 높았으며, 원형 테두리가 사진과 진행 상태를 한 덩어리로 보여준다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경: 실제 오늘 완료율을 원형 테두리와 퍼센트로 표시하고 이름·성별·종 정보를 참고 이미지와 같은 한 줄 카드 구조로 정리했다. 모든 색상은 기존 디자인 토큰을 사용했다.
+- 검증 결과: TypeScript 프로젝트 검사, 변경 컴포넌트 ESLint, production build와 브라우저 렌더링 확인을 통과했다.
+- 남은 작업: 없음.
+## 2026-09-17 Q&A 기록 종류 선택 UI
+
+- 요청 요약: 질문의 기록 첨부 화면에서 날짜별 기록 전체를 노출하지 않고 배변·탈피 같은 기록 종류만 표시하며 여러 종류를 선택할 수 있게 한다.
+- 분석·판단 이유: 날짜별 개별 체크 목록은 기록이 많을수록 화면이 길어지고, 질문에 필요한 정보 종류를 고르는 목적보다 세부 날짜 선택이 먼저 강조됐다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 날짜 그룹과 개별 기록 체크박스를 제거하고 기록 종류를 3열 선택 버튼으로 표시했다. 선택 상태에는 민트 테두리·배경과 체크 표시를 적용했다.
+- 검증 결과: 관련 컴포넌트 ESLint, TypeScript 검사와 프로덕션 빌드를 실행했다.
+- 남은 작업: 없음.
+## 2026-09-17 Q&A 첨부 기록 사진 표시
+
+- 요청 요약: 기록 종류를 선택할 때와 질문에 첨부된 기록에서 기록 사진도 확인할 수 있게 한다.
+- 분석·판단 이유: 배변·탈피처럼 육안 정보가 중요한 기록은 텍스트 종류만으로 구분하기 어렵고 사진이 질문 맥락을 전달하는 핵심 자료다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/QnaParts.tsx`, `src/components/qna/qna-flow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 기록 종류 버튼에 해당 종류의 최근 사진을 대표 썸네일로 표시한다. 첨부된 복수 기록의 사진은 중복 URL을 제거한 3열 갤러리로, 단일 기록 사진은 카드 상단 이미지로 표시한다.
+- 검증 결과: 관련 컴포넌트 ESLint, TypeScript 검사와 프로덕션 빌드를 실행했다.
+- 남은 작업: 없음.
+## 2026-09-17 Q&A 카테고리 필터 팝업
+
+- 요청 요약: Q&A 상단의 돋보기 버튼을 세 줄과 조절점이 있는 카테고리 필터 아이콘으로 바꾸고 카테고리를 팝업으로 표시한다.
+- 분석·판단 이유: 검색창이 이미 본문에 있어 상단 돋보기는 기능이 중복됐으며, 카테고리 버튼을 홈에 상시 노출하면 목록 공간을 차지한다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 상단 버튼을 조절점 필터 아이콘으로 교체하고 전체·질병·사육·먹이·환경·행동·번식을 3열 팝업에서 선택하도록 변경했다. 선택된 카테고리가 있으면 홈에는 작은 요약 칩만 표시한다.
+- 검증 결과: 관련 컴포넌트 ESLint, TypeScript 검사와 프로덕션 빌드를 실행했다.
+- 남은 작업: 없음.
+
+## 2026-09-17 메인 기능명 제목 제거
+
+- 요청 요약: 내 펫, 다이어리, 병원 찾기, Q&A 메인 화면 최상단에 반복 표시되던 기능명 제목을 모두 제거했다.
+- 분석·판단 이유: 하단 내비게이션에서 현재 기능을 이미 확인할 수 있어 상단 제목이 화면 공간을 중복 점유했다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 네 메인 제목과 질문 상세의 반복 `Q&A` 제목을 제거하고 남은 상단 액션을 오른쪽 정렬했다. 지도 목록과 캘린더처럼 기능명이 아닌 하위 화면 제목은 유지했다.
+- 검증 결과: 대상 컴포넌트 ESLint와 TypeScript 프로젝트 검사를 통과했다.
+- 남은 작업: 없음.
+### 2026-09-17 · 중복 루틴 제거와 밀림 상태 표시
+
+- 요청 요약: 중복 루틴 대신 밀린 항목만 표시하고 완료 후에도 목록에 남도록 변경했다.
+- 분석·판단: 같은 care plan의 과거 pending task와 오늘 task를 동시에 반환했고, 완료가 하나라도 생기면 UI가 pending 항목만 필터링해 완료 행이 사라지고 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: care plan별 한 행으로 통합해 밀린 task를 우선하고 `밀림 · 시간`을 표시했으며 완료 여부와 관계없이 전체 행을 유지한다.
+- 검증 결과: TypeScript, 관련 TSX ESLint, diff 검사 통과.
+- 남은 작업: 없음.
+## 2026-09-17 마이 펫 기록 목록의 비이탈형 행 처리
+
+- 요청 요약: 마이 펫에서 정보를 보던 흐름이 다이어리로 빠지지 않도록 한다.
+- 분석·판단 이유: 기록 행의 화살표와 클릭 동작은 별도 상세가 열릴 것처럼 보이지만 실제로는 다이어리 탭으로 이동해 뒤로가기 문맥을 잃었다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`.
+- 핵심 변경 내용: 기록 모아보기의 데이터 행을 조회 전용 행으로 바꾸고 다이어리 이동을 암시하던 화살표를 제거했다. 레이아웃과 사진·요약 정보는 유지했다.
+- 검증 결과: 변경 파일 ESLint와 TypeScript 검사를 통과했다.
+- 남은 작업: 없음.
+## 2026-09-17 병원 리뷰 태그 진행 막대와 정보 카드 대비 개선
+
+- 요청 요약: 리뷰 태그의 종이비행기 모양을 비례 진행 막대로 바꾸고 병원 정보 카드의 경계와 리뷰 구분을 선명하게 한다.
+- 분석·판단 이유: 동일 선택 수의 태그가 아이콘 목록처럼 보여 상대 빈도를 비교하기 어려웠고, 운영시간·최근 진료 종·리뷰 헤더의 옅은 배경만으로는 기능 단위가 구분되지 않았다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 최대 선택 수를 100% 기준으로 태그별 채움 너비를 계산하고 각 행을 테두리 박스로 표시한다. 병원 기본 정보, 운영시간, 최근 진료 종과 리뷰 헤더에 선명한 테두리·표면·약한 그림자를 적용하고 병원 정보와 리뷰 사이에 구분선을 추가했다.
+- 검증 결과: 관련 컴포넌트 ESLint, TypeScript 검사와 프로덕션 빌드를 통과했다. 진행도 너비가 `선택 수 / 최다 선택 수 × 100`으로 계산되는 것을 확인했다.
+- 남은 작업: 실제 모바일 데이터에서 카드 대비를 최종 확인한다.
+## 2026-09-19 Q&A 종합 필터 팝업 확장
+
+- 요청 요약: 카테고리 팝업에 주제 외에도 해결 여부, 인기순·좋아요순 정렬과 동물 종 검색을 추가한다.
+- 분석·판단 이유: 질문 탐색 조건이 여러 화면에 흩어지면 원하는 질문을 찾기 어렵기 때문에 상단 필터 팝업 한곳에서 조정할 필요가 있다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`, `src/types/app.ts`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 팝업을 주제·해결 여부·정렬·동물 종 입력 영역으로 확장하고 초기화와 적용 버튼을 제공했다. 활성 조건은 홈 요약 칩에 표시한다.
+- 검증 결과: 관련 파일 ESLint와 diff 검사를 통과했다. 전체 TypeScript 검사는 별도 다이어리 화면의 `unknown` 값을 문자열 인자로 전달하는 기존 오류로 중단됐다.
+- 남은 작업: 다이어리 타입 오류 해소 후 전체 프로덕션 빌드를 다시 확인한다.
+## 2026-09-19 Q&A 목록 사진 썸네일
+
+- 요청 요약: Q&A 목록 카드 오른쪽 빈 공간에 사용자가 질문에 올린 사진을 표시한다.
+- 분석·판단 이유: 첨부 사진은 질문 내용을 빠르게 파악하는 핵심 정보이며 기존 오른쪽 화살표 영역을 활용하면 카드 높이를 크게 늘리지 않고 제공할 수 있다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 질문의 첫 번째 첨부 사진을 우측 정사각형 썸네일로 표시하고 여러 장이면 추가 장수를 배지로 표시한다. 사진이 없는 글은 기존 화살표를 유지한다.
+- 검증 결과: 관련 파일 ESLint, diff 검사, TypeScript 검사와 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+## 2026-09-19 Q&A 목록 사진·화살표 병행 표시
+
+- 요청 요약: 사진이 있는 질문에서도 상세 진입 화살표를 제거하지 않고 사진 오른쪽에 유지한다.
+- 분석·판단 이유: 사진은 콘텐츠 미리보기이고 화살표는 상세 화면 진입 가능성을 알리는 탐색 표식이므로 두 요소의 역할이 다르다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 목록 카드 우측을 `사진 → 화살표` 순서로 구성하고 화살표가 축소되지 않도록 고정했다.
+- 검증 결과: 관련 컴포넌트 ESLint, TypeScript 검사와 프로덕션 빌드를 실행했다.
+- 남은 작업: 없음.
+# 2026-09-19 Q&A 추천 병원 표기 보완
+
+- 요청 요약: Q&A 댓글에 첨부된 병원 카드가 단독 정보처럼 보이지 않도록 `추천된 병원:` 문구를 추가했다.
+- 분석·판단 이유: 병원명과 주소만 노출되면 댓글 본문과의 관계가 불분명하므로, 카드 내부에 짧은 맥락 라벨을 두는 것이 정보 위계를 가장 적게 변경하면서 의미를 명확히 한다.
+- 수정 파일: `src/components/qna/QnaParts.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 병원 첨부 카드 상단에 보조 텍스트 라벨을 추가하고 병원명·주소 영역의 정렬과 너비를 정돈했다.
+- 검증 결과: 대상 컴포넌트 ESLint, TypeScript 빌드, Vite 프로덕션 빌드 통과.
+- 남은 작업: 실제 모바일 화면에서 긴 병원명과 주소의 줄바꿈 상태를 확인할 수 있다.
+
+# 2026-09-19 마이펫 진행도 표시 정확성 개선
+
+- 요청 요약: 완료한 루틴이 마이펫 펫 카드의 원형 진행도와 퍼센트에 정확히 반영되게 했다.
+- 분석·판단 이유: 실제 완료 결과와 카드의 `0%` 표시가 어긋나면 진행도 UI를 신뢰하기 어렵다.
+- 수정 파일: `src/features/diary/routineSchedule.ts`.
+- 핵심 변경 내용: 완료된 밀린 루틴이 오늘 루틴을 대체한 경우 카드와 상세 화면 모두 완료 상태로 표시하도록 요약 데이터를 보정했다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-09-19 펫 상세 중복 설정 버튼 제거
+
+- 요청 요약: 펫 상세 화면에서 정보 수정 기능과 중복되는 별도 설정 버튼을 제거했다.
+- 분석·판단 이유: 이름·종 정보 옆 톱니 버튼은 상단 수정 버튼과 하단 `펫 정보 수정` 항목과 역할이 중복되어 진입점의 의미를 불명확하게 만들었다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`.
+- 핵심 변경 내용: 펫 이름 영역의 톱니 설정 버튼만 제거하고 상단 수정 버튼과 하단의 명시적인 정보 수정 항목은 유지했다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-09-19 프로필 이미지 원형 비율 고정
+
+- 요청 요약: 타원으로 눌려 보이던 프로필 이미지를 정원으로 표시한다.
+- 분석·판단 이유: 상단 헤더의 flex 공간이 부족할 때 프로필 버튼의 가로 크기만 축소될 수 있어 `border-radius: 50%`여도 타원으로 렌더링됐다.
+- 수정 파일: `src/components/navigation/AppNavigation.tsx`, `src/components/profile/profile-flow.css`.
+- 핵심 변경 내용: 상단 프로필 버튼과 이미지에 1:1 비율 및 축소 방지 규칙을 적용하고, 프로필 요약·설정 이미지에도 동일한 정원 제약을 추가했다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-09-19 마이펫 루틴 완료 문구 정확성 개선
+
+- 요청 요약: 루틴 완료 후 빈 일정 문구 대신 실제 완료 상태가 표시되게 했다.
+- 분석·판단 이유: 오늘 처리한 밀린 루틴이 요약에서 제외되면 완료 상태가 아니라 빈 상태 UI로 분기됐다.
+- 수정 파일: `src/features/diary/routineSchedule.ts`, `src/components/my-pet/PetsScreen.tsx`.
+- 핵심 변경 내용: 오늘 완료한 밀린 루틴을 오늘 진행도에 포함해 카드에는 완료 퍼센트, 상세 화면에는 `오늘의 루틴을 모두 완료했어요!` 문구가 표시되도록 데이터 기준을 통일했다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
 - 남은 작업: 없음.

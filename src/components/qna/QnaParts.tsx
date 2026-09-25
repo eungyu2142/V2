@@ -71,16 +71,17 @@ export function DiaryTimelineAttachment({ snapshot, mode, onRemove }: { snapshot
 }
 
 export function DiaryVisualizationAttachment({ snapshot }: { snapshot: AttachedDiarySnapshot }) {
-  return <DataVisualization records={snapshot.records} petName={snapshot.petName} />
+  const photos = [...new Set(snapshot.records.map((record) => record.photoUrl).filter((url): url is string => Boolean(url)))]
+  return <section className="qna-diary-visualization-attachment"><DataVisualization records={snapshot.records} petName={snapshot.petName} />{photos.length > 0 && <div className="qna-attached-record-photos" aria-label="첨부 기록 사진">{photos.map((photo, index) => <img src={photo} alt={`${snapshot.petName} 기록 사진 ${index + 1}`} key={photo} />)}</div>}</section>
 }
 
 export function RecordAttachCard({ record, mode, onRemove, onOpen }: { record: AttachedRecordSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
-  return <article className="qna-record-attachment"><strong>{record.recordTypeLabel}</strong><span>{record.petName} · {record.recordDate}</span><p>{record.summary}</p>{onOpen && <button type="button" onClick={onOpen}>{text.viewRecord}</button>}{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>{text.remove}</button>}</article>
+  return <article className="qna-record-attachment">{record.photoUrl && <img className="qna-record-attachment-photo" src={record.photoUrl} alt={`${record.petName} ${record.recordTypeLabel} 기록`} />}<strong>{record.recordTypeLabel}</strong><span>{record.petName} · {record.recordDate}</span><p>{record.summary}</p>{onOpen && <button type="button" onClick={onOpen}>{text.viewRecord}</button>}{mode === 'draft' && onRemove && <button type="button" onClick={onRemove}>{text.remove}</button>}</article>
 }
 
 export function HospitalAttachCard({ hospital, mode, onRemove, onOpen }: { hospital: HospitalSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
   const content = <><strong>{hospital.name}</strong><span>{hospital.address}</span></>
-  return <article className={`qna-hospital-attachment ${mode}`}>{onOpen ? <button className="qna-hospital-attachment-main" type="button" onClick={onOpen}>{content}</button> : <div className="qna-hospital-attachment-main">{content}</div>}{mode === 'draft' && onRemove && <button className="qna-hospital-attachment-remove" type="button" onClick={onRemove}>{text.remove}</button>}</article>
+  return <article className={`qna-hospital-attachment ${mode}`}><span className="qna-hospital-attachment-label">추천된 병원:</span>{onOpen ? <button className="qna-hospital-attachment-main" type="button" onClick={onOpen}>{content}</button> : <div className="qna-hospital-attachment-main">{content}</div>}{mode === 'draft' && onRemove && <button className="qna-hospital-attachment-remove" type="button" onClick={onRemove}>{text.remove}</button>}</article>
 }
 
 export function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalSnapshot[]; onSelect: (hospital: HospitalSnapshot) => void; onClose: () => void }) {

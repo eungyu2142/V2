@@ -5,25 +5,14 @@ import {
   type PushSubscriptionState,
 } from '../../lib/pushNotifications'
 
-const snoozeDurationMs = 7 * 24 * 60 * 60 * 1000
-
-function snoozeKey(userId: string) {
-  return `exocare.push.nudge-snoozed-until.${userId}`
-}
-
-function isSnoozed(userId: string) {
-  const value = Number(localStorage.getItem(snoozeKey(userId)))
-  return Number.isFinite(value) && value > Date.now()
-}
-
-function NotificationOptInNudge({ userId, hasActiveRoutines }: { userId: string; hasActiveRoutines: boolean }) {
+function NotificationOptInNudge({ userId }: { userId: string }) {
   const [state, setState] = useState<PushSubscriptionState | null>(null)
-  const [dismissed, setDismissed] = useState(() => isSnoozed(userId))
+  const [dismissed, setDismissed] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
-    if (!hasActiveRoutines || dismissed) return
+    if (dismissed) return
 
     let active = true
     getPushSubscriptionState().then((nextState) => {
@@ -32,10 +21,10 @@ function NotificationOptInNudge({ userId, hasActiveRoutines }: { userId: string;
     return () => {
       active = false
     }
-  }, [dismissed, hasActiveRoutines, userId])
+  }, [dismissed, userId])
 
-  if (!hasActiveRoutines || dismissed || !state) return null
-  if (state.status === 'enabled' || state.status === 'blocked' || state.status === 'unsupported') return null
+  if (dismissed || !state) return null
+  if (state.status === 'enabled' || state.status === 'unsupported') return null
 
   const enable = async () => {
     setIsSaving(true)
@@ -43,7 +32,7 @@ function NotificationOptInNudge({ userId, hasActiveRoutines }: { userId: string;
     try {
       const nextState = await enablePushNotifications(userId)
       setState(nextState)
-      if (nextState.status === 'enabled') localStorage.removeItem(snoozeKey(userId))
+      if (nextState.status === 'blocked') setErrorMessage('브라우저 설정에서 파작파작 알림을 허용해 주세요.')
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error('Push notification nudge opt-in failed.', error)
       setErrorMessage('알림을 설정하지 못했어요. 다시 시도해 주세요.')
@@ -53,21 +42,23 @@ function NotificationOptInNudge({ userId, hasActiveRoutines }: { userId: string;
   }
 
   const snooze = () => {
-    localStorage.setItem(snoozeKey(userId), String(Date.now() + snoozeDurationMs))
     setDismissed(true)
   }
 
   return (
-    <section className="diary-notification-nudge" aria-labelledby="diary-notification-nudge-title">
-      <div>
-        <strong id="diary-notification-nudge-title">루틴 알림을 켜놓을까요?</strong>
-        <span>정해둔 시간과 아직 끝내지 않은 돌봄을 알려드려요.</span>
+    <section className="diary-notification-nudge" role="dialog" aria-modal="false" aria-labelledby="diary-notification-nudge-title" aria-describedby="diary-notification-nudge-description">
+      <span className="diary-notification-nudge-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6.8 9.7a5.2 5.2 0 0 1 10.4 0c0 6 2.4 6.1 2.4 7.3H4.4c0-1.2 2.4-1.3 2.4-7.3Z"/><path d="M10 20h4M12 4V2.8"/></svg>
+      </span>
+      <div className="diary-notification-nudge-copy">
+        <strong id="diary-notification-nudge-title">알림을 허용하시겠습니까?</strong>
+        <span id="diary-notification-nudge-description">정해둔 시간과 아직 끝내지 않은 돌봄을 알려드려요.</span>
         {errorMessage && <small role="alert">{errorMessage}</small>}
       </div>
       <div className="diary-notification-nudge-actions">
         <button type="button" className="secondary" onClick={snooze}>나중에</button>
         <button type="button" className="primary" disabled={isSaving} onClick={enable}>
-          {isSaving ? '설정 중' : '알림 켜기'}
+          {isSaving ? '설정 중' : '허용하기'}
         </button>
       </div>
     </section>

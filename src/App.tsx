@@ -12,6 +12,7 @@ import { isCurrentDeviceBlocked, registerCurrentDevice } from './lib/qnaModerati
 import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
 import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalRecommendationConcern, HospitalReview, HospitalSnapshot, Pet, QnaCategory, QnaPost, Tab } from './types/app'
 import type { HospitalConditionId } from './features/hospital-map/hospitalConditionCatalog'
+import type { PetMobileView } from './components/my-pet/PetMobileFlow'
 export type { AppProfile, DraftItem, HospitalReview, HospitalSnapshot, Pet, QnaPost } from './types/app'
 
 const AuthScreen = lazy(() => import('./components/AuthScreen'))
@@ -89,6 +90,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [diaryPetId, setDiaryPetId] = useState<string | null>(initialUrlState.petId)
   const [diaryReadOnly, setDiaryReadOnly] = useState(false)
   const [diaryInitialAction, setDiaryInitialAction] = useState<'routine-create' | null>(null)
+  const [diaryReturnToPets, setDiaryReturnToPets] = useState(false)
   const [qnaInitialPetId, setQnaInitialPetId] = useState<string | null>(initialUrlState.tab === 'qna' ? initialUrlState.petId : null)
   const [qnaInitialPreset, setQnaInitialPreset] = useState<{ category: QnaCategory; title: string } | null>(null)
   const [editingDraft, setEditingDraft] = useState<DraftItem | null>(null)
@@ -96,6 +98,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [mapRecommendationConcern, setMapRecommendationConcern] = useState<HospitalRecommendationConcern | HospitalConditionId | null>(null)
   const [diaryClinicHospital, setDiaryClinicHospital] = useState<HospitalSnapshot | null>(null)
   const [currentPetId, setCurrentPetId] = useState<string | null>(initialUrlState.petId)
+  const [petView, setPetView] = useState<PetMobileView>('main')
   const [pets, setPets] = useState<Pet[]>([])
   const [qnaPosts, setQnaPosts] = useState<QnaPost[]>([])
   const [drafts, setDrafts] = useState<DraftItem[]>([])
@@ -253,6 +256,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       setDiaryPetId(null)
       setDiaryReadOnly(false)
     }
+    setDiaryReturnToPets(false)
     if (tab !== 'qna') setQnaInitialPetId(null)
     if (tab !== 'map') setMapRecommendationConcern(null)
     setCreateMode(null)
@@ -364,6 +368,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
     setDiaryPetId(petId)
     setDiaryReadOnly(false)
     setDiaryInitialAction(action ?? null)
+    setDiaryReturnToPets(true)
     syncAppUrl('diary', petId)
     setActiveTab('diary')
     setCreateMode(null)
@@ -686,8 +691,8 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
       {activeTab !== 'map' && (
         <main className="app-main">
-          {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} onDeletePet={deletePet} onEditPet={(pet) => { setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
-          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitals={allHospitals} hospitalReviews={hospitalReviews} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialAction={diaryInitialAction} onInitialActionHandled={() => setDiaryInitialAction(null)} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onFindHospital={openPetHospitalSearch} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
+          {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} selectedPetId={currentPetId ?? pets[0]?.id ?? ''} view={petView} onSelectPet={setCurrentPetId} onView={setPetView} onDeletePet={deletePet} onEditPet={(pet) => { setCurrentPetId(pet.id); setPetView('detail'); setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setPetView('main'); setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
+          {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitals={allHospitals} hospitalReviews={hospitalReviews} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialAction={diaryInitialAction} onInitialActionHandled={() => setDiaryInitialAction(null)} returnToPets={diaryReturnToPets} onReturnToPets={() => moveTab('pets')} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onFindHospital={openPetHospitalSearch} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
           {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={allHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalOnMap} onFindConditionHospitals={openConditionHospitalSearch} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
           {activeTab === 'profile' && (
             <ProfileScreen

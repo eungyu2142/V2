@@ -6,6 +6,7 @@
 .map-side-panel { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .map-flow-heading, .map-search-panel, .map-flow-tags { position: relative; z-index: 3; pointer-events: auto; margin: 0 24px; max-width: 480px; }
 .map-flow-heading { display: flex; gap: 14px; align-items: center; padding: 22px 0 12px; }
+.map-side-panel.collapsed .map-search-panel { margin-top: 22px; }
 .map-flow-heading h2 { margin: 0; font-size: 21px; }
 .map-flow-heading button, .hospital-detail-back { width: 36px; height: 36px; padding: 0; background: var(--color-surface); color: var(--color-text-primary); border: 0; font-size: 32px; line-height: 1; border-radius: var(--radius-md, 10px); }
 .map-search-field { display: flex; align-items: center; min-height: 46px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full, 999px); padding: 0 14px 0 8px; box-shadow: 0 3px 14px color-mix(in srgb, var(--color-primary-900) 9%, transparent); }
@@ -69,7 +70,8 @@
 .hospital-address-row { display: flex; align-items: center; gap: 10px; }
 .hospital-address-row p { display: flex; align-items: center; flex: 1; gap: 8px; margin: 10px 0; font-size: 14px; }
 .hospital-address-row svg, .hospital-summary-distance svg { width: 17px; height: 17px; color: var(--color-primary-600); }
-.hospital-opening-hours { margin: 18px 0 24px; background: var(--color-background); border-radius: var(--radius-md, 10px); padding: 14px; font-size: 13px; }
+.hospital-basic-info { padding: 4px 14px 14px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md, 10px); background: var(--color-surface); box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary-900) 6%, transparent); }
+.hospital-opening-hours { margin: 12px 0 0; border: 1px solid var(--color-border); background: var(--color-background); border-radius: var(--radius-md, 10px); padding: 14px; font-size: 13px; }
 .hospital-opening-current, .hospital-today-hours { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .hospital-opening-break { display: block; text-align: right; margin-top: 7px; color: var(--color-text-secondary); }
 .hospital-weekly-hours { margin-top: 16px; }
@@ -79,7 +81,7 @@
 .hospital-weekly-hours-panel.is-open { grid-template-rows: 1fr; }
 .hospital-weekly-hours-panel > div { overflow: hidden; }
 .hospital-weekly-hours-panel ul { margin: 14px 0 0; padding: 0; list-style: none; color: var(--color-text-secondary); line-height: 1.8; }
-.hospital-recent-species { margin: 22px 0; }
+.hospital-recent-species { margin: 16px 0; padding: 14px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md, 10px); background: var(--color-surface); box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary-900) 6%, transparent); }
 .hospital-recent-species h3, .hospital-section-header h3 { font-size: 15px; margin: 0 0 12px; }
 .hospital-recent-species > div { display: flex; flex-wrap: wrap; gap: 7px; }
 .hospital-recent-species span { background: var(--color-background); padding: 6px 9px; border-radius: var(--radius-sm, 6px); font-size: 12px; }
@@ -88,7 +90,8 @@
 .hospital-primary-actions a, .hospital-primary-actions button { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 45px; color: var(--color-primary-600); border: 1px solid var(--color-primary-600); background: var(--color-surface); border-radius: var(--radius-md, 10px); text-decoration: none; }
 .hospital-primary-actions a:hover { background: var(--color-background); color: var(--color-primary-700); }
 .hospital-contact-info { display: none; }
-.hospital-section-header { display: flex; align-items: center; justify-content: space-between; background: var(--color-background); padding: 9px 13px; border-radius: var(--radius-md, 10px); }
+.hospital-review-panel { margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--color-border-strong); }
+.hospital-section-header { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--color-border-strong); background: var(--color-surface); padding: 9px 13px; border-radius: var(--radius-md, 10px); box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary-900) 6%, transparent); }
 .hospital-section-header > div { display: flex; align-items: center; gap: 9px; }
 .hospital-section-header h3 { margin: 0; }
 .hospital-section-header span { font-size: 12px; color: var(--color-text-secondary); }
@@ -96,6 +99,17 @@
 .hospital-review-empty { display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center; padding: 38px 12px; }
 .hospital-review-empty strong { font-size: 14px; }
 .hospital-review-empty span { font-size: 12px; color: var(--color-text-secondary); }
+.hospital-review-tag-summary { margin: 14px 0 8px; }
+.hospital-review-tag-summary > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.hospital-review-tag-summary > header strong { font-size: 14px; }
+.hospital-review-tag-summary > header span { color: var(--color-text-secondary); font-size: 11px; }
+.hospital-review-tag-bars { display: grid; gap: 8px; }
+.hospital-review-tag-row { position: relative; display: flex; min-height: 38px; align-items: center; justify-content: space-between; gap: 10px; overflow: hidden; padding: 8px 11px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm, 6px); background: var(--color-surface); }
+.hospital-review-tag-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--color-primary-100); transition: width 180ms ease; }
+.hospital-review-tag-label, .hospital-review-tag-row > strong { position: relative; z-index: 1; }
+.hospital-review-tag-label { min-width: 0; font-size: 12px; line-height: 1.45; }
+.hospital-review-tag-row > strong { flex: none; color: var(--color-primary-700); font-size: 11px; }
+.hospital-review-tag-more { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-sm, 6px); background: var(--color-surface); color: var(--color-text-secondary); }
 .review-item { padding: 24px 0; border-bottom: 1px solid var(--color-border); }
 .review-item-head { display: flex; align-items: center; gap: 10px; }
 .review-author-avatar, .review-avatar { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; background: var(--color-background); }

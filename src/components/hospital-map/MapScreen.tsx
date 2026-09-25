@@ -1073,7 +1073,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
         )}
       </section>
       <aside className={`map-side-panel ${isSidePanelCollapsed ? 'collapsed' : ''}`} aria-label="병원 검색과 정보">
-        <header className="map-flow-heading">{!isSidePanelCollapsed && <button type="button" aria-label="지도로 돌아가기" onClick={() => setIsSidePanelCollapsed(true)}>‹</button>}<h2>{isSidePanelCollapsed ? '병원 찾기' : '병원 목록'}</h2></header>
+        {!isSidePanelCollapsed && <header className="map-flow-heading"><button type="button" aria-label="지도로 돌아가기" onClick={() => setIsSidePanelCollapsed(true)}>‹</button><h2>병원 목록</h2></header>}
         <form className="map-search-panel" onSubmit={submit}>
           <div className="map-search-field">
             <label htmlFor="hospital-map-search">병원 검색</label>
@@ -1445,16 +1445,18 @@ function HospitalReviewTagSummary({ reviews }: { reviews: HospitalReview[] }) {
         <span>{totalSelections}회 선택 · {participantKeys.size}명 참여</span>
       </header>
       <div className="hospital-review-tag-bars">
-        {visibleRows.map(({ tag, count }) => (
-          <div className="hospital-review-tag-row" key={tag}>
-            <span className="hospital-review-tag-fill" style={{ width: `${Math.max(8, count / maxCount * 100)}%` }} aria-hidden="true" />
+        {visibleRows.map(({ tag, count }) => {
+          const percentage = count / maxCount * 100
+          return (
+          <div className="hospital-review-tag-row" role="progressbar" aria-label={`${tag} ${count}회 선택`} aria-valuemin={0} aria-valuemax={maxCount} aria-valuenow={count} key={tag}>
+            <span className="hospital-review-tag-fill" style={{ width: `${percentage}%` }} aria-hidden="true" />
             <span className="hospital-review-tag-label">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 3.5 3.5L16 5" /></svg>
               <b>{tag}</b>
             </span>
-            <strong>{count}</strong>
+            <strong>{count}회</strong>
           </div>
-        ))}
+          )
+        })}
       </div>
       {rows.length > 6 && (
         <button className="hospital-review-tag-more" type="button" aria-expanded={isExpanded} onClick={() => setIsExpanded((expanded) => !expanded)}>

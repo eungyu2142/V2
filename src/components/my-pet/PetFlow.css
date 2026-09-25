@@ -1,6 +1,7 @@
 @layer components {
 .pet-flow { width:100%; min-height:calc(100dvh - var(--app-header-height) - var(--app-nav-clearance)); padding:24px clamp(22px,5vw,80px) 36px; background:var(--color-surface); }
 .pet-flow-header { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:48px; margin-bottom:24px; }
+.pet-flow-main-actions { display:flex; justify-content:flex-end; align-items:center; min-height:44px; margin-bottom:24px; }
 .pet-flow-header.centered { display:grid; grid-template-columns:80px 1fr 80px; text-align:center; }
 .pet-flow-header h1 { font-size:23px; }
 .pet-flow-header-actions { display:flex; justify-content:flex-end; }
@@ -12,19 +13,23 @@
 .pet-flow-add .guide-icon-disc { fill:none; }
 .pet-flow-add:hover { background:var(--color-primary-700); }
 .pet-flow-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); align-items:start; gap:20px; }
-.pet-flow-card { display:flex; flex-direction:column; width:100%; padding:20px; border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-surface); text-align:left; gap:14px; }
+.pet-flow-card { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; width:100%; min-height:112px; padding:16px 18px; border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-surface); text-align:left; gap:16px; }
 .pet-flow-card:hover { border-color:var(--color-primary-600); box-shadow:var(--shadow-card); }
 .pet-flow-card-identity { display:flex; gap:16px; align-items:center; }
 .pet-flow-card-identity > span:last-child { display:grid; gap:5px; }
-.pet-flow-card-identity strong { font-size:19px; }
-.pet-flow-card-identity small { display:flex; align-items:center; gap:4px; color:var(--color-text-secondary); }
+.pet-flow-card-identity strong { display:flex; align-items:center; gap:4px; font-size:19px; }
+.pet-flow-card-identity small { color:var(--color-text-secondary); }
 .pet-flow-card-identity small svg { width:20px; height:20px; }
+.pet-flow-card-identity strong svg { width:18px; height:18px; }
 .pet-flow-photo { width:80px; height:80px; display:block; border-radius:var(--radius-control); overflow:hidden; background:var(--color-primary-50); }
 .pet-flow-photo > img, .pet-flow-photo .pajak-mascot { width:100%; height:100%; object-fit:cover; border-radius:inherit; }
-.pet-flow-card-progress { display:flex; gap:12px; align-items:center; color:var(--color-primary-700); font-size:14px; }
-.pet-flow-remaining { display:grid; gap:7px; font-size:13px; }
-.pet-flow-remaining > span { display:flex; gap:8px; flex-wrap:wrap; }
-.pet-flow-card-status { align-self:flex-end; min-height:32px; display:flex; align-items:center; color:var(--color-text-secondary); }
+.pet-flow-card-photo { width:80px; height:80px; flex:0 0 auto; display:grid; place-items:center; border-radius:50%; padding:6px; background:var(--color-primary-100); }
+.pet-flow-card-photo-progress { background:conic-gradient(var(--color-primary-600) var(--pet-progress), var(--color-primary-100) 0); }
+.pet-flow-card-photo .pet-flow-photo { width:68px; height:68px; border:3px solid var(--color-surface); border-radius:50%; }
+.pet-flow-card-progress { display:grid; justify-items:end; gap:3px; color:var(--color-primary-700); }
+.pet-flow-card-progress strong { font-size:19px; line-height:1; }
+.pet-flow-card-progress small { color:var(--color-text-secondary); font-size:13px; }
+.pet-flow-card-status { max-width:146px; color:var(--color-text-secondary); text-align:right; line-height:1.45; word-break:keep-all; }
 .pet-flow-empty-home, .pet-flow-empty { text-align:center; padding:64px 20px; color:var(--color-text-secondary); }
 .pet-flow-empty-home p { margin-top:20px; }
 .pet-flow-detail-content { display:grid; grid-template-columns:minmax(240px,1fr) minmax(320px,1.2fr); gap:40px; }
@@ -60,8 +65,8 @@
 .pet-chart-grid { stroke:var(--color-border); } .pet-chart-line { stroke:var(--color-primary-600); fill:none; stroke-width:2.5; }
 .pet-chart-dot { fill:var(--color-surface); stroke:var(--color-primary-600); stroke-width:2.5; }
 .pet-flow-record-list, .pet-flow-routine-list { margin-top:20px; display:grid; gap:8px; }
-.pet-flow-record-list button, .pet-flow-routine-list button { display:flex; align-items:center; gap:12px; min-height:70px; padding:12px; text-align:left; border-bottom:1px solid var(--color-border); }
-.pet-flow-record-list button > span, .pet-flow-routine-list button > span { display:grid; flex:1; gap:5px; }
+.pet-flow-record-list button, .pet-flow-record-list article, .pet-flow-routine-list button { display:flex; align-items:center; gap:12px; min-height:70px; padding:12px; text-align:left; border-bottom:1px solid var(--color-border); }
+.pet-flow-record-list button > span, .pet-flow-record-list article > span, .pet-flow-routine-list button > span { display:grid; flex:1; gap:5px; }
 .pet-flow-record-list small, .pet-flow-routine-list small { color:var(--color-text-secondary); }
 .pet-flow-record-list img { width:56px; height:56px; object-fit:cover; border-radius:var(--radius-control); }
 .pet-flow-create { min-height:100dvh; display:flex; flex-direction:column; padding-bottom:100px; }
@@ -104,7 +109,7 @@
 .pet-photo-preview-body p, .pet-photo-preview-body small { text-align:center; color:var(--color-text-secondary); }
 .pet-photo-preview-frame { position:relative; height:320px; overflow:hidden; touch-action:none; border-radius:var(--radius-card); }
 .pet-photo-preview-frame img { width:100%; height:100%; object-fit:cover; }
-@media(max-width:700px) { .pet-flow { padding:18px 20px 24px; } .pet-flow-header { margin-bottom:18px; } .pet-flow-header h1 { font-size:21px; } .pet-flow-header.centered { grid-template-columns:64px 1fr 64px; } .pet-flow-header-actions .pet-flow-icon-button { width:32px; } .pet-flow-cards { grid-template-columns:1fr; gap:14px; } .pet-flow-card { padding:15px; gap:10px; } .pet-flow-detail-content { grid-template-columns:1fr; gap:14px; } .pet-flow-hero { min-height:0; height:220px; } .pet-flow-detail-body { gap:18px; } .pet-flow-record-tabs { grid-template-columns:repeat(4,1fr); gap:6px; } .pet-flow-record-tabs button:nth-child(-n+3) { grid-column:span 1; } .pet-flow-record-tabs button:first-child { grid-column:span 2; } .pet-flow-chart svg { min-height:200px; } .pet-flow-create { padding-bottom:100px; } .pet-flow-create .pet-flow-form-body { gap:20px; } .pet-flow-intro .pajak-mascot, .pet-flow-complete .pajak-mascot { width:160px; height:160px; } }
+@media(max-width:700px) { .pet-flow { padding:18px 20px 24px; } .pet-flow-header { margin-bottom:18px; } .pet-flow-header h1 { font-size:21px; } .pet-flow-header.centered { grid-template-columns:64px 1fr 64px; } .pet-flow-header-actions .pet-flow-icon-button { width:32px; } .pet-flow-cards { grid-template-columns:1fr; gap:14px; } .pet-flow-card { min-height:100px; padding:12px 14px; gap:12px; } .pet-flow-card-photo { width:74px; height:74px; } .pet-flow-card-photo .pet-flow-photo { width:62px; height:62px; } .pet-flow-detail-content { grid-template-columns:1fr; gap:14px; } .pet-flow-hero { min-height:0; height:220px; } .pet-flow-detail-body { gap:18px; } .pet-flow-record-tabs { grid-template-columns:repeat(4,1fr); gap:6px; } .pet-flow-record-tabs button:nth-child(-n+3) { grid-column:span 1; } .pet-flow-record-tabs button:first-child { grid-column:span 2; } .pet-flow-chart svg { min-height:200px; } .pet-flow-create { padding-bottom:100px; } .pet-flow-create .pet-flow-form-body { gap:20px; } .pet-flow-intro .pajak-mascot, .pet-flow-complete .pajak-mascot { width:160px; height:160px; } }
 
 
 }

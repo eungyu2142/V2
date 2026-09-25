@@ -220,7 +220,7 @@ export async function settleSupersededOverdueTasks(userId: string, task: DailyTa
   if (task.scheduledDate >= completedDate) return []
 
   const now = new Date().toISOString()
-  const { data, error } = await supabase
+  let query = supabase
     .from('daily_tasks')
     .update({
       status: 'skipped',
@@ -229,11 +229,13 @@ export async function settleSupersededOverdueTasks(userId: string, task: DailyTa
     })
     .eq('user_id', userId)
     .eq('pet_id', task.petId)
-    .eq('task_type', task.taskType)
     .eq('status', 'pending')
     .lte('scheduled_date', completedDate)
     .neq('id', task.id)
-    .select('id')
+  if (task.medicationPlanId) query = query.eq('medication_plan_id', task.medicationPlanId)
+  else if (task.taskType === 'custom' && task.carePlanId) query = query.eq('care_plan_id', task.carePlanId)
+  else query = query.eq('task_type', task.taskType)
+  const { data, error } = await query.select('id')
 
   if (error) throw error
   const settledIds = (data ?? []).map((row) => String(row.id))

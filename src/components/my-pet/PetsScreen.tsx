@@ -5,9 +5,13 @@ import type { Pet } from '../../types/app'
 import PetMobileFlow, { type PetMobileView } from './PetMobileFlow'
 import './PetFlow.css'
 
-export default function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpenDiary, onRegisterPet }: {
+export default function PetsScreen({ userId, pets, selectedPetId, view, onSelectPet, onView, onDeletePet, onEditPet, onOpenDiary, onRegisterPet }: {
   userId: string
   pets: Pet[]
+  selectedPetId: string
+  view: PetMobileView
+  onSelectPet: (petId: string) => void
+  onView: (view: PetMobileView) => void
   onDeletePet: (petId: string) => void | Promise<void>
   onEditPet: (pet: Pet) => void
   onOpenDiary: (petId: string, action?: 'routine-create') => void
@@ -16,15 +20,17 @@ export default function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpe
   const [plans, setPlans] = useState<CarePlan[]>([])
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([])
   const [records, setRecords] = useState<PetRecord[]>([])
-  const [view, setView] = useState<PetMobileView>('main')
-  const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id ?? '')
   const [loadError, setLoadError] = useState('')
   const resolvedSelectedPetId = pets.some((pet) => pet.id === selectedPetId) ? selectedPetId : pets[0]?.id ?? ''
 
   useEffect(() => {
     let active = true
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
-    Promise.allSettled([listCarePlans(userId), listDailyTasks(userId, today, today), listCareRecords(userId)]).then(([planResult, taskResult, recordResult]) => {
+    const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' })
+    const now = new Date()
+    const lookbackStart = new Date(now)
+    lookbackStart.setDate(lookbackStart.getDate() - 14)
+    const today = dateFormatter.format(now)
+    Promise.allSettled([listCarePlans(userId), listDailyTasks(userId, dateFormatter.format(lookbackStart), today), listCareRecords(userId)]).then(([planResult, taskResult, recordResult]) => {
       if (!active) return
       if (planResult.status === 'fulfilled') setPlans(planResult.value)
       if (taskResult.status === 'fulfilled') setDailyTasks(taskResult.value)
@@ -36,6 +42,6 @@ export default function PetsScreen({ userId, pets, onDeletePet, onEditPet, onOpe
 
   return <>
     {loadError ? <p className="pet-flow-load-error" role="status">{loadError}</p> : null}
-    <PetMobileFlow pets={pets} selectedPetId={resolvedSelectedPetId} view={view} tasks={dailyTasks} plans={plans} records={records} onSelectPet={setSelectedPetId} onView={setView} onRegisterPet={onRegisterPet} onEditPet={onEditPet} onDeletePet={onDeletePet} onOpenDiary={onOpenDiary}/>
+    <PetMobileFlow pets={pets} selectedPetId={resolvedSelectedPetId} view={view} tasks={dailyTasks} plans={plans} records={records} onSelectPet={onSelectPet} onView={onView} onRegisterPet={onRegisterPet} onEditPet={onEditPet} onDeletePet={onDeletePet} onOpenDiary={onOpenDiary}/>
   </>
 }

@@ -59,7 +59,7 @@ const animalCategorySearchTerms: Record<AnimalCategory, string> = {
 const exoticHospitalSearchTerms = ['특수동물병원', '이국동물병원', '파충류 동물병원', '파충류 동물 병원']
 const hospitalGenericSearchWords = ['특수동물', '특수', '이국동물', '이국', '동물병원', '동물', '병원', '진료', '파충류']
 const hospitalPositiveKeywords = ['동물병원', '동물 병원', '특수동물', '특수 동물', '이국동물', '이국 동물', '파충류', '양서류', '도마뱀', '게코', '거북', '거북이', '뱀', '이구아나', '카멜레온', '크레스티드', '레오파드', '비어디', '비어디드래곤', '스킨크', '왕도마뱀', '개구리', '팩맨', '트리프록', '두꺼비', '다트프록', '독화살 개구리', '도롱뇽', '뉴트', '살라만더', '살라만다', '아홀로틀']
-const hospitalNegativeKeywords = ['애견카페', '카페', '펫샵', '애견샵', '용품', '미용', '호텔', '분양', '수족관', '아쿠아리움', '사료', '간식', '훈련소', '보호소']
+const hospitalNegativeKeywords = ['']
 
 const animalCategoryKeywords: Record<Exclude<AnimalCategory, 'all'>, string[]> = {
   reptile: ['파충류', '도마뱀', '게코', '거북', '거북이', '뱀', '이구아나', '카멜레온', '크레스티드', '레오파드', '비어디', '비어디드래곤', '스킨크', '왕도마뱀', '육지거북', '수생거북', '콘스네이크', '킹스네이크', '볼파이톤', '호그노즈'],
