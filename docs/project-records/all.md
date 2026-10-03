@@ -1,5 +1,14 @@
 # ExoPet 전체 작업 기록
 
+## 2026-09-28 펫 종 데이터 1단계 정규화
+
+- 요청 요약: 문자열로 반복 저장되던 펫 종 정보를 정규화한다.
+- 분석·판단 이유: 앱이 `pets.species`와 JSON `payload`를 직접 사용하고 있어 즉시 삭제하면 기존 저장·조회가 깨진다. 표준 테이블과 외래키를 먼저 도입하고 호환 컴럼은 유지하는 단계적 전환을 선택했다.
+- 수정 파일: `supabase/migrations/202609280001_normalize_pet_species.sql`, `src/lib/appData.ts`, `src/types/app.ts`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: `species_catalog`, `pets.species_id` FK, 백필, NOT NULL, 인덱스, RLS, 동기화 트리거, `pets_with_species` 뷰를 추가했다. 앱은 `pets` 로드 시 정규화된 컴럼으로 `payload`를 덮어쓴다.
+- 검증 결과: TypeScript·ESLint와 프로덕션 빌드를 통과했다. `supabase db push --dry-run`으로 원격 적용 대상을 확인했다.
+- 남은 작업: 원격 DB에 이전 Q&A 마이그레이션 2개가 미적용으로 함께 잡혀으므로, 예상치 않은 변경을 피하기 위해 종 정규화 마이그레이션은 아직 push하지 않았다.
+
 ## 2026-08-05 배포 준비 전체 점검
 
 - 요청 요약: 배포 전에 구현 기능과 원격 백엔드 반영 상태를 빠짐없이 점검했다.

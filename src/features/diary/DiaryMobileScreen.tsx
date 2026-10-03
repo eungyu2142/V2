@@ -30,6 +30,7 @@ type Props = {
   onOpenCompletedRoutine: (id: string) => void
   onAddRoutine: () => void
   onManageRoutines: () => void
+  onBulkManageRoutines: () => void
   recordMenuOpen: boolean
   onRecordMenuChange: (open: boolean) => void
 }
@@ -37,7 +38,7 @@ type Props = {
 const recordActionOrder = ['shed', 'poop', 'mating', 'egg', 'hospital']
 const recordActionLabel: Record<string, string> = { shed: '탈피', poop: '배변', mating: '메이팅', egg: '산란', hospital: '진료' }
 
-export default function DiaryMobileScreen({ petName, petPhoto, canChangePet, canWrite, alert, routines, quickActions, selectedDateLabel, calendar, calendarOpen, onCalendarChange, onChangePet, onToggleRoutine, onOpenCompletedRoutine, onAddRoutine, onManageRoutines, recordMenuOpen, onRecordMenuChange }: Props) {
+export default function DiaryMobileScreen({ petName, petPhoto, canChangePet, canWrite, alert, routines, quickActions, selectedDateLabel, calendar, calendarOpen, onCalendarChange, onChangePet, onToggleRoutine, onOpenCompletedRoutine, onAddRoutine, onManageRoutines, onBulkManageRoutines, recordMenuOpen, onRecordMenuChange }: Props) {
   const [selectedRoutine, setSelectedRoutine] = useState<MobileDiaryRoutine | null>(null)
   const [warningOpen, setWarningOpen] = useState(false)
   const [warningDetails, setWarningDetails] = useState(false)
@@ -64,7 +65,7 @@ export default function DiaryMobileScreen({ petName, petPhoto, canChangePet, can
   if (calendarOpen) return <main className="mobile-diary diary-calendar-page"><DiarySubHeader title="캘린더" onBack={() => onCalendarChange(false)} /><div className="diary-calendar-full">{calendar}</div></main>
 
   return <main className="mobile-diary diary-home">
-    <header className="diary-home-header"><div>{canChangePet && <button className="diary-home-pet" type="button" aria-label={`${petName}, 펫 선택`} onClick={onChangePet}>{petPhoto ? <img src={petPhoto} alt="" /> : <Mascot />}</button>}<button className="diary-calendar-trigger" type="button" aria-label="캘린더 열기" onClick={() => onCalendarChange(true)}><DiaryGlyph name="calendar" /></button>{canWrite && <button className="diary-round-add" type="button" aria-label="루틴 추가하기" onClick={onAddRoutine}><GuideAction symbol="+" /></button>}</div></header>
+    <header className="diary-home-header"><div>{canChangePet && <button className="diary-home-pet" type="button" aria-label={`${petName}, 펫 선택`} onClick={onChangePet}>{petPhoto ? <img src={petPhoto} alt="" /> : <Mascot />}</button>}<button className="diary-calendar-trigger" type="button" aria-label="캘린더 열기" onClick={() => onCalendarChange(true)}><DiaryGlyph name="calendar" /></button>{canWrite && <><button className="diary-header-action" type="button" onClick={onManageRoutines}>루틴 수정</button><button className="diary-header-action" type="button" onClick={onBulkManageRoutines}>일괄 수정</button><button className="diary-round-add" type="button" aria-label="루틴 추가하기" onClick={onAddRoutine}><GuideAction symbol="+" /></button></>}</div></header>
     <button className="diary-date-button" type="button" aria-label={`${selectedDateLabel}, 캘린더 열기`} onClick={() => onCalendarChange(true)}>{selectedDateLabel}</button>
     <section className="diary-today-routines"><div className="flex items-center justify-between"><h2>오늘의 루틴 <span>{completedCount}/{routines.length}</span></h2>{canWrite && <button type="button" aria-label="루틴 관리" className="flex size-11 items-center justify-center" onClick={onManageRoutines}><ReferenceIcon name="settings" className="size-6" /></button>}</div><ProgressBar done={completedCount} total={routines.length} label="오늘의 루틴 완료" className="mb-4" /><ul className="diary-routine-list">{routines.map((routine) => { const overdueLevel = routine.overdueDays && routine.overdueDays >= 3 ? 'danger' : routine.overdueDays === 2 ? 'warning' : routine.overdueDays === 1 ? 'caution' : ''; return <li className={routine.overdue ? `overdue overdue-${overdueLevel}` : ''} key={routine.id}><button type="button" disabled={routine.disabled} onClick={() => openRoutine(routine)}><span className="diary-routine-icon">{routine.icon && <DiaryGlyph name={routine.icon} />}</span><strong>{routine.label}</strong><time>{routine.overdue ? `${routine.overdueDays ?? 1}일 밀림 · ${routine.time || '시간 미지정'}` : routine.time || '시간 미지정'}</time><span className={`diary-routine-checkmark ${routine.completed ? 'complete' : ''}`} aria-label={routine.completed ? '완료' : '미완료'}>{routine.completed && <DiaryGlyph name="check" />}</span></button></li> })}</ul>{routines.length === 0 && <div className="diary-empty"><p>오늘 예정된 루틴이 없어요.</p>{canWrite && <button type="button" className="diary-secondary" onClick={onAddRoutine}>루틴 추가</button>}</div>}{allRoutinesCompleted && <p className="diary-complete-note">오늘의 루틴을 모두 완료했어요.</p>}</section>
     {canWrite && <button className="diary-record-add-button" type="button" onClick={() => onRecordMenuChange(true)}>기록하기</button>}

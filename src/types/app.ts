@@ -26,7 +26,7 @@ export type HospitalGoogleReview = {
   relativePublishTimeDescription?: string
   googleMapsUri?: string
 }
-export type Pet = { id: string; name: string; group: AnimalCategory; species: string; gender: 'male' | 'female' | 'unknown'; photo?: string; photoPosition?: { x: number; y: number }; weight?: string; weightUnit?: 'g' | 'kg'; birthday?: string; adoptionDate?: string; registeredAt?: string; description?: string; memo?: string; ageStage?: string; ageText?: string }
+export type Pet = { id: string; name: string; group: AnimalCategory; species: string; speciesId?: string; gender: 'male' | 'female' | 'unknown'; photo?: string; photoPosition?: { x: number; y: number }; weight?: string; weightUnit?: 'g' | 'kg'; birthday?: string; adoptionDate?: string; registeredAt?: string; description?: string; memo?: string; ageStage?: string; ageText?: string }
 export type QnaCategory = '질병' | '사육' | '먹이' | '환경' | '행동' | '번식'
 export type QnaStatus = 'unresolved' | 'resolved'
 export type QnaSort = 'latest' | 'popular' | 'likes' | 'comments' | 'views'

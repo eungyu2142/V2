@@ -118,6 +118,8 @@ export default function HospitalReviewForm({
   const [currentStep, setCurrentStep] = useState(0)
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
   const selectedPetMeta = selectedPet?.species || ''
+  const selectedDiagnosisOption = reviewDiagnosisOptions.find((option) => option === diagnosis) ?? ''
+  const selectedPrescriptionOption = prescriptionOptions.find((option) => option === treatment) ?? ''
   const canMoveNext = currentStep === 0
     ? Boolean(selectedPetId)
     : currentStep === 1
@@ -183,20 +185,30 @@ export default function HospitalReviewForm({
             <input inputMode="numeric" value={cost} onChange={(event) => onCostChange(formatCostInput(event.target.value))} placeholder={text.costPlaceholder} />
           </label>
         </div>
-        <label className="review-clinical-field">
+        <div className="review-clinical-field">
           <span>{text.diagnosis}</span>
-          <input list="review-diagnosis-options" value={diagnosis} onChange={(event) => onDiagnosisChange(event.target.value)} placeholder={text.diagnosisPlaceholder} />
-          <datalist id="review-diagnosis-options">
-            {reviewDiagnosisOptions.map((option) => <option value={option} key={option} />)}
-          </datalist>
-        </label>
-        <label className="review-clinical-field">
+          <select aria-label="병명 추천 항목 선택" value={selectedDiagnosisOption} onChange={(event) => onDiagnosisChange(event.target.value)}>
+            <option value="">추천 병명에서 선택</option>
+            {reviewDiagnosisOptions.map((option) => <option value={option} key={option}>{option}</option>)}
+          </select>
+          <label className="review-clinical-direct-input">
+            <span>직접 입력</span>
+            <input value={diagnosis} onChange={(event) => onDiagnosisChange(event.target.value)} placeholder={text.diagnosisPlaceholder} />
+          </label>
+          <small>목록에서 선택하거나 직접 입력할 수 있어요.</small>
+        </div>
+        <div className="review-clinical-field">
           <span>{text.prescription}</span>
-          <input list="review-prescription-options" value={treatment} onChange={(event) => onTreatmentChange(event.target.value)} placeholder="처방을 검색하거나 직접 입력하세요" />
-          <datalist id="review-prescription-options">
-            {prescriptionOptions.map((option) => <option value={option} key={option} />)}
-          </datalist>
-        </label>
+          <select aria-label="처방 추천 항목 선택" value={selectedPrescriptionOption} onChange={(event) => onTreatmentChange(event.target.value)}>
+            <option value="">추천 처방에서 선택</option>
+            {prescriptionOptions.map((option) => <option value={option} key={option}>{option}</option>)}
+          </select>
+          <label className="review-clinical-direct-input">
+            <span>직접 입력</span>
+            <input value={treatment} onChange={(event) => onTreatmentChange(event.target.value)} placeholder="처방명이나 처방 내용을 직접 입력하세요" />
+          </label>
+          <small>목록에서 선택하거나 직접 입력할 수 있어요.</small>
+        </div>
       </section>
       </div>}
 

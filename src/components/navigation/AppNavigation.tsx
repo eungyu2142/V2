@@ -30,7 +30,7 @@ export function AppNavigation(props: AppNavigationProps) {
   return <>
     <header className="fixed inset-x-0 top-0 z-40 flex h-[var(--app-header-height)] items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-8 max-[700px]:px-4">
       <div className="flex items-center gap-3 text-[var(--color-primary-900)]"><Mascot className="size-10! max-[700px]:size-8!" /><strong className="text-2xl font-black tracking-tight max-[700px]:text-xl">파작파작</strong><span className="ml-2 text-xs max-[700px]:hidden">작은 관리가, 큰 하루가 돼요.</span></div>
-      <button className="grid size-10 shrink-0 aspect-square place-items-center overflow-hidden rounded-full text-[var(--color-primary-900)] hover:bg-[var(--color-primary-50)] aria-pressed:bg-[var(--color-primary-600)] aria-pressed:text-[var(--color-on-primary)]" type="button" aria-label={activeTab === 'profile' ? '프로필 닫기' : '프로필 열기'} aria-pressed={activeTab === 'profile'} onClick={onToggleProfile}>
+      <button className="grid size-11 shrink-0 aspect-square place-items-center overflow-hidden rounded-full p-0 text-[var(--color-primary-900)] hover:bg-[var(--color-primary-50)] aria-pressed:bg-[var(--color-primary-600)] aria-pressed:text-[var(--color-on-primary)]" type="button" aria-label={activeTab === 'profile' ? '프로필 닫기' : '프로필 열기'} aria-pressed={activeTab === 'profile'} onClick={onToggleProfile}>
         {profile.avatarUrl ? <img className="block size-full aspect-square rounded-full object-cover" src={profile.avatarUrl} alt="" /> : <svg className="size-6 fill-none stroke-current" strokeWidth="1.6" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg>}
       </button>
     </header>

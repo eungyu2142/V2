@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pajakpajak-pwa-v7'
+const CACHE_NAME = 'pajakpajak-pwa-v8'
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/pajak-icon-v2.png']
 const DEFAULT_NOTIFICATION_TITLE = '\uD30C\uC791\uD30C\uC791'
 const DEFAULT_NOTIFICATION_BODY = '\uC644\uB8CC\uD558\uC9C0 \uC54A\uC740 \uB3CC\uBD04 \uC77C\uC815\uC774 \uC788\uC5B4\uC694.'
@@ -90,6 +90,7 @@ self.addEventListener('push', (event) => {
     icon: readString(payload.icon, DEFAULT_NOTIFICATION.icon),
     badge: readString(payload.badge, DEFAULT_NOTIFICATION.badge),
     tag: buildNotificationTag(payload),
+    requireInteraction: payload.urgent === true,
     data: {
       url: targetUrl,
       petId: payload.petId != null ? String(payload.petId) : null,

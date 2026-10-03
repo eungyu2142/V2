@@ -5850,3 +5850,88 @@ AI 사진을 사용하지 않고, 사용자가 직접 사진을 첨부해야 펫
 - 핵심 변경 내용: 마이펫의 task 조회 범위를 최근 14일부터 오늘까지로 넓히고, 과거 예정 task라도 서울 시간 기준 오늘 완료했다면 오늘 요약에 포함한다. 같은 루틴의 오늘 task와 밀린 완료 task는 하나로 합쳐 완료 상태를 우선한다.
 - 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
 - 남은 작업: 없음.
+
+# 2026-09-28 펫 등록 분류별 세부 종 선택 개선
+
+- 요청 요약: 펫 등록 시 파충류·양서류를 먼저 선택하고 해당 분류의 세부 종만 드롭다운에서 선택하며, 목록에 없으면 직접 입력할 수 있게 한다.
+- 분석·판단 이유: 기존 하나의 드롭다운은 두 분류의 종이 함께 노출되어 선택 순서가 불명확했다. 분류를 먼저 확정한 뒤 종 선택 범위를 좁히면 오선택을 줄일 수 있다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`.
+- 핵심 변경 내용: 분류 선택 버튼을 추가하고 선택된 분류의 기존 species 데이터만 세부 종 드롭다운에 표시한다. `목록에 없어요 · 직접 입력`을 선택하면 필수 직접 입력창이 나타나며, 분류 변경 시 이전 종 값은 초기화된다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-09-28 펫 분류 카드 선택 피드백 강화
+
+- 요청 요약: 첨부 이미지와 같은 시각적 분류 선택 경험을 적용한다.
+- 분석·판단 이유: 카드 전체를 큰 선택 영역으로 제공하고 선택 상태를 배경·테두리·체크 세 가지로 동시에 전달하면 터치 정확성과 상태 인지가 좋아진다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`.
+- 핵심 변경 내용: 파충류·양서류 카드는 전체 영역이 버튼이며 `aria-pressed` 상태를 유지한다. 선택 후 기존과 동일하게 해당 분류의 세부 종 드롭다운이 이어진다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-09-30 기록 모아보기 차트 선택 UX
+
+- 요청 요약: 영문 차트 유형을 사용자가 이해할 수 있는 한국어 버튼으로 제공한다.
+- 분석·판단 이유: 개발 용어인 LINE·AREA·COLUMN·BAR·MIXED·RANGE AREA를 그대로 노출하기보다 차트 방향과 형태를 한국어로 설명하는 편이 선택 결과를 예측하기 쉽다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`.
+- 핵심 변경 내용: 여섯 차트 유형을 `선형`, `영역`, `세로 막대`, `가로 막대`, `혼합`, `범위 영역`으로 번역하고 가로 스크롤 가능한 선택 칩으로 구성했다. 활성 유형은 민트 상태로 표시하고 `aria-pressed`를 제공한다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-10-03 마이펫 분류별 탐색
+
+- 요청 요약: 전체 펫 목록에서 양서류와 파충류만 각각 골라 볼 수 있게 한다.
+- 분석·판단 이유: 필터는 목록 화면에만 적용하고 선택 펫·상세 화면 상태와 분리해야 사용자가 상세에서 돌아왔을 때 탐색 조건을 유지할 수 있다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`.
+- 핵심 변경 내용: 실제 `group` 데이터로 목록을 필터링하며 필터 버튼에 `aria-pressed`를 제공한다. 필터 결과가 없을 때 전체 펫으로 돌아가는 명시적 버튼을 제공한다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-09-28 프로필 탐색 중복 제거
+
+- 요청 요약: 프로필 활동 요약을 제거하고 상위/하위 탐색을 구분한다.
+- 분석·판단 이유: 활동 요약과 탭의 중복 진입점을 줄이고 작성한 글 아래 Q&A가 하위 필터임을 시각적으로 드러낸다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/components/profile/profile-flow.css`.
+- 핵심 변경 내용: 상위 활동 탭은 유지하고 큰 요약 숫자 및 버튼을 제거했다. 하위 필터를 별도 테두리 박스에 배치하며 기존 클릭 및 키보드 탭 이동 로직을 유지했다.
+- 검증 결과: ESLint·TypeScript 검사 통과, 삭제 범위와 기존 이벤트 유지 여부 diff 확인. 브라우저 검증은 미실시.
+- 남은 작업: 사용자 화면 확인.
+## 2026-09-30 기록 상태 연동 푸시 알림
+
+- 요청 요약: 평상시 알림과 병원 또는 Q&A 확인이 필요한 기록 상태의 알림 문구를 구분하고, 예약 시각 전달 구조를 설명할 수 있도록 정리했다.
+- 분석·판단: 서비스워커는 서버가 보낸 문구를 표시하는 역할이므로, 최신 기록을 안전하게 조회할 수 있는 `send-routine-notifications` Edge Function에서 분기하도록 했다. 기존 배변 NOTICE 기준을 재사용해 임의 의료 기준은 추가하지 않았다.
+- 수정 파일: `supabase/functions/send-routine-notifications/index.ts`, `supabase/functions/send-routine-notifications/README.md`, `public/sw.js`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 일반 알림에는 펫 이름과 루틴명을 표시한다. 최신 혈변은 병원 우선, 이물질은 Q&A/병원, 연속된 동일 건조·묽음은 기록 확인 후 Q&A/병원을 안내한다. 최신 정상 배변은 과거 경고를 해제한다. 긴급 알림은 지원 환경에서 화면에 더 오래 남도록 표시한다.
+- 검증 결과: 대상 Edge Function ESLint와 전체 TypeScript/Vite 프로덕션 빌드를 통과했고, `send-routine-notifications` 함수를 원격 프로젝트에 배포했다. 읽기 전용 Cron 진단 SQL도 추가했다.
+- 남은 작업: `supabase/cron/diagnose_routine_notifications.sql`을 운영 DB에서 실행해 Cron 실행 이력과 실제 지연 시간을 확인한다. 서비스워커 변경은 다음 프론트 배포 때 적용된다.
+## 2026-09-30 루틴 수정 진입점과 일괄 수정
+
+- 요청 요약: 완료 체크 외에 루틴을 쉽게 수정할 수 있도록 다이어리 상단 `+` 옆에 `루틴 수정`, `일괄 수정` 버튼을 추가했다.
+- 분석·판단: 기존 톱니바퀴와 더보기 메뉴에 숨은 개별 수정 기능을 상단에 노출하고, 일괄 수정은 별도 시스템을 만들지 않고 기존 Reminder/CarePlan 저장 구조를 재사용했다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 개별 관리 화면 바로가기와 선택형 일괄 편집 화면을 추가했다. 선택한 루틴의 반복 요일, 알림 시간, 활성 상태를 한 번에 저장하며 다건 서버 동기화가 모두 처리되도록 저장 로직을 보완했다.
+- 검증 결과: 대상 TSX ESLint와 전체 TypeScript/Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+## 2026-09-30 캘린더 선택 날짜 기록 추가
+
+- 요청 요약: 캘린더에서 날짜를 선택한 상세 화면 안에서도 기록을 작성할 수 있게 했다.
+- 분석·판단: 미래 기록을 미리 생성하면 실제 기록과 예정 일정이 섞이므로 오늘과 과거 날짜만 허용하고 미래는 조회 전용으로 유지했다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 날짜 상세의 추가 버튼을 과거 날짜에도 노출하고 선택 날짜를 기록 작성 화면까지 전달한다. 기록 종류 버튼도 과거 날짜에서 활성화했다.
+- 검증 결과: 대상 TSX ESLint와 전체 TypeScript/Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+## 2026-10-01 리뷰 임상 정보 입력 방식 명확화
+
+- 요청 요약: 병명과 처방 입력에서 선택과 자유 작성을 모두 제공한다.
+- 분석·판단 이유: 자동완성에만 의존하면 사용자가 목록 선택이 가능한지 알기 어렵고, 선택형만 제공하면 실제 처방 문구나 목록 외 진단을 기록할 수 없다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: `추천 항목 선택 → 필요하면 직접 입력값 수정` 흐름을 한 화면에 노출하고 두 입력 방식 모두 기존 `diagnosis`, `treatment` 저장 구조를 그대로 사용한다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+## 2026-10-01 루틴 선택형 단계 수정
+
+- 요청 요약: 루틴 수정 전에 원하는 루틴을 선택하고, 스크롤 폼 대신 단계별로 수정하며, 일괄 수정도 루틴별 값을 따로 수정하도록 변경했다.
+- 분석·판단: 공통 값을 여러 루틴에 덮어쓰는 방식은 각 루틴의 일정 차이를 잃게 하므로 선택한 루틴을 큐로 만들고 하나씩 기존 값을 불러와 수정하도록 했다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경: 단일·복수 루틴 선택 화면, 일정 → 알림·상태 → 확인 3단계 편집, 복수 선택 순차 편집 및 개별 저장 흐름을 구현했다.
+- 검증 결과: 대상 TSX ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.

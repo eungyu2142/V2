@@ -35,7 +35,13 @@ type PushPayload = {
   scheduledFor: string
   tag: string
   url: string
+  urgent?: boolean
 }
+
+type PetContext = { name: string; species: string | null }
+type RoutineContext = { title: string; task_type: string }
+type CareRecordRow = { payload: unknown; memo: string | null }
+type HealthGuidance = { body: string; urgent: boolean }
 
 type DeliveryResult = { delivered: number; expired: number; failed: number }
 type NextJob = { type: NotificationType; scheduledAt: string; dedupeKey: string }
@@ -106,7 +112,7 @@ Deno.serve(async (request) => {
         .eq('is_active', true)
       if (subscriptionsError) throw subscriptionsError
 
-      const payload = buildPayload(job)
+      const payload = await buildPayload(supabase, job)
       const delivery = await deliverToSubscriptions(
         (subscriptionData ?? []) as PushSubscriptionRow[],
         payload,
@@ -186,22 +192,99 @@ function readBatchLimit(value: string | undefined) {
   return Math.min(parsed, MAX_BATCH_LIMIT)
 }
 
-function buildPayload(job: NotificationJob): PushPayload {
+async function buildPayload(
+  supabase: ReturnType<typeof createClient>,
+  job: NotificationJob,
+): Promise<PushPayload> {
   const query = new URLSearchParams({
     petId: String(job.pet_id),
     routineId: String(job.routine_id),
     date: job.routine_date,
   })
+  const [{ data: pet }, { data: routine }, { data: recentStoolRecords }] = await Promise.all([
+    supabase.from('pets').select('name, species').eq('id', job.pet_id).maybeSingle(),
+    supabase.from('care_plans').select('title, task_type').eq('id', job.routine_id).maybeSingle(),
+    supabase
+      .from('care_records')
+      .select('payload, memo')
+      .eq('pet_id', job.pet_id)
+      .eq('record_type', 'poop')
+      .order('occurred_at', { ascending: false })
+      .limit(2),
+  ])
+  const petContext = pet as PetContext | null
+  const routineContext = routine as RoutineContext | null
+  const healthGuidance = buildHealthGuidance(
+    petContext?.name || '반려동물',
+    (recentStoolRecords ?? []) as CareRecordRow[],
+  )
+  const routineTitle = routineContext?.title?.trim() || taskTypeLabel(routineContext?.task_type)
+  const ordinaryBody = `회원님의 ${petContext?.name || petContext?.species || '반려동물'}을 확인하세요. ${routineTitle} 루틴 시간입니다.`
   return {
-    title: 'ExoCare',
-    body: '펫의 루틴을 확인해 주세요.',
+    title: healthGuidance ? '파작파작 · 상태 확인' : '파작파작',
+    body: healthGuidance?.body || ordinaryBody,
     petId: String(job.pet_id),
     routineId: String(job.routine_id),
     routineDate: job.routine_date,
     scheduledFor: job.scheduled_at,
     tag: job.dedupe_key,
     url: `/diary?${query.toString()}`,
+    urgent: healthGuidance?.urgent,
   }
+}
+
+function buildHealthGuidance(petName: string, records: CareRecordRow[]): HealthGuidance | null {
+  const latest = readStoolStatus(records[0])
+  if (latest === 'blood') {
+    return {
+      body: `${petName}의 상태가 이상한지 확인하고, 환경 조절만으로 판단하지 말고 진료 가능한 병원에 데려가는 것을 권합니다.`,
+      urgent: true,
+    }
+  }
+  if (latest === 'foreign_body') {
+    return {
+      body: `${petName}의 상태가 이상한지 확인하고, 배변 기록을 첨부해 Q&A에 질문하거나 진료 가능한 병원을 확인하는 것을 권합니다.`,
+      urgent: true,
+    }
+  }
+
+  const previous = readStoolStatus(records[1])
+  if ((latest === 'dry' || latest === 'diarrhea') && previous === latest) {
+    return {
+      body: `${petName}에게 같은 배변 상태가 이어졌어요. 최근 기록과 상태를 확인하고, 필요하면 Q&A에 질문하거나 병원을 확인하는 것을 권합니다.`,
+      urgent: false,
+    }
+  }
+  return null
+}
+
+function readStoolStatus(record: CareRecordRow | undefined) {
+  if (!record) return null
+  const payload = record.payload
+  if (payload && typeof payload === 'object') {
+    const root = payload as Record<string, unknown>
+    const nested = root.stoolRecord ?? root.stool_record
+    if (nested && typeof nested === 'object') {
+      const status = (nested as Record<string, unknown>).status
+      if (typeof status === 'string') return status
+    }
+    if (typeof root.status === 'string') return root.status
+  }
+  const memo = record.memo || ''
+  if (memo.includes('혈변')) return 'blood'
+  if (memo.includes('이물질')) return 'foreign_body'
+  if (memo.includes('건조')) return 'dry'
+  if (memo.includes('묽')) return 'diarrhea'
+  if (memo.includes('정상')) return 'normal'
+  return null
+}
+
+function taskTypeLabel(taskType?: string) {
+  const labels: Record<string, string> = {
+    feed: '먹이', mist: '분무', water: '물그릇', humidity: '습도 확인',
+    temperature: '온도 확인', cleaning: '청소', medicine: '약', hospital: '진료',
+  }
+  return taskType ? labels[taskType] || '돌봄' : '돌봄'
 }
 
 function getNextJob(job: NotificationJob): NextJob {

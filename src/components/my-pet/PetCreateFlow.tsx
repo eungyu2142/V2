@@ -1,4 +1,4 @@
-import { type ChangeEvent, type PointerEvent, type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type PointerEvent, useEffect, useRef, useState } from 'react'
 import type { AnimalCategory, DraftItem, Pet } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
 import { RequiredMark } from '../common/FieldMarkers'
@@ -17,13 +17,16 @@ type Props = {
   categoryOptions: Exclude<AnimalCategory, 'all'>[]
   categoryLabels: Record<AnimalCategory, string>
   speciesOptions: Record<Exclude<AnimalCategory, 'all'>, string[]>
-  renderCategoryIcon: (category: AnimalCategory) => ReactNode
   onClose: () => void
   onSave: (pet: Pet, photoFile?: File) => void | Promise<void>
   onOpenPlan: (petId: string) => void
 }
 
 const defaultPosition = { x: 50, y: 50 }
+const categoryIllustrations: Record<SupportedPetCategory, string> = {
+  reptile: '/assets/pet-category-reptile.png',
+  amphibian: '/assets/pet-category-amphibian.png',
+}
 const routineOptions: Array<{ key: string; type: CareTaskType; label: string; icon: PetIconName }> = [
   { key: 'feed', type: 'feed', label: '먹이', icon: 'feed' },
   { key: 'mist', type: 'mist', label: '분무', icon: 'mist' },
@@ -143,6 +146,14 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
     weight: weight || undefined, weightUnit, registeredAt: initialPet?.registeredAt ?? new Date().toISOString(),
   })
 
+  const selectGroup = (nextGroup: SupportedPetCategory) => {
+    if (group === nextGroup) return
+    setGroup(nextGroup)
+    setSpecies('')
+    setCustomSpecies('')
+    setCustomSpeciesMode(false)
+  }
+
   const save = async () => {
     if (!canContinue || saving) return
     try {
@@ -179,8 +190,9 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
           <label className="pet-flow-photo-input"><input type="file" accept="image/*" aria-label="펫 사진 선택" onChange={attachPhoto}/><span>{photo ? <img src={photo} alt="반려동물 사진 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }}/> : <PetIcon name="camera"/>}</span></label>
           <div className="pet-flow-fields">
             <label className="pet-flow-field"><span>이름 <RequiredMark/></span><input value={name} maxLength={24} onChange={(event) => setName(event.target.value)} placeholder="예) 청단이" required/></label>
-            <label className="pet-flow-field"><span>세부 종명 <RequiredMark/></span><select value={customSpeciesMode ? 'custom' : species ? `${group}|${species}` : ''} onChange={(event) => { if (event.target.value === 'custom') { setCustomSpeciesMode(true); setSpecies(''); setGroup((current) => current || 'reptile'); return } const [nextGroup, nextSpecies] = event.target.value.split('|') as [SupportedPetCategory, string]; setGroup(nextGroup || ''); setSpecies(nextSpecies || ''); setCustomSpecies(''); setCustomSpeciesMode(false) }} required><option value="">예) 크레스티드 게코</option>{categories.map((category) => <optgroup label={categoryLabels[category]} key={category}>{speciesOptions[category].filter((item) => item !== '직접 입력').map((item) => <option value={`${category}|${item}`} key={item}>{item}</option>)}</optgroup>)}<option value="custom">직접 입력</option></select></label>
-            {customSpeciesMode ? <div className="pet-flow-custom"><label className="pet-flow-field"><span>동물 분류</span><select value={group} onChange={(event) => setGroup(event.target.value as SupportedPetCategory)}>{categories.map((category) => <option value={category} key={category}>{categoryLabels[category]}</option>)}</select></label><label className="pet-flow-field"><span>종 직접 입력</span><input value={customSpecies} maxLength={40} onChange={(event) => setCustomSpecies(event.target.value)} placeholder="세부 종명을 입력해주세요" required/></label></div> : null}
+            <fieldset className="pet-flow-category"><legend>동물 분류 <RequiredMark/></legend><div>{categories.map((category) => <button className={group === category ? 'active' : ''} type="button" key={category} aria-pressed={group === category} onClick={() => selectGroup(category)}><img className="pet-flow-category-illustration" src={categoryIllustrations[category]} alt=""/><strong>{categoryLabels[category]}</strong>{group === category ? <span className="pet-flow-category-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span> : null}</button>)}</div></fieldset>
+            <label className="pet-flow-field"><span>세부 종명 <RequiredMark/></span><select value={customSpeciesMode ? 'custom' : species} disabled={!group} onChange={(event) => { if (event.target.value === 'custom') { setCustomSpeciesMode(true); setSpecies(''); setCustomSpecies(''); return } setSpecies(event.target.value); setCustomSpecies(''); setCustomSpeciesMode(false) }} required><option value="">{group ? '세부 종을 선택해주세요' : '동물 분류를 먼저 선택해주세요'}</option>{group ? speciesOptions[group].filter((item) => item !== '직접 입력').map((item) => <option value={item} key={item}>{item}</option>) : null}<option value="custom" disabled={!group}>목록에 없어요 · 직접 입력</option></select></label>
+            {customSpeciesMode ? <label className="pet-flow-field"><span>종 직접 입력 <RequiredMark/></span><input value={customSpecies} maxLength={40} onChange={(event) => setCustomSpecies(event.target.value)} placeholder="세부 종명을 입력해주세요" required/></label> : null}
             <fieldset className="pet-flow-gender"><legend>성별 <RequiredMark/></legend><div>{(['male', 'female', 'unknown'] as const).map((value) => <button className={gender === value ? 'active' : ''} type="button" key={value} aria-pressed={gender === value} onClick={() => setGender(value)}><PetIcon name={value === 'male' ? 'male' : value === 'female' ? 'female' : 'unknown'}/>{value === 'male' ? '수컷' : value === 'female' ? '암컷' : '미구분'}</button>)}</div></fieldset>
             <label className="pet-flow-field"><span>생년월일</span><input type="date" value={birthday} max={new Intl.DateTimeFormat('en-CA').format(new Date())} onChange={(event) => setBirthday(event.target.value)}/></label>
             <details className="pet-flow-extra"><summary>추가 정보 (선택)</summary><div>

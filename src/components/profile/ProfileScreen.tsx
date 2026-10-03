@@ -12,7 +12,6 @@ import './profile-flow.css'
 
 type ProfileTab = 'posts' | 'drafts' | 'likes' | 'accepted' | 'settings'
 type WrittenFilter = 'qna' | 'reviews'
-type ProfileActivityId = 'posts' | 'drafts' | 'likes' | 'accepted'
 type LikeFilter = 'posts' | 'hospitals' | 'reviews'
 type WrittenPost = QnaPost & { kind: 'question' }
 type ProfileReviewItem = HospitalReview & { hospitalId: string }
@@ -192,7 +191,6 @@ function ProfileScreen({
     )),
     [hospitalReviews],
   )
-  const likedCount = likedQnaItems.length + likedHospitals.length + (PROFILE_REVIEWS_ENABLED ? likedReviewItems.length : 0)
   const acceptedAnswers = useMemo<Array<{ post: QnaPost; comment: QnaComment }>>(
     () => qnaPosts.flatMap((post) => {
       if (!post.selectedAnswerCommentId) return []
@@ -254,17 +252,7 @@ function ProfileScreen({
         accountId={accountId}
         avatarUrl={avatarUrl}
         isLoading={!profile.username && !profile.nickname}
-      />
-
-      <ProfileActivitySummary
-        activeId={view}
-        items={[
-          { id: 'posts', label: '글', count: writtenPosts.length + (PROFILE_REVIEWS_ENABLED ? myReviews.length : 0) },
-          ...(PROFILE_DRAFTS_ENABLED ? [{ id: 'drafts' as const, label: '임시저장', count: drafts.length }] : []),
-          { id: 'likes', label: '좋아요', count: likedCount },
-          { id: 'accepted', label: '채택 답변', count: acceptedAnswers.length },
-        ]}
-        onSelect={(activity) => openTab(activity)}
+        acceptedCount={acceptedAnswers.length}
       />
 
       <div ref={tabsRef} className="profile-detail-area">
@@ -362,11 +350,13 @@ function ProfileHeader({
   accountId,
   avatarUrl,
   isLoading,
+  acceptedCount,
 }: {
   displayName: string
   accountId: string
   avatarUrl: string
   isLoading: boolean
+  acceptedCount: number
 }) {
   const [failedAvatarUrl, setFailedAvatarUrl] = useState('')
   const showAvatar = Boolean(avatarUrl) && failedAvatarUrl !== avatarUrl
@@ -398,40 +388,14 @@ function ProfileHeader({
           )}
         </div>
         <div className="profile-summary-copy">
-          <h2>{displayName}</h2>
+          <div className="profile-summary-name-row">
+            <h2>{displayName}</h2>
+            <span className="profile-accepted-count">채택 댓글 <strong>{acceptedCount}개</strong></span>
+          </div>
           <p>@{accountId}</p>
         </div>
       </div>
     </header>
-  )
-}
-
-function ProfileActivitySummary({
-  items,
-  activeId,
-  onSelect,
-}: {
-  items: Array<{ id: ProfileActivityId; label: string; count: number }>
-  activeId: ProfileTab | ProfileActivityId
-  onSelect: (activity: ProfileActivityId) => void
-}) {
-  return (
-    <div className="profile-activity-summary" aria-label="활동 요약">
-      {items.map((item) => (
-        <button
-          key={item.id}
-          className={activeId === item.id ? 'is-active' : ''}
-          type="button"
-          aria-label={`${item.label}: ${item.count}`}
-          aria-current={activeId === item.id ? 'page' : undefined}
-          title={`${item.label}: ${item.count}`}
-          onClick={() => onSelect(item.id)}
-        >
-          <span className="profile-summary-count">{item.count}</span>
-          <span className="profile-summary-label">{item.label}</span>
-        </button>
-      ))}
-    </div>
   )
 }
 

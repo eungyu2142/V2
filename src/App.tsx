@@ -9,7 +9,7 @@ import { dataUrlToImageFile, removeUploadedImage, uploadImageFile } from './lib/
 import { deleteHospitalLike, getHospitalLikeKey, mergeLocalHospitalLikes, saveHospitalLike } from './lib/hospitalLikes'
 import { deactivatePushSubscriptionForLogout, syncCurrentDevicePushSubscription } from './lib/pushNotifications'
 import { isCurrentDeviceBlocked, registerCurrentDevice } from './lib/qnaModeration'
-import { animalCategoryLabels, animalCategoryOptions, CategoryTagIcon, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
+import { animalCategoryLabels, animalCategoryOptions, isSameHospitalIdentity, loadCollectedHospitals, normalizePet, petSpeciesOptions, readSavedHospitalSnapshots, readStoredReviews, reviewStorageKey, toHospitalSnapshot, writeSavedHospitalSnapshots } from './components/hospital-map/mapDependencies'
 import type { AnimalCategory, AppProfile, CreateMode, DraftItem, HospitalRecommendationConcern, HospitalReview, HospitalSnapshot, Pet, QnaCategory, QnaPost, Tab } from './types/app'
 import type { HospitalConditionId } from './features/hospital-map/hospitalConditionCatalog'
 import type { PetMobileView } from './components/my-pet/PetMobileFlow'
@@ -640,7 +640,6 @@ function AuthenticatedApp({ session }: { session: Session }) {
       categoryOptions={animalCategoryOptions.filter((item): item is Exclude<AnimalCategory, 'all'> => item !== 'all')}
       categoryLabels={animalCategoryLabels}
       speciesOptions={petSpeciesOptions}
-      renderCategoryIcon={(category) => <CategoryTagIcon category={category} />}
       onClose={() => { setCreateMode(null); setEditingPet(null); setEditingDraft(null) }}
       onSave={async (pet, photoFile) => {
         await savePet(pet, photoFile)

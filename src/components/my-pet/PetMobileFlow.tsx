@@ -7,14 +7,19 @@ import { PetIcon, type PetIconName } from './PetIcons'
 import './PetFlow.css'
 import { ProgressBar } from '../ui/ProgressBar'
 import { FlowHeader } from '../ui/FlowHeader'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 export type PetMobileView = 'main' | 'detail' | 'records' | 'growth' | 'routines'
 type RecordTab = 'temperature' | 'humidity' | 'weight' | 'shed' | 'poop' | 'mating' | 'egg'
+type RecordChartType = 'line' | 'area' | 'column' | 'bar' | 'mixed' | 'rangeArea'
+type PetFilter = 'all' | 'amphibian' | 'reptile'
 type Props = { pets: Pet[]; selectedPetId: string; view: PetMobileView; tasks: DailyTask[]; plans: CarePlan[]; records: PetRecord[]; onSelectPet: (id: string) => void; onView: (view: PetMobileView) => void; onRegisterPet: () => void; onEditPet: (pet: Pet) => void; onDeletePet: (petId: string) => void | Promise<void>; onOpenDiary: (petId: string, action?: 'routine-create') => void }
 
 const routineLabels: Record<string, string> = { feed: '먹이', mist: '분무', water: '물그릇', weight: '무게', humidity: '습도', temperature: '온도', water_temperature: '수온', cleaning: '청소', partial_cleaning: '청소', full_cleaning: '청소', medicine: '약', hospital: '진료', uvb_check: 'UVB', water_quality: '수질 확인', filter_check: '여과기 확인', custom: '직접 입력' }
 const routineIcons: Record<string, PetIconName> = { feed: 'feed', mist: 'mist', water: 'water', weight: 'weight', humidity: 'mist', temperature: 'temperature', water_temperature: 'temperature', cleaning: 'cleaning', partial_cleaning: 'cleaning', full_cleaning: 'cleaning', uvb_check: 'uvb', medicine: 'medicine' }
 const recordTabs: Array<[RecordTab, string]> = [['temperature', '온도'], ['humidity', '습도'], ['weight', '무게'], ['shed', '탈피'], ['poop', '배변'], ['mating', '메이팅'], ['egg', '산란']]
+const recordChartTypes: Array<[RecordChartType, string]> = [['line', '선형'], ['area', '영역'], ['column', '세로 막대'], ['bar', '가로 막대'], ['mixed', '혼합'], ['rangeArea', '범위 영역']]
+const petFilters: Array<[PetFilter, string]> = [['all', '전체'], ['amphibian', '양서류'], ['reptile', '파충류']]
 const dateLabel = (value?: string) => value ? value.slice(0, 10).replaceAll('-', '.') : '-'
 const genderLabel = (gender: Pet['gender']) => gender === 'male' ? '수컷' : gender === 'female' ? '암컷' : '미구분'
 const todayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
@@ -55,7 +60,7 @@ function recordSummary(record: PetRecord) {
   return record.memo || '기록됨'
 }
 
-function PetRecordChart({ records, tab }: { records: PetRecord[]; tab: RecordTab }) {
+function PetRecordChart({ records, tab, chartType }: { records: PetRecord[]; tab: RecordTab; chartType: RecordChartType }) {
   const values = records.flatMap((record) => {
     const value = tab === 'weight' ? record.weight : record.environmentRecord?.value
     return value !== undefined && Number.isFinite(value) ? [{ record, value }] : []
@@ -63,28 +68,42 @@ function PetRecordChart({ records, tab }: { records: PetRecord[]; tab: RecordTab
   const unit = tab === 'weight' ? 'g' : tab === 'humidity' ? '%' : '℃'
   const title = recordTabs.find(([id]) => id === tab)?.[1] ?? ''
   if (!values.length) return <p className="pet-flow-empty">아직 {title} 기록이 없어요.</p>
-  const min = Math.min(...values.map(({ value }) => value))
-  const max = Math.max(...values.map(({ value }) => value))
-  const padding = Math.max((max - min) * 0.2, 1)
-  const floor = Math.max(0, min - padding)
-  const ceiling = max + padding
-  const point = (value: number, index: number) => ({ x: values.length === 1 ? 310 : 64 + index / (values.length - 1) * 496, y: 224 - (value - floor) / (ceiling - floor) * 190 })
-  return <figure className="pet-flow-chart"><figcaption>{title} 변화 ({unit})</figcaption><svg viewBox="0 0 600 275" role="img" aria-label={`${title} 변화 그래프. ${values.length}개 기록, 최근 ${values.at(-1)?.value}${unit}`}>
-    {[0, 1, 2, 3, 4].map((tick) => { const y = 224 - tick * 47.5; const value = floor + (ceiling - floor) * tick / 4; return <g key={tick}><line className="pet-chart-grid" x1="64" x2="560" y1={y} y2={y}/><text x="48" y={y + 4} textAnchor="end">{Number(value.toFixed(1))}</text></g> })}
-    <polyline className="pet-chart-line" points={values.map(({ value }, index) => { const p = point(value, index); return `${p.x},${p.y}` }).join(' ')}/>
-    {values.map(({ record, value }, index) => { const p = point(value, index); const showLabel = values.length <= 6 || index === 0 || index === values.length - 1 || index % Math.ceil(values.length / 5) === 0; return <g key={record.id}><circle className="pet-chart-dot" cx={p.x} cy={p.y} r="4"><title>{dateLabel(record.date)}: {value}{unit}</title></circle>{showLabel ? <text x={p.x} y="252" textAnchor="middle">{record.date.slice(5).replace('-', '/')}</text> : null}</g> })}
-  </svg></figure>
+  const data = values.map(({ record, value }, index) => {
+    const range = record.environmentRecord ? [record.environmentRecord.minValue, record.environmentRecord.maxValue] : [value, value]
+    const neighbors = values.slice(Math.max(0, index - 1), Math.min(values.length, index + 2))
+    const trend = Number((neighbors.reduce((sum, item) => sum + item.value, 0) / neighbors.length).toFixed(2))
+    return { label: record.date.slice(5).replace('-', '/'), value, trend, range }
+  })
+  const grid = <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false}/>
+  const tooltip = <Tooltip formatter={(value) => Array.isArray(value) ? [`${value[0]}~${value[1]}${unit}`, '범위'] : [`${value}${unit}`, title]} />
+  const horizontalAxes = <><XAxis dataKey="label" tickLine={false} axisLine={false}/><YAxis tickLine={false} axisLine={false} unit={unit} width={48}/></>
+  const chart = chartType === 'area'
+    ? <AreaChart data={data}>{grid}{horizontalAxes}{tooltip}<Area type="monotone" dataKey="value" name={title} stroke="var(--color-primary-600)" fill="var(--color-primary-100)" strokeWidth={3}/></AreaChart>
+    : chartType === 'column'
+      ? <BarChart data={data}>{grid}{horizontalAxes}{tooltip}<Bar dataKey="value" name={title} fill="var(--color-primary-600)" radius={[8, 8, 0, 0]}/></BarChart>
+      : chartType === 'bar'
+        ? <BarChart data={data} layout="vertical" margin={{ left: 8, right: 20 }}>{grid}<XAxis type="number" tickLine={false} axisLine={false} unit={unit}/><YAxis type="category" dataKey="label" tickLine={false} axisLine={false} width={52}/>{tooltip}<Bar dataKey="value" name={title} fill="var(--color-primary-600)" radius={[0, 8, 8, 0]}/></BarChart>
+        : chartType === 'mixed'
+          ? <ComposedChart data={data}>{grid}{horizontalAxes}{tooltip}<Bar dataKey="value" name={title} fill="var(--color-primary-100)" radius={[8, 8, 0, 0]}/><Line type="monotone" dataKey="trend" name="추세" stroke="var(--color-primary-700)" strokeWidth={3} dot={false}/></ComposedChart>
+          : chartType === 'rangeArea'
+            ? <ComposedChart data={data}>{grid}{horizontalAxes}{tooltip}<Area type="monotone" dataKey="range" name="범위" stroke="var(--color-primary-300)" fill="var(--color-primary-100)"/><Line type="monotone" dataKey="value" name={title} stroke="var(--color-primary-700)" strokeWidth={3}/></ComposedChart>
+            : <LineChart data={data}>{grid}{horizontalAxes}{tooltip}<Line type="monotone" dataKey="value" name={title} stroke="var(--color-primary-600)" strokeWidth={3} activeDot={{ r: 5 }}/></LineChart>
+  return <figure className="pet-flow-chart"><figcaption>{title} 변화 ({unit})</figcaption><div className="pet-flow-chart-canvas" role="img" aria-label={`${title} ${recordChartTypes.find(([type]) => type === chartType)?.[1]} 차트. ${values.length}개 기록, 최근 ${values.at(-1)?.value}${unit}`}><ResponsiveContainer width="100%" height="100%">{chart}</ResponsiveContainer></div></figure>
 }
 
 export default function PetMobileFlow({ pets, selectedPetId, view, tasks, plans, records, onSelectPet, onView, onRegisterPet, onEditPet, onDeletePet, onOpenDiary }: Props) {
   const [recordTab, setRecordTab] = useState<RecordTab>('weight')
+  const [recordChartType, setRecordChartType] = useState<RecordChartType>('line')
+  const [petFilter, setPetFilter] = useState<PetFilter>('all')
   const [menuOpen, setMenuOpen] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const pet = pets.find((item) => item.id === selectedPetId) ?? pets[0]
+  const visiblePets = petFilter === 'all' ? pets : pets.filter((item) => item.group === petFilter)
 
   if (view === 'main' || !pet) return <main className="pet-flow pet-flow-list">
     <header className="pet-flow-main-actions"><button className="pet-flow-add" type="button" aria-label="펫 추가" onClick={onRegisterPet}><PetIcon name="add"/></button></header>
-    {pets.length ? <div className="pet-flow-cards">{pets.map((item) => {
+    {pets.length ? <nav className="pet-flow-filters" aria-label="펫 분류 필터">{petFilters.map(([filter, label]) => <button type="button" className={petFilter === filter ? 'active' : ''} aria-pressed={petFilter === filter} key={filter} onClick={() => setPetFilter(filter)}>{label}</button>)}</nav> : null}
+    {visiblePets.length ? <div className="pet-flow-cards">{visiblePets.map((item) => {
       const todayTasks = tasksForPet(item.id, tasks, plans)
       const completed = todayTasks.filter((task) => task.status === 'completed').length
       const progressPercent = todayTasks.length ? Math.round(completed / todayTasks.length * 100) : 0
@@ -92,7 +111,7 @@ export default function PetMobileFlow({ pets, selectedPetId, view, tasks, plans,
         <span className="pet-flow-card-identity"><PetProgressPhoto pet={item} completed={completed} total={todayTasks.length}/><span><strong>{item.name} <PetIcon name={item.gender === 'male' ? 'male' : item.gender === 'female' ? 'female' : 'unknown'} aria-label={genderLabel(item.gender)}/></strong><small>{item.species}</small></span></span>
         {todayTasks.length ? <span className="pet-flow-card-progress"><strong>{progressPercent}%</strong><small>{completed === todayTasks.length ? '오늘 케어 완료' : '오늘 케어'}</small></span> : <span className="pet-flow-card-status"><small>오늘 예정된 루틴이 없어요.</small></span>}
       </button>
-    })}</div> : <section className="pet-flow-empty-home"><Mascot/><p>등록된 펫이 없어요.</p></section>}
+    })}</div> : pets.length ? <section className="pet-flow-filter-empty"><p>{petFilter === 'amphibian' ? '등록된 양서류가 없어요.' : '등록된 파충류가 없어요.'}</p><button type="button" onClick={() => setPetFilter('all')}>전체 펫 보기</button></section> : <section className="pet-flow-empty-home"><Mascot/><p>등록된 펫이 없어요.</p></section>}
   </main>
 
   const petTasks = tasksForPet(pet.id, tasks, plans)
@@ -110,7 +129,7 @@ export default function PetMobileFlow({ pets, selectedPetId, view, tasks, plans,
   if (view === 'records' || view === 'growth') return <main className="pet-flow pet-flow-records">
     <FlowHeader title="기록 모아보기" onBack={backToDetail}/>
     <nav className="pet-flow-record-tabs" aria-label="기록 종류">{recordTabs.map(([id, label]) => <button type="button" className={recordTab === id ? 'active' : ''} aria-pressed={recordTab === id} key={id} onClick={() => setRecordTab(id)}>{label}</button>)}</nav>
-    {recordTab === 'weight' || recordTab === 'temperature' || recordTab === 'humidity' ? <PetRecordChart records={filteredRecords} tab={recordTab}/> : <h2 className="pet-flow-record-heading">{recordTabs.find(([id]) => id === recordTab)?.[1]} 기록</h2>}
+    {recordTab === 'weight' || recordTab === 'temperature' || recordTab === 'humidity' ? <><nav className="pet-flow-chart-types" aria-label="차트 종류">{recordChartTypes.map(([type, label]) => <button type="button" className={recordChartType === type ? 'active' : ''} aria-pressed={recordChartType === type} key={type} onClick={() => setRecordChartType(type)}>{label}</button>)}</nav><PetRecordChart records={filteredRecords} tab={recordTab} chartType={recordChartType}/></> : <h2 className="pet-flow-record-heading">{recordTabs.find(([id]) => id === recordTab)?.[1]} 기록</h2>}
     {filteredRecords.length ? <div className="pet-flow-record-list">{filteredRecords.map((record) => <article key={record.id}><span><strong>{dateLabel(record.date)}</strong><small>{recordSummary(record)}</small></span>{record.photoUrl ? <img src={record.photoUrl} alt="기록 사진"/> : null}</article>)}</div> : recordTab !== 'weight' && recordTab !== 'temperature' && recordTab !== 'humidity' ? <p className="pet-flow-empty">아직 기록이 없어요.</p> : null}
   </main>
 
