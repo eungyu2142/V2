@@ -4,27 +4,29 @@ import { GuideIcon } from '../../components/common/GuideIcon'
 
 export type DiaryGlyphName = 'feed' | 'mist' | 'water' | 'temperature' | 'humidity' | 'cleaning' | 'weight' | 'poop' | 'shed' | 'mating' | 'egg' | 'hospital' | 'medicine' | 'uvb' | 'other' | 'calendar' | 'chart' | 'check'
 
-const diaryMarkViewports: Partial<Record<DiaryGlyphName, [number, number, number]>> = {
-  feed: [132, 129, 92],
-  mist: [429, 129, 92],
-  cleaning: [727, 129, 92],
-  medicine: [1024, 129, 92],
-  humidity: [1225, 129, 92],
-  temperature: [132, 256, 92],
-  weight: [454, 256, 92],
-  shed: [130, 414, 98],
-  poop: [132, 542, 98],
-  mating: [132, 670, 98],
-  egg: [132, 800, 98],
-  hospital: [132, 927, 98],
-  calendar: [930, 545, 210],
+type DiaryMarkViewport = [centerX: number, centerY: number, width: number, height: number]
+
+const diaryMarkViewports: Partial<Record<DiaryGlyphName, DiaryMarkViewport>> = {
+  feed: [132, 129, 136, 112],
+  mist: [429, 129, 130, 112],
+  cleaning: [727, 129, 130, 112],
+  medicine: [1024, 129, 126, 112],
+  humidity: [1225, 129, 128, 112],
+  temperature: [132, 256, 120, 112],
+  weight: [454, 256, 124, 112],
+  shed: [132, 414, 150, 112],
+  poop: [132, 542, 150, 112],
+  mating: [132, 670, 150, 112],
+  egg: [132, 800, 150, 112],
+  hospital: [132, 927, 150, 112],
+  calendar: [930, 550, 230, 220],
 }
 
 function DiaryReferenceMark({ name, ...props }: { name: DiaryGlyphName } & SVGProps<SVGSVGElement>) {
   const viewport = diaryMarkViewports[name]
   if (!viewport) return null
-  const [centerX, centerY, size] = viewport
-  return <svg width="32" height="32" {...props} viewBox={`${centerX - size / 2} ${centerY - size / 2} ${size} ${size}`} aria-hidden="true" className={`diary-reference-mark ${props.className ?? ''}`.trim()}>
+  const [centerX, centerY, width, height] = viewport
+  return <svg width="32" height="32" {...props} viewBox={`${centerX - width / 2} ${centerY - height / 2} ${width} ${height}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true" className={`diary-reference-mark ${props.className ?? ''}`.trim()}>
     <image href="/diary-mark-reference.png" width="1536" height="1024" />
   </svg>
 }

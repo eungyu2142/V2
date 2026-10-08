@@ -1,12 +1,12 @@
 import { type ChangeEvent, type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuideAction from '../../components/common/GuideAction'
 import ReactCalendar from 'react-calendar'
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { deleteAppData, loadAppData, saveAppData } from '../../lib/appData'
-import { completeDailyTask, deleteCarePlan, listCarePlans, listCareRecords, listDailyTasks, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, settleSupersededOverdueTasks, skipDailyTask, undoDailyTask } from './diaryService'
+import { completeDailyTask, deleteCarePlan, listCarePlans, listCareRecords, listDailyTasks, saveCarePlan, saveClinicToDiary, saveDailyTaskCareRecord, settleSupersededOverdueTasks, undoDailyTask } from './diaryService'
 import type { CarePlan, CareTaskType, ClinicRecordDetails, DailyTask, EnvironmentRecord, FeedingFoodItem, PetRecord, PetRecordType, RiskLevel, StoolStatus } from './diaryTypes'
 import { analyzeRecordedCycle } from './diaryCycleAnalysis'
-import { cancelRoutineNotificationJobs, getFirstRoutineDate, markRoutineNotificationJobCompleted, markRoutineNotificationJobSkipped, upsertRoutineNotificationJob } from './routineNotificationJobs'
+import { cancelRoutineNotificationJobs, getFirstRoutineDate, markRoutineNotificationJobCompleted, upsertRoutineNotificationJob } from './routineNotificationJobs'
 import { customFoodOptionKey, fallbackSpeciesCareProfiles, findSpeciesCareProfile, listSpeciesCareProfiles, type CareEnvironmentProfile, type CareFoodOption, type SpeciesCareProfile } from './speciesCareProfiles'
 import { toDateKey } from './mockDiaryData'
 import type { HospitalRecommendationConcern, HospitalReview, HospitalSnapshot } from '../../types/app'
@@ -43,7 +43,6 @@ type EnvironmentRiskResult = {
   message: string
 }
 type DiaryInsightLevel = 'normal' | 'notice' | 'caution' | 'urgent'
-type DiaryChartType = 'line' | 'area' | 'bar' | 'column'
 type DiaryInsight = {
   id: string
   title: string
@@ -617,7 +616,6 @@ export default function DiaryPage({
   const [completingReminder, setCompletingReminder] = useState<Reminder | null>(null)
   const [reminderFormOpen, setReminderFormOpen] = useState(false)
   const [routineManagerOpen, setRoutineManagerOpen] = useState(false)
-  const [routineManagerMode, setRoutineManagerMode] = useState<'single' | 'bulk'>('single')
   const [routineEditQueue, setRoutineEditQueue] = useState<string[]>([])
   const [clinicEditorOpen, setClinicEditorOpen] = useState(false)
   const [clinicDraft, setClinicDraft] = useState<ClinicDraft | null>(null)
@@ -1044,15 +1042,6 @@ export default function DiaryPage({
       await markRoutineNotificationJobCompleted(String(userId), String(dailyTask.carePlanId), dailyTask.scheduledDate, dailyTask.id)
     } catch (error) {
       console.error('Routine notification job complete sync failed.', error)
-    }
-  }
-
-  const markNotificationJobSkippedForTask = async (dailyTask: DailyTask) => {
-    if (!dailyTask.carePlanId) return
-    try {
-      await markRoutineNotificationJobSkipped(String(userId), String(dailyTask.carePlanId), dailyTask.scheduledDate, dailyTask.id)
-    } catch (error) {
-      console.error('Routine notification job skip sync failed.', error)
     }
   }
 
@@ -1659,19 +1648,6 @@ export default function DiaryPage({
     }
   }
 
-  const skipPlan = (dailyTask?: DailyTask) => {
-    if (!dailyTask || !usingCarePlans) return
-    setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'skipped' } : item))
-    void skipDailyTask(dailyTask.id)
-      .then(() => {
-        void markNotificationJobSkippedForTask(dailyTask)
-        consolidateOverdueTasksAfterCompletion(dailyTask)
-        if (dailyTask.scheduledDate >= today) void refreshDailyTasks()
-      })
-      .catch((error) => console.error('Daily task skip sync failed; kept local state.', error))
-    showSmartToast('이번 할 일을 건너뛰었어요')
-  }
-
   const togglePlan = (reminder: Reminder) => {
     saveReminderList(reminders.map((item) => item.id === reminder.id ? { ...item, isActive: !item.isActive, updatedAt: new Date().toISOString() } : item))
   }
@@ -1691,8 +1667,9 @@ export default function DiaryPage({
     closeWeightCompletion()
   }
 
-  const removePlan = (reminderId: string) => {
-    saveReminderList(reminders.filter((item) => item.id !== reminderId))
+  const removePlans = (reminderIds: string[]) => {
+    const removingIds = new Set(reminderIds)
+    saveReminderList(reminders.filter((item) => !removingIds.has(item.id)))
   }
 
   const removeRecords = async (recordIds: string | string[]) => {
@@ -1852,10 +1829,8 @@ export default function DiaryPage({
   }
 
   if (routineManagerOpen) return <main className="diary-create-screen diary-routine-manager">
-    <DiarySubHeader title={routineManagerMode === 'bulk' ? '루틴 일괄 수정' : '루틴 수정'} onBack={() => { if (returnToPets && onReturnToPets) onReturnToPets(); else setRoutineManagerOpen(false) }} />
-    <RoutineSelectionPanel plans={reminders} selectedPetId={effectivePetId} multiple={routineManagerMode === 'bulk'} onStart={(ids) => { const first = reminders.find((item) => item.id === ids[0]); if (!first) return; setRoutineEditQueue(ids); setEditingReminder(first); setRoutinePresetType(null); setReminderFormOpen(true) }} />
-    {planReminders.some((item) => item.overdue) && <DailyPlan pet={selectedPet} tasks={planReminders.filter((item) => item.overdue)} selectedDate={selectedDate} hasCarePlans onAddPlan={openReminderCreate} onEditPlan={(reminder) => { setEditingReminder(reminder); setRoutinePresetType(null); setReminderFormOpen(true) }} onDeletePlan={removePlan} onComplete={(item) => completePlan(item.reminder, item.dailyTask)} onSkip={(item) => skipPlan(item.dailyTask)} />}
-    {!readOnly && <NotificationOptInNudge userId={userId} />}
+    <DiarySubHeader title="루틴 수정" onBack={() => { if (returnToPets && onReturnToPets) onReturnToPets(); else setRoutineManagerOpen(false) }} />
+    <RoutineSelectionPanel plans={reminders} selectedPetId={effectivePetId} onDelete={removePlans} onStart={(ids) => { const first = reminders.find((item) => item.id === ids[0]); if (!first) return; setRoutineEditQueue(ids); setEditingReminder(first); setRoutinePresetType(null); setReminderFormOpen(true) }} />
   </main>
 
   const dateRecordsView = dateDetailsOpen ? (
@@ -1910,8 +1885,13 @@ export default function DiaryPage({
           onToggleRoutine={(id) => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id); if (item) void completePlan(item.reminder, item.dailyTask) }}
           onOpenCompletedRoutine={(id) => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id); if (!item) return; const record = records.find((entry) => item.dailyTask ? entry.dailyTaskId === item.dailyTask.id : entry.petId === item.reminder.petId && entry.date === selectedDate && entry.memo === planLabel(item.reminder, selectedPet)); if (record) setSelectedRecordId(record.id) }}
           onAddRoutine={openReminderCreate}
-          onManageRoutines={() => { setRoutineManagerMode('single'); setRoutineManagerOpen(true) }}
-          onBulkManageRoutines={() => { setRoutineManagerMode('bulk'); setRoutineManagerOpen(true) }}
+          onManageRoutines={() => setRoutineManagerOpen(true)}
+          onBulkCheckRoutines={async (ids) => {
+            for (const id of ids) {
+              const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id)
+              if (item && reminderMeta[item.reminder.reminderType].inputType === 'check') await completePlan(item.reminder, item.dailyTask)
+            }
+          }}
           recordMenuOpen={mobileRecordMenuOpen}
           onRecordMenuChange={setMobileRecordMenuOpen}
         />
@@ -2112,128 +2092,6 @@ export default function DiaryPage({
   }
 }
 
-function DailyPlan({
-  pet,
-  tasks,
-  selectedDate,
-  hasCarePlans,
-  onAddPlan,
-  onEditPlan,
-  onDeletePlan,
-  onComplete,
-  onSkip,
-}: {
-  pet?: DiaryPet
-  tasks: Array<{ reminder: Reminder; overdue: boolean; dailyTask?: DailyTask }>
-  selectedDate: string
-  hasCarePlans: boolean
-  onAddPlan: () => void
-  onEditPlan: (reminder: Reminder) => void
-  onDeletePlan: (id: string) => void
-  onComplete: (task: { reminder: Reminder; overdue: boolean; dailyTask?: DailyTask }) => void
-  onSkip: (task: { reminder: Reminder; overdue: boolean; dailyTask?: DailyTask }) => void
-}) {
-  const [listOpen, setListOpen] = useState(false)
-  const isFuture = selectedDate > toDateKey(new Date())
-  const overdueTasks = tasks.filter((task) => task.overdue && (task.dailyTask
-    ? task.dailyTask.status !== 'skipped'
-    : true))
-  const isTaskCompleted = (task: { reminder: Reminder; dailyTask?: DailyTask }) => task.dailyTask
-    ? task.dailyTask.status === 'completed'
-    : task.reminder.completedAt?.slice(0, 10) === selectedDate
-  const pendingTodayTasks = tasks.filter((task) => !task.overdue && (task.dailyTask
-    ? task.dailyTask.status === 'pending'
-    : !isTaskCompleted(task)))
-  const completedTodayTasks = tasks.filter((task) => !task.overdue && isTaskCompleted(task))
-  const todayTasks = pendingTodayTasks
-  const doneToggle = (
-    <button
-      className="daily-plan-list-toggle"
-      type="button"
-      aria-haspopup="dialog"
-      onClick={() => setListOpen(true)}
-    >
-      <strong>한 일</strong>
-      <span className="daily-plan-list-toggle-state">{completedTodayTasks.length}</span>
-    </button>
-  )
-  const renderTask = (task: { reminder: Reminder; overdue: boolean; dailyTask?: DailyTask }) => {
-    const { reminder, overdue, dailyTask } = task
-    const checked = isTaskCompleted(task)
-    const completedTime = checked && (dailyTask?.completedAt ?? reminder.completedAt)
-      ? new Date(dailyTask?.completedAt ?? reminder.completedAt ?? '').toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })
-      : ''
-    const overdueDays = dailyTask ? Math.max(1, daysBetween(dailyTask.scheduledDate, toDateKey(new Date()))) : 1
-    const overdueStage = overdueDays >= 7 ? Math.min(5, overdueDays - 6) : 0
-    const taskDescription = overdue
-      ? `${overdueDays}일 지남${overdueStage > 0 ? ` · ${overdueStage}단계` : ''}`
-      : checked
-        ? `${completedTime || '완료'} · 완료한 루틴`
-      : reminder.reminderType === 'medicine'
-        ? `${dailyTask?.scheduledDate ?? selectedDate} · ${dailyTask?.occurrenceNo ?? 1}회차`
-        : formatPlanDays(reminder)
-    return <div className={`daily-plan-task-row ${overdue ? 'overdue' : ''}`} key={`${reminder.id}-${dailyTask?.id ?? selectedDate}`}>
-      <div className={`daily-plan-task ${routinePhotoKeys[reminder.reminderType] ? 'has-routine-photo' : ''}`}>
-        <RoutinePhoto type={reminder.reminderType} className="daily-plan-routine-photo" />
-        <span className="daily-plan-task-content">
-          <span className="daily-plan-title-line">
-            <strong>{planLabel(reminder, pet)}</strong>
-          </span>
-          {(overdue || checked) && <small>{taskDescription}</small>}
-        </span>
-        {!overdue && <label className="daily-plan-check-wrap">
-          <span className={`daily-plan-check ${checked ? 'checked' : ''}`} aria-hidden="true">{checked && <DiaryGlyph name="check" />}</span>
-          <input className="daily-plan-check-input" type="checkbox" checked={checked} disabled={isFuture || checked} onChange={() => onComplete(task)} aria-label={`${planLabel(reminder, pet)} ${checked ? '완료됨' : '완료'}`} />
-        </label>}
-        <details className="daily-task-menu">
-          <summary aria-label={`${planLabel(reminder, pet)} 메뉴`} title="루틴 메뉴"><span className="menu-dots" aria-hidden="true"><span /><span /><span /></span></summary>
-          <div>
-            <button type="button" onClick={() => onEditPlan(reminder)}>수정</button>
-            <button type="button" onClick={() => onDeletePlan(reminder.id)}>삭제</button>
-          </div>
-        </details>
-      </div>
-      {overdue && !checked && <div className="daily-plan-task-actions"><button type="button" onClick={() => onComplete(task)}>지금 완료</button><button type="button" onClick={() => onSkip(task)}>건너뛰기</button></div>}
-    </div>
-  }
-
-  return (
-    <>
-      <section className="daily-plan-panel">
-        <div className="daily-plan-heading"><span><strong>오늘 할 일</strong><small>{formatDate(selectedDate)}</small></span><em>전체 {pendingTodayTasks.length + overdueTasks.length}개</em></div>
-        <header><button className="daily-plan-add-button" type="button" onClick={onAddPlan}>루틴</button>{doneToggle}</header>
-        {hasCarePlans && (
-          <div className="daily-plan-inline-list">
-            {overdueTasks.length > 0 && <div className="daily-plan-list">{overdueTasks.map(renderTask)}</div>}
-            {todayTasks.length > 0 && <div className="daily-plan-list">{todayTasks.map(renderTask)}</div>}
-            {overdueTasks.length === 0 && todayTasks.length === 0 && (
-              <button className="daily-plan-completed-summary" type="button" onClick={() => setListOpen(true)}>
-                {tasks.some((task) => !task.overdue && isTaskCompleted(task)) ? '오늘 할 일을 모두 마쳤어요.' : '오늘 예정된 일이 없어요.'}
-              </button>
-            )}
-          </div>
-        )}
-      </section>
-      {listOpen && (
-        <Overlay onClose={() => setListOpen(false)}>
-          <section className="daily-plan-dialog" role="dialog" aria-modal="true" aria-labelledby="daily-plan-dialog-title">
-            <header>
-              <div><h2 id="daily-plan-dialog-title">오늘 한 일</h2><p>{formatDate(selectedDate)}</p></div>
-            </header>
-            {!hasCarePlans ? (
-              <div className="daily-plan-first-empty"><strong>아직 반복 일정이 없어요.</strong></div>
-            ) : (
-              <div className="daily-plan-list-content">
-                <section className="daily-task-group today-task-group">{completedTodayTasks.length ? <div className="daily-plan-list">{completedTodayTasks.map(renderTask)}</div> : <p className="daily-plan-empty">아직 완료한 일이 없어요.</p>}</section>
-              </div>
-            )}
-          </section>
-        </Overlay>
-      )}
-    </>
-  )
-}
-
 function PetMenuDrawer({
   currentPet,
   pets,
@@ -2273,6 +2131,7 @@ function PetMenuDrawer({
                   <GenderMark gender={pet.gender} />
                 </span>
                 <small>{pet.species}</small>
+                {selected && <em>선택됨</em>}
               </button>
             )
           })}
@@ -2297,27 +2156,21 @@ function GenderMark({ gender }: { gender: DiaryPet['gender'] }) {
   return null
 }
 
-function RoutineSelectionPanel({ plans, selectedPetId, multiple, onStart }: {
+function RoutineSelectionPanel({ plans, selectedPetId, onStart, onDelete }: {
   plans: Reminder[]
   selectedPetId: string
-  multiple: boolean
   onStart: (ids: string[]) => void
+  onDelete: (ids: string[]) => void
 }) {
   const petPlans = plans.filter((plan) => plan.petId === selectedPetId)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const selectedSet = new Set(selectedIds)
-  const choose = (id: string) => {
-    if (!multiple) {
-      setSelectedIds([id])
-      return
-    }
-    setSelectedIds((ids) => ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id])
-  }
+  const choose = (id: string) => setSelectedIds((ids) => ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id])
   if (!petPlans.length) return <div className="care-plan-empty"><strong>수정할 루틴이 없어요.</strong><span>먼저 루틴을 추가해 주세요.</span></div>
   return <section className="routine-select-step">
-    <header><div><h2>{multiple ? '수정할 루틴을 선택하세요' : '루틴 하나를 선택하세요'}</h2><p>{multiple ? '선택한 순서대로 하나씩 수정해요.' : '선택한 뒤 일정 설정으로 이동해요.'}</p></div>{multiple && <button type="button" onClick={() => setSelectedIds(selectedIds.length === petPlans.length ? [] : petPlans.map((plan) => plan.id))}>{selectedIds.length === petPlans.length ? '전체 해제' : '전체 선택'}</button>}</header>
+    <header><div><h2>수정할 루틴을 선택하세요</h2><p>한 개 또는 여러 개를 선택할 수 있어요.</p></div><button type="button" onClick={() => setSelectedIds(selectedIds.length === petPlans.length ? [] : petPlans.map((plan) => plan.id))}>{selectedIds.length === petPlans.length ? '전체 해제' : '전체 선택'}</button></header>
     <div className="routine-select-list">{petPlans.map((plan) => <button type="button" className={selectedSet.has(plan.id) ? 'selected' : ''} aria-pressed={selectedSet.has(plan.id)} onClick={() => choose(plan.id)} key={plan.id}><RoutinePhoto type={plan.reminderType} className="care-plan-routine-photo" /><span><strong>{planLabel(plan)}</strong><small>{formatPlanDays(plan)} · {plan.reminderTime} · {plan.isActive ? '사용 중' : '일시정지'}</small></span><i aria-hidden="true">{selectedSet.has(plan.id) ? '✓' : ''}</i></button>)}</div>
-    <button className="diary-primary" type="button" disabled={!selectedIds.length} onClick={() => onStart(selectedIds)}>{multiple ? `선택한 ${selectedIds.length}개 수정하기` : '이 루틴 수정하기'}</button>
+    <div className="routine-select-actions"><button className="diary-primary" type="button" disabled={!selectedIds.length} onClick={() => onStart(selectedIds)}>{selectedIds.length > 1 ? `선택한 ${selectedIds.length}개 수정하기` : '이 루틴 수정하기'}</button><button className="routine-select-delete" type="button" disabled={!selectedIds.length} onClick={() => { if (!window.confirm(`선택한 루틴 ${selectedIds.length}개를 삭제할까요?`)) return; onDelete(selectedIds); setSelectedIds([]) }}>선택 삭제</button></div>
   </section>
 }
 
@@ -3272,10 +3125,8 @@ function buildRecentPoopContext(records: PetRecord[], date: string) {
 
 export function DataVisualization({
   records,
-  chartType = 'line',
 }: {
   records: PetRecord[]
-  chartType?: DiaryChartType
   petName: string
   onCreateQna?: (metric?: DiaryInsight['metric']) => void
   onShedComplete?: () => void
@@ -3325,16 +3176,16 @@ export function DataVisualization({
         <button className={selectedMetric === 'mating' ? 'active' : ''} type="button" onClick={() => setActiveMetric('mating')}>메이팅 <span>{metricCounts.mating}</span></button>
         <button className={selectedMetric === 'egg' ? 'active' : ''} type="button" onClick={() => setActiveMetric('egg')}>산란 <span>{metricCounts.egg}</span></button>
       </div>
-      {selectedMetric === 'shed' && (shedRecords.length > 0 ? <ShedCycleChart records={shedRecords} chartType={chartType} /> : <MetricEmpty label="탈피 기록" />)}
+      {selectedMetric === 'shed' && (shedRecords.length > 0 ? <ShedCycleChart records={shedRecords} /> : <MetricEmpty label="탈피 기록" />)}
       {selectedMetric === 'environment' && (
         temperatureRecords.length || humidityRecords.length
-          ? <>{temperatureRecords.length > 0 && <EnvironmentLineChart title="온도·수온 변화" records={temperatureRecords} chartType={chartType} />}{humidityRecords.length > 0 && <EnvironmentLineChart title="습도 변화" records={humidityRecords} chartType={chartType} />}</>
+          ? <>{temperatureRecords.length > 0 && <EnvironmentLineChart title="온도·수온 변화" records={temperatureRecords} />}{humidityRecords.length > 0 && <EnvironmentLineChart title="습도 변화" records={humidityRecords} />}</>
           : <MetricEmpty label="온습도 기록" />
       )}
-      {selectedMetric === 'weight' && (weightRecords.length > 0 ? <WeightLineChart records={weightRecords} chartType={chartType} /> : <MetricEmpty label="체중 기록" />)}
-      {selectedMetric === 'poop' && (poopRecords.length > 0 ? <><EventIntervalChart title="배변 주기" records={poopRecords.filter((record) => getStoolStatus(record) === 'normal')} chartType={chartType} /><PoopStatusChart records={poopRecords} chartType={chartType} /></> : <MetricEmpty label="배변 기록" />)}
-      {selectedMetric === 'mating' && (matingRecords.length > 0 ? <EventIntervalChart title="메이팅 간격" records={matingRecords} chartType={chartType} /> : <MetricEmpty label="메이팅 기록" />)}
-      {selectedMetric === 'egg' && (eggRecords.length > 0 ? <><EventIntervalChart title="산란 주기" records={eggRecords} chartType={chartType} /><EggStatusChart records={eggRecords} chartType={chartType} /></> : <MetricEmpty label="산란 기록" />)}
+      {selectedMetric === 'weight' && (weightRecords.length > 0 ? <WeightLineChart records={weightRecords} /> : <MetricEmpty label="체중 기록" />)}
+      {selectedMetric === 'poop' && (poopRecords.length > 0 ? <PoopStatusChart records={poopRecords} /> : <MetricEmpty label="배변 기록" />)}
+      {selectedMetric === 'mating' && (matingRecords.length > 0 ? <MatingTimelineChart records={matingRecords} /> : <MetricEmpty label="메이팅 기록" />)}
+      {selectedMetric === 'egg' && (eggRecords.length > 0 ? <EggContextChart records={records} /> : <MetricEmpty label="산란 기록" />)}
     </div>
   )
 }
@@ -3849,15 +3700,6 @@ function buildCalendarCyclePredictions(records: PetRecord[]): CalendarCyclePredi
   return predictions.filter((prediction, index) => predictions.findIndex((item) => item.date === prediction.date && item.type === prediction.type) === index)
 }
 
-function buildIntervalRecords(records: PetRecord[]) {
-  const sorted = records.slice().sort(compareRecordTime)
-  return sorted.slice(1).map((record, index) => ({
-    ...record,
-    id: `interval-${sorted[index].id}-${record.id}`,
-    intervalDays: Math.max(1, daysBetween(sorted[index].date, record.date)),
-  }))
-}
-
 export function LegacySimpleLineChart({ title, subtitle = '날짜별 변화', unit, records, getValue }: { title: string; subtitle?: string; unit: string; records: PetRecord[]; getValue: (record: PetRecord) => number }) {
   const width = 520
   const height = 190
@@ -3886,72 +3728,70 @@ export function LegacySimpleLineChart({ title, subtitle = '날짜별 변화', un
 
 type DiaryChartDatum = { label: string; value: number; min?: number; max?: number }
 
-function RechartsMetricChart({ title, subtitle, unit, data, chartType }: { title: string; subtitle?: string; unit: string; data: DiaryChartDatum[]; chartType: DiaryChartType }) {
+type AreaTimelineDatum = { label: string; [key: string]: string | number }
+type AreaTimelineSeries = { key: string; label: string; color: string; stackId?: string }
+
+function AreaTimelineChart({ title, unit, data, series }: { title: string; unit: string; data: AreaTimelineDatum[]; series: AreaTimelineSeries[] }) {
   const margin = { top: 12, right: 12, bottom: 4, left: -12 }
   const axisProps = { tick: { fill: 'var(--color-text-secondary)', fontSize: 11 }, axisLine: false, tickLine: false }
   const grid = <CartesianGrid stroke="var(--color-neutral-200)" strokeDasharray="4 4" vertical={false} />
   const tooltip = <Tooltip cursor={{ fill: 'var(--color-primary-50)' }} contentStyle={{ borderColor: 'var(--color-border)', borderRadius: 'var(--radius-control)', background: 'var(--color-surface)' }} />
-  const rangeLines = <>{data.some((item) => item.min !== undefined) && <Line type="monotone" dataKey="min" name="적정 최저" stroke="var(--color-primary-200)" strokeDasharray="6 5" dot={false} />}{data.some((item) => item.max !== undefined) && <Line type="monotone" dataKey="max" name="적정 최고" stroke="var(--color-primary-200)" strokeDasharray="6 5" dot={false} />}</>
-
   return <section className="environment-chart">
-    <header><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</header>
-    <div className={`recharts-chart-shell recharts-chart-shell--${chartType}`} role="img" aria-label={`${title} ${chartType.toUpperCase()} 차트`}>
+    <header><strong>{title}</strong>{series.length > 1 && <span className="area-chart-legend">{series.map((item) => <i key={item.key}><b style={{ background: item.color }} />{item.label}</i>)}</span>}</header>
+    <div className="recharts-chart-shell" role="img" aria-label={`${title} 영역 차트`}>
       <ResponsiveContainer width="100%" height="100%">
-        {chartType === 'area' ? <AreaChart data={data} margin={margin}>{grid}<XAxis dataKey="label" {...axisProps} /><YAxis {...axisProps} unit={unit} />{tooltip}<Area type="monotone" dataKey="value" name={title} unit={unit} stroke="var(--color-primary-600)" fill="var(--color-primary-100)" strokeWidth={3} />{rangeLines}</AreaChart>
-          : chartType === 'bar' ? <BarChart data={data} layout="vertical" margin={{ ...margin, left: 18 }}>{grid}<XAxis type="number" {...axisProps} unit={unit} /><YAxis type="category" dataKey="label" width={52} {...axisProps} />{tooltip}<Bar dataKey="value" name={title} unit={unit} fill="var(--color-primary-600)" radius={[0, 8, 8, 0]} /></BarChart>
-            : chartType === 'column' ? <BarChart data={data} margin={margin}>{grid}<XAxis dataKey="label" {...axisProps} /><YAxis {...axisProps} unit={unit} />{tooltip}<Bar dataKey="value" name={title} unit={unit} fill="var(--color-primary-600)" radius={[8, 8, 0, 0]} /></BarChart>
-              : <LineChart data={data} margin={margin}>{grid}<XAxis dataKey="label" {...axisProps} /><YAxis {...axisProps} unit={unit} />{tooltip}<Line type="monotone" dataKey="value" name={title} unit={unit} stroke="var(--color-primary-600)" strokeWidth={3} activeDot={{ r: 6 }} />{rangeLines}</LineChart>}
+        <AreaChart data={data} margin={margin}>{grid}<XAxis dataKey="label" {...axisProps} /><YAxis {...axisProps} unit={unit} allowDecimals={false} />{tooltip}{series.map((item) => <Area key={item.key} type="monotone" dataKey={item.key} name={item.label} unit={unit} stackId={item.stackId} stroke={item.color} fill={item.color} fillOpacity={0.24} strokeWidth={2.5} />)}</AreaChart>
       </ResponsiveContainer>
     </div>
   </section>
 }
 
-function SimpleLineChart({ title, subtitle = '날짜별 변화', unit, records, getValue, chartType }: { title: string; subtitle?: string; unit: string; records: PetRecord[]; getValue: (record: PetRecord) => number; chartType: DiaryChartType }) {
+function RechartsMetricChart({ title, unit, data }: { title: string; unit: string; data: DiaryChartDatum[] }) {
+  return <AreaTimelineChart title={title} unit={unit} data={data} series={[{ key: 'value', label: title, color: 'var(--color-primary-600)' }]} />
+}
+
+function SimpleAreaChart({ title, unit, records, getValue }: { title: string; unit: string; records: PetRecord[]; getValue: (record: PetRecord) => number }) {
   const data = records.map((record) => ({ label: formatDate(record.date), value: getValue(record) }))
-  return <RechartsMetricChart title={title} subtitle={subtitle} unit={unit} data={data} chartType={chartType} />
+  return <RechartsMetricChart title={title} unit={unit} data={data} />
 }
 
-function WeightLineChart({ records, chartType }: { records: PetRecord[]; chartType: DiaryChartType }) {
-  return <SimpleLineChart title="체중 변화" unit="g" records={records} getValue={(record) => record.weight ?? 0} chartType={chartType} />
+function WeightLineChart({ records }: { records: PetRecord[] }) {
+  return <SimpleAreaChart title="체중 변화" unit="g" records={records} getValue={(record) => record.weight ?? 0} />
 }
 
-function ShedCycleChart({ records, chartType }: { records: PetRecord[]; chartType: DiaryChartType }) {
-  const durations = buildShedDurationRecords(records)
-  const durationAverage = averageDurationDays(durations)
-  const completedDates = getCompletedShedDates(records)
-  const cycleRecords = buildIntervalRecords(completedDates.map((date) => ({ id: `shed-complete-${date}`, userId: '', petId: '', type: 'shed' as const, date, createdAt: `${date}T00:00:00` })))
-  const cycleAverage = cycleRecords.length ? Math.round(cycleRecords.reduce((sum, record) => sum + record.intervalDays, 0) / cycleRecords.length) : 0
-  const ongoing = getOngoingShedRecord(records)
-  if (cycleRecords.length > 0) return <SimpleLineChart title="탈피 주기" subtitle={`평균 ${cycleAverage}일${durationAverage ? ` · 평균 완료 기간 ${durationAverage}일` : ''}`} unit="일" records={cycleRecords} getValue={(record) => 'intervalDays' in record ? Number(record.intervalDays) : 0} chartType={chartType} />
-  if (durations.length > 0) return <SimpleLineChart title="탈피 기간" subtitle={`${ongoing ? '진행 중 · ' : ''}평균 ${durationAverage}일`} unit="일" records={durations} getValue={(record) => 'duration' in record ? Number(record.duration) : 0} chartType={chartType} />
-  return <section className="environment-chart shed-cycle-status"><header><strong>탈피</strong><span>{ongoing ? '진행 중' : '주기 계산에는 완료 기록이 2회 이상 필요해요.'}</span></header></section>
+function buildEventAreaData(records: PetRecord[], classify: (record: PetRecord) => string): AreaTimelineDatum[] {
+  const dates = new Map<string, AreaTimelineDatum>()
+  records.forEach((record) => {
+    const row = dates.get(record.date) ?? { label: formatDate(record.date) }
+    const key = classify(record)
+    row[key] = Number(row[key] ?? 0) + 1
+    dates.set(record.date, row)
+  })
+  return [...dates.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value)
 }
 
-function EventIntervalChart({ title, records, chartType }: { title: string; records: PetRecord[]; chartType: DiaryChartType }) {
-  const intervals = buildIntervalRecords(records)
-  if (intervals.length === 0) return <section className="environment-chart shed-cycle-status"><header><strong>{title}</strong><span>간격 계산에는 기록이 2회 이상 필요해요.</span></header></section>
-  const average = Math.round(intervals.reduce((sum, record) => sum + record.intervalDays, 0) / intervals.length)
-  return <SimpleLineChart title={title} subtitle={`평균 ${average}일`} unit="일" records={intervals} getValue={(record) => 'intervalDays' in record ? Number(record.intervalDays) : 0} chartType={chartType} />
+function ShedCycleChart({ records }: { records: PetRecord[] }) {
+  const relevant = records.filter((record) => isStartedShed(record) || isCompletedShed(record))
+  return <AreaTimelineChart title="탈피 시작·종료 주기" unit="회" data={buildEventAreaData(relevant, (record) => isStartedShed(record) ? 'started' : 'completed')} series={[{ key: 'started', label: '탈피 시작', color: 'var(--color-primary-400)' }, { key: 'completed', label: '탈피 종료', color: 'var(--color-primary-700)' }]} />
 }
 
-function EggStatusChart({ records, chartType }: { records: PetRecord[]; chartType: DiaryChartType }) {
-  const counts = [
-    { label: '무정란', count: records.filter((record) => eggFertility(record) === 'unfertilized').length, color: 'var(--color-primary-300)' },
-    { label: '유정란', count: records.filter((record) => eggFertility(record) === 'fertilized').length, color: 'var(--color-primary-600)' },
-    { label: '구분 없음', count: records.filter((record) => eggFertility(record) === 'unknown').length, color: 'var(--color-neutral-300)' },
-  ].filter((item) => item.count > 0)
-  return <RechartsMetricChart title="산란 기록" subtitle="기록한 알 상태" unit="회" data={counts.map((item) => ({ label: item.label, value: item.count }))} chartType={chartType} />
+function MatingTimelineChart({ records }: { records: PetRecord[] }) {
+  return <AreaTimelineChart title="메이팅 기록일" unit="회" data={buildEventAreaData(records, () => 'mating')} series={[{ key: 'mating', label: '메이팅', color: 'var(--color-like-500)' }]} />
 }
 
-function PoopStatusChart({ records, chartType }: { records: PetRecord[]; chartType: DiaryChartType }) {
-  const counts = [
-    { label: '정상', status: 'normal' as const, color: 'var(--color-primary-600)' },
-    { label: '건조', status: 'dry' as const, color: 'var(--color-accent-700)' },
-    { label: '묽음', status: 'diarrhea' as const, color: 'var(--color-primary-300)' },
-    { label: '이물질', status: 'foreign_body' as const, color: 'var(--color-warning-600)' },
-    { label: '혈변', status: 'blood' as const, color: 'var(--color-error-600)' },
-  ].map((item) => ({ ...item, count: records.filter((record) => getStoolStatus(record) === item.status).length }))
-  return <RechartsMetricChart title="배변 상태" subtitle="기록한 상태별 횟수" unit="회" data={counts.map((item) => ({ label: item.label, value: item.count }))} chartType={chartType} />
+function EggContextChart({ records }: { records: PetRecord[] }) {
+  const relevant = records.filter((record) => record.type === 'food' || isMatingRecord(record) || isEggRecord(record))
+  const classify = (record: PetRecord) => record.type === 'food' ? 'food' : isMatingRecord(record) ? 'mating' : eggFertility(record) === 'unfertilized' ? 'unfertilized' : 'fertilized'
+  return <AreaTimelineChart title="먹이·메이팅·산란 흐름" unit="회" data={buildEventAreaData(relevant, classify)} series={[{ key: 'food', label: '먹이', color: 'var(--color-accent-600)' }, { key: 'mating', label: '메이팅', color: 'var(--color-like-500)' }, { key: 'fertilized', label: '유정란', color: 'var(--color-primary-600)' }, { key: 'unfertilized', label: '무정란', color: 'var(--color-chart-yellow)' }]} />
+}
+
+function PoopStatusChart({ records }: { records: PetRecord[] }) {
+  const classify = (record: PetRecord) => {
+    const status = getStoolStatus(record)
+    if (status === 'constipation') return 'dry'
+    return status
+  }
+  return <AreaTimelineChart title="배변 상태" unit="회" data={buildEventAreaData(records, classify)} series={[{ key: 'normal', label: '정상', color: 'var(--color-primary-600)', stackId: 'poop' }, { key: 'diarrhea', label: '묽음', color: 'var(--color-chart-yellow)', stackId: 'poop' }, { key: 'dry', label: '건조', color: 'var(--color-chart-orange)', stackId: 'poop' }, { key: 'foreign_body', label: '이물질', color: 'var(--color-chart-black)', stackId: 'poop' }, { key: 'blood', label: '혈변', color: 'var(--color-error-600)', stackId: 'poop' }]} />
 }
 
 export function LegacyEnvironmentLineChart({ title, records }: { title: string; records: PetRecord[] }) {
@@ -3993,22 +3833,21 @@ export function LegacyEnvironmentLineChart({ title, records }: { title: string; 
   )
 }
 
-function EnvironmentLineChart({ title, records, chartType }: { title: string; records: PetRecord[]; chartType: DiaryChartType }) {
+function EnvironmentLineChart({ title, records }: { title: string; records: PetRecord[] }) {
   const values = records.map((record) => record.environmentRecord).filter((record): record is EnvironmentRecord => Boolean(record))
   const unit = values[0]?.unit === 'percent' ? '%' : '℃'
-  const data = values.map((record, index) => ({ label: formatDate(records[index].date), value: record.value, min: record.minValue, max: record.maxValue }))
-  return <RechartsMetricChart title={title} unit={unit} data={data} chartType={chartType} />
+  const data = values.map((record, index) => ({ label: formatDate(records[index].date), value: record.value }))
+  return <RechartsMetricChart title={title} unit={unit} data={data} />
 }
 
 function DataVisualizationScreen({ records, petName, onBack, onCreateQna, onFindHospital, onShedComplete, onShedNotYet, resolvedInsightIds, followedUpInsightIds, onFollowUpInsight, onResolveInsight, onKeepInsight }: { records: PetRecord[]; petName: string; onBack: () => void; onCreateQna?: (metric?: DiaryInsight['metric']) => void; onFindHospital?: (concern?: HospitalRecommendationConcern) => void; onShedComplete?: () => void; onShedNotYet?: () => void; resolvedInsightIds?: string[]; followedUpInsightIds?: string[]; onFollowUpInsight?: (insightId: string) => void; onResolveInsight?: (insightId: string) => void; onKeepInsight?: (insightId: string) => void }) {
   const [range, setRange] = useState<'week' | 'month' | 'all'>('month')
-  const [chartType, setChartType] = useState<DiaryChartType>('line')
   const cutoff = new Date()
   if (range === 'week') cutoff.setDate(cutoff.getDate() - 7)
   if (range === 'month') cutoff.setMonth(cutoff.getMonth() - 1)
   const cutoffKey = toDateKey(cutoff)
   const visibleRecords = range === 'all' ? records : records.filter((record) => record.date >= cutoffKey)
-  return <main className="diary-create-screen data-visualization-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}><GuideAction symbol="←" /></button><strong>기록 모아보기</strong><span /></header><div className="visualization-range-tabs" role="group" aria-label="분석 기간"><button type="button" className={range === 'week' ? 'active' : ''} onClick={() => setRange('week')}>주간</button><button type="button" className={range === 'month' ? 'active' : ''} onClick={() => setRange('month')}>월간</button><button type="button" className={range === 'all' ? 'active' : ''} onClick={() => setRange('all')}>전체</button></div><div className="visualization-chart-tabs" role="group" aria-label="차트 종류">{(['line', 'area', 'bar', 'column'] as const).map((type) => <button type="button" key={type} className={chartType === type ? 'active' : ''} aria-pressed={chartType === type} onClick={() => setChartType(type)}>{type.toUpperCase()}</button>)}</div><DataVisualization records={visibleRecords} chartType={chartType} petName={petName} onCreateQna={onCreateQna} onFindHospital={onFindHospital} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} /></main>
+  return <main className="diary-create-screen data-visualization-screen"><header><button type="button" aria-label="뒤로가기" onClick={onBack}><GuideAction symbol="←" /></button><strong>기록 모아보기</strong><span /></header><div className="visualization-range-tabs" role="group" aria-label="분석 기간"><button type="button" className={range === 'week' ? 'active' : ''} onClick={() => setRange('week')}>주간</button><button type="button" className={range === 'month' ? 'active' : ''} onClick={() => setRange('month')}>월간</button><button type="button" className={range === 'all' ? 'active' : ''} onClick={() => setRange('all')}>전체</button></div><DataVisualization records={visibleRecords} petName={petName} onCreateQna={onCreateQna} onFindHospital={onFindHospital} onShedComplete={onShedComplete} onShedNotYet={onShedNotYet} resolvedInsightIds={resolvedInsightIds} followedUpInsightIds={followedUpInsightIds} onFollowUpInsight={onFollowUpInsight} onResolveInsight={onResolveInsight} onKeepInsight={onKeepInsight} /></main>
 }
 
 function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {

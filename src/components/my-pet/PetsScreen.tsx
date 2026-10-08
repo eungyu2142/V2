@@ -5,14 +5,13 @@ import type { Pet } from '../../types/app'
 import PetMobileFlow, { type PetMobileView } from './PetMobileFlow'
 import './PetFlow.css'
 
-export default function PetsScreen({ userId, pets, selectedPetId, view, onSelectPet, onView, onDeletePet, onEditPet, onOpenDiary, onRegisterPet }: {
+export default function PetsScreen({ userId, pets, selectedPetId, view, onSelectPet, onView, onEditPet, onOpenDiary, onRegisterPet }: {
   userId: string
   pets: Pet[]
   selectedPetId: string
   view: PetMobileView
   onSelectPet: (petId: string) => void
   onView: (view: PetMobileView) => void
-  onDeletePet: (petId: string) => void | Promise<void>
   onEditPet: (pet: Pet) => void
   onOpenDiary: (petId: string, action?: 'routine-create') => void
   onRegisterPet: () => void
@@ -42,6 +41,6 @@ export default function PetsScreen({ userId, pets, selectedPetId, view, onSelect
 
   return <>
     {loadError ? <p className="pet-flow-load-error" role="status">{loadError}</p> : null}
-    <PetMobileFlow pets={pets} selectedPetId={resolvedSelectedPetId} view={view} tasks={dailyTasks} plans={plans} records={records} onSelectPet={onSelectPet} onView={onView} onRegisterPet={onRegisterPet} onEditPet={onEditPet} onDeletePet={onDeletePet} onOpenDiary={onOpenDiary}/>
+    <PetMobileFlow pets={pets} selectedPetId={resolvedSelectedPetId} view={view} tasks={dailyTasks} plans={plans} records={records} onSelectPet={onSelectPet} onView={onView} onRegisterPet={onRegisterPet} onEditPet={onEditPet} onOpenDiary={onOpenDiary}/>
   </>
 }

@@ -80,8 +80,9 @@ export function RecordAttachCard({ record, mode, onRemove, onOpen }: { record: A
 }
 
 export function HospitalAttachCard({ hospital, mode, onRemove, onOpen }: { hospital: HospitalSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {
-  const content = <><strong>{hospital.name}</strong><span>{hospital.address}</span></>
-  return <article className={`qna-hospital-attachment ${mode}`}><span className="qna-hospital-attachment-label">추천된 병원:</span>{onOpen ? <button className="qna-hospital-attachment-main" type="button" onClick={onOpen}>{content}</button> : <div className="qna-hospital-attachment-main">{content}</div>}{mode === 'draft' && onRemove && <button className="qna-hospital-attachment-remove" type="button" onClick={onRemove}>{text.remove}</button>}</article>
+  const openingLabel = hospital.isOpenNow === true ? '진료 중' : hospital.isOpenNow === false ? '진료 종료' : null
+  const content = <><span className="qna-hospital-attachment-copy"><strong>{hospital.name}</strong><span>{hospital.address}</span><small>{openingLabel && <em>{openingLabel}</em>}{hospital.rating !== undefined && <span>★ {hospital.rating.toFixed(1)}{hospital.googleReviewCount !== undefined ? ` (${hospital.googleReviewCount}개)` : ''}</span>}</small></span>{onOpen && <span className="qna-hospital-attachment-chevron" aria-hidden="true">›</span>}</>
+  return <article className={`qna-hospital-attachment ${mode}`}><span className="qna-hospital-attachment-label">{mode === 'posted' ? '답변자가 첨부한 병원' : '첨부할 병원'}</span>{onOpen ? <button className="qna-hospital-attachment-main" type="button" onClick={onOpen}>{content}</button> : <div className="qna-hospital-attachment-main">{content}</div>}{mode === 'draft' && onRemove && <button className="qna-hospital-attachment-remove" type="button" onClick={onRemove}>{text.remove}</button>}</article>
 }
 
 export function HospitalPicker({ hospitals, onSelect, onClose }: { hospitals: HospitalSnapshot[]; onSelect: (hospital: HospitalSnapshot) => void; onClose: () => void }) {

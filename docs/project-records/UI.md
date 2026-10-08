@@ -15,7 +15,7 @@
 - 분석·판단 이유: 기존 체크는 큰 참고 이미지의 작은 일부를 SVG viewport로 잘라 쓰어 작은 크기에서 화질이 저하됐다.
 - 수정 파일: `src/features/diary/DiaryGlyph.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
 - 핵심 변경 내용: `check` 글리프를 독립 SVG path로 교체하고 오늘 루틴과 밀린 루틴 행에 공통 적용했다.
-- 검증 결과: TypeScript, ESLint, 프로덕션 빌드로 확인한다.
+- 검증 결과: 대상 TSX ESLint와 전체 TypeScript/Vite 프로덕션 빌드를 통과했다.
 - 남은 작업: 없음.
 
 ## 2026-09-19 중복 밀린 루틴 단일 표시
@@ -6484,3 +6484,248 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 핵심 변경 내용: 먹이, 분무, 청소, 약, 습도, 온도, 무게, 탈피, 배변, 메이팅, 산란, 진료, 캘린더 마크를 첨부 시안 기반 마크로 교체했다. 시안에 없는 물그릇·UVB·기타·그래프·체크는 기존 아이콘을 유지한다.
 - 검증 결과: 대상 TSX ESLint와 전체 TypeScript/Vite 프로덕션 빌드를 통과했다.
 - 남은 작업: 실제 모바일 화면에서 마크 크롭 위치를 최종 육안 확인한다.
+# 2026-10-03 마이펫 분류 필터 드롭다운 전환
+
+- 요청 요약: 마이펫의 전체·양서류·파충류 필터를 버튼이 아닌 펼침 목록 방식으로 변경한다.
+- 분석·판단 이유: 모바일에서도 운영체제 기본 선택 목록을 사용할 수 있는 네이티브 `select`가 요청한 드롭다운 동작과 접근성을 가장 안정적으로 제공한다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 기존 필터 칩을 `펫 분류` 드롭다운으로 교체하고 전체·양서류·파충류 옵션 및 기존 필터 결과를 그대로 연결했다. 디자인 토큰으로 테두리, 포커스, 반응 상태를 통일했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+## 2026-10-03 다이어리 마크 잘림 수정
+
+- 요청 요약: 다이어리의 여러 마크 외곽과 장식이 잘려 보이는 문제를 수정했다.
+- 분석·판단 이유: 모든 마크에 비슷한 정사각형 크롭 범위를 적용해, 가로로 긴 먹이·탈피·메이팅 마크와 외곽 장식이 뷰포트 밖으로 잘리고 있었다. 라벨 영역은 포함하지 않으면서 마크마다 가로·세로 안전 여백을 따로 지정했다.
+- 수정 파일: `src/features/diary/DiaryGlyph.tsx`, `src/features/diary/diary-flow.css`.
+- 핵심 변경 내용: 마크별 뷰포트를 가변 너비·높이 구조로 바꾸고, 먹이·상황 기록 마크의 좌우 여백과 캘린더 마크의 상하 여백을 확대했다. 원본 비율은 `preserveAspectRatio`로 유지한다.
+- 검증 결과: TypeScript, ESLint, 프로덕션 빌드로 확인한다.
+- 남은 작업: 없음.
+
+## 2026-10-03 다이어리 상단 관리 메뉴 통합
+
+- 요청 요약: 펫 선택과 캘린더는 유지하고 루틴 추가·루틴 수정·일괄 수정·일괄 체크를 `+ 관리` 버튼 하나에 모은다.
+- 분석·판단 이유: 좁은 모바일 상단에 여러 버튼을 나열하면 라벨과 아이콘이 잘리고 각 기능의 위계가 불명확해진다. 자주 보는 펫·캘린더만 상단에 남기고 관리 작업은 한 바텀시트로 묶었다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 상단의 세 관리 버튼을 하나의 Primary `+ 관리` 버튼으로 교체하고, 토큰 기반 2열 관리 메뉴에 네 기능을 배치했다. 모바일 안전 너비와 하단 내비게이션 여백을 반영했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-03 루틴 관리 메뉴 문구 간소화
+
+- 요청 요약: 관리 메뉴에서 불필요한 설명을 모두 지우고 네 기능명만 표시하되 루틴 수정 아래에만 `루틴을 선택해서 수정`을 표시한다.
+- 분석·판단 이유: 기능명이 명확한 메뉴에 반복 설명이 많아 카드가 복잡해 보이므로 요청한 최소 문구만 유지했다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 메뉴 제목과 상단 안내, 루틴 추가·일괄 수정·일괄 체크 설명을 제거했다. 닫기 버튼과 접근성 라벨은 유지하고 카드 높이를 줄였다.
+- 검증 결과: 대상 ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-03 루틴 수정·일괄 수정 통합
+
+- 요청 요약: 관리 메뉴의 별도 `일괄 수정` 항목을 제거하고 `루틴 수정` 화면 안에서 복수 루틴을 수정할 수 있게 한다.
+- 분석·판단 이유: 단일 수정과 일괄 수정이 같은 선택·단계 편집 구조를 사용하므로 진입점을 합치면 메뉴 중복을 줄이면서 기존 기능을 유지할 수 있다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 관리 메뉴를 루틴 추가·루틴 수정·일괄 체크 세 항목으로 줄였다. 루틴 수정에서는 한 개 또는 여러 개를 선택하고, 복수 선택 시 선택한 순서대로 기존 단계 편집을 진행한다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-03 루틴 관리 메뉴 마크 교체
+
+- 요청 요약: 첨부 마크를 왼쪽부터 루틴 추가, 루틴 수정, 일괄 체크 순서로 적용한다.
+- 분석·판단 이유: 원본은 동일 크기의 세 마크가 한 이미지에 정렬되어 있어 별도 재생성 없이 스프라이트 위치만 나눠 사용하면 원본 품질과 일관성을 유지할 수 있다.
+- 수정 파일: `public/diary-manage-marks.png`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`.
+- 핵심 변경 내용: 기존 더하기·편집·체크 아이콘을 첨부된 민트 원형 마크로 교체하고 각 카드에서 잘리지 않도록 고정 비율과 위치를 지정했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 루틴 수정 화면 카드·삭제 정리
+
+- 요청 요약: 루틴 수정에 삭제 기능을 추가하고 하단의 오늘 할 일 영역을 제거하며 루틴 카드를 한 줄에 두 개 표시한다.
+- 분석·판단 이유: 수정 화면에 다이어리 본문이 이어지면 화면 목적이 흐려지고 불필요한 스크롤이 생긴다. 수정 대상 선택과 수정·삭제 행동만 남기고 카드 밀도를 높였다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 두 열 루틴 선택 카드, 선택 삭제 버튼과 확인 절차를 추가했다. 수정 선택 영역 아래의 밀린 루틴 및 알림 안내 렌더링을 제거했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 NOTICE 경고 캐릭터 표시 범위
+
+- 요청 요약: 첨부 캐릭터를 다이어리 전체에 표시하지 않고 NOTICE 상세의 경고 메시지에만 표시한다.
+- 분석·판단 이유: 메인 화면에 고정된 캐릭터는 루틴과 NOTICE를 가리고 정보성·완료 안내에서도 경고처럼 보일 수 있다. 실제 경고 단계 상세 안에만 배치했다.
+- 수정 파일: `public/assets/mascot/notice-warning.png`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 첨부 이미지를 경고 캐릭터 자산으로 교체하고 다이어리 메인의 고정 렌더링과 추가 하단 여백을 제거했다. NOTICE 상세에서 critical·warning·caution일 때만 본문 상단에 표시한다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 기록 모아보기 영역 그래프 통일
+
+- 요청 요약: 그래프 아래 데이터 목록과 차트 형태 선택을 제거하고 모든 기록 그래프를 영역 형태로 통일한다.
+- 분석·판단 이유: 모바일에서는 여러 차트 타입보다 일관된 시간축 영역 그래프가 기록 변화와 사건 발생 시점을 비교하기 쉽다. 색상 의미가 필요한 복수 영역은 그래프 위의 최소 범례만 유지했다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `src/index.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: LINE·BAR·COLUMN 선택과 렌더링을 제거했다. 배변 5상태, 탈피 시작·종료, 메이팅 발생일, 먹이·메이팅·유정란·무정란 산란 흐름을 다중 영역 차트로 구현하고 체중·온습도도 단일 영역 차트로 통일했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 내 펫 기록 모아보기 AREA 전용 수정
+
+- 요청 요약: 여전히 노출되던 선형·막대·혼합 선택기와 그래프 아래 날짜별 데이터 목록을 삭제하고 배변·탈피·메이팅도 그래프로 표시한다.
+- 분석·판단 이유: 해당 화면은 다이어리 내부 시각화가 아니라 내 펫의 별도 기록 모아보기 구현이었다. 두 경로를 같은 AREA 전용 UX로 맞춰야 사용 화면에서 변경이 보인다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 6종 차트 선택과 날짜·수치·사진 목록을 제거했다. 모든 기록 탭이 Recharts AreaChart를 사용하며 배변 5상태, 탈피 시작·종료, 메이팅 날짜, 먹이·메이팅·유정란·무정란 산란 흐름도 렌더링한다. 단일 기록도 점과 영역 축이 나타나도록 구성했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다. 빌드 결과물과 소스에서 구형 차트 선택 문구 및 하단 기록 목록 렌더링이 제거된 것도 확인했다.
+- 남은 작업: 없음.
+
+## 2026-10-07 다이어리 상황별 기록 명칭
+
+- 요청 요약: 다이어리 메인의 `기록하기`를 `상황별 기록`으로 변경한다.
+- 분석·판단 이유: 루틴 기록과 배변·탈피·메이팅·산란·진료 같은 상황 기록의 성격을 문구만으로 구분할 수 있도록 진입점과 화면 제목을 함께 맞췄다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 메인 버튼, 기록 종류 선택 화면 제목과 접근성 라벨을 `상황별 기록` 기준으로 변경했다. 클릭 동작과 기록 저장 흐름은 유지했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-08 펫 전환 메뉴 영역 구분
+
+- 요청 요약: 현재 선택된 펫과 전체 펫 목록이 겹쳐 보이지 않도록 박스로 구분한다.
+- 분석·판단 이유: 같은 펫이 상단 요약과 목록 첫 행에 연속으로 표시되는데 컨테이너 경계가 없어 중첩된 정보처럼 보였다. 요약과 목록의 역할을 각각 독립된 표면으로 나눴다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 현재 펫 요약에는 민트 테두리 박스, 전체 목록에는 뉴트럴 테두리 박스를 적용했다. 목록의 현재 펫에는 진한 민트 테두리·좌측 표시선·`선택됨` 배지를 추가했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-03 지도 마커 이미지 교체
+
+- 요청 요약: 첨부 이미지의 내 위치·병원·좋아요 병원 마커를 기본/호버 상태별로 지도에 적용하고, 이미지 아래의 설명 글씨는 표시하지 않는다.
+- 분석·판단 이유: 기존 H 벡터 마커는 제공된 시각 디자인과 달랐고, 원본 하단 라벨은 디자인 설명용이므로 실제 지도 정보와 중복된다.
+- 수정 파일: `public/assets/map-markers/*.png`, `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 제공된 투명 PNG에서 하단 설명 라벨을 제외한 마커 6종을 분리했다. 내 위치와 병원, 좋아요 병원에 각각 기본/호버 이미지를 연결하고 실제 앱 리뷰 개수는 이미지 위 동적 배지로 유지했다.
+- 검증 결과: 대상 TSX/TS 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다. 분리한 PNG를 직접 확인해 하단 설명 라벨이 포함되지 않았음을 검증했다.
+- 남은 작업: 지도 화면에서 마커 크기와 배지 위치를 확인한다.
+
+# 2026-10-03 첨부 민트 캐릭터로 공통 마스코트 교체
+
+- 요청 요약: 첨부된 두 캐릭터를 기준으로 앱 마스코트를 다시 구현한다.
+- 분석·판단 이유: 공통 Mascot이 기존 플로우 이미지 일부를 표시하고 있어 새 PNG 두 종으로 교체했다. 기본은 서 있는 캐릭터, welcome과 빈 펫 목록은 상자 캐릭터로 적용했다.
+- 수정 파일: `src/components/common/Mascot.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/index.css`, `public/assets/mascot/standing.png`, `public/assets/mascot/welcome.png`.
+- 핵심 변경 내용: 내장 image_gen으로 첨부 원본에서 캐릭터별 투명 배경 자산을 생성하고 프로젝트에 복사했다. 프롬프트는 오른쪽/왼쪽 캐릭터만 추출, 나머지 캐릭터와 회색 체크무늬 제거, 원본 정체성·색·포즈 유지, 투명 정사각 PNG로 지정했다. mood API는 유지하고 welcome 이외는 기본 자산을 사용한다. object-fit contain으로 잘림을 방지한다.
+- 검증 결과: 생성 이미지 육안 확인, 대상 ESLint 및 프로덕션 빌드 통과. React 체크리스트에서 props 호환, 이미지 대체 접근성, 명시적 크기 및 불필요한 effect 없음 확인. 브라우저 화면 검증은 미실시.
+- 남은 작업: 운영 재배포는 이번 변경에서 수행하지 않았다.
+
+# 2026-10-03 NOTICE 경고 캐릭터 배치
+
+- 요청 요약: 첨부한 걱정 표정 캐릭터를 NOTICE 경고 시 하단 내비게이션 위에 표시한다.
+- 분석·판단 이유: 주의·경고·심각 상태에만 표시하고 일반 정보와 완료 안내에는 표시하지 않는다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `public/assets/mascot/notice-warning.png`.
+- 핵심 변경 내용: 첨부 원본을 그대로 복사해 사용한다. 홈 NOTICE 및 경고 상세에서 우측 하단에 140px 캐릭터를 고정하고 공통 내비게이션 높이와 safe area를 반영한다. 나중에 선택 시 숨기고 관리 메뉴에서도 숨긴다. 하단 스크롤 여백과 pointer-events none을 적용했다.
+- 검증 결과: 대상 ESLint 및 TypeScript 검사 통과. 실제 브라우저 시각 검증은 미실시.
+- 남은 작업: 운영 배포 미실시.
+# 2026-10-04 병원 상세 카드 구조 정리
+
+- 요청 요약: 병원 상세 상단의 주소가 포함된 바깥 박스를 제거하고, 리뷰 작성 버튼뿐 아니라 빈 상태와 리뷰 내용 전체를 리뷰 박스 안에 포함한다.
+- 분석·판단 이유: 주소·운영시간을 둘러싼 중첩 카드가 정보 계층을 복잡하게 만들었고, 리뷰 헤더만 카드로 표시되어 본문과의 소속 관계가 약했다.
+- 수정 파일: `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 병원 기본 정보의 바깥 테두리·그림자·배경 카드를 제거했다. 리뷰 패널 자체에 카드 테두리와 내부 여백을 적용하고 헤더 아래 구분선을 두어 빈 상태와 실제 리뷰 목록이 모두 같은 카드 안에 표시되도록 했다.
+- 검증 결과: 병원 상세 컴포넌트 ESLint를 통과하고 CSS 선택자 적용 범위를 확인했다. 전체 TypeScript/프로덕션 빌드는 기존 `src/features/diary/DiaryPage.tsx`의 차트 타입·컴포넌트 오류로 중단됐으며 이번 CSS 변경과는 무관하다.
+- 남은 작업: 모바일과 데스크톱에서 리뷰 카드 내부 간격을 확인한다.
+# 2026-10-04 Q&A 검색·필터 배치 정리
+
+- 요청 요약: 검색창 아래의 활성 필터 칩을 제거하고 우측 상단 필터 버튼을 검색창 옆으로 이동했다.
+- 분석·판단 이유: 검색과 필터는 같은 탐색 행동이므로 한 줄에 배치하고, 별도 필터 요약 행을 없애 목록 상단의 불필요한 세로 공간을 줄였다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 검색창과 필터 버튼을 공통 툴바로 묶고, 필터 적용 여부는 버튼의 활성 색상으로 표시하도록 변경했다.
+- 검증 결과: Q&A 대상 파일 ESLint와 `git diff --check` 통과. 전체 TypeScript·프로덕션 빌드는 기존 `src/features/diary/DiaryPage.tsx`의 미사용 `buildIntervalRecords` 오류로 중단됐다.
+- 남은 작업: 실제 모바일 너비에서 검색창과 필터 버튼의 터치 영역을 확인할 수 있다.
+# 2026-10-04 증상·질병 필터 카드 제거
+
+- 요청 요약: 증상·질병별 병원 카드를 없애고 거리순·평점순과 같은 필터 줄에서 선택할 수 있게 하며, 선택 후 긴 설명을 제거한다.
+- 분석·판단 이유: 필터 기능이 별도 콘텐츠 카드처럼 보여 목록 탐색 흐름을 끊었고, 초기 대처·근거 설명이 검색 결과보다 먼저 노출되어 병원 비교를 방해했다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 증상·질병 필터를 거리순·평점순 옆의 둥근 선택 필터로 이동했다. 기존 카드, 펼치기 버튼, 초기 대처 및 근거 안내, 추천 설명을 제거하고 선택 결과 병원 목록만 남겼다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 좁은 모바일 화면에서 세 필터의 줄바꿈을 확인한다.
+# 2026-10-04 Q&A 상세 사진·답변 채택 UI
+
+- 요청 요약: 상세 게시글 사진을 본문 가로폭에 맞추고 댓글 좋아요를 질문 작성자 전용 채택 UI로 변경했다.
+- 분석·판단 이유: 첨부 사진은 상태 확인이 핵심이므로 작은 정사각형보다 원본 비율의 전체 폭 표시가 적합하며, 답변 평가는 단순 인기보다 질문자가 선택한 채택 여부를 명확히 보여줘야 한다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/QnaTrustBadge.tsx`, `src/components/qna/qnaTrust.ts`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 사진을 100% 너비로 표시하고, 댓글 좋아요·좋아요순 UI를 제거했으며, 채택·채택 취소 버튼과 `신뢰도 +N개` 배지를 추가했다.
+- 검증 결과: 변경한 Q&A 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 실제 모바일 화면에서 세로로 긴 원본 사진의 표시 높이를 확인할 수 있다.
+# 2026-10-04 바텀시트 필터 영역 확장
+
+- 요청 요약: 바텀시트의 `주변 병원` 텍스트를 제거하고 증상·질병 필터를 더 길게 표시한다.
+- 분석·판단 이유: 병원 목록이라는 맥락이 이미 명확해 제목과 개수는 필터 공간을 줄이는 중복 정보였다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 주변 병원 요약 DOM과 모바일 전용 스타일을 제거했다. 필터 줄 전체를 사용하고 증상·질병 선택창이 남는 공간을 모두 차지하도록 확장했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 좁은 모바일 화면에서 필터명 말줄임 여부를 확인한다.
+# 2026-10-04 Q&A 댓글 크기 축소
+
+- 요청 요약: Q&A 댓글이 지나치게 크게 보이지 않도록 일반 커뮤니티 앱 수준의 작은 글자와 조밀한 구조로 조정했다.
+- 분석·판단 이유: 게시글 본문과 댓글의 시각적 위계가 약했고, 큰 프로필 이미지·여백·병원 카드가 댓글 한 개의 높이를 과도하게 키우고 있었다.
+- 수정 파일: `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 댓글 프로필을 34px, 본문을 13px, 날짜를 11px로 줄이고 행 간격·채택 버튼·신뢰도 배지·추천 병원 카드의 크기와 패딩을 함께 축소했다.
+- 검증 결과: TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 실제 모바일 화면에서 긴 병원명과 주소의 줄바꿈을 확인할 수 있다.
+# 2026-10-04 Q&A 댓글 추가 축소
+
+- 요청 요약: 댓글을 이전 조정보다 훨씬 작게 만들고 신뢰도 표기를 `신뢰도 +N` 형식으로 변경했다.
+- 분석·판단 이유: 이전 크기도 게시글 본문과 시각적 차이가 충분하지 않아 댓글 목록의 정보 밀도가 낮았으므로 프로필부터 첨부 카드까지 댓글 전용 크기를 다시 낮췄다.
+- 수정 파일: `src/components/qna/QnaTrustBadge.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 프로필 28px, 작성자·본문 약 11.5px, 날짜 10px로 축소하고 채택·신뢰도·병원 첨부 요소도 함께 축소했다. 신뢰도 화면 표기에서 `개`를 제거했다.
+- 검증 결과: ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-04 Q&A 답글·병원 첨부 카드
+
+- 요청 요약: 참고 이미지의 다른 기능은 제외하고 댓글에 대한 답글과 병원 추천 카드 형식만 반영했다.
+- 분석·판단 이유: 댓글 간 대화를 구분하려면 답글의 들여쓰기와 연결선이 필요하며, 첨부 병원은 단순 이름·주소보다 첨부 주체와 실제 가용 정보가 함께 보여야 한다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/QnaParts.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 원댓글 아래 답글을 들여쓰기해 표시하고 답글 작성 대상을 안내한다. 병원 첨부는 `답변자가 첨부한 병원` 제목과 병원명·주소·영업 상태·평점·이동 화살표를 표시한다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 병원 스냅샷에 사진 URL이 추가되면 실제 병원 사진 영역을 연결할 수 있다.
+
+# 2026-10-04 마이펫 상세 관리 마크 적용
+
+- 요청 요약: 펫 카드 클릭 후 상세 화면에 표시되는 루틴 관리, 기록 모아보기, 펫 정보 수정 마크를 첨부 시안 스타일로 변경한다.
+- 분석·판단 이유: 합성 이미지를 잘라 쓰지 않고 동일한 선형 형태를 SVG로 구성하면 화면 밀도와 크기에 관계없이 선명하고 기존 버튼 접근성도 유지할 수 있다.
+- 수정 파일: `src/components/my-pet/PetIcons.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 체크리스트·문서 검색·설정 SVG 마크를 추가하고 세 관리 메뉴를 원형 마크 3열 배치로 변경했다. 기본·호버·포커스·누름 상태는 디자인 토큰으로 구현했다.
+- 검증 결과: 관련 TSX ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-04 Q&A 병원 상세 복귀
+
+- 요청 요약: Q&A 댓글의 첨부 병원을 눌러 병원 찾기로 이동한 뒤, 병원 상세 뒤로가기를 누르면 원래 Q&A로 돌아오게 했다.
+- 분석·판단 이유: 진입 출처를 보존하지 않으면 사용자가 병원 목록으로만 이동해 읽던 질문과 댓글 맥락을 잃게 된다.
+- 수정 파일: `src/App.tsx`, `src/components/qna/QnaScreen.tsx`, `src/components/hospital-map/MapScreen.tsx`
+- 핵심 변경 내용: Q&A에서 병원을 열 때 게시글 ID를 보관하고, 병원 상세의 뒤로가기 라벨과 동작을 출처에 따라 Q&A 복귀 또는 기존 병원 목록 복귀로 분기했다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-04 펫 삭제 버튼 수정 화면 이동
+
+- 요청 요약: 펫 상세의 점 3개 더보기 버튼을 제거하고 펫 정보 수정 화면의 적용 버튼 아래에 붉은색 펫 삭제 버튼을 배치하며, 상단 수정 버튼에는 제공된 연필 마크 스타일을 적용한다.
+- 분석·판단 이유: 수정과 삭제를 한 관리 화면에 모으면 상세 화면의 중복 메뉴를 줄이고 위험 동작의 위치도 예측 가능해진다.
+- 수정 파일: `src/App.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetsScreen.tsx`, `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 상세 헤더의 더보기와 기존 삭제 패널을 제거했다. 수정 화면 하단을 적용·삭제 버튼의 세로 구조로 바꾸고 삭제 확인, 처리 중 비활성화, 실패 메시지를 연결했다. 수정 버튼은 민트 배경의 둥근 사각형과 연필·밑줄 SVG 마크로 교체했다.
+- 검증 결과: 관련 React 컴포넌트와 앱 진입점 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-04 펫 수정 하단 버튼 한 줄 배치
+
+- 요청 요약: 펫 수정 화면의 적용과 삭제 버튼을 한 줄에 모두 넣고 스크롤 시 마지막 입력 내용이 가려지지 않게 한다.
+- 분석·판단 이유: 두 버튼을 세로로 쌓은 고정 푸터가 높아지면서 모바일 폼의 마지막 영역을 덮고 있었다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 수정 화면 푸터에 전용 클래스를 적용해 적용하기와 펫 삭제를 같은 행의 균등 너비 버튼으로 배치했다. 모바일 하단 안전 영역을 포함한 스크롤 여백을 확보했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-04 지도 마커 원상 복귀 및 리뷰 수 표시
+
+- 요청 요약: 이미지형 지도 마커를 기존 핀 형태로 되돌리고 H 대신 리뷰 개수를 표시하며, 좋아요 병원만 옆에 하트를 표시한다.
+- 분석·판단 이유: 큰 이미지 마커보다 기존 작은 핀이 지도 가독성과 병원 밀집 지역 탐색에 적합하고, 중앙 숫자로 리뷰 규모를 바로 확인할 수 있다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 병원 마커와 내 위치 마커를 기존 형태로 복원했다. 병원 핀 중앙에 실제 앱 리뷰 개수를 표시하고 좋아요 상태일 때만 우측 상단에 하트 배지를 표시한다.
+- 검증 결과: 대상 TSX/TS 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 지도에서 0개, 두 자리, 99+ 숫자의 가독성을 확인한다.
+# 2026-10-08 마이펫 분류 버튼과 추가 버튼 배치
+
+- 요청 요약: 마이펫 분류 드롭다운을 전체·파충류·양서류 버튼으로 바꾸고 옆에 `+` 버튼을 배치한다.
+- 분석·판단 이유: 세 분류는 선택지가 적어 한 번에 보이는 버튼이 빠르며 추가 진입점도 같은 도구 행에 두는 편이 공간과 위계가 자연스럽다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 드롭다운과 독립 상단 추가 영역을 제거하고 `전체 / 파충류 / 양서류 / +`를 한 줄에 배치했다. 선택 상태와 hover는 Primary 토큰으로 구분하고 좁은 화면에서는 필터 영역만 가로 스크롤된다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.

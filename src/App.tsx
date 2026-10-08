@@ -95,6 +95,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [qnaInitialPreset, setQnaInitialPreset] = useState<{ category: QnaCategory; title: string } | null>(null)
   const [editingDraft, setEditingDraft] = useState<DraftItem | null>(null)
   const [mapFocusHospital, setMapFocusHospital] = useState<HospitalSnapshot | null>(null)
+  const [mapReturnQnaPostId, setMapReturnQnaPostId] = useState<string | null>(null)
   const [mapRecommendationConcern, setMapRecommendationConcern] = useState<HospitalRecommendationConcern | HospitalConditionId | null>(null)
   const [diaryClinicHospital, setDiaryClinicHospital] = useState<HospitalSnapshot | null>(null)
   const [currentPetId, setCurrentPetId] = useState<string | null>(initialUrlState.petId)
@@ -299,8 +300,24 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }
 
   const openHospitalOnMap = (hospital: HospitalSnapshot) => {
+    setMapReturnQnaPostId(null)
     setMapFocusHospital(hospital)
     moveTab('map')
+  }
+
+  const openHospitalFromQna = (hospital: HospitalSnapshot, postId: string) => {
+    setMapReturnQnaPostId(postId)
+    setMapFocusHospital(hospital)
+    moveTab('map')
+  }
+
+  const returnToQnaFromHospital = () => {
+    if (!mapReturnQnaPostId) return
+    const postId = mapReturnQnaPostId
+    setMapReturnQnaPostId(null)
+    setMapFocusHospital(null)
+    setQnaOpenId(postId)
+    moveTab('qna')
   }
 
   const openClinicReview = (hospital: HospitalSnapshot, review: HospitalReview) => {
@@ -360,6 +377,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
     } catch (error) {
       console.error('Supabase pet delete failed.', error)
       setDataError('동물을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      throw error
     }
   }
 
@@ -646,6 +664,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
         if (editingDraft?.draftType === 'pet') await deleteDraft(editingDraft.id)
         setEditingDraft(null)
       }}
+      onDelete={deletePet}
       onOpenPlan={(petId) => openPetDiary(petId)}
     />
   )
@@ -686,13 +705,13 @@ function AuthenticatedApp({ session }: { session: Session }) {
         shouldSuppressBottomClick={() => suppressNextBottomNavClickRef.current}
       />
 
-      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} recommendationConcern={mapRecommendationConcern} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={updateLikedHospitals} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} /></main>}
+      {activeTab === 'map' && <main className="app-main"><MapScreen userId={session.user.id} profile={profile} pets={pets} initialPetId={currentPetId ?? undefined} focusHospital={mapFocusHospital} recommendationConcern={mapRecommendationConcern} reviewDraft={editingDraft?.draftType === 'hospital_review' ? editingDraft : null} reviews={hospitalReviews} likedHospitals={likedHospitals} onReviewsChange={setHospitalReviews} onLikedHospitalsChange={updateLikedHospitals} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} onBackToSource={mapReturnQnaPostId ? returnToQnaFromHospital : undefined} /></main>}
 
       {activeTab !== 'map' && (
         <main className="app-main">
-          {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} selectedPetId={currentPetId ?? pets[0]?.id ?? ''} view={petView} onSelectPet={setCurrentPetId} onView={setPetView} onDeletePet={deletePet} onEditPet={(pet) => { setCurrentPetId(pet.id); setPetView('detail'); setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setPetView('main'); setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
+          {activeTab === 'pets' && <PetsScreen userId={session.user.id} pets={pets} selectedPetId={currentPetId ?? pets[0]?.id ?? ''} view={petView} onSelectPet={setCurrentPetId} onView={setPetView} onEditPet={(pet) => { setCurrentPetId(pet.id); setPetView('detail'); setEditingPet(pet); setCreateMode('pet') }} onOpenDiary={openPetDiary} onRegisterPet={() => { setPetView('main'); setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} />}
           {activeTab === 'diary' && <DiaryPage userId={session.user.id} pets={pets} hospitals={allHospitals} hospitalReviews={hospitalReviews} initialPetId={diaryPetId ?? currentPetId ?? undefined} initialAction={diaryInitialAction} onInitialActionHandled={() => setDiaryInitialAction(null)} returnToPets={diaryReturnToPets} onReturnToPets={() => moveTab('pets')} initialClinicHospital={diaryClinicHospital} readOnly={diaryReadOnly} onAddPet={() => { setEditingPet(null); setEditingDraft(null); setCreateMode('pet') }} onCreateQna={openQnaCreate} onFindHospital={openPetHospitalSearch} onCreateClinicReview={openClinicReview} onInitialClinicHospitalHandled={() => setDiaryClinicHospital(null)} initialDraft={editingDraft?.draftType === 'care_record' || editingDraft?.draftType === 'reminder' ? editingDraft as never : null} onDeleteDraft={async (draftId) => { await deleteDraft(draftId); setEditingDraft(null) }} />}
-          {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={allHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalOnMap} onFindConditionHospitals={openConditionHospitalSearch} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
+          {activeTab === 'qna' && <QnaScreen userId={session.user.id} profile={profile} posts={qnaPosts} hospitals={allHospitals} openPostId={qnaOpenId} onOpenHandled={() => setQnaOpenId(null)} onChange={updateQnaPosts} onDeletePost={deleteQnaPost} onEditPost={(post) => editWrittenPost('question', post.id)} onCreate={(petId) => openQnaCreate(petId)} onOpenHospital={openHospitalFromQna} onFindConditionHospitals={openConditionHospitalSearch} onOpenDiary={(petId, readOnly) => { setDiaryPetId(petId); setCurrentPetId(petId); setDiaryReadOnly(readOnly); syncAppUrl('diary', petId); setActiveTab('diary') }} />}
           {activeTab === 'profile' && (
             <ProfileScreen
               key={`${profile.username}-${profile.nickname}-${profile.avatarUrl}`}

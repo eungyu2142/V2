@@ -19,6 +19,7 @@ type Props = {
   speciesOptions: Record<Exclude<AnimalCategory, 'all'>, string[]>
   onClose: () => void
   onSave: (pet: Pet, photoFile?: File) => void | Promise<void>
+  onDelete: (petId: string) => void | Promise<void>
   onOpenPlan: (petId: string) => void
 }
 
@@ -50,13 +51,14 @@ function sanitizeDecimal(value: string) {
   return decimal.length ? `${integer.slice(0, 5)}.${decimal.join('').slice(0, 2)}` : integer.slice(0, 5)
 }
 
-export default function PetCreateFlow({ userId, initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave }: Props) {
+export default function PetCreateFlow({ userId, initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave, onDelete }: Props) {
   const initialGroup = isSupported(initialPet?.group) ? initialPet.group : ''
   const [step, setStep] = useState(initialPet || initialDraft ? 1 : 0)
   const [petId] = useState(initialPet?.id ?? crypto.randomUUID())
   const [selectedRoutines, setSelectedRoutines] = useState<string[]>([])
   const [routineIds] = useState(() => Object.fromEntries(routineOptions.map((option) => [option.key, crypto.randomUUID()])))
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [completedPet, setCompletedPet] = useState<Pet | null>(null)
   const [name, setName] = useState(initialPet?.name ?? '')
   const [group, setGroup] = useState<SupportedPetCategory | ''>(initialGroup)
@@ -177,6 +179,20 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
     }
   }
 
+  const deletePet = async () => {
+    if (!initialPet || deleting || !window.confirm(`'${initialPet.name}'을 삭제할까요? 삭제한 데이터는 복구할 수 없어요.`)) return
+    try {
+      setDeleting(true)
+      setSaveError('')
+      await onDelete(initialPet.id)
+      onClose()
+    } catch {
+      setSaveError('펫을 삭제하지 못했어요. 다시 시도해주세요.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (completedPet) return <main className="pet-flow pet-flow-create pet-flow-complete"><section><Mascot mood="happy"/><h1>{completedPet.name}가 등록되었어요!</h1></section><footer className="pet-flow-footer"><button className="pet-flow-primary" type="button" onClick={onClose}>내 펫 보기</button></footer></main>
 
   if (step === 0) return <main className="pet-flow pet-flow-create pet-flow-intro"><header className="pet-flow-header centered"><button className="pet-flow-icon-button" type="button" aria-label="뒤로가기" onClick={onClose}><PetIcon name="back"/></button><h1>펫 추가</h1><span/></header><section><Mascot mood="welcome"/><h2>새로운 가족을 맞이해요!</h2></section><footer className="pet-flow-footer"><button className="pet-flow-primary" type="button" onClick={() => setStep(1)}>시작하기</button></footer></main>
@@ -209,7 +225,7 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
         </>}
         {saveError ? <p className="pet-flow-error" role="alert">{saveError}</p> : null}
       </section>
-      <footer className="pet-flow-footer"><button className="pet-flow-primary" type="submit" disabled={!canContinue || saving}>{saving ? '저장 중…' : initialPet ? '저장하기' : '다음'}</button></footer>
+      <footer className={initialPet ? 'pet-flow-footer pet-flow-footer-edit' : 'pet-flow-footer'}><button className="pet-flow-primary" type="submit" disabled={!canContinue || saving || deleting}>{saving ? '저장 중…' : initialPet ? '적용하기' : '다음'}</button>{initialPet ? <button className="pet-flow-delete-button" type="button" disabled={saving || deleting} onClick={() => void deletePet()}>{deleting ? '삭제 중…' : '펫 삭제'}</button> : null}</footer>
     </form>
     {pendingPhoto ? <div className="pet-photo-preview-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) cancelPhoto() }}><section className="pet-photo-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-photo-preview-title"><div className="pet-photo-preview-header"><button type="button" onClick={cancelPhoto}>취소</button><h2 id="pet-photo-preview-title">사진 조정</h2><button type="button" onClick={applyPhoto}>적용</button></div><div className="pet-photo-preview-body"><p>사진을 움직여 위치를 맞춰주세요.</p><div className="pet-photo-preview-frame" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); movePendingPhoto(event) }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePendingPhoto(event) }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><img src={pendingPhoto.url} alt="조정 중인 반려동물 사진" style={{ objectPosition: `${pendingPhoto.position.x}% ${pendingPhoto.position.y}%` }} draggable={false}/><span className="pet-photo-preview-guide" aria-hidden="true"/></div><small>상하좌우로 드래그해 조정할 수 있어요.</small></div></section></div> : null}
   </main>

@@ -706,7 +706,8 @@ export function hospitalMarkerContent(hospital: Hospital, active: boolean, revie
   const openingClass = hospital.isOpenNow === true ? ' is-open' : ''
   const openingLabel = hospital.isOpenNow === true ? '영업 중' : hospital.isOpenNow === false ? '영업 종료' : '영업 상태 미확인'
   const savedLabel = liked ? ', 찜한 병원' : ''
-  return `<button class="exo-hospital-marker${openingClass}${active ? ' is-selected' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}, ${openingLabel}, 리뷰 ${reviewCount}개${savedLabel}"><svg class="exo-marker-pin" viewBox="0 0 28 38" aria-hidden="true"><path d="M14 37C11 30 1 22 1 14a13 13 0 0 1 26 0c0 8-10 16-13 23Z"/><path class="exo-marker-letter" d="M10 8v13M18 8v13M10 14.5h8"/></svg></button>`
+  const displayReviewCount = reviewCount > 99 ? '99+' : String(reviewCount)
+  return `<button class="exo-hospital-marker${openingClass}${active ? ' is-selected' : ''}" type="button" aria-label="${escapeHtml(hospital.name)}, ${openingLabel}, 리뷰 ${reviewCount}개${savedLabel}"><svg class="exo-marker-pin" viewBox="0 0 28 38" aria-hidden="true"><path d="M14 37C11 30 1 22 1 14a13 13 0 0 1 26 0c0 8-10 16-13 23Z"/></svg><span class="exo-marker-review-count" aria-hidden="true">${displayReviewCount}</span>${liked ? '<span class="exo-marker-like" aria-hidden="true">♥</span>' : ''}</button>`
 }
 
 export function readStoredReviews() {
@@ -866,4 +867,3 @@ function escapeHtml(value: string) {
 function normalizeText(value: string) {
   return cleanHtml(value).replace(/\s+/g, '').toLowerCase()
 }
-

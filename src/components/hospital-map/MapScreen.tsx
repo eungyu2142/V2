@@ -212,7 +212,7 @@ function getHospitalSortRating(hospital: Hospital, hospitalReviews: HospitalRevi
   return appAverage || externalRating
 }
 
-function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recommendationConcern, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; recommendationConcern?: HospitalRecommendationConcern | HospitalConditionId | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void> }) {
+function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recommendationConcern, reviewDraft, reviews, likedHospitals, onReviewsChange, onLikedHospitalsChange, onDeleteDraft, onBackToSource }: { userId: string; profile: AppProfile; pets: Pet[]; initialPetId?: string; focusHospital?: HospitalSnapshot | null; recommendationConcern?: HospitalRecommendationConcern | HospitalConditionId | null; reviewDraft?: DraftItem | null; reviews: Record<string, HospitalReview[]>; likedHospitals: HospitalSnapshot[]; onReviewsChange: (reviews: Record<string, HospitalReview[]>) => void; onLikedHospitalsChange: (hospitals: HospitalSnapshot[]) => void; onDeleteDraft: (draftId: string) => void | Promise<void>; onBackToSource?: () => void }) {
   const naverMapClientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID
   const [initialMapLocation] = useState<Coordinates | null>(readSessionMapLocation)
   const [query, setQuery] = useState('')
@@ -274,7 +274,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   const [mobileSheetHeight, setMobileSheetHeight] = useState(35)
   const [isSheetDragging, setIsSheetDragging] = useState(false)
   const [selectedConditionId, setSelectedConditionId] = useState<HospitalConditionId | null>(() => recommendationConcern === 'shed' ? 'shedding' : recommendationConcern === 'poop' ? 'defecation' : recommendationConcern ?? null)
-  const [isConditionBrowserOpen, setIsConditionBrowserOpen] = useState(false)
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [visibleHospitalCount, setVisibleHospitalCount] = useState(HOSPITAL_LIST_PAGE_SIZE)
   const [conditionEvidence, setConditionEvidence] = useState<HospitalConditionEvidenceData | null>(null)
@@ -1088,53 +1087,25 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
         <section className={`map-hospital-list mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} aria-label="검색된 병원" style={mobileSheetStyle}>
           <div className="map-sheet-fixed-header">
             <button className="map-sheet-handle" type="button" aria-label="병원 목록 높이 조절" {...sheetDragHandlers} />
-            <div className="map-sheet-summary">
-              <strong>주변 병원</strong>
-              <span>{filteredHospitals.length}곳</span>
-            </div>
             <div className="map-sheet-sort-tabs" aria-label="병원 정렬">
+              <label className={`map-condition-filter ${selectedConditionId ? 'active' : ''}`}>
+                <span className="sr-only">증상·질병별 병원 필터</span>
+                <select value={selectedConditionId ?? ''} onChange={(event) => { setSelectedConditionId((event.target.value || null) as HospitalConditionId | null); setVisibleHospitalCount(event.target.value ? 5 : HOSPITAL_LIST_PAGE_SIZE) }}>
+                  <option value="">증상·질병</option>
+                  <optgroup label="증상·상태">
+                    {hospitalConditions.filter((condition) => condition.group === '증상·상태').map((condition) => <option value={condition.id} key={condition.id}>{condition.label}</option>)}
+                  </optgroup>
+                  <optgroup label="리뷰 진단명">
+                    {hospitalConditions.filter((condition) => condition.group === '리뷰 진단명').map((condition) => <option value={condition.id} key={condition.id}>{condition.label}</option>)}
+                  </optgroup>
+                </select>
+              </label>
               {renderSortButtons()}
             </div>
           </div>
           <div className="map-sheet-scroll-content">
-            <section className="map-condition-browser" aria-labelledby="map-condition-browser-title">
-              <button className="map-condition-browser-toggle" type="button" aria-expanded={isConditionBrowserOpen} onClick={() => setIsConditionBrowserOpen((open) => !open)}>
-                <span><strong id="map-condition-browser-title">증상·질병별 병원</strong><small>{activeCondition ? activeCondition.label : '리뷰가 있는 병원 TOP 5'}</small></span>
-                <span aria-hidden="true">{isConditionBrowserOpen ? '−' : '+'}</span>
-              </button>
-              {isConditionBrowserOpen && (
-                <div className="map-condition-browser-panel">
-                  <label>
-                    <span>증상 또는 질병 선택</span>
-                    <select value={selectedConditionId ?? ''} onChange={(event) => { setSelectedConditionId((event.target.value || null) as HospitalConditionId | null); setVisibleHospitalCount(5) }}>
-                      <option value="">전체 병원</option>
-                      <optgroup label="증상·상태">
-                        {hospitalConditions.filter((condition) => condition.group === '증상·상태').map((condition) => <option value={condition.id} key={condition.id}>{condition.label}</option>)}
-                      </optgroup>
-                      <optgroup label="리뷰 진단명">
-                        {hospitalConditions.filter((condition) => condition.group === '리뷰 진단명').map((condition) => <option value={condition.id} key={condition.id}>{condition.label}</option>)}
-                      </optgroup>
-                    </select>
-                  </label>
-                </div>
-              )}
-              {activeCondition && (
-                <div className="map-condition-guide">
-                  <strong>{activeCondition.label} 초기 대처</strong>
-                  <p>{activeCondition.firstAid}</p>
-                  <p className="is-urgent">{activeCondition.urgent}</p>
-                  <small>일반적인 안내이며 진단을 대신하지 않습니다. <a href="https://www.merckvetmanual.com/all-other-pets/reptiles/disorders-and-diseases-of-reptiles" target="_blank" rel="noreferrer">수의학 근거 보기</a></small>
-                </div>
-              )}
-            </section>
-            {activeCondition && (
-              <div className="map-concern-recommendation-head">
-                <strong>{activeCondition.label} 리뷰·근거 병원 TOP 5</strong>
-                <span>관련 리뷰와 공개 검색 근거가 확인된 순서이며 의료 품질을 보증하지 않아요.</span>
-              </div>
-            )}
             {filteredHospitals.length === 0 ? (
-              <p className="map-side-empty">{activeCondition && conditionEvidenceStatus !== 'ready' && conditionEvidenceStatus !== 'error' ? '병원 진료 근거를 불러오고 있어요.' : activeCondition ? `${activeCondition.label} 관련 리뷰나 공개 근거가 있는 병원이 아직 없어요.` : '병원명 또는 지역을 검색해보세요.'}</p>
+              <p className="map-side-empty">검색 결과가 없습니다.</p>
             ) : (
               <>
                 {visibleHospitals.map((hospital) => (
@@ -1142,7 +1113,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
                     hospital={hospital}
                     key={hospital.id}
                     active={hospital.id === selectedHospitalId}
-                    recommendation={concernRecommendationById.get(hospital.id)}
                     onSelect={() => setSelectedHospitalId(hospital.id)}
                   />
                 ))}
@@ -1163,7 +1133,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
         <article className={`map-hospital-panel map-detail-dock mobile-sheet-${mobileSheetState} ${isSheetDragging ? 'is-dragging' : ''}`} style={mobileSheetStyle}>
           <button className="map-sheet-handle" type="button" aria-label="병원 상세 높이 조절" {...sheetDragHandlers} />
           <header className="hospital-detail-header">
-            <button className="hospital-detail-back" type="button" aria-label="병원 목록으로 돌아가기" onClick={() => { setSelectedHospitalId(null); setIsSidePanelCollapsed(false) }}>‹</button>
+            <button className="hospital-detail-back" type="button" aria-label={onBackToSource ? 'Q&A로 돌아가기' : '병원 목록으로 돌아가기'} onClick={() => { if (onBackToSource) { onBackToSource(); return } setSelectedHospitalId(null); setIsSidePanelCollapsed(false) }}>‹</button>
             <strong>{selectedHospital.name}</strong>
             <div className="hospital-detail-tools">
               <button
@@ -1335,14 +1305,13 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   )
 }
 
-function HospitalListRow({ hospital, active, recommendation, onSelect }: { hospital: Hospital; active: boolean; recommendation?: { rank: number; researchEvidenceCount: number; appReviewCount: number }; onSelect: () => void }) {
+function HospitalListRow({ hospital, active, onSelect }: { hospital: Hospital; active: boolean; onSelect: () => void }) {
   return (
     <article className={`map-hospital-row ${active ? 'active' : ''}`}>
       <button className="map-hospital-row-main" type="button" onClick={onSelect}>
         <span className="map-hospital-thumbnail" aria-hidden="true"><GuideIcon><path d="M6 21V5h12v16M3 21h18M10 8h4m-2-2v4M9 14h2m2 0h2m-6 3h2m2 0h2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></GuideIcon></span>
         <span>
           <strong>{hospital.name}</strong>
-          {recommendation && <span className="hospital-recommendation-evidence"><b>{recommendation.rank}위</b> · 공개 근거 {recommendation.researchEvidenceCount}건 · 앱 리뷰 {recommendation.appReviewCount}개</span>}
           <small>
             <span>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</span>
             <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${getHospitalOpeningStatusClass(hospital)}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>

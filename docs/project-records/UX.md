@@ -9,6 +9,15 @@
 - 검증 결과: 대표 항목 선택 우선순위를 pending, completed, skipped 순서로 조정했다.
 - 남은 작업: 없음.
 
+# 2026-10-04 마이펫 상세 관리 메뉴 시각화
+
+- 요청 요약: 펫 상세의 주요 관리 기능을 첨부한 마크 중심 UI로 제공한다.
+- 분석·판단 이유: 자주 사용하는 세 기능을 같은 위계의 큰 터치 대상으로 나란히 배치하면 기능 구분과 모바일 접근이 쉬워진다.
+- 수정 파일: `src/components/my-pet/PetIcons.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 기존 루틴·기록·수정 이동 로직은 그대로 유지하면서 각 버튼의 터치 영역, 포커스 상태, 눌림 피드백을 명확하게 만들었다.
+- 검증 결과: 관련 TSX ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
 ## 2026-09-19 완료 상태 시인성 개선
 
 - 요청 요약: 루틴이 완료됐는지 보여주는 체크를 선명하게 만들었다.
@@ -5934,4 +5943,205 @@ AI 사진을 사용하지 않고, 사용자가 직접 사진을 첨부해야 펫
 - 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
 - 핵심 변경: 단일·복수 루틴 선택 화면, 일정 → 알림·상태 → 확인 3단계 편집, 복수 선택 순차 편집 및 개별 저장 흐름을 구현했다.
 - 검증 결과: 대상 TSX ESLint, TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-03 마이펫 분류 선택 드롭다운
+
+- 요청 요약: 마이펫 분류를 버튼 나열이 아닌 드롭다운에서 선택하도록 변경한다.
+- 분석·판단 이유: 필터 옵션을 한 개의 컨트롤로 모으면 목록 공간을 덜 차지하고 사용자가 요청한 펼침 선택 흐름과 일치한다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 선택값은 기존 필터 상태에 바로 반영되며 필터 결과가 없을 때의 안내와 전체 펫 복귀 동작은 유지했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-03 루틴 관리와 일괄 체크 흐름
+
+- 요청 요약: 다이어리의 네 가지 루틴 관리 동작을 하나의 진입점에서 선택할 수 있게 한다.
+- 분석·판단 이유: `+`의 의미를 명확히 하고 수정 계열 동작을 가까이 모으면 상단 혼잡을 줄이면서도 기존 기능을 찾기 쉬워진다. 일괄 완료는 오작동을 막기 위해 대상 선택과 최종 확정의 두 단계로 구성했다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: `+ 관리` → 작업 선택 → 기존 추가·수정 흐름 또는 일괄 체크 선택 화면으로 이어진다. 값 입력이 필요한 루틴은 일괄 완료에서 제외해 기록 데이터가 비는 것을 방지한다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-03 루틴 수정 진입점 통합
+
+- 요청 요약: 일괄 수정을 별도 메뉴로 두지 않고 루틴 수정 안에서 제공한다.
+- 분석·판단 이유: 수정 대상 개수만 다르고 실제 편집 흐름은 같아, 하나의 선택 화면에서 단수·복수를 모두 지원하는 편이 사용자가 기능 차이를 고민하지 않아도 된다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 루틴 수정 진입 후 한 개를 고르면 개별 수정, 여러 개를 고르면 순차 일괄 수정으로 자연스럽게 분기한다. 전체 선택과 전체 해제도 같은 화면에서 제공한다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 루틴 수정 전용 흐름
+
+- 요청 요약: 루틴 수정에서 삭제도 가능하게 하고 수정과 무관한 하단 콘텐츠를 없앤다.
+- 분석·판단 이유: 선택 화면에서 수정과 삭제를 모두 처리하면 기존 더보기 메뉴를 찾을 필요가 없고, 오늘 할 일 영역을 제거하면 작업 완료 지점이 명확해진다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 루틴을 하나 또는 여러 개 선택해 수정하거나 삭제할 수 있다. 삭제는 확인 후 선택 항목을 한 번에 기존 저장 구조에서 제거한다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 NOTICE 경고 캐릭터 조건부 노출
+
+- 요청 요약: 경고 캐릭터는 NOTICE를 열고 실제 경고가 있을 때만 보여준다.
+- 분석·판단 이유: 캐릭터의 걱정스러운 표정은 경고 맥락에만 적합하므로 평상시 다이어리와 정보·완료 메시지에서는 제외해야 의미가 명확하다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: NOTICE 목록 버튼에는 캐릭터를 표시하지 않고, 상세 진입 후 경고 등급일 때만 메시지와 함께 표시한다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 기록 흐름 비교 방식 단순화
+
+- 요청 요약: 기록 모아보기에서 원시 데이터 나열과 차트 형태 선택을 없애고 영역 그래프만 제공한다.
+- 분석·판단 이유: 사용자가 차트 종류를 고르는 부담을 없애고, 기록별로 필요한 비교 관계를 앱이 정해 보여주는 편이 모바일에서 빠르게 이해하기 쉽다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `src/index.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 배변 상태는 지정 색상으로 구분하고, 탈피는 시작·종료, 산란은 먹이·메이팅·알 상태, 메이팅은 기록일만 한 시간축에서 확인하도록 구성했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-04 내 펫 기록 화면 중복 시각화 제거
+
+- 요청 요약: 실제 화면에 남아 있던 차트 유형 선택과 그래프 하단 기록 나열을 제거한다.
+- 분석·판단 이유: 같은 이름의 기록 모아보기가 두 경로에 존재해 이전 변경이 한 화면에만 적용됐다. 내 펫 경로도 기록 종류 선택 후 AREA 차트만 보이는 흐름으로 일치시켰다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 모든 기록 종류가 같은 차트 구조를 사용하고, 복수 상태는 상단의 작은 색상 범례로만 구분한다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다. 빌드 결과물과 소스에서 구형 차트 선택 문구 및 하단 기록 목록 렌더링이 제거된 것도 확인했다.
+- 남은 작업: 없음.
+
+## 2026-10-07 상황별 기록 진입점 명확화
+
+- 요청 요약: `기록하기` 진입점의 이름을 `상황별 기록`으로 바꾼다.
+- 분석·판단 이유: 일반 기록이라는 표현보다 상황별 기록이라고 명시하면 상단의 루틴 관리와 역할이 겹쳐 보이지 않는다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 버튼을 누른 뒤 열리는 화면까지 같은 명칭을 사용해 탐색 맥락을 유지했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-08 펫 전환 선택 상태 명확화
+
+- 요청 요약: 펫 전환 화면에서 현재 선택 정보와 선택 가능한 목록을 명확히 구분한다.
+- 분석·판단 이유: 같은 펫이 두 번 보이는 이유를 사용자가 바로 이해할 수 있도록 상단은 현재 상태, 하단은 선택 목록이라는 시각적 위계를 제공해야 한다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 목록의 현재 항목에 `선택됨` 상태를 명시하고 다른 항목은 흰색 카드로 유지해 선택 가능 여부를 구분했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-03 지도 마커 상태 구분 개선
+
+- 요청 요약: 제공된 마커 디자인을 사용하되 예시 이미지 아래의 상태 설명 문구는 실제 지도에서 제외한다.
+- 분석·판단 이유: 마커 자체의 기본/호버/좋아요 표현만으로 상태를 전달하고, 설명 라벨은 지도 가독성과 공간을 해치므로 노출하지 않는 편이 적절하다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/map-flow.css`, `public/assets/map-markers/*.png`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 선택 또는 포커스·호버 시 강조 이미지를 사용하고, 좋아요 병원은 하트 마커를 사용한다. 리뷰 수는 고정된 예시 숫자가 아니라 기존 실제 리뷰 집계값을 마커 배지에 표시한다.
+- 검증 결과: 대상 TSX/TS 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다. 분리한 PNG를 직접 확인해 하단 설명 라벨이 포함되지 않았음을 검증했다.
+- 남은 작업: 모바일 지도에서 마커 겹침과 터치 선택 영역을 확인한다.
+
+# 2026-10-03 NOTICE 경고 캐릭터 배치
+
+- 요청 요약: 첨부한 걱정 표정 캐릭터를 NOTICE 경고 시 하단 내비게이션 위에 표시한다.
+- 분석·판단 이유: 주의·경고·심각 상태에만 표시하고 일반 정보와 완료 안내에는 표시하지 않는다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `public/assets/mascot/notice-warning.png`.
+- 핵심 변경 내용: 첨부 원본을 그대로 복사해 사용한다. 홈 NOTICE 및 경고 상세에서 우측 하단에 140px 캐릭터를 고정하고 공통 내비게이션 높이와 safe area를 반영한다. 나중에 선택 시 숨기고 관리 메뉴에서도 숨긴다. 하단 스크롤 여백과 pointer-events none을 적용했다.
+- 검증 결과: 대상 ESLint 및 TypeScript 검사 통과. 실제 브라우저 시각 검증은 미실시.
+- 남은 작업: 운영 배포 미실시.
+# 2026-10-04 병원 상세 정보 그룹 개선
+
+- 요청 요약: 상단 주소 카드의 과도한 박스 표현을 제거하고 리뷰 관련 정보를 하나의 박스로 묶는다.
+- 분석·판단 이유: 주소 영역은 병원 요약 정보의 연장선으로 자연스럽게 읽히게 하고, 리뷰는 작성·빈 상태·목록이 하나의 기능 단위임을 명확히 보여야 한다.
+- 수정 파일: `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 주소·운영시간의 외곽 카드를 없애고, 리뷰 헤더와 콘텐츠를 하나의 카드 컨테이너로 통합했다. 리뷰가 없을 때도 안내 문구가 카드 내부에 유지된다.
+- 검증 결과: 병원 상세 컴포넌트 ESLint를 통과하고 CSS 선택자 적용 범위를 확인했다. 전체 TypeScript/프로덕션 빌드는 기존 `src/features/diary/DiaryPage.tsx`의 차트 타입·컴포넌트 오류로 중단됐으며 이번 CSS 변경과는 무관하다.
+- 남은 작업: 실제 데이터가 있는 병원과 없는 병원을 각각 확인한다.
+# 2026-10-04 Q&A 필터 접근 동선 단축
+
+- 요청 요약: 검색창 하단의 `미해결` 등 필터 요약을 제거하고 필터 진입 버튼을 검색어 입력창 옆에 배치했다.
+- 분석·판단 이유: 검색어 입력과 조건 필터링을 인접 배치하면 질문 탐색 흐름이 한 영역에서 끝나며, 모바일에서도 필터 버튼을 빠르게 찾을 수 있다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 기존 필터 팝업과 상태는 유지하면서 진입 위치만 검색창 옆으로 이동했고 적용 상태는 버튼 강조로 전달한다.
+- 검증 결과: Q&A 대상 파일 ESLint와 `git diff --check` 통과. 전체 TypeScript·프로덕션 빌드는 기존 `src/features/diary/DiaryPage.tsx`의 미사용 `buildIntervalRecords` 오류로 중단됐다.
+- 남은 작업: 없음.
+# 2026-10-04 병원 목록 필터 흐름 단순화
+
+- 요청 요약: 증상·질병 필터를 정렬 버튼과 같은 위치에 두고 결과 외의 긴 안내 문구를 제거한다.
+- 분석·판단 이유: 필터 선택 직후 사용자가 원하는 것은 설명문이 아니라 일치하는 병원 목록이므로 결과 중심으로 화면을 단순화한다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 증상·질병 선택 후 기존 추천 순서는 유지하되 근거 수·순위 설명과 초기 대처 문구는 표시하지 않는다. 일치 항목이 없으면 `검색 결과가 없습니다.`만 표시한다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-04 Q&A 답변 채택과 신뢰도
+
+- 요청 요약: 댓글 반응을 좋아요가 아닌 채택으로 통일하고, 질문 작성자만 채택할 수 있으며 답변자의 누적 채택 수를 프로필 옆에 표시하도록 했다.
+- 분석·판단 이유: 채택 권한을 질문 소유자로 제한해야 답변의 해결 기여도를 신뢰할 수 있고, 신뢰도 수치는 좋아요가 아닌 실제 채택 횟수만 반영해야 의미가 일관된다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/QnaTrustBadge.tsx`, `src/components/qna/qnaTrust.ts`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 기존 게시글의 `selectedAnswerCommentId`를 채택 기준으로 재사용하고 채택 답변을 상단 정렬하며, 누적 채택 수를 `신뢰도 +N개`로 계산한다.
+- 검증 결과: 변경한 Q&A 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-04 바텀시트 필터 우선 배치
+
+- 요청 요약: 주변 병원 제목 대신 증상·질병 필터의 가독성과 조작 공간을 늘린다.
+- 분석·판단 이유: 고정 제목보다 사용자가 직접 조작하는 필터가 더 높은 정보 우선순위를 가지므로 가로 공간을 필터에 배정한다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 모바일에서 증상·질병 필터는 가변 너비로 확장하고 거리순·평점순 버튼은 필요한 너비만 유지한다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-04 Q&A 댓글 정보 밀도 개선
+
+- 요청 요약: 참고 이미지의 댓글 형식처럼 작성자, 본문, 날짜, 부가 기능이 작고 빠르게 읽히도록 댓글 밀도를 높였다.
+- 분석·판단 이유: 댓글은 게시글 본문보다 보조 정보이므로 더 작은 타이포그래피와 얇은 구분선 중심으로 구성해야 여러 답변을 빠르게 비교할 수 있다.
+- 수정 파일: `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 실제 댓글 문구와 기능은 유지하고 댓글 영역에만 크기·간격 조정을 적용해 게시글 본문에는 영향을 주지 않도록 했다.
+- 검증 결과: TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-04 Q&A 댓글 초밀도 표시
+
+- 요청 요약: 댓글이 게시글 본문보다 명확히 작게 인식되도록 전체 크기와 간격을 추가로 줄였다.
+- 분석·판단 이유: 여러 답변을 한 화면에서 더 많이 비교할 수 있도록 댓글의 보조 정보 위계를 강화할 필요가 있었다.
+- 수정 파일: `src/components/qna/QnaTrustBadge.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 댓글의 프로필, 작성자, 본문, 날짜, 신뢰도, 채택 버튼과 병원 첨부 카드까지 동일한 밀도로 축소했다.
+- 검증 결과: ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-04 Q&A 댓글 답글 흐름
+
+- 요청 요약: 각 댓글에 답글을 달 수 있도록 하고 병원 추천 정보를 참고 시안과 같은 정보 구조로 표시했다.
+- 분석·판단 이유: 기존 `parentCommentId`를 활용하면 DB 테이블을 추가하지 않고 대화 맥락을 보존할 수 있으며, 병원 정보는 실제 저장된 값만 노출해야 한다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/QnaParts.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 답글 대상 선택·취소·저장·복원·원댓글 하단 정렬을 연결했다. 추천·비추천과 임의 인증 정보는 추가하지 않았다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-04 Q&A→병원→Q&A 복귀 흐름
+
+- 요청 요약: 댓글의 병원 추천에서 병원 상세를 확인한 후 원래 보던 Q&A 게시글로 복귀하도록 했다.
+- 분석·판단 이유: 병원 정보 확인은 Q&A 답변을 보조하는 일시적 탐색이므로 뒤로가기 시 질문 상세 맥락을 복원하는 것이 자연스럽다.
+- 수정 파일: `src/App.tsx`, `src/components/qna/QnaScreen.tsx`, `src/components/hospital-map/MapScreen.tsx`
+- 핵심 변경 내용: Q&A 진입에서만 출처 게시글을 기억하며, 다른 경로로 병원 상세를 연 경우 기존 뒤로가기 동작을 유지한다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-04 펫 관리 동선 단순화
+
+- 요청 요약: 펫 삭제를 상세 더보기에서 정보 수정 화면 맨 아래로 이동한다.
+- 분석·판단 이유: 수정 화면을 펫 관리의 단일 진입점으로 사용하고 삭제를 기본 적용 버튼과 시각적으로 분리해 오조작 가능성을 낮춘다.
+- 수정 파일: `src/App.tsx`, `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetsScreen.tsx`, `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: `펫 정보 수정 → 적용하기 또는 펫 삭제` 흐름으로 정리했다. 삭제 전 복구 불가 확인을 받고 성공하면 마이펫으로 돌아가며 실패하면 현재 입력 상태를 유지한다. 상세 상단 수정 진입점은 연필 마크로 더 명확하게 구분했다.
+- 검증 결과: 관련 React 컴포넌트와 앱 진입점 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-04 펫 수정 마지막 입력 접근성 개선
+
+- 요청 요약: 펫 수정 화면 하단 버튼 때문에 마지막 항목이 보이지 않는 문제를 해결한다.
+- 분석·판단 이유: 고정 푸터 높이와 본문 하단 여백이 맞지 않아 끝까지 스크롤해도 입력 내용이 버튼 아래에 남을 수 있었다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 적용·삭제를 한 줄로 줄여 푸터 높이를 낮추고, 실제 푸터와 모바일 안전 영역보다 큰 하단 여백을 본문에 적용했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-04 지도 마커 정보 단순화
+
+- 요청 요약: 병원 마커를 원래 크기로 복원하고 리뷰 수와 좋아요 여부만 간결하게 표시한다.
+- 분석·판단 이유: 마커 본체에는 비교에 필요한 리뷰 수를, 마커 옆에는 선택적 좋아요 상태만 두면 지도 위 정보 밀도를 낮출 수 있다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`.
+- 핵심 변경 내용: 중앙 H를 실제 리뷰 수로 교체하고 좋아요하지 않은 병원에는 별도 장식을 표시하지 않는다. 선택·호버 시 기존 핀이 조금 진해지도록 상태 피드백을 유지했다.
+- 검증 결과: 대상 TSX/TS 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-08 마이펫 빠른 분류와 등록
+
+- 요청 요약: 마이펫 목록에서 분류를 버튼으로 즉시 선택하고 같은 줄에서 새 펫을 추가할 수 있게 한다.
+- 분석·판단 이유: 드롭다운을 여는 단계를 없애고 현재 선택을 계속 노출하면 반복 탐색이 쉬워지며, `+` 버튼을 인접 배치하면 등록 동선도 짧아진다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 기존 실제 분류 필터 상태와 빈 결과 안내는 유지하고 입력 방식과 추가 버튼 위치만 변경했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
 - 남은 작업: 없음.

@@ -7,6 +7,7 @@ export type PetIconName = 'pet' | 'add' | 'profile' | 'edit' | 'delete' | 'repti
 const paths: Partial<Record<PetIconName, ReactNode>> = {
   add: <><path d="M12 5v14M5 12h14"/></>,
   profile: <><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8 17c.8-2 2.1-3 4-3s3.2 1 4 3"/></>,
+  edit: <><path d="m5 17-.8 3.8L8 20l10.7-10.7a2 2 0 0 0-2.8-2.8Z"/><path d="m14.5 8 2.8 2.8M11 21h9"/></>,
   delete: <><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></>,
   reptile: <><path d="M4 14c3-5 6-7 10-6 3 .7 5 3 4 5.5-.8 2.1-4 2.5-6 1.1-1.7-1.1-3.8-.9-5.3.6L4 18"/><path d="m9 10-2-3m7 1 1-3m-6 10-2 3m7-3 2 3"/><circle cx="16" cy="11" r=".7" fill="currentColor"/></>,
   amphibian: <><path d="M7 10c0-3 2.2-5 5-5s5 2 5 5c2 1.2 3 3 2 5-1 2.2-3.3 3.5-7 3.5S6 17.2 5 15c-1-2 .1-3.8 2-5Z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M9 14c1.6 1.2 4.4 1.2 6 0M6 16l-2 3m14-3 2 3"/></>,
@@ -15,7 +16,9 @@ const paths: Partial<Record<PetIconName, ReactNode>> = {
   unknown: <><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 0 1 4.6 1c0 2-2.4 2.1-2.4 4m0 3h.01"/></>,
   back: <><path d="m15 18-6-6 6-6"/></>,
   chevron: <><path d="m9 18 6-6-6-6"/></>,
-  routine: <><path d="M5 6h14M5 12h14M5 18h14"/><circle cx="7" cy="6" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="18" r="1" fill="currentColor"/></>,
+  routine: <><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M9 4V2h6v2M8 9l1.5 1.5L12 8M14 10h3M8 15l1.5 1.5L12 14M14 16h3"/></>,
+  record: <><path d="M6 3h10a2 2 0 0 1 2 2v7M6 3a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h7"/><path d="M8 8h6M8 12h3M8 17v2m3-4v4"/><circle cx="17" cy="16" r="4"/><path d="m20 19 3 3"/></>,
+  settings: <><path d="M9.6 3.6 10.3 2h3.4l.7 1.6 1.6.7 1.6-.7 2.4 2.4-.7 1.6.7 1.6 1.6.7v3.4l-1.6.7-.7 1.6.7 1.6-2.4 2.4-1.6-.7-1.6.7-.7 1.6h-3.4l-.7-1.6-1.6-.7-1.6.7L4 18.6l.7-1.6-.7-1.6-1.6-.7v-3.4l1.6-.7.7-1.6L4 7.4 6.4 5l1.6.7Z"/><circle cx="12" cy="12" r="3.2"/></>,
   stats: <><path d="M5 20V10m7 10V4m7 16v-7"/><path d="M3 20h18"/></>,
 }
 

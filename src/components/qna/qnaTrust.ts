@@ -30,3 +30,11 @@ export function getTrustScoreForMine(posts: QnaPost[]) {
     return commentScore + (comment.isAccepted || post.selectedAnswerCommentId === comment.id ? 3 : 0) + (comment.likes ?? 0)
   }, 0), 0)
 }
+
+export function getAcceptedAnswerCountForAuthor(posts: QnaPost[], ownerUserId: string | undefined, author: string) {
+  return posts.reduce((count, post) => count + post.comments.reduce((commentCount, comment) => {
+    const sameAuthor = ownerUserId ? comment.ownerUserId === ownerUserId : comment.author === author
+    const accepted = comment.isAccepted === true || post.selectedAnswerCommentId === comment.id
+    return commentCount + (sameAuthor && accepted ? 1 : 0)
+  }, 0), 0)
+}
