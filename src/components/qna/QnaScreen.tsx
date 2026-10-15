@@ -137,7 +137,6 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   const [attachmentOnly, setAttachmentOnly] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
-  const [replyingTo, setReplyingTo] = useState<{ id: string; author: string } | null>(null)
   const [attachedHospital, setAttachedHospital] = useState<HospitalSnapshot | null>(null)
   const attachedHospitalRef = useRef<HospitalSnapshot | null>(null)
   const [hospitalPickerOpen, setHospitalPickerOpen] = useState(false)
@@ -387,7 +386,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     const attachedHospitalSnapshot = attachedHospitalRef.current ?? attachedHospital
       ? { ...(attachedHospitalRef.current ?? attachedHospital)! }
       : undefined
-    const newComment: QnaComment = { id: crypto.randomUUID(), parentCommentId: replyingTo?.id, author: displayAuthor, authorAvatarUrl: profile.avatarUrl, body: comment.trim(), createdAt: new Date().toISOString(), mine: true, isAccepted: false, hospitalSnapshot: attachedHospitalSnapshot }
+    const newComment: QnaComment = { id: crypto.randomUUID(), author: displayAuthor, authorAvatarUrl: profile.avatarUrl, body: comment.trim(), createdAt: new Date().toISOString(), mine: true, isAccepted: false, hospitalSnapshot: attachedHospitalSnapshot }
     const hospitalPayload = newComment.hospitalSnapshot ?? null
     if (attachedHospitalSnapshot) {
       setLocalCommentHospitalSnapshot(newComment.id, attachedHospitalSnapshot)
@@ -400,7 +399,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
 
     let insertResult = await supabase
       .from('post_comments')
-      .insert({ id: newComment.id, post_id: selected.id, user_id: userId, body: newComment.body, hospital_snapshot: hospitalPayload, payload: { author: newComment.author, authorAvatarUrl: newComment.authorAvatarUrl, parentCommentId: newComment.parentCommentId, isAccepted: false, is_accepted: false, hospitalSnapshot: hospitalPayload, hospital_snapshot: hospitalPayload } })
+      .insert({ id: newComment.id, post_id: selected.id, user_id: userId, body: newComment.body, hospital_snapshot: hospitalPayload, payload: { author: newComment.author, authorAvatarUrl: newComment.authorAvatarUrl, isAccepted: false, is_accepted: false, hospitalSnapshot: hospitalPayload, hospital_snapshot: hospitalPayload } })
       .select('payload, hospital_snapshot')
       .single()
 
@@ -408,7 +407,7 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     if (isMissingHospitalSnapshotColumn(insertResult.error)) {
       insertResult = await supabase
         .from('post_comments')
-        .insert({ id: newComment.id, post_id: selected.id, user_id: userId, body: newComment.body, payload: { author: newComment.author, authorAvatarUrl: newComment.authorAvatarUrl, parentCommentId: newComment.parentCommentId, isAccepted: false, is_accepted: false, hospitalSnapshot: hospitalPayload, hospital_snapshot: hospitalPayload } })
+        .insert({ id: newComment.id, post_id: selected.id, user_id: userId, body: newComment.body, payload: { author: newComment.author, authorAvatarUrl: newComment.authorAvatarUrl, isAccepted: false, is_accepted: false, hospitalSnapshot: hospitalPayload, hospital_snapshot: hospitalPayload } })
         .select('payload')
         .single()
     }
@@ -425,13 +424,12 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
     if (savedHospitalSnapshot) {
       setCommentHospitalOverrides((items) => ({ ...items, [newComment.id]: savedHospitalSnapshot }))
     }
-    const savedComment = { ...newComment, hospitalSnapshot: savedHospitalSnapshot, hospital_snapshot: savedHospitalSnapshot ?? null, payload: { hospitalSnapshot: savedHospitalSnapshot ?? null, hospital_snapshot: savedHospitalSnapshot ?? null, parentCommentId: newComment.parentCommentId } }
+    const savedComment = { ...newComment, hospitalSnapshot: savedHospitalSnapshot, hospital_snapshot: savedHospitalSnapshot ?? null, payload: { hospitalSnapshot: savedHospitalSnapshot ?? null, hospital_snapshot: savedHospitalSnapshot ?? null } }
     setCommentsByPost((items) => ({
       ...items,
       [selected.id]: (items[selected.id] ?? selected.comments).map((item) => item.id === newComment.id ? savedComment : item),
     }))
     setComment('')
-    setReplyingTo(null)
     attachedHospitalRef.current = null
     setAttachedHospital(null)
   }
@@ -439,16 +437,11 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
   if (selected) {
     const selectedImages = selected.images?.length ? selected.images : selected.image ? [selected.image] : []
     const relatedHospitalCondition = findHospitalCondition([selected.title, selected.body, selected.attachedRecordSnapshot?.summary].filter(Boolean).join(' '))
-    const sortedRootComments = selectedComments.filter((item) => !item.parentCommentId).sort((a, b) => {
+    const sortedComments = [...selectedComments].sort((a, b) => {
       const accepted = (a.id === selected.selectedAnswerCommentId ? -1 : 0) - (b.id === selected.selectedAnswerCommentId ? -1 : 0)
       if (accepted !== 0) return accepted
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
-    const orphanReplies = selectedComments.filter((item) => item.parentCommentId && !selectedComments.some((parent) => parent.id === item.parentCommentId))
-    const orderedComments = sortedRootComments.flatMap((root) => [
-      root,
-      ...selectedComments.filter((item) => item.parentCommentId === root.id).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
-    ]).concat(orphanReplies)
     const trustPosts = posts.map((post) => ({ ...post, comments: hydrateComments(commentsByPost[post.id] ?? post.comments) }))
     return (
       <section className="qna-detail">
@@ -465,31 +458,28 @@ export function QnaScreen({ userId, profile, posts, openPostId, onOpenHandled, o
           <div className="qna-author"><UserAvatar url={selected.mine === true ? profile.avatarUrl : selected.authorAvatarUrl} name={qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)} /><div><strong>{qnaDisplayAuthor(selected.author, selected.mine === true, displayAuthor)}</strong><span>{formatQnaAnimal(selected)} · {formatQnaDate(selected.createdAt)}</span></div></div>
           {selectedImages.length > 0 && <div className="qna-detail-image-grid">{selectedImages.map((image) => <button className="qna-detail-image-button" type="button" key={image} onClick={() => setLightboxImage(image)}><img src={image} alt="첨부 이미지" /></button>)}</div>}
           <p>{maskKoreanProfanity(selected.body)}</p>
-          {selected.attachedDiarySnapshot && selected.attachedDiarySnapshot.records.length > 1 && <DiaryVisualizationAttachment snapshot={selected.attachedDiarySnapshot} />}
+          {selected.attachedDiarySnapshot && selected.attachedDiarySnapshot.records.length > 0 && <DiaryVisualizationAttachment snapshot={selected.attachedDiarySnapshot} />}
           {!selected.attachedDiarySnapshot && selected.attachedRecordSnapshot && <RecordAttachCard record={selected.attachedRecordSnapshot} mode="posted" onOpen={() => onOpenDiary(selected.attachedRecordSnapshot!.petId, selected.mine !== true)} />}
           {relatedHospitalCondition && <aside className="qna-condition-hospital"><span><strong>{relatedHospitalCondition.label} 관련 병원</strong><small>관련 진료 리뷰와 공개 근거가 있는 병원 TOP 5를 확인해보세요.</small></span><button type="button" onClick={() => onFindConditionHospitals(relatedHospitalCondition.id)}>병원 TOP 5 보기</button></aside>}
           <div className="qna-detail-actions"><button className={selected.liked ? 'active' : ''} type="button" onClick={() => toggleLike(selected)}><HeartIcon filled={selected.liked} /> 좋아요 {selected.likes}</button></div>
         </article>
         <section className="qna-comments">
           <header className="qna-comments-heading"><h3>답변 {selectedComments.length}</h3></header>
-          {orderedComments.filter((item) => !item.ownerUserId || !blockedUserIds.has(item.ownerUserId)).map((item) => (
-            <article className={`${selected.selectedAnswerCommentId === item.id ? 'accepted' : ''}${item.parentCommentId ? ' qna-comment-reply' : ''}`} key={item.id}>
-              <div className="qna-comment-head"><span className="qna-comment-author"><UserAvatar url={item.mine ? profile.avatarUrl : item.authorAvatarUrl} name={item.author} /><span><strong>{item.author} <QnaTrustBadge acceptedCount={getAcceptedAnswerCountForAuthor(trustPosts, item.ownerUserId, item.author)} /></strong><time>{formatQnaDate(item.createdAt)}</time></span></span>{item.mine && <div className="qna-comment-menu"><button type="button" aria-label="댓글 관리 메뉴" aria-expanded={commentMenuId === item.id} onClick={() => setCommentMenuId(commentMenuId === item.id ? null : item.id)}><GuideAction symbol="⋮" /></button>{commentMenuId === item.id && <div><button type="button" onClick={async () => { await supabase.from('post_comments').delete().eq('id', item.id).eq('user_id', userId); setCommentsByPost((items) => ({ ...items, [selected.id]: (items[selected.id] ?? []).filter((commentItem) => commentItem.id !== item.id) })); setCommentMenuId(null) }}>댓글 삭제</button></div>}</div>}</div>
+          {sortedComments.filter((item) => !item.ownerUserId || !blockedUserIds.has(item.ownerUserId)).map((item) => (
+            <article className={selected.selectedAnswerCommentId === item.id ? 'accepted' : ''} key={item.id}>
+              <div className="qna-comment-head"><span className="qna-comment-author"><UserAvatar url={item.mine ? profile.avatarUrl : item.authorAvatarUrl} name={item.author} /><span><strong>{item.author} <QnaTrustBadge acceptedCount={getAcceptedAnswerCountForAuthor(trustPosts, item.ownerUserId, item.author)} /></strong><time>{formatQnaDate(item.createdAt)}</time></span></span><div className="qna-comment-actions">{selected.mine === true && item.mine !== true && <button className="qna-accept-button" type="button" aria-pressed={selected.selectedAnswerCommentId === item.id} onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '채택'}</button>}{item.mine && <div className="qna-comment-menu"><button type="button" aria-label="댓글 관리 메뉴" aria-expanded={commentMenuId === item.id} onClick={() => setCommentMenuId(commentMenuId === item.id ? null : item.id)}><GuideAction symbol="⋮" /></button>{commentMenuId === item.id && <div><button type="button" onClick={async () => { await supabase.from('post_comments').delete().eq('id', item.id).eq('user_id', userId); setCommentsByPost((items) => ({ ...items, [selected.id]: (items[selected.id] ?? []).filter((commentItem) => commentItem.id !== item.id) })); setCommentMenuId(null) }}>댓글 삭제</button></div>}</div>}</div></div>
               {selected.selectedAnswerCommentId === item.id && <span className="accepted-answer-chip">채택 답변</span>}
               {item.body && <p>{maskKoreanProfanity(item.body)}</p>}
               {readCommentHospitalSnapshot(item) && <HospitalAttachCard hospital={readCommentHospitalSnapshot(item)!} mode="posted" onOpen={() => onOpenHospital(readCommentHospitalSnapshot(item)!, selected.id)} />}
-              <button className="qna-reply-button" type="button" onClick={() => { setReplyingTo({ id: item.parentCommentId ?? item.id, author: item.author }); setComment('') }}>답글</button>
-              {selected.mine === true && item.mine !== true && <button className="qna-accept-button" type="button" aria-pressed={selected.selectedAnswerCommentId === item.id} onClick={() => selectAnswer(selected, item.id)}>{selected.selectedAnswerCommentId === item.id ? '채택 취소' : '채택'}</button>}
             </article>
           ))}
           <form onSubmit={addComment}>
-            {replyingTo && <div className="qna-replying-to"><span><strong>{replyingTo.author}</strong>님에게 답글 작성 중</span><button type="button" onClick={() => setReplyingTo(null)}>취소</button></div>}
             {attachedHospital && <HospitalAttachCard hospital={attachedHospital} mode="draft" onRemove={() => { attachedHospitalRef.current = null; setAttachedHospital(null) }} />}
             <div className="qna-comment-tools">
               <button type="button" onClick={() => setHospitalPickerOpen((open) => !open)}>병원 첨부</button>
             </div>
             <div className="qna-comment-input-row">
-              <input value={comment} maxLength={1000} onChange={(event) => setComment(event.target.value)} placeholder={replyingTo ? `${replyingTo.author}님에게 답글 입력` : '답변을 입력하세요'} aria-label={replyingTo ? `${replyingTo.author}님에게 답글, 최대 1000자` : '답변, 최대 1000자'} />
+              <input value={comment} maxLength={1000} onChange={(event) => setComment(event.target.value)} placeholder="답변을 입력하세요" aria-label="답변, 최대 1000자" />
               <button type="submit" disabled={!comment.trim()}>등록</button>
             </div>
           </form>

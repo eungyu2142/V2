@@ -15,6 +15,7 @@
   --color-accent-50: #fff8ec; --color-accent-100: #fff0d4; --color-accent-500: #dc9931; --color-accent-600: #a76a16; --color-accent-700: #875316;
   --color-location-500: #488bff; --color-location-halo: #488bff26; --color-location-ring: #ffffff80;
   --color-like-500: #ec6583; --color-warning-600: var(--color-accent-600);
+  --color-urgent-50: #fff0f6; --color-urgent-600: #a4135d; --color-urgent-700: #86124d;
   --color-error-50: #fff3f1; --color-error-100: #ffe4df; --color-error-500: #d55348; --color-error-600: #bd3f37; --color-error-700: #9c302a;
   --color-chart-yellow: #d5ad00; --color-chart-orange: #d8751d; --color-chart-black: #20252b;
   --color-neutral-50: #fafcfb; --color-neutral-100: #f2f5f4; --color-neutral-200: #e3e9e6;

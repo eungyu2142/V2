@@ -262,6 +262,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   const [reviewCost, setReviewCost] = useState('')
   const [reviewDiagnosis, setReviewDiagnosis] = useState('')
   const [reviewTreatment, setReviewTreatment] = useState('')
+  const [reviewRating, setReviewRating] = useState(0)
   const [reviewPetId, setReviewPetId] = useState(initialPetId && pets.some((pet) => pet.id === initialPetId && isHospitalCareCategory(pet.group)) ? initialPetId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
   const [reviewTags, setReviewTags] = useState<string[]>([])
   const [reviewImages, setReviewImages] = useState<ReviewImageDraft[]>([])
@@ -397,6 +398,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   const hasMoreHospitals = visibleHospitalCount < filteredHospitals.length
   const selectedHospital = filteredHospitals.find((hospital) => hospital.id === selectedHospitalId) ?? null
   const selectedHospitalReviews = selectedHospital ? (reviews[selectedHospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory)) : []
+  const selectedHospitalReviewSummary = getReviewSummary(selectedHospitalReviews)
   const reviewDraftPayload = reviewDraft?.draftType === 'hospital_review' ? reviewDraft.payload as HospitalReviewDraftPayload : null
   const profileReviewAuthor = profile.nickname.trim() || profile.username.trim() || '사용자'
   const selectedReviewPet = pets.find((pet) => pet.id === reviewPetId)
@@ -406,8 +408,10 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   const canSubmitHospitalReview = Boolean(
     reviewPetId
     && isHospitalCareCategory(selectedReviewPet?.group)
-    && reviewBody.trim().length > 0
     && reviewVisitDate.trim().length > 0
+    && reviewRating >= 1
+    && reviewRating <= 5
+    && (editingReviewId ? reviewBody.trim().length > 0 || reviewTags.length > 0 : reviewBody.trim().length > 0)
   )
   const selectedHospitalIsLiked = selectedHospital ? likedHospitals.some((hospital) => isSameHospitalIdentity(hospital, selectedHospital)) : false
   const selectedHospitalOpeningHours = selectedHospital?.openingHours ?? []
@@ -504,6 +508,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
     setReviewDiagnosis(reviewDraftPayload.review.diagnosis ?? '')
     setReviewTreatment(reviewDraftPayload.review.treatment ?? reviewDraftPayload.review.medicine ?? '')
     setReviewPetId(reviewDraftPayload.review.petId && pets.some((pet) => pet.id === reviewDraftPayload.review.petId && isHospitalCareCategory(pet.group)) ? reviewDraftPayload.review.petId : pets.find((pet) => isHospitalCareCategory(pet.group))?.id ?? '')
+    setReviewRating(Math.max(0, Math.min(5, Math.round(reviewDraftPayload.review.rating ?? 0))))
     setReviewTags(reviewDraftPayload.review.tags ?? [])
     setReviewImages((reviewDraftPayload.review.images ?? []).slice(0, 3).map((url, index) => ({ id: `stored-${index}-${url}`, previewUrl: url, storedUrl: url })))
     setReviewImageError('')
@@ -707,6 +712,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
     setReviewCost('')
     setReviewDiagnosis('')
     setReviewTreatment('')
+    setReviewRating(0)
     setReviewTags([])
     setReviewImages((items) => {
       items.forEach((item) => { if (item.file) URL.revokeObjectURL(item.previewUrl) })
@@ -731,6 +737,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
     setReviewCost(review.cost ? review.cost.toLocaleString('ko-KR') : '')
     setReviewDiagnosis(review.diagnosis ?? '')
     setReviewTreatment(review.treatment ?? review.medicine ?? '')
+    setReviewRating(Math.max(0, Math.min(5, Math.round(review.rating ?? 0))))
     setReviewTags(review.tags ?? [])
     setReviewImages((review.images ?? []).slice(0, 3).map((url, index) => ({ id: `stored-${index}-${url}`, previewUrl: url, storedUrl: url })))
     setReviewImageError('')
@@ -764,6 +771,10 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
       return items.filter((item) => item.id !== imageId)
     })
     setReviewImageError('')
+  }
+
+  const toggleReviewTag = (tag: string) => {
+    setReviewTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : current.length >= 5 ? current : [...current, tag])
   }
 
   const submitReview = async (event: FormEvent<HTMLFormElement>) => {
@@ -801,7 +812,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
       authorAvatarUrl: profile.avatarUrl,
       animalCategory: selectedReviewAnimalCategory,
       species: selectedReviewSpecies,
-      rating: 0,
+      rating: reviewRating,
       visitDate: reviewVisitDate,
       cost: Number(reviewCost.replace(/\D/g, '')) || undefined,
       diagnosis: reviewDiagnosis.trim(),
@@ -877,10 +888,6 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
     resetReviewForm()
     setIsReviewFormOpen(false)
     if (reviewDraft) void onDeleteDraft(reviewDraft.id)
-  }
-
-  const toggleReviewTag = (tag: string) => {
-    setReviewTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : current.length >= 5 ? current : [...current, tag])
   }
 
   const toggleReviewLike = async (hospitalId: string, reviewId: string) => {
@@ -1111,6 +1118,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
                 {visibleHospitals.map((hospital) => (
                   <HospitalListRow
                     hospital={hospital}
+                    reviewSummary={getReviewSummary((reviews[hospital.id] ?? []).filter((review) => isHospitalCareCategory(review.animalCategory)))}
                     key={hospital.id}
                     active={hospital.id === selectedHospitalId}
                     onSelect={() => setSelectedHospitalId(hospital.id)}
@@ -1227,6 +1235,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
               <div>
                 <h3 id="exocare-review-title">리뷰</h3>
                 {selectedHospitalReviews.length > 0 && <span>{selectedHospitalReviews.length}개</span>}
+                {selectedHospitalReviewSummary.average > 0 && <span className="hospital-review-average">★ {selectedHospitalReviewSummary.average.toFixed(1)}</span>}
               </div>
               <button className="hospital-review-write-action" type="button" aria-label="리뷰 작성" onClick={() => { resetReviewForm(); setIsReviewFormOpen(true) }}>
                 <GuideIcon aria-hidden="true"><path d="m5 16-1 4 4-1L20 7l-3-3L5 16Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="m14 7 3 3" stroke="currentColor" strokeWidth="1.8" /></GuideIcon>
@@ -1275,12 +1284,14 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
                 cost={reviewCost}
                 diagnosis={reviewDiagnosis}
                 treatment={reviewTreatment}
+                rating={reviewRating}
                 pets={reviewablePets.map((pet) => ({ id: pet.id, name: pet.name, group: pet.group, species: pet.species }))}
                 selectedPetId={reviewPetId}
                 selectedTags={reviewTags}
                 images={reviewImages}
                 imageError={reviewImageError}
                 isSubmitting={isReviewSubmitting}
+                isEditing={Boolean(editingReviewId)}
                 canSubmit={canSubmitHospitalReview}
                 submitLabel={editingReviewId ? '리뷰 수정 완료' : '리뷰 작성 완료'}
                 onBodyChange={setReviewBody}
@@ -1288,6 +1299,7 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
                 onCostChange={setReviewCost}
                 onDiagnosisChange={setReviewDiagnosis}
                 onTreatmentChange={setReviewTreatment}
+                onRatingChange={setReviewRating}
                 onPetChange={(petId) => {
                   setReviewPetId(petId)
                   setReviewClinicRecordId('')
@@ -1305,13 +1317,19 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
   )
 }
 
-function HospitalListRow({ hospital, active, onSelect }: { hospital: Hospital; active: boolean; onSelect: () => void }) {
+function HospitalListRow({ hospital, reviewSummary, active, onSelect }: { hospital: Hospital; reviewSummary: ReturnType<typeof getReviewSummary>; active: boolean; onSelect: () => void }) {
   return (
     <article className={`map-hospital-row ${active ? 'active' : ''}`}>
       <button className="map-hospital-row-main" type="button" onClick={onSelect}>
         <span className="map-hospital-thumbnail" aria-hidden="true"><GuideIcon><path d="M6 21V5h12v16M3 21h18M10 8h4m-2-2v4M9 14h2m2 0h2m-6 3h2m2 0h2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></GuideIcon></span>
         <span>
           <strong>{hospital.name}</strong>
+          {reviewSummary.count > 0 && (
+            <small className="hospital-list-review-summary">
+              {reviewSummary.average > 0 && <b>★ {reviewSummary.average.toFixed(1)}</b>}
+              <span>리뷰 {reviewSummary.count}개</span>
+            </small>
+          )}
           <small>
             <span>{hospital.distanceKm === undefined ? '거리 계산 전' : `${hospital.distanceKm.toFixed(1)}km`}</span>
             <><span aria-hidden="true">·</span><span className={`hospital-list-open-status ${getHospitalOpeningStatusClass(hospital)}`}>{getHospitalOpeningStatusLabel(hospital)}</span></>
@@ -1369,6 +1387,7 @@ function HospitalReviewItem({ review, onDelete, onEdit, onToggleLike }: { review
           )}
         </div>
       </div>
+      <ReviewRatingStars rating={review.rating} />
       {body && <p className="review-item-body">{body}</p>}
       {review.tags && review.tags.length > 0 && (
         <div className="review-item-tags" aria-label={`리뷰 태그 ${review.tags.length}개`}>
@@ -1384,6 +1403,11 @@ function HospitalReviewItem({ review, onDelete, onEdit, onToggleLike }: { review
       </footer>
     </article>
   )
+}
+
+function ReviewRatingStars({ rating }: { rating: number }) {
+  const normalizedRating = Math.max(0, Math.min(5, Math.round(rating || 0)))
+  return <div className="review-rating-display" aria-label={`별점 ${normalizedRating}점, 5점 만점`}>{[1, 2, 3, 4, 5].map((score) => <span className={score <= normalizedRating ? 'active' : ''} aria-hidden="true" key={score}>★</span>)}<strong>{normalizedRating}점</strong></div>
 }
 
 function HospitalReviewTagSummary({ reviews }: { reviews: HospitalReview[] }) {
@@ -1417,13 +1441,11 @@ function HospitalReviewTagSummary({ reviews }: { reviews: HospitalReview[] }) {
         {visibleRows.map(({ tag, count }) => {
           const percentage = count / maxCount * 100
           return (
-          <div className="hospital-review-tag-row" role="progressbar" aria-label={`${tag} ${count}회 선택`} aria-valuemin={0} aria-valuemax={maxCount} aria-valuenow={count} key={tag}>
-            <span className="hospital-review-tag-fill" style={{ width: `${percentage}%` }} aria-hidden="true" />
-            <span className="hospital-review-tag-label">
-              <b>{tag}</b>
-            </span>
-            <strong>{count}회</strong>
-          </div>
+            <div className="hospital-review-tag-row" role="progressbar" aria-label={`${tag} ${count}회 선택`} aria-valuemin={0} aria-valuemax={maxCount} aria-valuenow={count} key={tag}>
+              <span className="hospital-review-tag-fill" style={{ width: `${percentage}%` }} aria-hidden="true" />
+              <span className="hospital-review-tag-label"><b>{tag}</b></span>
+              <strong>{count}회</strong>
+            </div>
           )
         })}
       </div>

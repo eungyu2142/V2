@@ -811,11 +811,15 @@ export function getReviewSummary(reviews: HospitalReview[]) {
   const tagCounts = new Map<string, number>()
   const animalCounts = new Map<Exclude<AnimalCategory, 'all'>, number>()
   let total = 0
+  let ratedCount = 0
 
   reviews.forEach((review) => {
-    const rating = Math.min(5, Math.max(1, Math.round(review.rating || 0)))
-    distribution[rating] += 1
-    total += rating
+    const rating = Math.min(5, Math.max(0, Math.round(review.rating || 0)))
+    if (rating > 0) {
+      distribution[rating] += 1
+      total += rating
+      ratedCount += 1
+    }
     review.tags?.forEach((tag) => tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1))
     if (review.animalCategory) animalCounts.set(review.animalCategory, (animalCounts.get(review.animalCategory) ?? 0) + 1)
   })
@@ -823,7 +827,7 @@ export function getReviewSummary(reviews: HospitalReview[]) {
   const count = reviews.length
   const topTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([tag]) => tag)
   const topAnimal = Array.from(animalCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
-  return { count, average: count ? total / count : 0, distribution, topTags, topAnimal }
+  return { count, average: ratedCount ? total / ratedCount : 0, distribution, topTags, topAnimal }
 }
 
 export function getRecentSpecies(reviews: HospitalReview[]) {

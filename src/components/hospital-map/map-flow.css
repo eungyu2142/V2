@@ -35,6 +35,8 @@
 .map-hospital-row-main > span:nth-child(2) { display: flex; flex: 1; min-width: 0; gap: 6px; flex-direction: column; }
 .map-hospital-row-main strong { font-size: 16px; }
 .map-hospital-row-main small { display: flex; flex-wrap: wrap; gap: 8px; color: var(--color-text-secondary); font-size: 13px; }
+.map-hospital-row-main .hospital-list-review-summary { align-items:center; gap:6px; }
+.hospital-list-review-summary b, .hospital-review-average { color:var(--color-accent-600); font-weight:800; }
 .map-hospital-row-main .hospital-list-address { display: block; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 .map-hospital-thumbnail { display: grid; place-items: center; width: 76px; height: 76px; border-radius: var(--radius-md, 10px); background: var(--color-background); color: var(--color-primary-600); }
 .map-hospital-thumbnail svg { width: 34px; height: 34px; }
@@ -82,6 +84,7 @@
 .hospital-section-header > div { display: flex; align-items: center; gap: 9px; }
 .hospital-section-header h3 { margin: 0; }
 .hospital-section-header span { font-size: 12px; color: var(--color-text-secondary); }
+.hospital-section-header .hospital-review-average { color:var(--color-accent-600); font-weight:800; }
 .hospital-review-write-action { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--color-primary-600); border-radius: var(--radius-full, 999px); color: var(--color-primary-600); background: var(--color-surface); }
 .hospital-review-empty { display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center; padding: 38px 12px; }
 .hospital-review-empty strong { font-size: 14px; }
@@ -111,6 +114,9 @@
 .review-manage-popover button { display: block; width: 100%; padding: 10px; border: 0; background: transparent; color: var(--color-text-primary); }
 .review-manage-popover .danger { color: var(--color-error-600); }
 .review-item-body { line-height: 1.8; font-size: 14px; white-space: pre-wrap; }
+.review-rating-display { display:flex; align-items:center; gap:2px; margin:14px 0 8px; color:var(--color-neutral-300); }
+.review-rating-display span.active { color:var(--color-accent-500); }
+.review-rating-display strong { margin-left:6px; color:var(--color-text-secondary); font-size:12px; }
 .review-item-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .review-item-tags span { padding: 5px 8px; font-size: 12px; background: var(--color-background); border-radius: var(--radius-sm, 6px); }
 .review-image-row { display: flex; gap: 8px; overflow-x: auto; }
@@ -190,7 +196,7 @@
   .map-detail-dock > .map-sheet-handle { position: sticky; top: 0; z-index: 2; margin: 0; background: var(--color-surface); }
   .hospital-detail-header > strong { font-size: 18px; }
   .map-hospital-thumbnail { width: 62px; height: 62px; }
-  .hospital-review-modal { min-height: 100dvh; padding: 20px; }
+  .hospital-review-modal { min-height: 100%; padding:20px; }
 }
 
 .map-page { height:calc(100dvh - var(--app-header-height) - var(--app-nav-clearance)); min-height:0; }
@@ -210,6 +216,13 @@
 .review-required-star, .review-image-error { color:var(--color-error-600); }
 .review-form-row { display:flex; gap:16px; } .review-form-row > label { flex:1; }
 .review-step-content label { display:grid; gap:8px; }
+.review-rating-section { padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-background); }
+.review-rating-value { margin-left:auto; color:var(--color-text-secondary); font-size:13px; font-weight:700; }
+.review-rating-picker { display:flex; gap:8px; }
+.review-rating-picker button { display:grid; place-items:center; width:46px; height:46px; padding:0; border:0; background:transparent; color:var(--color-neutral-300); font-size:35px; line-height:1; }
+.review-rating-picker button.active { color:var(--color-accent-500); }
+.review-rating-picker button:focus-visible { outline:2px solid var(--color-primary-600); outline-offset:2px; border-radius:var(--radius-sm, 6px); }
+.review-rating-section small { color:var(--color-text-secondary); font-size:12px; }
 .review-chip-grid { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 22px; }
 .review-chip-grid button { min-height:38px; padding:8px 12px; border:1px solid var(--color-border); border-radius:var(--radius-control); font-size:13px; }
 .review-chip-grid button.active { background:var(--color-primary-600); color:var(--color-on-primary); border-color:var(--color-primary-600); }
@@ -220,7 +233,37 @@
 .review-clinical-direct-input { display:grid; gap:6px; }
 .review-clinical-direct-input > span, .review-clinical-field > small { color:var(--color-text-secondary); font-size:12px; }
 .review-image-preview-list { display:flex; gap:12px; } .review-image-preview-list img { width:90px; height:90px; object-fit:cover; border-radius:var(--radius-control); }
-.review-form-actions { position:sticky; bottom:0; padding:15px 0; background:var(--color-surface); }
+.review-optional-label { color:var(--color-text-secondary); font-size:12px; }
+.review-form-actions { position:sticky; z-index:5; bottom:0; display:flex; gap:8px; margin-top:18px; padding:14px 0 calc(14px + env(safe-area-inset-bottom, 0px)); border-top:1px solid var(--color-border); background:var(--color-surface); box-shadow:0 -10px 18px color-mix(in srgb, var(--color-primary-900) 7%, transparent); }
+.review-form-actions > button { flex:1; min-width:0; min-height:48px; }
+.review-submit-action { font-weight:800; }
+
+@media (max-width: 600px) {
+  .hospital-review-modal-layer { inset:var(--app-header-height) 0 var(--app-nav-clearance); place-items:stretch; }
+  .hospital-review-modal { display:flex; flex-direction:column; width:100%; height:100%; min-height:0; max-height:100%; overflow:hidden; }
+  .hospital-review-modal-head { flex:none; margin-bottom:6px; }
+  .hospital-review-modal-body { flex:1; min-height:0; overflow:hidden; }
+  .review-step-form { display:grid; grid-template-rows:auto minmax(0, 1fr) auto; height:100%; min-height:0; overflow:hidden; }
+  .review-stepper { flex:none; margin:4px 0 10px; }
+  .review-step-content { min-height:0; overflow:hidden; align-content:start; padding-bottom:6px; gap:6px; }
+  .review-step-title { margin:0; font-size:16px; }
+  .review-input-section { gap:8px; margin:6px 0; }
+  .review-input-head { min-height:20px; }
+  .review-form-row { gap:8px; align-items:start; }
+  .review-form-row > label, .review-step-content label { gap:4px; }
+  .review-clinical-field { gap:4px; }
+  .review-rating-section { padding:10px; }
+  .review-rating-picker button { width:40px; height:40px; font-size:30px; }
+  .review-step-content textarea { min-height:82px; resize:none; }
+  .review-image-picker { min-height:40px; }
+  .review-image-help { display:none; }
+  .review-tag-selectors { display:grid; gap:8px; }
+  .review-selected-tags { display:flex; flex-wrap:wrap; gap:6px; }
+  .review-selected-tags button { min-height:32px; padding:5px 8px; border:1px solid var(--color-primary-200); border-radius:var(--radius-control); background:var(--color-primary-50); color:var(--color-text-primary); font-size:12px; }
+  .review-selected-tags button span { margin-left:5px; }
+  .review-form-actions { position:static; flex:none; margin-top:0; padding:8px 0 6px; }
+  .review-form-actions > button { min-height:44px; }
+}
 
 
 }

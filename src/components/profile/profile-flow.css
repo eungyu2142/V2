@@ -22,7 +22,17 @@
 .profile-empty-state, .profile-inline-empty { display:grid; gap:16px; justify-items:center; padding:55px 15px; text-align:center; color:var(--color-text-secondary); }
 .profile-empty-state button, .profile-continue-button { color:var(--color-primary-700); min-height:44px; padding:8px 16px; border:1px solid var(--color-primary-200); border-radius:var(--radius-control); }
 .profile-content-list { display:grid; } .profile-list-row { display:flex; gap:15px; align-items:center; border-bottom:1px solid var(--color-border); padding:18px 0; }
-.profile-row-main { display:grid; gap:6px; flex:1; text-align:left; min-width:0; } .profile-row-main h3 { font-size:15px; }
+.profile-row-main { display:flex; align-items:center; justify-content:space-between; gap:16px; flex:1; min-height:44px; width:100%; text-align:left; min-width:0; padding:8px; border-radius:var(--radius-control); color:var(--color-text-primary); }
+.profile-row-main strong { min-width:0; overflow-wrap:anywhere; white-space:normal; font-size:15px; }
+.profile-row-copy { display:grid; flex:1; min-width:0; gap:6px; }
+.profile-row-copy > strong { line-height:1.45; }
+.profile-row-copy .profile-row-kicker { gap:6px 10px; }
+.profile-row-copy .profile-row-kicker > span:not(:last-child)::after, .profile-row-copy .profile-row-kicker > time::after { content:'·'; margin-left:10px; color:var(--color-border-strong); }
+.profile-row-copy .profile-row-meta { gap:12px; }
+.profile-row-main .profile-row-arrow { width:20px; height:20px; flex:none; color:var(--color-primary-600); }
+.profile-row-main:hover:not(:disabled) { background:var(--color-neutral-100); }
+.profile-row-main:active:not(:disabled) { color:var(--color-primary-700); }
+.profile-row-main:focus-visible { outline:2px solid var(--color-primary-600); outline-offset:2px; }
 .profile-row-main p { font-size:13px; color:var(--color-text-secondary); } .profile-row-meta, .profile-row-kicker { display:flex; flex-wrap:wrap; gap:8px; color:var(--color-text-secondary); font-size:12px; }
 .profile-row-menu { display:flex; gap:10px; font-size:12px; } .profile-row-menu button { min-height:40px; }
 .profile-page svg { width:22px; height:22px; }

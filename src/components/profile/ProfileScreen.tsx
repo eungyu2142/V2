@@ -62,34 +62,6 @@ function syncProfileTabUrl(tab: ProfileTab, writtenFilter: WrittenFilter) {
   window.history.replaceState(window.history.state, '', next)
 }
 
-function formatDate(value?: string) {
-  if (!value) return '날짜 없음'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '날짜 없음'
-  return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }).format(date)
-}
-
-function formatReviewDate(value?: string) {
-  if (!value) return '방문일 미입력'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '방문일 미입력'
-  return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' }).format(date)
-}
-
-function draftTypeLabel(type: DraftItem['draftType']) {
-  if (type === 'question') return 'Q&A'
-  if (type === 'pet') return '마이 펫'
-  if (type === 'care_record') return '기록'
-  if (type === 'reminder') return '알림'
-  return '병원 리뷰'
-}
-
-function clipText(value: string, limit = 120) {
-  const text = value.trim()
-  if (text.length <= limit) return text
-  return `${text.slice(0, limit)}...`
-}
-
 function readableNotificationError(error: unknown) {
   if (!(error instanceof Error)) return '알림 설정을 완료하지 못했습니다.'
   if (error.message === 'VAPID_PUBLIC_KEY_MISSING') return '알림 설정값이 아직 준비되지 않았습니다.'
@@ -509,8 +481,6 @@ function ProfilePostList({
   posts,
   onCreateQuestion,
   onOpen,
-  onEdit,
-  onDelete,
 }: {
   posts: WrittenPost[]
   onCreateQuestion: () => void
@@ -534,36 +504,36 @@ function ProfilePostList({
       {posts.map((post) => (
         <article key={post.id} className="profile-list-row" role="listitem">
           <button className="profile-row-main" type="button" onClick={() => onOpen(post.kind, post.id)}>
-            <span className="profile-row-kicker">Q&A · {formatDate(post.createdAt)}</span>
-            <strong>{post.title}</strong>
-            <p>{clipText(post.body)}</p>
-            <span className="profile-row-status-meta">
-              <ProfilePostStatus status={post.status} />
-              <span>조회 {post.viewCount ?? 0} · 댓글 {post.comments?.length ?? 0}</span>
-            </span>
+            <ProfileQnaRowSummary post={post} />
+            <ProfileRowArrow />
           </button>
-          <ProfileRowMenu
-            items={[
-              { label: '수정', onClick: () => onEdit(post.kind, post.id) },
-              {
-                label: '삭제',
-                onClick: () => window.confirm('이 글을 삭제할까요?') && onDelete(post.kind, post.id),
-                danger: true,
-              },
-            ]}
-          />
         </article>
       ))}
     </div>
   )
 }
 
-function ProfilePostStatus({ status }: { status: QnaPost['status'] }) {
-  const isResolved = status === 'resolved'
+function ProfileQnaRowSummary({ post }: { post: QnaPost }) {
+  const createdAt = new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(post.createdAt))
+  const categories = post.categories?.length ? post.categories.join(' · ') : post.category
 
   return (
-    <span className={`profile-post-status ${isResolved ? 'resolved' : 'waiting'}`}>
-      {isResolved ? '해결' : '답변 대기'}
+    <span className="profile-row-copy">
+      <strong>{post.title || '제목 없는 글'}</strong>
+      <span className="profile-row-kicker">
+        <span>{categories}</span>
+        <time dateTime={post.createdAt}>{createdAt}</time>
+        <span>{post.status === 'resolved' ? '해결됨' : '미해결'}</span>
+      </span>
+      <span className="profile-row-meta" aria-label={`답변 ${post.comments.length}개, 조회 ${post.viewCount ?? 0}회, 좋아요 ${post.likes}개`}>
+        <span>답변 {post.comments.length}</span>
+        <span>조회 {post.viewCount ?? 0}</span>
+        <span>좋아요 {post.likes}</span>
+      </span>
     </span>
   )
 }
@@ -571,7 +541,6 @@ function ProfilePostStatus({ status }: { status: QnaPost['status'] }) {
 function ProfileDraftList({
   drafts,
   onContinue,
-  onDelete,
 }: {
   drafts: DraftItem[]
   onContinue: (draft: DraftItem) => void
@@ -585,23 +554,10 @@ function ProfileDraftList({
     <div className="profile-content-list" role="list">
       {drafts.map((draft) => (
         <article key={draft.id} className="profile-list-row" role="listitem">
-          <div className="profile-row-main static">
-            <span className="profile-row-kicker">{draftTypeLabel(draft.draftType)} · 마지막 수정 {formatDate(draft.updatedAt)}</span>
+          <button className="profile-row-main" type="button" onClick={() => onContinue(draft)}>
             <strong>{draft.title || '제목 없는 글'}</strong>
-            <p>{clipText(draft.body || '작성 중인 내용이 아직 없습니다.')}</p>
-          </div>
-          <div className="profile-row-end">
-            <button className="profile-continue-button" type="button" onClick={() => onContinue(draft)}>이어서 작성</button>
-            <ProfileRowMenu
-              items={[
-                {
-                  label: '삭제',
-                  onClick: () => window.confirm('이 임시저장 글을 삭제할까요?') && onDelete(draft.id),
-                  danger: true,
-                },
-              ]}
-            />
-          </div>
+            <ProfileRowArrow />
+          </button>
         </article>
       ))}
     </div>
@@ -614,10 +570,8 @@ function ProfileAcceptedAnswerList({ answers, onOpenPost }: { answers: Array<{ p
       {answers.map(({ post, comment }) => (
         <article key={`${post.id}-${comment.id}`} className="profile-list-row">
           <button className="profile-row-main" type="button" onClick={() => onOpenPost(post.id)}>
-            <span className="profile-row-kicker">Q&A · {formatDate(post.createdAt)}</span>
             <strong>{post.title}</strong>
-            <p>{comment.body}</p>
-            <span className="profile-row-meta">채택 답변</span>
+            <ProfileRowArrow />
           </button>
         </article>
       ))}
@@ -633,9 +587,6 @@ function ProfileLikeList({
   reviews,
   onOpenPost,
   onOpenHospital,
-  onUnlikePost,
-  onUnlikeHospital,
-  onUnlikeReview,
 }: {
   filter: LikeFilter
   onFilterChange: (filter: LikeFilter) => void
@@ -684,14 +635,9 @@ function ProfileLikeList({
           {posts.map((post) => (
             <article key={post.id} className="profile-list-row">
               <button className="profile-row-main" type="button" onClick={() => onOpenPost(post.id)}>
-                <span className="profile-row-kicker">Q&A · {formatDate(post.createdAt)}</span>
-                <strong>{post.title}</strong>
-                <span className="profile-row-status-meta">
-                  <ProfilePostStatus status={post.status} />
-                  <span>조회 {post.viewCount ?? 0} · 댓글 {post.comments?.length ?? 0}</span>
-                </span>
+                <ProfileQnaRowSummary post={post} />
+                <ProfileRowArrow />
               </button>
-              <ProfileRowMenu items={[{ label: '좋아요 해제', onClick: () => onUnlikePost(post.id) }]} />
             </article>
           ))}
         </ProfileLikeSection>
@@ -702,12 +648,9 @@ function ProfileLikeList({
           {hospitals.map((hospital) => (
             <article key={hospital.id ?? hospital.name} className="profile-list-row">
               <button className="profile-row-main" type="button" onClick={() => onOpenHospital(hospital)}>
-                <span className="profile-row-kicker">병원</span>
                 <strong>{hospital.name}</strong>
-                <p>{hospital.address || '주소 정보 없음'}</p>
-                <span className="profile-row-meta">{hospital.rating ? `평점 ${hospital.rating}` : '평점 정보 없음'} · 상세보기</span>
+                <ProfileRowArrow />
               </button>
-              <ProfileRowMenu items={[{ label: '좋아요 해제', onClick: () => onUnlikeHospital(hospital) }]} />
             </article>
           ))}
         </ProfileLikeSection>
@@ -721,17 +664,10 @@ function ProfileLikeList({
                 className="profile-row-main"
                 type="button"
                 disabled={!review.hospitalSnapshot}
-                onClick={() => review.hospitalSnapshot && onOpenHospital(review.hospitalSnapshot)}
-              >
-                <span className="profile-row-kicker profile-review-kicker">
-                  <span>리뷰</span>
-                  <span aria-hidden="true">·</span>
-                  <ProfileRatingStars rating={review.rating} />
-                </span>
+                onClick={() => review.hospitalSnapshot && onOpenHospital(review.hospitalSnapshot)}>
                 <strong>{review.hospitalName || review.hospitalSnapshot?.name || '병원 리뷰'}</strong>
-                <p>{clipText(review.body || review.content || '')}</p>
+                <ProfileRowArrow />
               </button>
-              <ProfileRowMenu items={[{ label: '좋아요 해제', onClick: () => onUnlikeReview(review.hospitalId, review.id) }]} />
             </article>
           ))}
         </ProfileLikeSection>
@@ -752,22 +688,10 @@ function ProfileLikeSection({ title, count, children }: { title: string; count: 
   )
 }
 
-function ProfileRatingStars({ rating }: { rating: number }) {
-  const normalizedRating = Math.max(0, Math.min(5, Math.round(rating)))
-
-  return (
-    <span className="profile-rating-stars" aria-label={`별점 ${rating}점, 5점 만점`}>
-      <span aria-hidden="true">{'★'.repeat(normalizedRating)}</span>
-      <span className="is-empty" aria-hidden="true">{'☆'.repeat(5 - normalizedRating)}</span>
-    </span>
-  )
-}
-
 function ProfileReviewList({
   reviews,
   onCreateReview,
   onEdit,
-  onDelete,
 }: {
   reviews: ProfileReviewItem[]
   onCreateReview: () => void
@@ -790,25 +714,9 @@ function ProfileReviewList({
       {reviews.map((review) => (
         <article key={review.id} className="profile-list-row" role="listitem">
           <button className="profile-row-main" type="button" onClick={() => onEdit(review)}>
-            <span className="profile-row-kicker profile-review-kicker">
-              <span>{formatReviewDate(review.visitDate || review.createdAt)}</span>
-              <span aria-hidden="true">·</span>
-              <ProfileRatingStars rating={review.rating} />
-            </span>
             <strong>{review.hospitalName || review.hospitalSnapshot?.name || '병원 리뷰'}</strong>
-            <span className="profile-row-meta">{review.petName || review.species || '방문 동물 정보 없음'}</span>
-            <p>{clipText(review.body || review.content || '')}</p>
+            <ProfileRowArrow />
           </button>
-          <ProfileRowMenu
-            items={[
-              { label: '수정', onClick: () => onEdit(review) },
-              {
-                label: '삭제',
-                onClick: () => window.confirm('이 병원 리뷰를 삭제할까요?') && onDelete(review.hospitalId, review.id),
-                danger: true,
-              },
-            ]}
-          />
         </article>
       ))}
     </div>
@@ -1133,33 +1041,8 @@ function ProfileEmptyState({
   )
 }
 
-function ProfileRowMenu({
-  items,
-}: {
-  items: Array<{ label: string; onClick: () => void; danger?: boolean }>
-}) {
-  return (
-    <details className="profile-row-menu">
-      <summary aria-label="항목 관리">
-        <span aria-hidden="true">⋯</span>
-      </summary>
-      <div>
-        {items.map((item) => (
-          <button
-            key={item.label}
-            className={item.danger ? 'danger' : ''}
-            type="button"
-            onClick={(event) => {
-              event.currentTarget.closest('details')?.removeAttribute('open')
-              item.onClick()
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </details>
-  )
+function ProfileRowArrow() {
+  return <svg className="profile-row-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
 }
 
 export default ProfileScreen

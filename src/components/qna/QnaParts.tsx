@@ -72,7 +72,7 @@ export function DiaryTimelineAttachment({ snapshot, mode, onRemove }: { snapshot
 
 export function DiaryVisualizationAttachment({ snapshot }: { snapshot: AttachedDiarySnapshot }) {
   const photos = [...new Set(snapshot.records.map((record) => record.photoUrl).filter((url): url is string => Boolean(url)))]
-  return <section className="qna-diary-visualization-attachment"><DataVisualization records={snapshot.records} petName={snapshot.petName} />{photos.length > 0 && <div className="qna-attached-record-photos" aria-label="첨부 기록 사진">{photos.map((photo, index) => <img src={photo} alt={`${snapshot.petName} 기록 사진 ${index + 1}`} key={photo} />)}</div>}</section>
+  return <section className="qna-diary-visualization-attachment"><DataVisualization records={snapshot.records} petName={snapshot.petName} hideEmptyMetrics />{photos.length > 0 && <div className="qna-attached-record-photos" aria-label="첨부 기록 사진">{photos.map((photo, index) => <img src={photo} alt={`${snapshot.petName} 기록 사진 ${index + 1}`} key={photo} />)}</div>}</section>
 }
 
 export function RecordAttachCard({ record, mode, onRemove, onOpen }: { record: AttachedRecordSnapshot; mode: 'draft' | 'posted'; onRemove?: () => void; onOpen?: () => void }) {

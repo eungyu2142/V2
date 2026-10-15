@@ -25,6 +25,11 @@ function tasksForPet(petId: string, tasks: DailyTask[], plans: CarePlan[]) {
   return petRoutineSummary(petId, todayKey(), tasks, plans).map((task) => ({ ...task, label: task.title || routineLabels[task.taskType.split('|')[0]] || task.taskType }))
 }
 
+function hasOverdueRoutine(petId: string, tasks: DailyTask[]) {
+  const today = todayKey()
+  return tasks.some((task) => task.petId === petId && task.status === 'pending' && task.scheduledDate < today)
+}
+
 function PetPhoto({ pet }: { pet: Pet }) {
   return <span className="pet-flow-photo">{pet.photo ? <img src={pet.photo} alt={`${pet.name} 사진`} style={{ objectPosition: `${pet.photoPosition?.x ?? 50}% ${pet.photoPosition?.y ?? 50}%` }}/> : <Mascot/>}</span>
 }
@@ -115,9 +120,12 @@ export default function PetMobileFlow({ pets, selectedPetId, view, tasks, plans,
       const todayTasks = tasksForPet(item.id, tasks, plans)
       const completed = todayTasks.filter((task) => task.status === 'completed').length
       const progressPercent = todayTasks.length ? Math.round(completed / todayTasks.length * 100) : 0
+      const hasActiveRoutine = plans.some((plan) => plan.petId === item.id && plan.isActive)
+      const isOverdue = hasOverdueRoutine(item.id, tasks)
+      const showProgress = hasActiveRoutine || todayTasks.length > 0 || isOverdue
       return <button className="pet-flow-card" type="button" key={item.id} aria-label={`${item.name} 상세 보기`} onClick={() => { onSelectPet(item.id); onView('detail') }}>
-        <span className="pet-flow-card-identity"><PetProgressPhoto pet={item} completed={completed} total={todayTasks.length}/><span><strong>{item.name} <PetIcon name={item.gender === 'male' ? 'male' : item.gender === 'female' ? 'female' : 'unknown'} aria-label={genderLabel(item.gender)}/></strong><small>{item.species}</small></span></span>
-        {todayTasks.length ? <span className="pet-flow-card-progress"><strong>{progressPercent}%</strong><small>{completed === todayTasks.length ? '오늘 케어 완료' : '오늘 케어'}</small></span> : <span className="pet-flow-card-status"><small>오늘 예정된 루틴이 없어요.</small></span>}
+        <span className="pet-flow-card-identity"><PetProgressPhoto pet={item} completed={completed} total={showProgress ? Math.max(todayTasks.length, 1) : 0}/><span><strong>{item.name} <PetIcon name={item.gender === 'male' ? 'male' : item.gender === 'female' ? 'female' : 'unknown'} aria-label={genderLabel(item.gender)}/></strong><small>{item.species}</small></span></span>
+        {showProgress ? <span className="pet-flow-card-progress"><strong>{progressPercent}%</strong><small>{todayTasks.length > 0 && completed === todayTasks.length ? '오늘 케어 완료' : '오늘 케어'}</small>{isOverdue && <em>루틴이 밀렸어요!</em>}</span> : <span className="pet-flow-card-status"><small>등록된 루틴이 없어요.</small></span>}
       </button>
     })}</div> : pets.length ? <section className="pet-flow-filter-empty"><p>{petFilter === 'amphibian' ? '등록된 양서류가 없어요.' : '등록된 파충류가 없어요.'}</p><button type="button" onClick={() => setPetFilter('all')}>전체 펫 보기</button></section> : <section className="pet-flow-empty-home"><Mascot mood="welcome"/><p>등록된 펫이 없어요.</p></section>}
   </main>
@@ -144,8 +152,8 @@ export default function PetMobileFlow({ pets, selectedPetId, view, tasks, plans,
     <header className="pet-flow-header centered"><BackButton onClick={() => onView('main')}/><h1>{pet.name}</h1><div className="pet-flow-header-actions"><button className="pet-flow-icon-button pet-flow-edit-button" type="button" aria-label="펫 정보 수정" onClick={() => onEditPet(pet)}><PetIcon name="edit"/></button></div></header>
     <section className="pet-flow-detail-content"><div className="pet-flow-hero"><PetPhoto pet={pet}/></div><div className="pet-flow-detail-body">
       <section className="pet-flow-identity"><div><h2>{pet.name}</h2><p>{pet.species} · {genderLabel(pet.gender)}</p></div></section>
-      <section className="pet-flow-today"><h2>오늘의 루틴 <strong>{completed}/{petTasks.length}</strong></h2><ProgressBar done={completed} total={petTasks.length} label={`${pet.name} 오늘 루틴 진행률`}/><h3>남은 루틴</h3>{remaining.length ? <div className="pet-flow-routine-pills">{remaining.map((task) => <button type="button" key={task.id} onClick={() => onView('routines')}><PetIcon name={routineIcons[task.taskType.split('|')[0]] ?? 'routine'}/>{task.label}</button>)}</div> : <p>{petTasks.length && completed === petTasks.length ? '오늘의 루틴을 모두 완료했어요!' : '오늘 예정된 루틴이 없어요.'}</p>}</section>
-      <nav className="pet-flow-detail-links" aria-label="펫 관리"><button type="button" onClick={() => onView('routines')}><PetIconMark name="routine"/><span>루틴 관리</span></button><button type="button" onClick={() => onView('records')}><PetIconMark name="record"/><span>기록 모아보기</span></button><button type="button" onClick={() => onEditPet(pet)}><PetIconMark name="settings"/><span>펫 정보 수정</span></button></nav>
+      <section className="pet-flow-today"><h2>오늘의 루틴 <strong>{completed}/{petTasks.length}</strong></h2><ProgressBar done={completed} total={petTasks.length} label={`${pet.name} 오늘 루틴 진행률`}/><h3>남은 루틴</h3>{remaining.length ? <div className="pet-flow-routine-pills">{remaining.map((task) => <button type="button" key={task.id} onClick={() => onOpenDiary(pet.id)}><PetIcon name={routineIcons[task.taskType.split('|')[0]] ?? 'routine'}/>{task.label}</button>)}</div> : <p>{petTasks.length && completed === petTasks.length ? '오늘의 루틴을 모두 완료했어요!' : '오늘 예정된 루틴이 없어요.'}</p>}</section>
+      <nav className="pet-flow-detail-links" aria-label="펫 관리"><button type="button" onClick={() => onOpenDiary(pet.id)}><PetIconMark name="routine"/><span>루틴 관리</span></button><button type="button" onClick={() => onView('records')}><PetIconMark name="record"/><span>기록 모아보기</span></button><button type="button" onClick={() => onEditPet(pet)}><PetIconMark name="settings"/><span>펫 정보 수정</span></button></nav>
     </div></section>
   </main>
 }

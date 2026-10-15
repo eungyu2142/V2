@@ -20,12 +20,14 @@ type HospitalReviewFormProps = {
   cost: string
   diagnosis: string
   treatment: string
+  rating: number
   pets: ReviewPetOption[]
   selectedPetId: string
   selectedTags: string[]
   images: Array<{ id: string; previewUrl: string }>
   imageError?: string
   isSubmitting?: boolean
+  isEditing?: boolean
   canSubmit: boolean
   submitLabel?: string
   onBodyChange: (value: string) => void
@@ -33,6 +35,7 @@ type HospitalReviewFormProps = {
   onCostChange: (value: string) => void
   onDiagnosisChange: (value: string) => void
   onTreatmentChange: (value: string) => void
+  onRatingChange: (value: number) => void
   onPetChange: (value: string) => void
   onToggleTag: (value: string) => void
   onImagesSelect: (files: File[]) => void
@@ -56,7 +59,7 @@ const text = {
   cost: '\uC9C4\uB8CC\uBE44',
   costPlaceholder: '\uC608: 35,000',
   diagnosis: '\uBCD1\uBA85/\uC9C4\uB2E8\uBA85',
-  diagnosisPlaceholder: '\uC608: MBD(\uB300\uC0AC\uC131 \uACE8\uC9C8\uD658)',
+  diagnosisPlaceholder: '\uC608: \uB300\uC0AC\uC131 \uACE8\uC9C8\uD658',
   prescription: '\uCC98\uBC29',
   treatmentPlaceholder: '\uBCD1\uC6D0\uC5D0\uC11C \uBC1B\uC740 \uCC98\uBC29 \uB0B4\uC6A9\uC744 \uADF8\uB300\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694.',
   tagTitle: '\uC5B4\uB5A4 \uC810\uC774 \uC88B\uC558\uB098\uC694?',
@@ -66,24 +69,18 @@ const text = {
 }
 
 const generalReviewTags = [
-  '\uC218\uC758\uC0AC\uB2D8\uC774 \uCE5C\uC808\uD574\uC694',
-  '\uBCD1\uC6D0\uC774 \uCCAD\uACB0\uD574\uC694',
-  '\uC124\uBA85\uC774 \uC790\uC138\uD574\uC694',
-  '\uAC00\uACA9 \uC548\uB0B4\uAC00 \uD22C\uBA85\uD574\uC694',
-  '\uC544\uC774\uB97C \uC870\uC2EC\uC2A4\uB7FD\uAC8C \uB2E4\uB904\uC918\uC694',
-  '\uB3D9\uBB3C \uD2B9\uC131\uC744 \uC798 \uC774\uD574\uD574\uC694',
-  '\uC751\uAE09 \uC0C1\uD669\uC5D0 \uBE60\uB974\uAC8C \uB300\uC751\uD574\uC694',
-  '\uC9D1\uC5D0\uC11C \uAD00\uB9AC\uD558\uB294 \uBC95\uC744 \uC54C\uB824\uC918\uC694',
-  '\uACFC\uC789\uC9C4\uB8CC\uAC00 \uC5C6\uC5B4\uC694',
-  '\uC7AC\uBC29\uBB38\uD558\uACE0 \uC2F6\uC5B4\uC694',
+  '수의사님이 친절해요', '병원이 청결해요', '설명이 자세해요', '가격 안내가 투명해요',
+  '아이를 조심스럽게 다뤄줘요', '동물 특성을 잘 이해해요', '응급 상황에 빠르게 대응해요',
+  '집에서 관리하는 법을 알려줘요', '과잉진료가 없어요', '재방문하고 싶어요',
 ]
 
 const prescriptionOptions = [
-  'Enrofloxacin', 'Ceftazidime', 'Metronidazole', 'Meloxicam', '칼슘제', '비타민제',
-  '구충제', '항진균제', '점안제', '외용제',
+  '항균제', '항원충제', '소염진통제', '칼슘 보충제', '비타민 보충제', '구충제',
+  '항진균제', '수액 처치', '점안제', '외용제', '분무 치료', '상처 소독 및 처치',
+  '영양 보조', '수술적 처치',
 ]
 
-const reviewSteps = ['방문', '진료', '태그', '후기']
+const reviewSteps = ['방문', '진료', '태그', '리뷰']
 
 function formatCostInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9)
@@ -96,12 +93,14 @@ export default function HospitalReviewForm({
   cost,
   diagnosis,
   treatment,
+  rating,
   pets,
   selectedPetId,
   selectedTags,
   images,
   imageError,
   isSubmitting = false,
+  isEditing = false,
   canSubmit,
   submitLabel,
   onBodyChange,
@@ -109,6 +108,7 @@ export default function HospitalReviewForm({
   onCostChange,
   onDiagnosisChange,
   onTreatmentChange,
+  onRatingChange,
   onPetChange,
   onToggleTag,
   onImagesSelect,
@@ -118,8 +118,6 @@ export default function HospitalReviewForm({
   const [currentStep, setCurrentStep] = useState(0)
   const selectedPet = pets.find((pet) => pet.id === selectedPetId)
   const selectedPetMeta = selectedPet?.species || ''
-  const selectedDiagnosisOption = reviewDiagnosisOptions.find((option) => option === diagnosis) ?? ''
-  const selectedPrescriptionOption = prescriptionOptions.find((option) => option === treatment) ?? ''
   const canMoveNext = currentStep === 0
     ? Boolean(selectedPetId)
     : currentStep === 1
@@ -186,28 +184,18 @@ export default function HospitalReviewForm({
           </label>
         </div>
         <div className="review-clinical-field">
-          <span>{text.diagnosis}</span>
-          <select aria-label="병명 추천 항목 선택" value={selectedDiagnosisOption} onChange={(event) => onDiagnosisChange(event.target.value)}>
-            <option value="">추천 병명에서 선택</option>
-            {reviewDiagnosisOptions.map((option) => <option value={option} key={option}>{option}</option>)}
-          </select>
-          <label className="review-clinical-direct-input">
-            <span>직접 입력</span>
-            <input value={diagnosis} onChange={(event) => onDiagnosisChange(event.target.value)} placeholder={text.diagnosisPlaceholder} />
-          </label>
-          <small>목록에서 선택하거나 직접 입력할 수 있어요.</small>
+          <label htmlFor="review-diagnosis-input">{text.diagnosis}</label>
+          <input id="review-diagnosis-input" list="review-diagnosis-options" value={diagnosis} onChange={(event) => onDiagnosisChange(event.target.value)} placeholder="병명을 입력하거나 선택하세요" autoComplete="off" />
+          <datalist id="review-diagnosis-options">
+            {reviewDiagnosisOptions.map((option) => <option value={option} key={option} />)}
+          </datalist>
         </div>
         <div className="review-clinical-field">
-          <span>{text.prescription}</span>
-          <select aria-label="처방 추천 항목 선택" value={selectedPrescriptionOption} onChange={(event) => onTreatmentChange(event.target.value)}>
-            <option value="">추천 처방에서 선택</option>
-            {prescriptionOptions.map((option) => <option value={option} key={option}>{option}</option>)}
-          </select>
-          <label className="review-clinical-direct-input">
-            <span>직접 입력</span>
-            <input value={treatment} onChange={(event) => onTreatmentChange(event.target.value)} placeholder="처방명이나 처방 내용을 직접 입력하세요" />
-          </label>
-          <small>목록에서 선택하거나 직접 입력할 수 있어요.</small>
+          <label htmlFor="review-treatment-input">{text.prescription}</label>
+          <input id="review-treatment-input" list="review-treatment-options" value={treatment} onChange={(event) => onTreatmentChange(event.target.value)} placeholder="처방을 입력하거나 선택하세요" autoComplete="off" />
+          <datalist id="review-treatment-options">
+            {prescriptionOptions.map((option) => <option value={option} key={option} />)}
+          </datalist>
         </div>
       </section>
       </div>}
@@ -219,35 +207,50 @@ export default function HospitalReviewForm({
           <strong>{text.tagTitle}</strong>
           <span>{selectedTags.length}/5</span>
         </div>
-        <div className="review-tag-scroll" role="region" aria-label="리뷰 태그 목록" tabIndex={0}>
-        <div className="review-tag-group is-specialist">
-          <strong>양서·파충류 전문성</strong>
-          <div className="review-chip-grid">
-            {specialistReviewTags.map((tag) => (
-              <button className={selectedTags.includes(tag) ? 'active' : ''} type="button" key={tag} onClick={() => onToggleTag(tag)} disabled={!selectedTags.includes(tag) && selectedTags.length >= 5}>{tag}</button>
-            ))}
-          </div>
+        <div className="review-tag-selectors">
+          <label>양서·파충류 전문성
+            <select value="" disabled={selectedTags.length >= 5} onChange={(event) => event.target.value && onToggleTag(event.target.value)}>
+              <option value="">태그 선택</option>
+              {specialistReviewTags.map((tag) => <option value={tag} key={tag} disabled={selectedTags.includes(tag)}>{tag}</option>)}
+            </select>
+          </label>
+          <label>일반 병원 경험
+            <select value="" disabled={selectedTags.length >= 5} onChange={(event) => event.target.value && onToggleTag(event.target.value)}>
+              <option value="">태그 선택</option>
+              {generalReviewTags.map((tag) => <option value={tag} key={tag} disabled={selectedTags.includes(tag)}>{tag}</option>)}
+            </select>
+          </label>
         </div>
-        <div className="review-tag-group">
-          <strong>일반 병원 경험</strong>
-          <div className="review-chip-grid">
-            {generalReviewTags.map((tag) => (
-              <button className={selectedTags.includes(tag) ? 'active' : ''} type="button" key={tag} onClick={() => onToggleTag(tag)} disabled={!selectedTags.includes(tag) && selectedTags.length >= 5}>{tag}</button>
-            ))}
-          </div>
+        {selectedTags.length > 0 && <div className="review-selected-tags" aria-label="선택한 리뷰 태그">
+          {selectedTags.map((tag) => <button type="button" key={tag} onClick={() => onToggleTag(tag)}>{tag}<span aria-hidden="true">×</span></button>)}
         </div>
-        </div>
+        }
       </section>
       </div>}
 
       {currentStep === 3 && <div className="review-step-content" aria-labelledby="review-step-body">
-      <h3 id="review-step-body" className="review-step-title">후기 작성</h3>
+      <h3 id="review-step-body" className="review-step-title">리뷰 작성</h3>
+      <section className="review-input-section review-rating-section" aria-labelledby="review-rating-title">
+        <div className="review-input-head">
+          <strong id="review-rating-title">병원 별점</strong>
+          <span className="review-required-star" aria-label={text.required}>*</span>
+          <span className="review-rating-value">{rating}점</span>
+        </div>
+        <div className="review-rating-picker" role="radiogroup" aria-label="병원 별점 선택">
+          {[1, 2, 3, 4, 5].map((score) => (
+            <button className={score <= rating ? 'active' : ''} type="button" role="radio" aria-checked={rating === score} aria-label={`${score}점`} key={score} onClick={() => onRatingChange(score)}>★</button>
+          ))}
+        </div>
+        <small>처음에는 0점이며 별을 눌러 평가해 주세요.</small>
+      </section>
       <section className="review-input-section">
         <div className="review-input-head">
           <strong>{text.bodyTitle}</strong>
-          <span className="review-required-star" aria-label={text.required}>*</span>
+          {isEditing
+            ? <span className="review-optional-label">{text.optional}</span>
+            : <span className="review-required-star" aria-label={text.required}>*</span>}
         </div>
-        <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} placeholder={text.bodyPlaceholder} required />
+        <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} placeholder={text.bodyPlaceholder} required={!isEditing} />
       </section>
       <section className="review-input-section review-image-section">
         <div className="review-input-head">
@@ -275,9 +278,11 @@ export default function HospitalReviewForm({
 
       <div className="step-actions review-form-actions">
         {currentStep > 0 && <button type="button" className="step-secondary" onClick={() => setCurrentStep((step) => step - 1)}>이전</button>}
-        {currentStep < reviewSteps.length - 1
-          ? <button type="button" className="step-primary" disabled={!canMoveNext} onClick={moveToNextStep}>다음</button>
-          : <button type="submit" className="step-primary" disabled={!canSubmit || isSubmitting}>{isSubmitting ? '사진 저장 중' : submitLabel ?? text.submit}</button>}
+        {currentStep < reviewSteps.length - 1 ? (
+          <button type="button" className="step-primary" disabled={!canMoveNext} onClick={moveToNextStep}>다음</button>
+        ) : (
+          <button type="submit" className="step-primary review-submit-action" disabled={!canSubmit || isSubmitting}>{isSubmitting ? '저장 중' : submitLabel ?? text.submit}</button>
+        )}
       </div>
     </form>
   )

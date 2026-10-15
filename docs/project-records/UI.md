@@ -1,5 +1,41 @@
 # UI 작업 기록
 
+## 2026-10-15 프로필 게시글 기본 정보 표시
+
+- 요청 요약: 프로필 게시글 목록을 제목만 표시하지 말고 댓글 수 등의 기본 정보를 포함하되 세부 본문은 숨긴다.
+- 분석·판단 이유: 제목만으로는 글의 반응과 상태를 판단하기 어렵지만 본문 전체를 목록에 노출하면 정보 밀도가 지나치게 높아진다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/components/profile/profile-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 작성한 글과 좋아요한 게시글 행에 카테고리, 작성일, 해결 여부, 답변·조회·좋아요 수를 추가하고 본문은 제외했다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-15 다음 진료일 UI 제거
+
+- 요청 요약: 다음 진료일 기능을 제거하고 재배포한다.
+- 분석·판단 이유: 다음 진료일은 입력 필드뿐 아니라 캘린더 마커와 범례에도 표시되어 있어 관련 UI를 함께 제거해야 화면과 데이터 흐름이 일치한다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 진료 기록의 다음 예정일 입력 영역과 캘린더의 다음 진료일 마커·범례를 제거했다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-14 직접 입력 카드 정렬
+
+- 요청 요약: 루틴 선택 화면의 `직접 입력` 카드를 `무게 측정`과 같은 줄에 배치한다.
+- 분석·판단 이유: 직접 입력만 별도 그리드로 분리되어 다음 줄 왼쪽에 고립되어 보였으므로 전체 선택 항목을 하나의 두 열 그리드로 구성해야 한다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 추천 루틴 배열 끝에 직접 입력 항목을 합쳐 동일한 카드 크기와 간격으로 렌더링한다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+## 2026-10-14 루틴 작성 2단계 UI
+
+- 요청 요약: 루틴 추가·수정의 마지막 확인 단계를 없애고 전체 단계를 2개로 줄인다.
+- 분석·판단 이유: 별도의 확인 화면이 같은 정보를 반복해 작성 흐름을 길게 만들고 있어 두 번째 입력 화면에서 바로 저장하는 편이 더 간결하다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`
+- 핵심 변경 내용: 단계 표시를 2단계로 변경하고 최종 확인 카드와 3단계 UI를 제거했다. 두 번째 단계의 주 버튼을 각각 `루틴 추가`, `저장`으로 변경했다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
 ## 2026-09-19 밀린 루틴 완료 행 유지
 
 - 요청 요약: 가장 오래 밀린 루틴을 완료해도 사라지지 않고 체크된 행으로 남기게 했다.
@@ -8,7 +44,6 @@
 - 핵심 변경 내용: pending 이후에는 completed 항목을 skipped보다 우선 선택하고, 밀린 완료 항목도 루틴 패널에서 체크 행으로 렌더링한다.
 - 검증 결과: TypeScript와 `DiaryPage.tsx` ESLint로 확인한다.
 - 남은 작업: 없음.
-
 ## 2026-09-19 루틴 체크 아이콘 벡터화
 
 - 요청 요약: 루틴 완료 체크 표시가 깨져 보이는 문제를 수정했다.
@@ -33,7 +68,7 @@
 - 분석·판단 이유: `DailyPlan`이 구조만 있고 전용 CSS가 없어 브라우저 기본 흐름으로 모든 요소가 붙어 렌더링되고 있었다.
 - 수정 파일: `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`.
 - 핵심 변경 내용: 제목·날짜·개수 배치, 2분할 액션, 루틴 행, 체크, 더보기 메뉴, 빈 상태에 카드와 모바일 반응형 스타일을 추가했다.
-- 검증 결과: TypeScript, ESLint, 프로덕션 빌드로 확인한다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
 - 남은 작업: 없음.
 
 ## 2026-09-19 상단 알림 배너와 밀림 단계 색상
@@ -6729,3 +6764,269 @@ AI 사진은 절대 사용하지 말고, 펫 등록은 반드시 사용자가 �
 - 핵심 변경 내용: 드롭다운과 독립 상단 추가 영역을 제거하고 `전체 / 파충류 / 양서류 / +`를 한 줄에 배치했다. 선택 상태와 hover는 Primary 토큰으로 구분하고 좁은 화면에서는 필터 영역만 가로 스크롤된다.
 - 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
 - 남은 작업: 없음.
+
+# 2026-10-08 마이펫 루틴 관리 진입점 정리
+
+- 요청 요약: 마이펫 상세의 별도 루틴 관리 동선을 없애고 다이어리로 바로 이동하게 한다.
+- 분석·판단 이유: 루틴 관리 기능이 이미 다이어리의 `+ 관리`에 모여 있어 별도 화면을 유지하면 같은 기능의 진입점과 화면이 중복된다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: `루틴 관리` 마크와 남은 루틴 버튼이 선택된 펫의 다이어리 메인을 열도록 연결했다. 기존 마크의 배치와 시각 스타일은 유지했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-10-10 중복 루틴 한 건 표시와 체크 상태 유지
+
+- 요청 요약: 같은 종류의 밀린 루틴과 오늘 루틴이 겹치면 가장 오래된 한 건만 표시하고, 체크 후에도 목록에서 사라지지 않게 한다.
+- 분석·판단 이유: 기존 중복 축약 로직이 미완료 상태를 먼저 선택해 오래된 항목을 완료한 직후 다음 미완료 항목이 대표 항목으로 바뀌고 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 같은 루틴 종류의 항목을 날짜순으로 묶은 뒤 완료 여부와 관계없이 가장 오래된 항목을 대표로 유지하도록 변경했다. 완료 마크와 기존 후속 중복 정리 동작은 유지했다.
+- 검증 결과: 대상 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-10-10 캘린더 진료일·기록 마커 색상
+
+- 요청 요약: 다음 진료일 마커는 노란색으로 바꾸고 실제 기록은 날짜 하단에 초록색으로 표시한다.
+- 분석·판단 이유: 다음 진료 예정과 완료된 실제 기록이 같은 초록색이라 날짜의 의미를 한눈에 구분하기 어려웠다.
+- 수정 파일: `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 진료 예정 점과 범례에 Accent 노란색 토큰을 적용하고, 실제 기록 점을 날짜 칸 하단에 정렬하면서 기존 Primary 초록색을 유지했다.
+- 검증 결과: 다이어리 소스 ESLint, TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다. 전체 ESLint는 기존 `.tmp/ui-flow-preview.tsx`의 Fast Refresh 규칙 1건으로 실패했으며 이번 변경 파일과는 무관하다. Vercel 프로덕션 배포 `dpl_DCeDjk9i1SfKsnkVbjTnviujWe5A`가 Ready 상태임을 확인했다.
+- 남은 작업: 없음.
+
+# 2026-10-10 캘린더 하단 기록 범례 추가
+
+- 요청 요약: 캘린더 하단에 `기록` 문구와 초록색 동그라미를 함께 표시하고 바로 재배포한다.
+- 분석·판단 이유: 날짜 칸의 초록 점만으로는 색상의 의미를 알기 어려워 하단 범례에 명시적인 설명이 필요했다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 캘린더 하단 범례의 첫 항목으로 초록 동그라미와 `기록` 문구를 항상 표시하고, 기존 다음 진료일·탈피·산란 범례를 이어서 표시했다.
+- 검증 결과: 다이어리 소스 ESLint, TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다. Vercel 프로덕션 배포 `dpl_DbeaaiYMLwe9rqRznoHQSAfSxyoC`가 Ready 상태임을 확인했다.
+- 남은 작업: 없음.
+
+# 2026-10-10 세부 종 자동완성과 나이 슬라이더
+
+- 요청 요약: 세부 종을 앞글자 자동완성 드롭다운과 직접 입력으로 통합하고 생년월일 대신 선택사항 나이 슬라이더를 제공한다.
+- 분석·판단 이유: 선택과 직접 입력을 두 필드로 나누면 입력 흐름이 끊기며, 정확한 생일을 모르는 특수동물은 날짜보다 대략적인 나이가 현실적인 정보다.
+- 수정 파일: `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 세부 종 입력 아래에 앞글자 일치 추천 목록을 표시하고 목록 밖의 값도 그대로 저장하도록 했다. 생년월일 UI를 제거하고 입력 안 함·1~99살·100살 이상을 선택하는 슬라이더와 현재 선택값을 표시했다.
+- 검증 결과: 대상 컴포넌트 ESLint, TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다. Vercel 프로덕션 배포 `dpl_F4XpYdA6b3t1Wmu1EPLXqLNpTS4W`가 Ready 상태임을 확인했다.
+- 남은 작업: 없음.
+
+# 2026-10-10 일괄 체크 선택 목록 제거
+
+- 요청 요약: 일괄 체크에서 루틴 선택지를 없애고 미완료 루틴을 전부 체크한다.
+- 분석·판단 이유: 일괄 작업 안에서 항목을 다시 선택하게 하면 기능명이 뜻하는 전체 처리와 실제 동작이 달라진다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 선택형 루틴 목록을 제거하고 미완료 개수와 전체 완료 버튼만 표시했다. 모든 현재 미완료 루틴을 완료 처리하고 체크 상태를 유지하도록 연결했다.
+- 검증 결과: 관련 다이어리 컴포넌트 ESLint, TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-10 Q&A 해결 완료 버튼 상태
+
+- 요청 요약: `해결하기` 버튼이 `해결 완료` 상태로 바뀌면 시각적 강조를 연하게 표시했다.
+- 분석·판단 이유: 해결 전 행동은 진한 기본 액션으로 강조하고, 완료 상태는 연한 민트로 낮춰 상태 변화가 즉시 구분되도록 했다.
+- 수정 파일: `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 기존 `resolved` 클래스를 활용해 연한 민트 배경, 민트 테두리와 진한 민트 글자색을 적용했다.
+- 검증 결과: TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-10 Q&A 답글 UI 제거
+
+- 요청 요약: Q&A 댓글의 답글 기능과 들여쓰기 표시를 제거했다.
+- 분석·판단 이유: 댓글 구조를 다시 단순한 1단 목록으로 유지하려는 최신 요청을 우선했다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 답글 버튼, 답글 작성 대상 안내, 들여쓰기·연결선 스타일을 제거하고 모든 댓글을 동일한 목록 행으로 표시한다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-10 Q&A 병원 첨부·채택 버튼 배치
+
+- 요청 요약: 댓글 입력부의 병원 첨부를 명확한 버튼으로 만들고, 채택 버튼을 댓글 프로필 행 우측으로 이동했다.
+- 분석·판단 이유: 병원 첨부가 텍스트처럼 보여 행동 요소임을 알아보기 어려웠고, 답글 제거 후 생긴 프로필 우측 공간에 채택을 두는 편이 댓글별 행동 관계가 명확하다.
+- 수정 파일: `src/components/qna/QnaScreen.tsx`, `src/components/qna/qna-flow.css`
+- 핵심 변경 내용: 병원 첨부에 연한 민트 배경과 테두리를 적용하고, 댓글 헤더 우측 액션 영역에 채택·채택 취소 버튼을 배치했다.
+- 검증 결과: 대상 파일 ESLint, TypeScript 빌드, Vite 프로덕션 빌드와 `git diff --check` 통과.
+- 남은 작업: 없음.
+# 2026-10-10 마이펫 루틴 0%·밀림 안내
+
+- 요청 요약: 루틴을 아직 진행하지 않은 펫도 `예정된 루틴이 없어요.` 대신 0% 진행도를 표시하고, 밀린 루틴은 진행률 아래에 빨간 안내를 표시한다.
+- 분석·판단 이유: 루틴이 등록된 상태와 루틴 자체가 없는 상태를 구분해야 사용자가 미진행 상태를 즉시 이해할 수 있으며, 기한이 지난 항목은 별도 경고가 필요하다.
+- 수정 파일: `src/components/my-pet/PetMobileFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 활성 루틴이 있으면 오늘 작업이 아직 없어도 원형 진행도와 `0%`를 표시하고, 지난 미완료 작업이 있으면 아래에 Error 토큰 색상의 `루틴이 밀렸어요!`를 추가했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-11 리뷰 수정 버튼 가시성 개선
+
+- 요청 요약: 리뷰 수정 버튼이 잘 보이게 하고 `후기` 표현을 `리뷰`로 변경한다.
+- 분석·판단 이유: 기존 수정 흐름은 마지막 단계에서만 저장 버튼이 나타나 태그만 바꾼 사용자가 저장 진입점을 찾기 어려웠다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/map-flow.css`, `src/components/hospital-map/MapScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 수정 모드에서는 모든 단계 하단에 `리뷰 수정 완료` 버튼을 노출한다. 하단 액션을 안전 영역을 포함한 고정형 푸터로 보강하고 버튼 높이, 상단 구분선과 그림자를 추가했다. 단계명과 제목의 `후기`를 `리뷰`로 통일했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 모바일에서 중간 단계의 이전·다음·수정 완료 세 버튼 폭을 확인한다.
+
+# 2026-10-11 다이어리 루틴·상황별 기록 탭 UI
+
+- 요청 요약: 다이어리의 루틴과 상황별 기록을 분리하고, 펫 선택과 캘린더는 유지하며 연도를 날짜 위에 표시한다.
+- 분석·판단 이유: 서로 목적이 다른 반복 관리와 사건 기록을 탭으로 나누면 메인 화면의 정보 밀도를 낮추면서 각 기능의 진입점을 더 명확히 구분할 수 있다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 2분할 탭, 2줄 날짜 표기, 상황별 기록 2열 선택 카드, 루틴 탭 전용 `+ 관리` 노출을 추가했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-10-11 다이어리 상단 탭 위치 조정
+
+- 요청 요약: 루틴·상황별 기록 탭을 가운데에서 빼고 캘린더·펫 선택 왼쪽에 배치하며 진료 항목을 제거한다.
+- 분석·판단 이유: 화면의 보기 전환은 상단 좌측, 공통 도구는 우측에 두어 역할을 분명히 하고 상황별 기록의 불필요한 진입 항목을 줄였다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 상단 헤더를 좌측 탭·우측 관리/캘린더/펫 도구 구조로 변경하고 상황별 기록 목록에서 진료 카드를 제외했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-10-11 다이어리 탭·NOTICE 크기 정리
+
+- 요청 요약: 상황별 기록 안내 문구를 제거하고 두 탭 버튼의 크기와 NOTICE 높이를 일정하게 맞춘다.
+- 분석·판단 이유: 반복 안내를 줄이고 동일 단계의 선택 요소와 알림 영역 크기를 통일해 화면이 흔들리지 않게 한다.
+- 수정 파일: `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 상황별 기록 보조 문구를 제거하고 탭을 같은 너비의 2열로 변경했다. NOTICE는 고정 높이와 제목 2줄 제한을 적용했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-10-11 다이어리 캘린더 마크 교체
+
+- 요청 요약: 다이어리 상단 캘린더 버튼을 첨부한 민트색 원형 캘린더 이미지로 교체한다.
+- 분석·판단 이유: 기존 선형 아이콘 대신 제공된 브랜드 마크를 사용하되, 원형 이미지에 테두리가 중복되거나 잘리지 않도록 버튼 배경과 내부 맞춤 방식을 조정했다.
+- 수정 파일: `public/assets/diary-calendar.png`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 첨부 이미지를 정적 자산으로 추가하고 캘린더 버튼의 SVG를 이미지로 교체했다. 이미지는 `object-fit: contain`으로 버튼 안에 온전히 표시한다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 없음.
+
+# 2026-10-12 루틴 추가 화면 재구성·아이콘 배경 정리
+
+- 요청 요약: 루틴 선택 아이콘의 흰 배경을 제거하고 루틴 추가 화면 전체를 더 보기 좋은 단계형 UI로 변경한다.
+- 분석·판단 이유: 기존 화면은 추천 항목과 반복 설정이 한 페이지에 이어져 길고 복잡했으며, 스프라이트의 흰 카드 배경이 선택 색상 위에 노출됐다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 루틴 추가를 3단계로 분리하고 2열 동일 크기 선택 카드, 진행 표시, 일정 카드, 최종 확인 요약을 추가했다. 아이콘에는 투명 혼합 표현을 적용해 흰 배경이 선택 카드 위에서 보이지 않게 했다.
+- 검증 결과: 대상 TSX ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다. 로컬 브라우저 연결은 실행 환경의 소켓 접근 제한으로 열리지 않아 로그인 상태의 실화면 확인은 진행하지 못했다.
+- 남은 작업: 배포 후 실제 모바일 화면에서 아이콘 배경과 2열 카드 간격을 확인한다.
+# 2026-10-11 리뷰 태그 유지 및 별점 입력 추가
+
+- 요청 요약: 기존 리뷰 태그는 유지하고 초기값 0인 별점 입력만 추가한다.
+- 분석·판단 이유: 기존 태그 경험은 유지하면서 1~5점 별점을 병원 비교와 평점순 정렬에 활용해야 하며, 기존 구현은 별점 UI 없이 모든 리뷰를 0점으로 저장하고 있었다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/mapDependencies.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 방문·진료·태그·리뷰 4단계와 태그 저장·요약·표시를 유지했다. 리뷰 단계에 0점에서 시작하는 5개 별 버튼과 현재 점수를 추가하고 리뷰 목록에도 저장된 별점을 표시한다.
+- 검증 결과: 대상 TSX/TS 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 모바일에서 별 버튼 크기와 간격을 확인한다.
+
+# 2026-10-11 병원 목록·상세 리뷰 별점 표시
+
+- 요청 요약: 병원 목록과 병원 정보 내부 리뷰에도 별점을 포함한다.
+- 분석·판단 이유: 별점 입력만 추가하면 병원 비교 단계에서 결과를 확인하기 어려우므로 목록, 상세 요약, 개별 리뷰에 동일한 앱 리뷰 별점 정보를 노출해야 한다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 병원 목록의 병원명 아래에 평균 별점과 리뷰 수를 추가했다. 병원 상세의 리뷰 제목 옆에는 평균 별점을 표시하고 개별 리뷰의 5개 별 표시는 유지했다.
+- 검증 결과: 대상 TSX/TS 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 별점이 없는 병원과 있는 병원의 목록 높이를 확인한다.
+# 2026-10-11 펫 정보 입력 모바일 압축
+
+- 요청 요약: 모바일에서 나이 선택까지 한눈에 보이게 하고 동물 분류 버튼 크기를 줄인다.
+- 분석·판단 이유: 분류 카드의 180px 높이와 큰 사진·간격이 필수 입력보다 많은 화면을 차지해 나이 입력이 첫 화면 아래로 밀리고 있었다.
+- 수정 파일: `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 모바일에서 사진을 68px로 줄이고 폼 간격과 입력 높이를 압축했다. 분류 카드는 이미지와 이름을 가로 정렬한 72px 카드로 줄였으며 성별과 나이 슬라이더도 가독성을 유지하는 범위에서 축소했다.
+- 검증 결과: Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-11 세부 종 자동완성 위쪽 표시
+
+- 요청 요약: 세부 종 자동완성 목록이 성별 선택을 가리지 않도록 위로 펼쳐지게 한다.
+- 분석·판단 이유: 입력창 아래에 표시되는 추천 목록이 바로 다음 필수 입력인 성별 버튼 위를 덮고 있었다.
+- 수정 파일: `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 자동완성 목록의 기준 위치를 입력창 하단이 아닌 상단으로 변경하고 기존 최대 높이와 내부 스크롤을 유지했다.
+- 검증 결과: Vite 프로덕션 빌드와 변경 파일 `git diff --check`를 통과했다.
+- 남은 작업: 없음.
+# 2026-10-12 온습도 NOTICE 단계 표시 보정
+
+- 요청 요약: 온도·습도 이상값을 기록했을 때 NOTICE에 경고 단계와 메시지가 나타나게 한다.
+- 분석·판단 이유: 같은 날 같은 측정 항목의 중복 정리 과정에서 오래된 기록이 남아 새 이상값이 화면 상태에서 사라졌고, 같은 우선순위의 다른 분석이 환경 경고보다 먼저 노출될 수 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 같은 날의 온도·습도 기록은 최신값을 유지하고 환경 경고를 같은 단계의 다른 분석보다 우선한다. NOTICE 배지에 `2단계`부터 `5단계`까지 실제 계산 단계를 표시한다.
+- 검증 결과: TypeScript, ESLint, 프로덕션 빌드로 확인한다.
+- 남은 작업: 실제 로그인 데이터에서 정상값 뒤 이상값을 같은 날 다시 저장하는 흐름을 확인한다.
+# 2026-10-13 Q&A 선택 기록만 표시
+
+- 요청 요약: Q&A 질문 상세의 기록 첨부 영역에서 사용자가 선택하지 않은 기록 종류를 `0`으로 표시하지 않고 직접 첨부한 종류만 보여준다.
+- 분석·판단 이유: 첨부 스냅샷은 이미 선택한 기록만 저장하지만 공용 시각화가 모든 지표 탭을 고정 렌더링해 선택하지 않은 종류까지 노출되고 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `src/components/qna/QnaParts.tsx`, `src/components/qna/QnaScreen.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 공용 기록 시각화에 빈 지표 숨김 옵션을 추가하고 Q&A 첨부 영역에만 적용했다. 한 건의 기록만 선택한 경우에도 첨부 시각화와 사진이 나타나게 했다.
+- 검증 결과: 관련 React 컴포넌트 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드, 변경 파일 `git diff --check`를 통과했다. Vercel 프로덕션 배포 `dpl_C4jv3TW6Lk48kDwdLdeGzGW2xrUg`가 Ready 상태임을 확인했다.
+- 남은 작업: 없음.
+
+# 2026-10-13 환경 위급 NOTICE 화면
+
+- 요청 요약: 환경 경고 3단계 이상은 기존 화면 문구를 제거하고 위급 제목, 병원 찾기와 Q&A 질문 버튼만 표시하며 단계별 색상을 적용한다.
+- 분석·판단 이유: 위급 단계에서 확인·나중에 중심의 일반 안내는 실제 후속 행동을 늦춘다. 병원 탐색을 1순위로 두고 질문을 보조 행동으로 제공하는 편이 단계의 의미와 일치한다.
+- 수정 파일: `src/index.css`, `src/App.tsx`, `src/features/diary/DiaryPage.tsx`, `src/features/diary/DiaryMobileScreen.tsx`, `src/features/diary/diary-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 3단계 주황·4단계 자홍·5단계 빨강 색상, 위급 상황 제목, 병원 찾기 기본 버튼과 Q&A 질문 보조 버튼을 적용했다. NOTICE 목록에도 단계 배지를 표시한다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 로그인 환경에서 각 단계별 색상과 병원 TOP 5 필터 연결을 확인한다.
+# 2026-10-13 일괄 체크 표시 복구
+
+- 요청 요약: 일괄 체크를 실행해도 오늘의 루틴에 체크 표시가 나타나지 않는 문제를 수정한다.
+- 분석·판단 이유: 화면이 작업 테이블의 상태만 보고 있었고, 일괄 완료와 밀린 항목 통합 과정에서 여러 번 실행된 재조회가 완료 직후 상태를 이전 값으로 덮을 수 있었다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 실제 완료 기록도 체크 표시의 근거로 사용하고, 일괄 체크에서는 후속 밀린 항목 정리를 기다린 뒤 마지막에 한 번만 작업 목록을 갱신한다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 계정의 밀린 루틴 여러 종류를 일괄 체크해 체크 유지와 새로고침 후 상태를 확인한다.
+# 2026-10-13 기존 기록 기반 루틴 체크
+
+- 요청 요약: 이미 기록된 루틴인데 체크 표시가 없는 문제를 수정한다.
+- 분석·판단 이유: 기존 화면은 작업 ID로 직접 연결된 완료 기록만 확인해, 상황별·수동 기록으로 먼저 저장한 같은 종류의 기록을 완료로 인식하지 못했다.
+- 수정 파일: `src/features/diary/DiaryPage.tsx`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 같은 펫과 선택 날짜의 실제 기록을 루틴 종류별로 대조해 완료 체크를 표시한다. 예정 상태 기록은 제외하고 온도·수온과 세부 청소 종류도 구분한다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 기존 기록 데이터의 메모 표현이 다른 사례가 있는지 확인한다.
+# 2026-10-13 리뷰 단계 버튼과 한국어 진료 선택지 정리
+
+- 요청 요약: 모든 리뷰 단계에서 하단 버튼을 더 위로 올리고 한 번에 버튼 하나만 보이게 하며, 병명과 처방 추천 항목을 MSD 자료 기반의 한국어 표기로 구성한다.
+- 분석·판단 이유: 고정 하단 내비게이션과 겹치는 행동 영역은 모바일에서 다음 단계 진행을 막고, 수정 모드의 다음·완료 버튼 동시 노출은 주 행동을 혼동시켰다. 영문 약품명과 영문 병명은 선택지의 일관성도 떨어뜨렸다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/features/hospital-map/hospitalConditionCatalog.ts`, `src/features/hospital-map/reviewTagOptions.ts`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 모바일 리뷰 행동 영역을 하단 내비게이션 높이만큼 위에 고정하고, 중간 단계에는 `다음`, 마지막 단계에는 완료 버튼만 표시한다. 병명과 처방 추천값은 한국어 질환·처치 분류로 교체하고 관련 태그의 영문 질환 약어도 한국어로 바꿨다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다.
+- 남은 작업: 실제 모바일 화면에서 소프트 키보드가 열린 상태의 버튼 위치를 확인한다.
+
+# 2026-10-13 리뷰 버튼 하단 내비게이션 겹침 재수정
+
+- 요청 요약: 배포 화면에서 리뷰 단계 버튼이 여전히 하단 내비게이션 뒤에 가려지는 문제를 바로잡는다.
+- 분석·판단 이유: 모바일용 `bottom` 보정이 뒤쪽의 기본 규칙에 덮였고, 리뷰 모달 자체가 하단 내비게이션 영역까지 차지해 끈적이 버튼도 그 뒤에 배치될 수 있었다.
+- 수정 파일: `src/components/hospital-map/map-flow.css`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 모바일 리뷰 모달 레이어의 아래 경계를 하단 내비게이션 상단으로 제한하고, 그 내부에서 행동 버튼을 바닥에 고정했다. 규칙 순서와 무관하게 버튼이 내비게이션과 겹치지 않는다.
+- 검증 결과: 대상 소스 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다. Vercel 프로덕션 배포 `EP7PXDjN2spTVCfYXAFsRz2gg2Ly`가 완료되어 `exopet-sage.vercel.app`에 연결됐다.
+- 남은 작업: 모바일 브라우저 캐시가 남아 있으면 새로고침 후 버튼 위치를 확인한다.
+
+# 2026-10-13 리뷰 스텝 한 화면 고정
+
+- 요청 요약: 리뷰 단계 표시가 화면과 함께 스크롤되지 않고 상단 단계, 입력 내용, 다음 버튼이 한 화면 안에 항상 보이게 한다.
+- 분석·판단 이유: 모달 전체가 스크롤되면 단계 위치와 다음 행동을 잃어버린다. 화면을 세 행으로 나누고 길이가 달라지는 입력 내용만 스크롤해야 한다.
+- 수정 파일: `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 모바일 리뷰 폼을 `단계 표시 / 입력 영역 / 행동 버튼` 그리드로 구성하고, 가운데 입력 영역에만 세로 스크롤을 허용했다. 모달 전체 스크롤과 버튼의 끈적이 위치 지정은 제거했다.
+- 검증 결과: 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 공백 검사를 통과했다. Vercel 프로덕션 배포 `dpl_7uZMo7p1w9KoSb7LsGmmDV272mrZ`가 Ready 상태이며 기본 도메인에 연결됐다.
+- 남은 작업: 모바일에서 키보드가 열린 상태의 가운데 입력 영역 높이를 확인한다.
+
+# 2026-10-13 리뷰 한 화면 밀도와 자동완성 입력
+
+- 요청 요약: 이전 버튼을 복구하고 진료비 주변의 과한 여백을 줄이며, 모든 리뷰 단계를 스크롤 없이 한 화면에 채운다. 병명과 처방은 자동완성 드롭다운으로 입력한다.
+- 분석·판단 이유: 선택창과 직접 입력창을 각각 두면 진료 단계 높이가 불필요하게 커진다. 자동완성 입력 하나로 통합하면 추천 선택과 직접 작성을 모두 유지하면서 한 화면 구성이 가능하다. 많은 태그는 두 분류 선택창과 선택된 태그 칩으로 압축해야 세로 스크롤을 없앨 수 있다.
+- 수정 파일: `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 병명·처방을 한국어 자동완성 입력으로 통합하고, 태그 목록을 분류별 선택창과 선택 결과 칩으로 변경했다. 모바일 여백·제목·별점·사진 영역을 압축하고 이전 버튼을 복구했으며 내부 스크롤을 제거했다.
+- 검증 결과: 대상 컴포넌트 ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 공백 검사를 통과했다. Vercel 프로덕션 배포 `dpl_Dx82B1cxTDNKHHgHUM4PjHshbfGz`가 Ready 상태이며 기본 도메인에 연결됐다.
+- 남은 작업: 모바일 키보드가 열린 상태의 자동완성 목록 위치를 확인한다.
+
+# 2026-10-14 리뷰 방문 단계 빈 공간 제거
+
+- 요청 요약: 리뷰 방문 단계에서 `방문 정보`와 반려동물 선택 사이에 생기는 큰 빈 공간을 제거한다.
+- 분석·판단 이유: 한 화면 그리드의 가운데 행이 남은 높이를 채우면서 내부 그리드 행도 자동으로 늘어나 제목과 입력 섹션 사이에 공간이 분배되고 있었다.
+- 수정 파일: `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 현재 단계 콘텐츠의 세로 정렬을 시작점으로 고정해 제목과 입력 필드가 위에서부터 기존 간격만큼만 이어지게 했다. 하단 다음 버튼의 화면 하단 배치는 유지한다.
+- 검증 결과: 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 공백 검사를 통과했다. Vercel 프로덕션 배포 `dpl_5edKsR67w769YpJeC4ia29nuYWD7`가 Ready 상태이며 기본 도메인에 연결됐다.
+- 남은 작업: 없음.
+
+# 2026-10-15 프로필 활동 목록 제목과 화살표 통일
+
+- 요청 요약: 프로필 목록에는 제목과 오른쪽 화살표 하나만 표시하고 다른 목록도 동일하게 정리하며 더보기(…)를 제거한다.
+- 분석·판단 이유: 공통 목록 형식을 적용하면 작성한 글·좋아요·채택 답변 간 탐색 방식이 같아진다. 부가 정보와 관리 메뉴를 실제 렌더링에서 제거하고 기존 행 이동 기능은 유지했다.
+- 수정 파일: `src/components/profile/ProfileScreen.tsx`, `src/components/profile/profile-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 제목과 장식용 SVG 화살표를 하나의 버튼에 배치했다. 날짜·본문·통계·상태·더보기 메뉴를 제거했다. 임시저장과 리뷰에도 같은 형식을 적용했다. 긴 제목은 말줄임표 없이 줄바꿈하고 공통 색상·radius 토큰 및 키보드 포커스를 적용했다.
+- 검증 결과: TypeScript 검사, Vite 프로덕션 빌드와 대상 TSX ESLint를 통과했다. 실제 브라우저 화면 검증은 수행하지 않았다.
+- 남은 작업: 운영 재배포 및 실제 계정의 목록 화면 확인.

@@ -51,6 +51,15 @@ function sanitizeDecimal(value: string) {
   return decimal.length ? `${integer.slice(0, 5)}.${decimal.join('').slice(0, 2)}` : integer.slice(0, 5)
 }
 
+function parsePetAge(value?: string) {
+  const age = Number.parseInt(value?.replace(/[^0-9]/g, '') ?? '', 10)
+  return Number.isFinite(age) ? Math.min(100, Math.max(0, age)) : 0
+}
+
+function normalizeSpeciesSearch(value: string) {
+  return value.trim().toLocaleLowerCase('ko-KR')
+}
+
 export default function PetCreateFlow({ userId, initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave, onDelete }: Props) {
   const initialGroup = isSupported(initialPet?.group) ? initialPet.group : ''
   const [step, setStep] = useState(initialPet || initialDraft ? 1 : 0)
@@ -62,16 +71,15 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
   const [completedPet, setCompletedPet] = useState<Pet | null>(null)
   const [name, setName] = useState(initialPet?.name ?? '')
   const [group, setGroup] = useState<SupportedPetCategory | ''>(initialGroup)
-  const knownInitialSpecies = initialGroup && speciesOptions[initialGroup].includes(initialPet?.species ?? '')
-  const [species, setSpecies] = useState(knownInitialSpecies ? initialPet?.species ?? '' : '')
-  const [customSpecies, setCustomSpecies] = useState(knownInitialSpecies ? '' : initialPet?.species ?? '')
-  const [customSpeciesMode, setCustomSpeciesMode] = useState(Boolean(initialPet?.species && !knownInitialSpecies))
+  const [speciesQuery, setSpeciesQuery] = useState(initialPet?.species ?? '')
+  const [speciesSuggestionsOpen, setSpeciesSuggestionsOpen] = useState(false)
+  const [activeSpeciesIndex, setActiveSpeciesIndex] = useState(-1)
   const [gender, setGender] = useState<Pet['gender'] | ''>(initialPet?.gender ?? '')
   const [photo, setPhoto] = useState(initialPet?.photo)
   const [photoFile, setPhotoFile] = useState<File>()
   const [photoPosition, setPhotoPosition] = useState(initialPet?.photoPosition ?? defaultPosition)
   const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null)
-  const [birthday, setBirthday] = useState(initialPet?.birthday ?? '')
+  const [age, setAge] = useState(() => parsePetAge(initialPet?.ageText))
   const [adoptionDate, setAdoptionDate] = useState(initialPet?.adoptionDate ?? '')
   const [description, setDescription] = useState(initialPet?.description ?? '')
   const [memo, setMemo] = useState(initialPet?.memo ?? '')
@@ -80,7 +88,13 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
   const [saveError, setSaveError] = useState('')
   const appliedUrlRef = useRef('')
   const pendingUrlRef = useRef('')
-  const resolvedSpecies = (species || customSpecies).trim().slice(0, 40)
+  const resolvedSpecies = speciesQuery.trim().slice(0, 40)
+  const normalizedSpeciesQuery = normalizeSpeciesSearch(speciesQuery)
+  const speciesSuggestions = group && normalizedSpeciesQuery
+    ? speciesOptions[group]
+      .filter((item) => item !== '직접 입력' && normalizeSpeciesSearch(item).startsWith(normalizedSpeciesQuery))
+      .slice(0, 8)
+    : []
   const canContinue = name.trim().length > 0 && Boolean(group) && resolvedSpecies.length > 0 && Boolean(gender)
 
   useEffect(() => () => {
@@ -143,7 +157,7 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
 
   const buildPet = (): Pet => ({
     ...initialPet, id: petId, name: name.trim().slice(0, 24), group: group || 'reptile', species: resolvedSpecies,
-    gender: gender || 'unknown', photo, photoPosition, birthday: birthday || undefined, adoptionDate: adoptionDate || undefined,
+    gender: gender || 'unknown', photo, photoPosition, ageText: age > 0 ? String(age) : undefined, adoptionDate: adoptionDate || undefined,
     description: description.trim().slice(0, 80) || undefined, memo: memo.trim().slice(0, 300) || undefined,
     weight: weight || undefined, weightUnit, registeredAt: initialPet?.registeredAt ?? new Date().toISOString(),
   })
@@ -151,9 +165,15 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
   const selectGroup = (nextGroup: SupportedPetCategory) => {
     if (group === nextGroup) return
     setGroup(nextGroup)
-    setSpecies('')
-    setCustomSpecies('')
-    setCustomSpeciesMode(false)
+    setSpeciesQuery('')
+    setSpeciesSuggestionsOpen(false)
+    setActiveSpeciesIndex(-1)
+  }
+
+  const selectSpecies = (value: string) => {
+    setSpeciesQuery(value)
+    setSpeciesSuggestionsOpen(false)
+    setActiveSpeciesIndex(-1)
   }
 
   const save = async () => {
@@ -207,10 +227,9 @@ export default function PetCreateFlow({ userId, initialPet, initialDraft, catego
           <div className="pet-flow-fields">
             <label className="pet-flow-field"><span>이름 <RequiredMark/></span><input value={name} maxLength={24} onChange={(event) => setName(event.target.value)} placeholder="예) 청단이" required/></label>
             <fieldset className="pet-flow-category"><legend>동물 분류 <RequiredMark/></legend><div>{categories.map((category) => <button className={group === category ? 'active' : ''} type="button" key={category} aria-pressed={group === category} onClick={() => selectGroup(category)}><img className="pet-flow-category-illustration" src={categoryIllustrations[category]} alt=""/><strong>{categoryLabels[category]}</strong>{group === category ? <span className="pet-flow-category-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span> : null}</button>)}</div></fieldset>
-            <label className="pet-flow-field"><span>세부 종명 <RequiredMark/></span><select value={customSpeciesMode ? 'custom' : species} disabled={!group} onChange={(event) => { if (event.target.value === 'custom') { setCustomSpeciesMode(true); setSpecies(''); setCustomSpecies(''); return } setSpecies(event.target.value); setCustomSpecies(''); setCustomSpeciesMode(false) }} required><option value="">{group ? '세부 종을 선택해주세요' : '동물 분류를 먼저 선택해주세요'}</option>{group ? speciesOptions[group].filter((item) => item !== '직접 입력').map((item) => <option value={item} key={item}>{item}</option>) : null}<option value="custom" disabled={!group}>목록에 없어요 · 직접 입력</option></select></label>
-            {customSpeciesMode ? <label className="pet-flow-field"><span>종 직접 입력 <RequiredMark/></span><input value={customSpecies} maxLength={40} onChange={(event) => setCustomSpecies(event.target.value)} placeholder="세부 종명을 입력해주세요" required/></label> : null}
+            <div className="pet-flow-field"><label htmlFor="pet-species-input">세부 종명 <RequiredMark/></label><div className="pet-flow-species-combobox" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) { setSpeciesSuggestionsOpen(false); setActiveSpeciesIndex(-1) } }}><input id="pet-species-input" role="combobox" aria-autocomplete="list" aria-expanded={speciesSuggestionsOpen && speciesSuggestions.length > 0} aria-controls="pet-species-suggestions" aria-activedescendant={activeSpeciesIndex >= 0 ? `pet-species-option-${activeSpeciesIndex}` : undefined} value={speciesQuery} maxLength={40} disabled={!group} placeholder={group ? '종명의 앞글자를 입력해주세요' : '동물 분류를 먼저 선택해주세요'} onFocus={() => setSpeciesSuggestionsOpen(true)} onChange={(event) => { setSpeciesQuery(event.target.value); setSpeciesSuggestionsOpen(true); setActiveSpeciesIndex(-1) }} onKeyDown={(event) => { if (event.key === 'ArrowDown' && speciesSuggestions.length) { event.preventDefault(); setSpeciesSuggestionsOpen(true); setActiveSpeciesIndex((current) => Math.min(current + 1, speciesSuggestions.length - 1)) } else if (event.key === 'ArrowUp' && speciesSuggestions.length) { event.preventDefault(); setActiveSpeciesIndex((current) => Math.max(0, current - 1)) } else if (event.key === 'Enter' && activeSpeciesIndex >= 0) { event.preventDefault(); selectSpecies(speciesSuggestions[activeSpeciesIndex]) } else if (event.key === 'Escape') { setSpeciesSuggestionsOpen(false); setActiveSpeciesIndex(-1) } }} required/>{speciesSuggestionsOpen && speciesSuggestions.length > 0 ? <div id="pet-species-suggestions" className="pet-flow-species-suggestions" role="listbox" aria-label="세부 종명 추천">{speciesSuggestions.map((item, index) => <button id={`pet-species-option-${index}`} type="button" role="option" aria-selected={activeSpeciesIndex === index} className={activeSpeciesIndex === index ? 'active' : ''} key={item} onMouseDown={(event) => event.preventDefault()} onClick={() => selectSpecies(item)}>{item}</button>)}</div> : null}</div><small>목록에 없어도 입력한 종명 그대로 저장돼요.</small></div>
             <fieldset className="pet-flow-gender"><legend>성별 <RequiredMark/></legend><div>{(['male', 'female', 'unknown'] as const).map((value) => <button className={gender === value ? 'active' : ''} type="button" key={value} aria-pressed={gender === value} onClick={() => setGender(value)}><PetIcon name={value === 'male' ? 'male' : value === 'female' ? 'female' : 'unknown'}/>{value === 'male' ? '수컷' : value === 'female' ? '암컷' : '미구분'}</button>)}</div></fieldset>
-            <label className="pet-flow-field"><span>생년월일</span><input type="date" value={birthday} max={new Intl.DateTimeFormat('en-CA').format(new Date())} onChange={(event) => setBirthday(event.target.value)}/></label>
+            <label className="pet-flow-field pet-flow-age-field"><span>나이 (선택)<output>{age > 0 ? age >= 100 ? '100살 이상' : `${age}살` : '입력 안 함'}</output></span><input type="range" min="0" max="100" step="1" value={age} onChange={(event) => setAge(Number(event.target.value))}/><small><span>입력 안 함</span><span>100살 이상</span></small></label>
             <details className="pet-flow-extra"><summary>추가 정보 (선택)</summary><div>
               <label className="pet-flow-field"><span>현재 몸무게</span><span className="pet-flow-weight"><input inputMode="decimal" value={weight} aria-label="현재 몸무게" onChange={(event) => setWeight(sanitizeDecimal(event.target.value))} placeholder="숫자 입력"/><span>{(['g', 'kg'] as const).map((unit) => <button className={weightUnit === unit ? 'active' : ''} aria-pressed={weightUnit === unit} type="button" key={unit} onClick={() => setWeightUnit(unit)}>{unit}</button>)}</span></span></label>
               <label className="pet-flow-field"><span>입양일</span><input type="date" value={adoptionDate} onChange={(event) => setAdoptionDate(event.target.value)}/></label>

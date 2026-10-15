@@ -10,6 +10,7 @@ import { cancelRoutineNotificationJobs, getFirstRoutineDate, markRoutineNotifica
 import { customFoodOptionKey, fallbackSpeciesCareProfiles, findSpeciesCareProfile, listSpeciesCareProfiles, type CareEnvironmentProfile, type CareFoodOption, type SpeciesCareProfile } from './speciesCareProfiles'
 import { toDateKey } from './mockDiaryData'
 import type { HospitalRecommendationConcern, HospitalReview, HospitalSnapshot } from '../../types/app'
+import type { HospitalConditionId } from '../hospital-map/hospitalConditionCatalog'
 import NotificationOptInNudge from '../../components/notifications/NotificationOptInNudge'
 import { OptionalBadge } from '../../components/common/FieldMarkers'
 import { sanitizeImageFile } from '../../lib/imageStorage'
@@ -54,6 +55,8 @@ type DiaryInsight = {
   poopFollowUpStage?: 1 | 2 | 3
   poopStatus?: StoolStatus
   poopRecovered?: boolean
+  environmentRiskLevel?: RiskLevel
+  hospitalConcern?: HospitalConditionId
 }
 type PoopFollowUp = {
   record: PetRecord
@@ -513,7 +516,9 @@ function getEnvironmentProfileKey(pet: DiaryPet, speciesProfiles: SpeciesCarePro
 
 function getEnvironmentProfile(pet: DiaryPet, speciesProfiles: SpeciesCareProfile[] = fallbackSpeciesCareProfiles) {
   const speciesProfile = findSpeciesCareProfile(pet.species, speciesProfiles)
-  if (speciesProfile) return speciesProfile.environmentProfile
+  if (speciesProfile?.environmentProfile) return speciesProfile.environmentProfile
+  const fallbackProfile = findSpeciesCareProfile(pet.species, fallbackSpeciesCareProfiles)
+  if (fallbackProfile?.environmentProfile) return fallbackProfile.environmentProfile
   const key = getEnvironmentProfileKey(pet, speciesProfiles)
   return key ? ENVIRONMENT_PROFILES[key] ?? null : null
 }
@@ -547,7 +552,6 @@ export default function DiaryPage({
   userId,
   pets,
   hospitals = [],
-  hospitalReviews = {},
   initialPetId,
   initialAction,
   onInitialActionHandled,
@@ -568,7 +572,7 @@ export default function DiaryPage({
   hospitals?: HospitalSnapshot[]
   hospitalReviews?: Record<string, HospitalReview[]>
   initialPetId?: string
-  initialAction?: 'routine-create' | null
+  initialAction?: 'main' | 'routine-create' | null
   onInitialActionHandled?: () => void
   returnToPets?: boolean
   onReturnToPets?: () => void
@@ -576,7 +580,7 @@ export default function DiaryPage({
   readOnly?: boolean
   onAddPet: () => void
   onCreateQna?: (petId: string, preset?: { category: '질병'; title: string }) => void
-  onFindHospital?: (petId: string, concern?: HospitalRecommendationConcern) => void
+  onFindHospital?: (petId: string, concern?: HospitalRecommendationConcern | HospitalConditionId) => void
   onCreateClinicReview?: (hospital: HospitalSnapshot, review: HospitalReview) => void
   onInitialClinicHospitalHandled?: () => void
   initialDraft?: DiaryDraftItem | null
@@ -666,7 +670,7 @@ export default function DiaryPage({
       return date
     })
     const scheduledCareRecords: PetRecord[] = activeReminders
-      .filter((reminder) => reminder.petId === effectivePetId && (reminder.reminderType === 'hospital' || reminder.reminderType === 'medicine'))
+      .filter((reminder) => reminder.petId === effectivePetId && reminder.reminderType === 'medicine')
       .flatMap((reminder) => {
         const scheduledDates = reminder.scheduleType === 'once'
           ? [reminder.startDate || reminder.reminderDate].filter((date): date is string => Boolean(date))
@@ -675,53 +679,51 @@ export default function DiaryPage({
           id: `scheduled-${reminder.reminderType}-${reminder.id}-${scheduledDate}`,
           userId,
           petId: reminder.petId,
-          type: reminder.reminderType === 'hospital' ? 'hospital' as const : 'other' as const,
+          type: 'other' as const,
           date: scheduledDate,
-          memo: reminder.reminderType === 'hospital' ? '진료 예정' : '약 예정',
+          memo: '약 예정',
           scheduledFor: scheduledDate,
           createdAt: reminder.createdAt,
         }))
       })
-    const reviewVisitRecords: PetRecord[] = Object.values(hospitalReviews)
-      .flat()
-      .flatMap((review) => {
-        const nextVisitDate = review.nextVisitDate
-        if (review.petId !== effectivePetId || !nextVisitDate || nextVisitDate <= today) return []
-        return [{
-          id: `scheduled-review-hospital-${review.id}-${nextVisitDate}`,
-          userId,
-          petId: effectivePetId,
-          type: 'hospital' as const,
-          date: nextVisitDate,
-          memo: '진료 예정',
-          hospitalId: review.hospitalId,
-          reviewId: review.id,
-          clinicDetails: {
-            hospitalName: review.hospitalName ?? review.hospitalSnapshot?.name ?? '병원',
-            visitDate: nextVisitDate,
-          },
-          scheduledFor: nextVisitDate,
-          createdAt: review.createdAt,
-        }]
-      })
-    const futurePlans = [...scheduledCareRecords, ...reviewVisitRecords].filter((record, index, items) => (
+    const futurePlans = scheduledCareRecords.filter((record, index, items) => (
       index === items.findIndex((candidate) => candidate.petId === record.petId && candidate.date === record.date && candidate.type === record.type)
     ))
     return [...displayPetRecords.filter((record) => record.date <= today), ...futurePlans]
-  }, [activeReminders, displayPetRecords, effectivePetId, hospitalReviews, today, userId, visibleMonth])
+  }, [activeReminders, displayPetRecords, effectivePetId, today, userId, visibleMonth])
 
   useEffect(() => {
-    if (initialAction !== 'routine-create' || !effectivePetId) return
+    if (!initialAction || !effectivePetId) return
     let active = true
     queueMicrotask(() => {
       if (!active) return
+      if (initialAction === 'main') {
+        setSelectedDate(today)
+        setMobileView('plan')
+        setDateDetailsOpen(false)
+        setMobileRecordMenuOpen(false)
+        setVisualizationOpen(false)
+        setSelectedRecordId(null)
+        setCreateType(null)
+        setReminderFormOpen(false)
+        setRoutineManagerOpen(false)
+        setRoutineEditQueue([])
+        setEditingReminder(null)
+        setRoutinePresetType(null)
+        setPetWarningOpen(false)
+        setPetMenuOpen(false)
+        setSmartSheet(null)
+        setClinicEditorOpen(false)
+        onInitialActionHandled?.()
+        return
+      }
       setEditingReminder(null)
       setRoutinePresetType(null)
       setRoutineManagerOpen(true)
       onInitialActionHandled?.()
     })
     return () => { active = false }
-  }, [effectivePetId, initialAction, onInitialActionHandled])
+  }, [effectivePetId, initialAction, onInitialActionHandled, today])
   const recentFoods = Array.from(new Set(petRecords.flatMap((record) => record.type === 'food' ? record.foods ?? [] : []))).slice(0, 3)
   const matingPetCandidates = selectedPet ? pets.filter((pet) => sameSpecies(pet, selectedPet)) : []
   const matingOptions = useMemo(() => getMatingOptions(records, pets, selectedPet), [pets, records, selectedPet])
@@ -804,7 +806,9 @@ export default function DiaryPage({
     label: planLabel(item.reminder, selectedPet),
     time: item.reminder.reminderTime,
     icon: routineGlyphs[item.reminder.reminderType],
-    completed: item.dailyTask ? item.dailyTask.status === 'completed' : item.reminder.completedAt?.slice(0, 10) === selectedDate,
+    completed: item.dailyTask?.status === 'completed'
+      || item.reminder.completedAt?.slice(0, 10) === selectedDate
+      || records.some((record) => recordCompletesRoutine(record, item.reminder, item.dailyTask, selectedDate, selectedPet, speciesCareProfiles)),
     disabled: readOnly || selectedDate !== today,
     overdue: item.overdue,
     overdueDays: item.overdue ? Math.max(1, daysBetween(item.dailyTask?.scheduledDate ?? ('overdueDate' in item && typeof item.overdueDate === 'string' ? item.overdueDate : selectedDate), today)) : undefined,
@@ -830,10 +834,14 @@ export default function DiaryPage({
   const hasActiveWaterRoutine = petCarePlans.some((reminder) => reminder.isActive && reminder.reminderType === 'water')
   const hasTodayEnvironmentRecord = petRecords.some((record) => record.date === today && Boolean(record.environmentRecord))
   const mobileAlert: MobileDiaryAlert | undefined = mobileInsight && !(mobileInsight.poopRecovered && !hasTemporaryPoopRoutine) ? {
+    id: mobileInsight.id,
     severity: mobileInsight.poopRecovered ? 'complete' : mobileInsight.level === 'urgent' ? 'critical' : mobileInsight.level === 'caution' ? 'warning' : mobileInsight.level === 'notice' ? 'caution' : 'info',
-    badge: mobileInsight.poopRecovered ? '완료' : mobileInsight.level === 'urgent' ? '심각' : mobileInsight.level === 'caution' ? '경고' : mobileInsight.level === 'notice' ? '주의' : '정보',
+    badge: mobileInsight.environmentRiskLevel
+      ? `${mobileInsight.environmentRiskLevel}단계`
+      : mobileInsight.poopRecovered ? '완료' : mobileInsight.level === 'urgent' ? '심각' : mobileInsight.level === 'caution' ? '경고' : mobileInsight.level === 'notice' ? '주의' : '정보',
     title: mobileInsight.title,
     body: mobileInsight.body,
+    environmentRiskLevel: mobileInsight.environmentRiskLevel,
     actions: mobileInsight.poopRecovered ? [
       { label: '유지하기', onClick: () => { resolveDiaryInsight(mobileInsight.id); showSmartToast('임시 루틴을 유지합니다.') } },
       { label: '종료하기', onClick: () => { closeTemporaryPoopRoutines(); resolveDiaryInsight(mobileInsight.id) } },
@@ -842,8 +850,8 @@ export default function DiaryPage({
     ] : buildMobileDiaryAlertActions({
       insight: mobileInsight,
       onOpenRecords: () => setVisualizationOpen(true),
-      onCreateQna: selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id, mobileInsight.metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : mobileInsight.metric === 'poop' ? { category: '질병', title: '배변 관련 질문' } : undefined) : undefined,
-      onFindHospital: selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id, mobileInsight.metric === 'poop' ? 'poop' : mobileInsight.metric === 'shed' ? 'shed' : undefined) : undefined,
+      onCreateQna: selectedPet && onCreateQna ? () => onCreateQna(selectedPet.id, mobileInsight.metric === 'shed' ? { category: '질병', title: '탈피 관련 질문' } : mobileInsight.metric === 'poop' ? { category: '질병', title: '배변 관련 질문' } : mobileInsight.metric === 'environment' ? { category: '질병', title: `${mobileInsight.title.replace(' 위급한 상황입니다.', '')} 관련 질문` } : undefined) : undefined,
+      onFindHospital: selectedPet && onFindHospital ? () => onFindHospital(selectedPet.id, mobileInsight.hospitalConcern ?? (mobileInsight.metric === 'poop' ? 'poop' : mobileInsight.metric === 'shed' ? 'shed' : undefined)) : undefined,
       onShedComplete: () => saveShedCheckRecord('탈피 완료'),
       onShedNotYet: () => saveShedCheckRecord('탈피 확인 · 완료 안됨'),
       hasTodayEnvironmentRecord,
@@ -859,6 +867,7 @@ export default function DiaryPage({
   } : undefined
   const overdueRoutine = mobileRoutines.find((routine) => !routine.completed && (routine.overdue || Boolean(routine.time && routine.time < new Date().toTimeString().slice(0, 5))))
   const routineDueAlert: MobileDiaryAlert | undefined = !readOnly && selectedDate === today && overdueRoutine ? {
+    id: `routine-due-${overdueRoutine.id}-${today}`,
     severity: 'warning', badge: '루틴', title: overdueRoutine.label + ' 확인 시간이 지났어요.', body: '아직 ' + overdueRoutine.label + ' 루틴이 완료되지 않았어요.',
     actions: [{ label: '확인하기', onClick: () => { const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === overdueRoutine.id); if (item) void completePlan(item.reminder, item.dailyTask) } }],
   } : undefined
@@ -1045,7 +1054,7 @@ export default function DiaryPage({
     }
   }
 
-  const consolidateOverdueTasksAfterCompletion = (dailyTask: DailyTask) => {
+  const consolidateOverdueTasksAfterCompletion = async (dailyTask: DailyTask, refreshAfter = true) => {
     if (dailyTask.scheduledDate >= today) return
     const supersededIds = new Set(dailyTasks
       .filter((task) => task.id !== dailyTask.id
@@ -1058,9 +1067,13 @@ export default function DiaryPage({
       if (supersededIds.has(item.id)) return { ...item, status: 'skipped', skipReason: 'overdue_consolidated' }
       return item
     }))
-    void settleSupersededOverdueTasks(String(userId), dailyTask, today)
-      .catch((error) => console.error('Overdue routine consolidation failed; completed record was kept.', error))
-      .finally(() => refreshDailyTasks())
+    try {
+      await settleSupersededOverdueTasks(String(userId), dailyTask, today)
+    } catch (error) {
+      console.error('Overdue routine consolidation failed; completed record was kept.', error)
+    } finally {
+      if (refreshAfter) await refreshDailyTasks()
+    }
   }
 
   const openSmartAdd = (kind: SmartAddKind) => {
@@ -1174,7 +1187,7 @@ export default function DiaryPage({
         diagnosis: draft.diagnosis?.trim(),
         treatment: draft.treatment?.trim(),
         reviewBody: undefined,
-        nextVisit: draft.nextVisit,
+        nextVisit: undefined,
         medicine: draft.medicine ? { ...draft.medicine, ocrRaw: undefined } : undefined,
       })
       const record: PetRecord = {
@@ -1195,29 +1208,7 @@ export default function DiaryPage({
         createdAt: new Date().toISOString(),
       }
       setRecords((current) => [record, ...current.filter((item) => item.id !== record.id)])
-      setReminders((current) => {
-        const withoutClinicPlan = current.filter((item) => item.id !== draft.id)
-        if (!draft.nextVisit) return withoutClinicPlan
-        return [...withoutClinicPlan, {
-          id: draft.id,
-          userId,
-          petId: selectedPet.id,
-          title: '다음 진료',
-          reminderType: 'hospital',
-          scheduleType: 'repeat',
-          weekdays: [parseDateKey(draft.nextVisit.date).getDay()],
-          recurrenceType: 'weekdays',
-          recurrenceIntervalDays: 1,
-          startDate: draft.nextVisit.date,
-          endDate: draft.nextVisit.date,
-          reminderDate: draft.nextVisit.date,
-          reminderTime: draft.nextVisit.time,
-          memo: '',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }]
-      })
+      setReminders((current) => current.filter((item) => item.id !== draft.id))
       void refreshDailyTasks()
       setSelectedDate(draft.visitDate)
       setVisibleMonth(new Date(`${draft.visitDate}T00:00:00`))
@@ -1439,6 +1430,31 @@ export default function DiaryPage({
     saveRecordList([record, ...records])
     markReminderCompleted(reminder)
     showSmartToast(`${label} 완료 기록이 저장되었습니다`)
+  }
+
+  const completePlanFromBulkCheck = async (reminder: Reminder, dailyTask?: DailyTask) => {
+    if (!selectedPet) return false
+    if (!dailyTask || !usingCarePlans) {
+      if (reminderMeta[reminder.reminderType].inputType !== 'check') return false
+      await completePlan(reminder, dailyTask)
+      return true
+    }
+    if (dailyTask.status === 'completed' || completingTaskIds.current.has(dailyTask.id)) return false
+    completingTaskIds.current.add(dailyTask.id)
+    const completedAt = new Date().toISOString()
+    try {
+      const storedRecord = await completeDailyTask(dailyTask.id)
+      setRecords((items) => [storedRecord, ...items.filter((item) => item.dailyTaskId !== dailyTask.id)])
+      setDailyTasks((items) => items.map((item) => item.id === dailyTask.id ? { ...item, status: 'completed', completedAt } : item))
+      await consolidateOverdueTasksAfterCompletion(dailyTask, false)
+      void markNotificationJobCompletedForTask(dailyTask)
+      return true
+    } catch (error) {
+      console.error('Bulk daily task completion failed.', error)
+      return false
+    } finally {
+      completingTaskIds.current.delete(dailyTask.id)
+    }
   }
 
   const completeFeedingPlan = async () => {
@@ -1887,10 +1903,13 @@ export default function DiaryPage({
           onAddRoutine={openReminderCreate}
           onManageRoutines={() => setRoutineManagerOpen(true)}
           onBulkCheckRoutines={async (ids) => {
+            let completed = 0
             for (const id of ids) {
               const item = planReminders.find((candidate) => (candidate.dailyTask?.id ?? candidate.reminder.id) === id)
-              if (item && reminderMeta[item.reminder.reminderType].inputType === 'check') await completePlan(item.reminder, item.dailyTask)
+              if (item && await completePlanFromBulkCheck(item.reminder, item.dailyTask)) completed += 1
             }
+            await refreshDailyTasks()
+            showSmartToast(completed === ids.length ? `${completed}개 루틴을 모두 완료했어요.` : `${completed}개 루틴을 완료했어요. 일부는 다시 확인해주세요.`)
           }}
           recordMenuOpen={mobileRecordMenuOpen}
           onRecordMenuChange={setMobileRecordMenuOpen}
@@ -2256,6 +2275,45 @@ function planLabel(reminder: Reminder, pet?: DiaryPet, speciesProfiles: SpeciesC
   return reminderMeta[reminder.reminderType]?.label ?? reminder.title ?? '관리'
 }
 
+function recordCompletesRoutine(
+  record: PetRecord,
+  reminder: Reminder,
+  dailyTask: DailyTask | undefined,
+  selectedDate: string,
+  pet?: DiaryPet,
+  speciesProfiles: SpeciesCareProfile[] = fallbackSpeciesCareProfiles,
+) {
+  if (record.petId !== reminder.petId) return false
+  if (dailyTask && record.dailyTaskId === dailyTask.id) return true
+  if (record.date !== selectedDate) return false
+
+  const label = planLabel(reminder, pet, speciesProfiles)
+  const memo = record.memo?.trim() ?? ''
+  if (memo === label || memo.includes(label)) return true
+
+  switch (reminder.reminderType) {
+    case 'feed': return record.type === 'food'
+    case 'mist': return memo.includes('분무')
+    case 'water': return memo.includes('물그릇') || memo.includes('급수')
+    case 'temperature': return record.environmentRecord?.metricType === 'temperature' && record.environmentRecord.measurementType !== 'water'
+    case 'water_temperature': return record.environmentRecord?.metricType === 'temperature' && record.environmentRecord.measurementType === 'water'
+    case 'humidity': return record.environmentRecord?.metricType === 'humidity'
+    case 'weight': return record.type === 'weight' && record.weight !== undefined
+    case 'cleaning': return record.type === 'cleaning'
+    case 'partial_cleaning': return record.type === 'cleaning' && memo.includes('부분')
+    case 'full_cleaning': return record.type === 'cleaning' && (memo.includes('전체') || memo === '청소')
+    case 'substrate_change': return record.type === 'cleaning' && memo.includes('바닥재')
+    case 'structure_cleaning': return record.type === 'cleaning' && memo.includes('구조물')
+    case 'wall_wipe': return record.type === 'cleaning' && memo.includes('벽')
+    case 'uvb_check': return memo.toLocaleLowerCase('ko-KR').includes('uvb')
+    case 'water_quality': return memo.includes('수질')
+    case 'filter_check': return memo.includes('여과기')
+    case 'medicine': return memo.includes('약') || memo.includes('투약')
+    case 'hospital': return record.type === 'hospital'
+    case 'custom': return memo === reminder.title
+  }
+}
+
 function routineOptionLabel(type: ReminderType, pet?: DiaryPet, speciesProfiles: SpeciesCareProfile[] = fallbackSpeciesCareProfiles) {
   if (type === 'water_temperature') return '수온 확인'
   if (type === 'temperature' && pet) {
@@ -2300,7 +2358,6 @@ function ClinicRecordEditor({
   const canSave = Boolean(
     draft.visitDate
     && draft.treatment?.trim()
-    && (!draft.nextVisit || draft.nextVisit.date)
     && (!draft.medicine?.name || (draft.medicine.startDate && draft.medicine.endDate && draft.medicine.dailyCount >= 1))
   )
 
@@ -2321,19 +2378,6 @@ function ClinicRecordEditor({
           <legend>처방약과 약 루틴</legend>
           <label>처방약<input value={draft.medicine?.name ?? ''} onChange={(event) => update({ medicine: event.target.value ? { name: event.target.value, dose: draft.medicine?.dose, startDate: draft.medicine?.startDate || draft.visitDate, endDate: draft.medicine?.endDate, dailyCount: draft.medicine?.dailyCount || 1, instructions: draft.medicine?.instructions } : undefined })} placeholder="약 이름" /></label>
           {draft.medicine && <><div className="clinic-record-row"><label>복용량<input value={draft.medicine.dose ?? ''} onChange={(event) => update({ medicine: { ...draft.medicine!, dose: event.target.value } })} placeholder="예: 0.2ml" /></label><label>하루 횟수<input type="number" min="1" value={draft.medicine.dailyCount} onChange={(event) => update({ medicine: { ...draft.medicine!, dailyCount: Math.max(1, Number(event.target.value) || 1) } })} /></label></div><div className="clinic-record-row"><label>복용 시작일<input type="date" value={draft.medicine.startDate} onChange={(event) => update({ medicine: { ...draft.medicine!, startDate: event.target.value } })} /></label><label>복용 종료일<input type="date" min={draft.medicine.startDate} value={draft.medicine.endDate ?? ''} onChange={(event) => update({ medicine: { ...draft.medicine!, endDate: event.target.value || undefined } })} /></label></div><label>복용 안내<input value={draft.medicine.instructions ?? ''} onChange={(event) => update({ medicine: { ...draft.medicine!, instructions: event.target.value } })} placeholder="투약 방법이나 주의사항" /></label><small>저장하면 기존 약 루틴에 연결됩니다.</small></>}
-        </fieldset>
-        <fieldset>
-          <legend>다음 예정일이 있나요?</legend>
-          <div className="clinic-record-choice">
-            <button type="button" className={draft.nextVisit ? 'active' : ''} aria-pressed={Boolean(draft.nextVisit)} onClick={() => update({ nextVisit: draft.nextVisit ?? { date: '', time: '09:00' } })}>예</button>
-            <button type="button" className={!draft.nextVisit ? 'active' : ''} aria-pressed={!draft.nextVisit} onClick={() => update({ nextVisit: undefined })}>아니요</button>
-          </div>
-          {draft.nextVisit && (
-            <div className="clinic-record-row">
-              <label>다음 진료일<input type="date" value={draft.nextVisit.date} onChange={(event) => update({ nextVisit: { ...draft.nextVisit!, date: event.target.value } })} /></label>
-              <label>알림 시간<input type="time" value={draft.nextVisit.time} onChange={(event) => update({ nextVisit: { ...draft.nextVisit!, time: event.target.value } })} /></label>
-            </div>
-          )}
         </fieldset>
       </div>
       {error && <p className="clinic-record-error" role="alert">{error}</p>}
@@ -2586,12 +2630,11 @@ function Calendar({
             key === prediction.startDate || date.getDay() === (mobileMode ? 1 : 0) ? 'expected-range-start' : '',
             key === prediction.endDate || date.getDay() === (mobileMode ? 0 : 6) ? 'expected-range-end' : '',
           ] : []).filter(Boolean).join(' ')
-          const hasClinicPlan = records.some((record) => record.date === key && record.type === 'hospital' && record.memo === '진료 예정')
-          return `calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${date.getMonth() !== month.getMonth() ? 'muted' : ''} ${predictionTypes} ${hasClinicPlan ? 'expected-clinic' : ''}`
+          return `calendar-day ${key === todayKey ? 'today' : ''} ${key === selectedDate ? 'selected' : ''} ${date.getMonth() !== month.getMonth() ? 'muted' : ''} ${predictionTypes}`
         }}
         tileContent={({ date, view }) => view === 'month' ? renderRecordTags(date) : null}
       />
-      {(cyclePredictions.length > 0 || records.some((record) => record.type === 'hospital' && record.memo === '진료 예정')) && <div className="calendar-cycle-legend" aria-label="예정일 색상 안내"><span className="clinic"><i />다음 진료일</span><span className="shed"><i />탈피 예상일</span><span className="egg"><i />산란 예상일</span></div>}
+      <div className="calendar-cycle-legend" aria-label="캘린더 마커 색상 안내"><span className="record"><i />기록</span><span className="shed"><i />탈피 예상일</span><span className="egg"><i />산란 예상일</span></div>
     </section>
   )
 }
@@ -2824,18 +2867,25 @@ function ReminderCreateScreen({
       .trim()
   })
   const [appointmentDate, setAppointmentDate] = useState(initialReminder?.startDate ?? initialReminder?.reminderDate ?? toDateKey(new Date()))
-  const isEditingRoutine = Boolean(initialReminder)
+  const [createStep, setCreateStep] = useState<1 | 2>(1)
   const isMedicineRoutine = routineTypes.length === 1 && routineTypes[0] === 'medicine'
   const isHospitalRoutine = routineTypes.length === 1 && routineTypes[0] === 'hospital'
   useWritingBrowserBack(0, onBack)
   const visibleRoutineTypes = recommendedTypes.filter((type) => type !== 'custom')
-  const customDisplayedTypes: ReminderType[] = ['custom']
+  const weightIndex = visibleRoutineTypes.indexOf('weight')
+  const displayedRoutineTypes: ReminderType[] = weightIndex >= 0
+    ? [...visibleRoutineTypes.slice(0, weightIndex + 1), 'custom', ...visibleRoutineTypes.slice(weightIndex + 1)]
+    : [...visibleRoutineTypes, 'custom']
   const hasCustomRoutine = routineTypes.includes('custom')
   const customRoutineExists = hasCustomRoutine && existingReminders.some((reminder) => reminder.petId === petId && reminder.isActive && reminder.id !== initialReminder?.id && reminder.reminderType === 'custom' && planLabel(reminder, selectedPet, speciesCareProfiles) === customRoutineName.trim())
-  const valid = Boolean(
+  const selectionValid = Boolean(
     petId
     && routineTypes.length > 0
-    && (isHospitalRoutine
+    && (!hasCustomRoutine || (customRoutineName.trim().length > 0 && !customRoutineExists))
+    && ((!isMedicineRoutine && !isHospitalRoutine) || specialRoutineName.trim().length > 0)
+  )
+  const scheduleValid = Boolean(
+    (isHospitalRoutine
       ? appointmentDate
       : recurrenceType === 'interval'
         ? recurrenceIntervalDays >= 1
@@ -2843,9 +2893,8 @@ function ReminderCreateScreen({
     && startDate
     && (!endDate || endDate >= startDate)
     && (!isMedicineRoutine || Boolean(endDate))
-    && (!hasCustomRoutine || (customRoutineName.trim().length > 0 && !customRoutineExists))
-    && (isEditingRoutine || (!isMedicineRoutine && !isHospitalRoutine) || specialRoutineName.trim().length > 0)
   )
+  const valid = selectionValid && scheduleValid
   const toggleRoutineType = (type: ReminderType) => {
     if (initialReminder) {
       setRoutineTypes([type])
@@ -2885,6 +2934,10 @@ function ReminderCreateScreen({
   }}
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    if (createStep === 1) {
+      if (selectionValid) setCreateStep(2)
+      return
+    }
     if (!valid) return
     onSave(routineTypes.map((type, index) => buildReminder(type, index)))
   }
@@ -2895,82 +2948,20 @@ function ReminderCreateScreen({
     <main className="diary-create-screen">
       <header>
         <button type="button" aria-label="뒤로가기" onClick={onBack}>←</button>
-        <strong>관리 루틴</strong>
+        <strong>루틴 추가</strong>
         <span />
       </header>
-      <form onSubmit={submit}>
+      <form className="routine-create-flow" onSubmit={submit}>
         <p className="create-keyword" aria-label="작성 키워드">루틴</p>
-        <div className="create-title">
-          <h1>{initialReminder ? '루틴 수정' : '루틴 설정'}</h1>
-        </div>
+        <div className="routine-create-progress" aria-label={`루틴 추가 ${createStep}/2단계`}><i style={{ width: `${createStep / 2 * 100}%` }} /><span>{createStep}/2</span></div>
         <div className="create-content">
-          <p className="selected-pet-inline">대상 펫: <strong>{selectedPet?.name ?? '현재 펫'}</strong>{selectedPet && <span> · {selectedPet.species}</span>}</p>
-          {isEditingRoutine && (
-            <div className="routine-edit-summary" aria-label="수정 중인 루틴">
-              <span>수정 중인 루틴</span>
-              <strong>{initialReminder ? planLabel(initialReminder, selectedPet, speciesCareProfiles) : '루틴'}</strong>
-            </div>
-          )}
-          {!presetType && <div className="routine-recommendation-field">
-              <label className="required-label">{selectedPet ? `${selectedPet.species || animalGroupLabel(selectedPet.group)} 추천 루틴` : '관리 항목'}<span aria-hidden="true">*</span></label>
-              <div className="routine-tag-section">
-                <div>
-                  {visibleRoutineTypes.map((key) => (
-                    <button type="button" className={routineTypes.includes(key) ? 'selected' : ''} key={key} onClick={() => toggleRoutineType(key)}>
-                      <RoutinePhoto type={key} className="routine-picker-photo" />
-                      <strong>{routineOptionLabel(key, selectedPet, speciesCareProfiles)}</strong>
-                      {requiredRoutineTypes.includes(key) && <em>필수</em>}
-                      {normalizedExistingTypes.has(key) && <em>이미 있음</em>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="routine-tag-section">
-                <div>
-                  {customDisplayedTypes.map((key) => (
-                    <button type="button" className={routineTypes.includes(key) ? 'selected' : ''} key={key} onClick={() => toggleRoutineType(key)}>
-                      <RoutinePhoto type={key} className="routine-picker-photo" />
-                      <strong>{routineOptionLabel(key, selectedPet, speciesCareProfiles)}</strong>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {hasCustomRoutine && <label className="custom-routine-name-field">루틴 이름<input value={customRoutineName} onChange={(event) => setCustomRoutineName(event.target.value)} placeholder="예: 환기하기" /></label>}
-              {customRoutineExists && <p className="routine-field-error">이미 같은 이름의 직접 입력 루틴이 있어요.</p>}
-            </div>
-          }
-          {!isEditingRoutine && isMedicineRoutine && <label className="required-label">약 이름<span aria-hidden="true">*</span><input value={specialRoutineName} onChange={(event) => setSpecialRoutineName(event.target.value)} placeholder="예: 처방약 A" autoFocus /></label>}
-          {!isEditingRoutine && isHospitalRoutine && <label className="required-label">진료 일정 이름<span aria-hidden="true">*</span><input value={specialRoutineName} onChange={(event) => setSpecialRoutineName(event.target.value)} placeholder="예: 정기 검진" autoFocus /></label>}
-          {isHospitalRoutine ? (
-            <label className="required-label">다음 진료 예정일<span aria-hidden="true">*</span><input type="date" min={toDateKey(new Date())} value={appointmentDate} onChange={(event) => setAppointmentDate(event.target.value)} /></label>
-          ) : (
-            <>
-              <label className="required-label">반복 설정<span aria-hidden="true">*</span></label>
-              <div className="weekday-picker repeat-type-picker" role="group" aria-label="반복 설정">
-                <button type="button" className={recurrenceType === 'weekdays' ? 'selected' : ''} onClick={() => setRecurrenceType('weekdays')}>반복</button>
-                <button type="button" className={recurrenceType === 'interval' ? 'selected' : ''} onClick={() => setRecurrenceType('interval')}>주기</button>
-              </div>
-              {recurrenceType === 'weekdays' ? (
-                <>
-                  <label className="required-label">요일<span aria-hidden="true">*</span></label>
-                  <div className="weekday-picker">
-                    {weekdays.map((day, index) => (
-                      <button type="button" className={selectedWeekdays.includes(index) ? 'selected' : ''} onClick={() => setSelectedWeekdays(selectedWeekdays.includes(index) ? selectedWeekdays.filter((item) => item !== index) : [...selectedWeekdays, index])} key={day}>{day}</button>
-                    ))}
-                    <button type="button" className={selectedWeekdays.length === 7 ? 'selected' : ''} onClick={() => setSelectedWeekdays(selectedWeekdays.length === 7 ? [] : [0, 1, 2, 3, 4, 5, 6])}>매일</button>
-                  </div>
-                </>
-              ) : (
-                <label className="required-label repeat-interval-field">주기<span aria-hidden="true">*</span><span className="repeat-interval-input"><input type="number" min="1" max="365" inputMode="numeric" value={recurrenceIntervalDays} onChange={(event) => setRecurrenceIntervalDays(Math.max(1, Number(event.target.value) || 1))} /><span>일마다</span></span></label>
-              )}
-            </>
-          )}
-          <label className="routine-notification-time-field">부재 시 알람 시간<input type="time" value={notificationTime} onChange={(event) => setNotificationTime(event.target.value)} /></label>
-          {!isHospitalRoutine && <label className={isMedicineRoutine ? 'required-label' : undefined}>종료일 {isMedicineRoutine ? <span aria-hidden="true">*</span> : <OptionalBadge />}<input type="date" value={endDate} min={startDate} onChange={(event) => setEndDate(event.target.value)} /></label>}
+          <p className="selected-pet-inline"><strong>{selectedPet?.name ?? '현재 펫'}</strong>{selectedPet && <span> · {selectedPet.species}</span>}</p>
+          {createStep === 1 && <section className="routine-create-step"><header><small>1단계</small><h1>추가할 루틴을 선택하세요</h1><p>여러 항목을 한 번에 선택할 수 있어요.</p></header>{presetType && <div className="routine-preset-card"><RoutinePhoto type={presetType} className="routine-picker-photo" /><span><strong>{routineOptionLabel(presetType, selectedPet, speciesCareProfiles)}</strong><small>선택된 루틴</small></span></div>}{!presetType && <div className="routine-recommendation-field"><div className="routine-tag-section"><div>{displayedRoutineTypes.map((key) => <button type="button" className={routineTypes.includes(key) ? 'selected' : ''} aria-pressed={routineTypes.includes(key)} key={key} onClick={() => toggleRoutineType(key)}><RoutinePhoto type={key} className="routine-picker-photo" /><span><strong>{routineOptionLabel(key, selectedPet, speciesCareProfiles)}</strong><small>{key === 'custom' ? '직접 이름 설정' : requiredRoutineTypes.includes(key) ? '필수 루틴' : normalizedExistingTypes.has(key) ? '이미 추가됨' : '선택 가능'}</small></span>{routineTypes.includes(key) && <i aria-hidden="true">✓</i>}</button>)}</div></div>{hasCustomRoutine && <label className="custom-routine-name-field">루틴 이름<input value={customRoutineName} onChange={(event) => setCustomRoutineName(event.target.value)} placeholder="예: 환기하기" /></label>}{customRoutineExists && <p className="routine-field-error">이미 같은 이름의 직접 입력 루틴이 있어요.</p>}</div>}{isMedicineRoutine && <label className="required-label">약 이름<span aria-hidden="true">*</span><input value={specialRoutineName} onChange={(event) => setSpecialRoutineName(event.target.value)} placeholder="예: 처방약 A" /></label>}{isHospitalRoutine && <label className="required-label">진료 일정 이름<span aria-hidden="true">*</span><input value={specialRoutineName} onChange={(event) => setSpecialRoutineName(event.target.value)} placeholder="예: 정기 검진" /></label>}</section>}
+          {createStep === 2 && <section className="routine-create-step"><header><small>2단계</small><h1>반복 일정과 시간을 정하세요</h1><p>선택한 루틴에 같은 일정이 적용돼요.</p></header>{isHospitalRoutine ? <label className="required-label">다음 진료 예정일<span aria-hidden="true">*</span><input type="date" min={toDateKey(new Date())} value={appointmentDate} onChange={(event) => setAppointmentDate(event.target.value)} /></label> : <><div className="routine-schedule-card"><label className="required-label">반복 방식<span aria-hidden="true">*</span></label><div className="weekday-picker repeat-type-picker" role="group" aria-label="반복 설정"><button type="button" className={recurrenceType === 'weekdays' ? 'selected' : ''} onClick={() => setRecurrenceType('weekdays')}>요일 선택</button><button type="button" className={recurrenceType === 'interval' ? 'selected' : ''} onClick={() => setRecurrenceType('interval')}>며칠마다</button></div>{recurrenceType === 'weekdays' ? <div className="weekday-picker routine-weekday-grid">{weekdays.map((day, index) => <button type="button" className={selectedWeekdays.includes(index) ? 'selected' : ''} onClick={() => setSelectedWeekdays(selectedWeekdays.includes(index) ? selectedWeekdays.filter((item) => item !== index) : [...selectedWeekdays, index])} key={day}>{day}</button>)}<button type="button" className={selectedWeekdays.length === 7 ? 'selected' : ''} onClick={() => setSelectedWeekdays(selectedWeekdays.length === 7 ? [] : [0, 1, 2, 3, 4, 5, 6])}>매일</button></div> : <label className="required-label repeat-interval-field">반복 주기<span className="repeat-interval-input"><input type="number" min="1" max="365" inputMode="numeric" value={recurrenceIntervalDays} onChange={(event) => setRecurrenceIntervalDays(Math.max(1, Number(event.target.value) || 1))} /><span>일마다</span></span></label>}</div></>}<div className="routine-schedule-fields"><label className="routine-notification-time-field">알림 시간<input type="time" value={notificationTime} onChange={(event) => setNotificationTime(event.target.value)} /></label>{!isHospitalRoutine && <label className={isMedicineRoutine ? 'required-label' : undefined}>종료일 {isMedicineRoutine ? <span aria-hidden="true">*</span> : <OptionalBadge />}<input type="date" value={endDate} min={startDate} onChange={(event) => setEndDate(event.target.value)} /></label>}</div></section>}
         </div>
         <div className="step-actions">
-          <button type="button" className="create-submit secondary diary-step-back" onClick={onBack}>이전</button>
-          <button className="create-submit" disabled={!valid}>저장</button>
+          <button type="button" className="create-submit secondary diary-step-back" onClick={() => { if (createStep === 1) onBack(); else setCreateStep(1) }}>{createStep === 1 ? '취소' : '이전'}</button>
+          <button className="create-submit" disabled={createStep === 1 ? !selectionValid : !valid}>{createStep === 2 ? '루틴 추가' : '다음'}</button>
         </div>
       </form>
     </main>
@@ -2984,7 +2975,7 @@ function RoutineEditStepScreen({ reminder, pet, speciesCareProfiles, onBack, onS
   onBack: () => void
   onSave: (reminder: Reminder) => void
 }) {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2>(1)
   const [title, setTitle] = useState(reminder.title)
   const [recurrenceType, setRecurrenceType] = useState<'weekdays' | 'interval'>(reminder.recurrenceType ?? 'weekdays')
   const [selectedWeekdays, setSelectedWeekdays] = useState(reminder.weekdays)
@@ -3010,14 +3001,13 @@ function RoutineEditStepScreen({ reminder, pet, speciesCareProfiles, onBack, onS
   }
   return <main className="diary-create-screen routine-edit-step-screen">
     <DiarySubHeader title="루틴 수정" onBack={step === 1 ? onBack : () => setStep((step - 1) as 1 | 2)} />
-    <div className="routine-step-progress" aria-label={`3단계 중 ${step}단계`}><span>{step}/3</span><i style={{ width: `${step / 3 * 100}%` }} /></div>
+    <div className="routine-step-progress" aria-label={`2단계 중 ${step}단계`}><span>{step}/2</span><i style={{ width: `${step / 2 * 100}%` }} /></div>
     <section className="routine-step-card">
       <header><RoutinePhoto type={reminder.reminderType} className="routine-picker-photo" /><div><small>{pet?.name ?? '현재 펫'}</small><h2>{planLabel(reminder, pet, speciesCareProfiles)}</h2></div></header>
       {step === 1 && <div className="routine-step-fields"><h3>일정을 수정하세요</h3>{['custom', 'medicine', 'hospital'].includes(reminder.reminderType) && <label>루틴 이름<input value={title} onChange={(event) => setTitle(event.target.value)} /></label>}{isHospital ? <label>진료 예정일<input type="date" value={appointmentDate} onChange={(event) => setAppointmentDate(event.target.value)} /></label> : <><div className="weekday-picker repeat-type-picker"><button type="button" className={recurrenceType === 'weekdays' ? 'selected' : ''} onClick={() => setRecurrenceType('weekdays')}>요일 반복</button><button type="button" className={recurrenceType === 'interval' ? 'selected' : ''} onClick={() => setRecurrenceType('interval')}>주기 반복</button></div>{recurrenceType === 'weekdays' ? <div className="weekday-picker">{weekdays.map((day, index) => <button type="button" className={selectedWeekdays.includes(index) ? 'selected' : ''} onClick={() => setSelectedWeekdays(selectedWeekdays.includes(index) ? selectedWeekdays.filter((item) => item !== index) : [...selectedWeekdays, index])} key={day}>{day}</button>)}</div> : <label>반복 주기<span className="repeat-interval-input"><input type="number" min="1" max="365" value={intervalDays} onChange={(event) => setIntervalDays(Math.max(1, Number(event.target.value) || 1))} /><span>일마다</span></span></label>}</>}</div>}
       {step === 2 && <div className="routine-step-fields"><h3>알림과 상태를 수정하세요</h3><label>알림 시간<input type="time" value={notificationTime} onChange={(event) => setNotificationTime(event.target.value)} /></label>{!isHospital && <label>종료일 {isMedicine ? <span aria-label="필수">*</span> : <OptionalBadge />}<input type="date" value={endDate} min={reminder.startDate} onChange={(event) => setEndDate(event.target.value)} /></label>}<div className="choice-field"><label>루틴 상태</label><div><button type="button" className={isActive ? 'selected' : ''} onClick={() => setIsActive(true)}>사용</button><button type="button" className={!isActive ? 'selected' : ''} onClick={() => setIsActive(false)}>일시정지</button></div></div></div>}
-      {step === 3 && <div className="routine-step-summary"><h3>수정 내용을 확인하세요</h3><dl><div><dt>루틴</dt><dd>{title}</dd></div><div><dt>반복</dt><dd>{isHospital ? appointmentDate : recurrenceType === 'interval' ? `${intervalDays}일마다` : selectedWeekdays.slice().sort().map((day) => weekdays[day]).join(' · ')}</dd></div><div><dt>알림</dt><dd>{notificationTime}</dd></div><div><dt>상태</dt><dd>{isActive ? '사용' : '일시정지'}</dd></div></dl></div>}
     </section>
-    <div className="step-actions routine-fixed-actions">{step > 1 && <button type="button" className="create-submit secondary" onClick={() => setStep((step - 1) as 1 | 2)}>이전</button>}{step < 3 ? <button type="button" className="create-submit" disabled={step === 1 && !canContinue || step === 2 && isMedicine && !endDate} onClick={() => setStep((step + 1) as 2 | 3)}>다음</button> : <button type="button" className="create-submit" onClick={() => onSave(nextReminder)}>저장</button>}</div>
+    <div className="step-actions routine-fixed-actions">{step > 1 && <button type="button" className="create-submit secondary" onClick={() => setStep(1)}>이전</button>}{step === 1 ? <button type="button" className="create-submit" disabled={!canContinue} onClick={() => setStep(2)}>다음</button> : <button type="button" className="create-submit" disabled={isMedicine && !endDate} onClick={() => onSave(nextReminder)}>저장</button>}</div>
   </main>
 }
 
@@ -3125,9 +3115,11 @@ function buildRecentPoopContext(records: PetRecord[], date: string) {
 
 export function DataVisualization({
   records,
+  hideEmptyMetrics = false,
 }: {
   records: PetRecord[]
   petName: string
+  hideEmptyMetrics?: boolean
   onCreateQna?: (metric?: DiaryInsight['metric']) => void
   onShedComplete?: () => void
   onShedNotYet?: () => void
@@ -3167,14 +3159,14 @@ export function DataVisualization({
   return (
     <div className="data-visualization">
       <div className="record-collection-tabs" aria-label="모아보기 항목">
-        <button className={selectedMetric === 'shed' ? 'active' : ''} type="button" onClick={() => setActiveMetric('shed')}>
+        {(!hideEmptyMetrics || metricCounts.shed > 0) && <button className={selectedMetric === 'shed' ? 'active' : ''} type="button" onClick={() => setActiveMetric('shed')}>
           탈피 <span>{metricCounts.shed}</span>
-        </button>
-        <button className={selectedMetric === 'environment' ? 'active' : ''} type="button" onClick={() => setActiveMetric('environment')}>온습도 <span>{metricCounts.environment}</span></button>
-        <button className={selectedMetric === 'weight' ? 'active' : ''} type="button" onClick={() => setActiveMetric('weight')}>체중 <span>{metricCounts.weight}</span></button>
-        <button className={selectedMetric === 'poop' ? 'active' : ''} type="button" onClick={() => setActiveMetric('poop')}>배변 <span>{metricCounts.poop}</span></button>
-        <button className={selectedMetric === 'mating' ? 'active' : ''} type="button" onClick={() => setActiveMetric('mating')}>메이팅 <span>{metricCounts.mating}</span></button>
-        <button className={selectedMetric === 'egg' ? 'active' : ''} type="button" onClick={() => setActiveMetric('egg')}>산란 <span>{metricCounts.egg}</span></button>
+        </button>}
+        {(!hideEmptyMetrics || metricCounts.environment > 0) && <button className={selectedMetric === 'environment' ? 'active' : ''} type="button" onClick={() => setActiveMetric('environment')}>온습도 <span>{metricCounts.environment}</span></button>}
+        {(!hideEmptyMetrics || metricCounts.weight > 0) && <button className={selectedMetric === 'weight' ? 'active' : ''} type="button" onClick={() => setActiveMetric('weight')}>체중 <span>{metricCounts.weight}</span></button>}
+        {(!hideEmptyMetrics || metricCounts.poop > 0) && <button className={selectedMetric === 'poop' ? 'active' : ''} type="button" onClick={() => setActiveMetric('poop')}>배변 <span>{metricCounts.poop}</span></button>}
+        {(!hideEmptyMetrics || metricCounts.mating > 0) && <button className={selectedMetric === 'mating' ? 'active' : ''} type="button" onClick={() => setActiveMetric('mating')}>메이팅 <span>{metricCounts.mating}</span></button>}
+        {(!hideEmptyMetrics || metricCounts.egg > 0) && <button className={selectedMetric === 'egg' ? 'active' : ''} type="button" onClick={() => setActiveMetric('egg')}>산란 <span>{metricCounts.egg}</span></button>}
       </div>
       {selectedMetric === 'shed' && (shedRecords.length > 0 ? <ShedCycleChart records={shedRecords} /> : <MetricEmpty label="탈피 기록" />)}
       {selectedMetric === 'environment' && (
@@ -3196,8 +3188,8 @@ function MetricEmpty({ label }: { label: string }) {
 
 function buildDiaryInsights(records: PetRecord[], petName: string, resolvedInsightIds: string[] = []): DiaryInsight[] {
   const insights = [
-    buildWeightInsight(records, petName),
     buildEnvironmentInsight(records, petName),
+    buildWeightInsight(records, petName),
     buildShedInsight(records, petName),
     buildPoopInsight(records, petName),
   ]
@@ -3239,23 +3231,35 @@ function buildEnvironmentInsight(records: PetRecord[], petName: string): DiaryIn
       latestByMetric.set(`${environment.metricType}:${environment.measurementType}`, record)
     })
   const latestRisk = Array.from(latestByMetric.values())
-    .filter((record) => (record.environmentRecord?.riskLevel ?? 0) > 1)
-    .sort(compareRecordTime)
+    .map((record) => {
+      const environment = record.environmentRecord
+      if (!environment) return null
+      return { record, risk: calculateEnvironmentRisk(environment.metricType, environment.value, environment.minValue, environment.maxValue) }
+    })
+    .filter((item): item is { record: PetRecord; risk: EnvironmentRiskResult } => Boolean(item && item.risk.level > 1))
+    .sort((a, b) => compareRecordTime(a.record, b.record))
     .at(-1)
-  if (!latestRisk?.environmentRecord) return null
-  const risk = latestRisk.environmentRecord
-  const label = risk.metricType === 'humidity' ? '습도' : risk.measurementType === 'water' ? '수온' : '온도'
+  if (!latestRisk?.record.environmentRecord) return null
+  const environment = latestRisk.record.environmentRecord
+  const risk = latestRisk.risk
+  const label = environment.metricType === 'humidity' ? '습도' : environment.measurementType === 'water' ? '수온' : '온도'
   const subjectLabel = label === '수온' ? '수온이' : `${label}가`
-  const isCritical = risk.riskLevel === 5
+  const isCritical = risk.level === 5
+  const urgentEnvironment = risk.level >= 3
+  const hospitalConcern: HospitalConditionId = environment.metricType === 'humidity'
+    ? risk.direction === 'low' ? 'dehydration' : 'fungal_disease'
+    : risk.direction === 'high' ? 'dehydration' : 'respiratory_infection'
   return {
-    id: `environment-risk-${latestRisk.id}`,
+    id: `environment-risk-${latestRisk.record.id}`,
     metric: 'environment',
-    level: risk.riskLevel >= 4 ? 'urgent' : risk.riskLevel >= 2 ? 'caution' : 'notice',
-    title: isCritical ? `${subjectLabel} 5단계 위험 수준이에요. 환경을 조정하고 병원 진료를 서둘러주세요.` : `${subjectLabel} ${risk.riskLevel}단계 상태예요.`,
+    level: risk.level >= 4 ? 'urgent' : risk.level >= 2 ? 'caution' : 'notice',
+    title: urgentEnvironment ? `${petName}의 ${subjectLabel} 위급한 상황입니다.` : `${subjectLabel} ${risk.level}단계 상태예요.`,
     body: isCritical
-      ? `${petName}의 ${label} 기록은 ${formatEnvironmentValue(risk)}예요. 즉시 안전 범위로 조정하고 동물의 상태를 확인한 뒤 빠르게 특수동물 병원에 데려가세요.`
-      : `${petName}의 ${label} 기록은 ${formatEnvironmentValue(risk)}예요. ${risk.riskMessage}`,
+      ? `${petName}의 ${label} 기록은 ${formatEnvironmentValue(environment)}예요. 즉시 안전 범위로 조정하고 동물의 상태를 확인한 뒤 빠르게 특수동물 병원에 데려가세요.`
+      : `${petName}의 ${label} 기록은 ${formatEnvironmentValue(environment)}예요. ${risk.message}`,
     action: 'environment-resolve',
+    environmentRiskLevel: risk.level,
+    hospitalConcern,
   }
 }
 
@@ -3501,8 +3505,12 @@ function buildMobileDiaryAlertActions({ insight, onOpenRecords, onCreateQna, onF
     ...(onCreateQna ? [{ label: 'Q&A 작성하기', onClick: onCreateQna }] : []),
   ]
   if (insight.metric === 'environment') return [
-    { label: '환경 기록 확인', onClick: onOpenRecords },
-    { label: '온습도 기록하기', onClick: onRecordEnvironment },
+    ...(insight.environmentRiskLevel && insight.environmentRiskLevel >= 3 && onFindHospital ? [{ label: '병원 찾기', onClick: onFindHospital }] : []),
+    ...(insight.environmentRiskLevel && insight.environmentRiskLevel >= 3 && onCreateQna ? [{ label: 'Q&A 질문', onClick: onCreateQna }] : []),
+    ...(!insight.environmentRiskLevel || insight.environmentRiskLevel < 3 ? [
+      { label: '환경 기록 확인', onClick: onOpenRecords },
+      { label: '온습도 기록하기', onClick: onRecordEnvironment },
+    ] : []),
   ]
   return [
     { label: '기록 모아보기', onClick: onOpenRecords },
@@ -3514,7 +3522,7 @@ function deduplicateMeasuredRecordsByDay(records: PetRecord[]) {
 
   records
     .slice()
-    .sort(compareRecordTime)
+    .sort((a, b) => compareRecordTime(b, a))
     .forEach((record) => {
       const environment = record.environmentRecord
       const key = environment
@@ -3538,9 +3546,7 @@ function collapseOverdueRoutineTasks(
   })
   return Array.from(grouped.values()).map((group) => {
     const sorted = group.slice().sort((a, b) => a.dailyTask.scheduledDate.localeCompare(b.dailyTask.scheduledDate))
-    return sorted.find((task) => task.dailyTask.status === 'pending')
-      ?? sorted.find((task) => task.dailyTask.status === 'completed')
-      ?? sorted.at(-1) as { reminder: Reminder; overdue: boolean; dailyTask: DailyTask }
+    return sorted[0]
   })
 }
 
@@ -4020,6 +4026,9 @@ function EnvironmentInputDialog({
     isBroadCategory: false,
   }
   const isWaterTemperature = !isHumidity && (measurementType === 'water' || previewProfile.temperatureType === 'water')
+  const previewMinValue = isHumidity ? previewProfile.minHumidity ?? value : previewProfile.minTemperature
+  const previewMaxValue = isHumidity ? previewProfile.maxHumidity ?? value : previewProfile.maxTemperature
+  const previewRisk = profile ? calculateEnvironmentRisk(metricType, value, previewMinValue, previewMaxValue) : null
   const title = isHumidity
     ? '현재 사육장 습도는 몇 %인가요?'
     : isWaterTemperature
@@ -4051,6 +4060,7 @@ function EnvironmentInputDialog({
         </label>
         <button type="button" onClick={() => setValue((current) => current + 1)} aria-label="값 늘리기">+</button>
       </div>
+      {previewRisk && <EnvironmentRiskGauge result={previewRisk} />}
       {!profile && <p className="environment-profile-empty">기준 없이 기록만 저장돼요.</p>}
       {error && <p className="feeding-food-error" role="alert">{error}</p>}
       <footer>

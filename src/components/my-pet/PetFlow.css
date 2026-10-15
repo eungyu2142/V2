@@ -38,6 +38,7 @@
 .pet-flow-card-progress { display:grid; justify-items:end; gap:3px; color:var(--color-primary-700); }
 .pet-flow-card-progress strong { font-size:19px; line-height:1; }
 .pet-flow-card-progress small { color:var(--color-text-secondary); font-size:13px; }
+.pet-flow-card-progress em { color:var(--color-error-600); font-size:12px; font-style:normal; font-weight:700; line-height:1.35; }
 .pet-flow-card-status { max-width:146px; color:var(--color-text-secondary); text-align:right; line-height:1.45; word-break:keep-all; }
 .pet-flow-empty-home, .pet-flow-empty { text-align:center; padding:64px 20px; color:var(--color-text-secondary); }
 .pet-flow-empty-home p { margin-top:20px; }
@@ -89,6 +90,15 @@
 .pet-flow-photo-input svg { width:46px; height:46px; } .pet-flow-photo-input .guide-icon-disc { fill:none; }
 .pet-flow-fields { display:grid; gap:18px; }
 .pet-flow-field { display:grid; gap:7px; font-weight:600; } .pet-flow-field input, .pet-flow-field textarea { font-weight:400; }
+.pet-flow-field > small { color:var(--color-text-secondary); font-size:12px; font-weight:400; }
+.pet-flow-species-combobox { position:relative; }
+.pet-flow-species-suggestions { position:absolute; z-index:5; right:0; bottom:calc(100% + 5px); left:0; max-height:230px; padding:5px; overflow:auto; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface); box-shadow:var(--shadow-card); }
+.pet-flow-species-suggestions button { display:block; width:100%; min-height:42px; padding:9px 11px; border-radius:calc(var(--radius-control) - 3px); text-align:left; font-weight:500; }
+.pet-flow-species-suggestions button:hover, .pet-flow-species-suggestions button.active { color:var(--color-primary-700); background:var(--color-primary-50); }
+.pet-flow-age-field > span { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.pet-flow-age-field output { color:var(--color-primary-700); font-size:14px; }
+.pet-flow-age-field input[type="range"] { width:100%; min-height:28px; }
+.pet-flow-age-field > small { display:flex; justify-content:space-between; }
 .pet-flow-custom { display:grid; grid-template-columns:1fr 2fr; gap:12px; }
 .pet-flow-category legend { margin-bottom:8px; font-size:14px; font-weight:600; }
 .pet-flow-category > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
@@ -132,7 +142,7 @@
 .pet-photo-preview-body p, .pet-photo-preview-body small { text-align:center; color:var(--color-text-secondary); }
 .pet-photo-preview-frame { position:relative; height:320px; overflow:hidden; touch-action:none; border-radius:var(--radius-card); }
 .pet-photo-preview-frame img { width:100%; height:100%; object-fit:cover; }
-@media(max-width:700px) { .pet-flow { padding:18px 20px 24px; } .pet-flow-header { margin-bottom:18px; } .pet-flow-header h1 { font-size:21px; } .pet-flow-header.centered { grid-template-columns:64px 1fr 64px; } .pet-flow-header-actions .pet-flow-icon-button { width:32px; } .pet-flow-cards { grid-template-columns:1fr; gap:14px; } .pet-flow-card { min-height:100px; padding:12px 14px; gap:12px; } .pet-flow-card-photo { width:74px; height:74px; } .pet-flow-card-photo .pet-flow-photo { width:62px; height:62px; } .pet-flow-detail-content { grid-template-columns:1fr; gap:14px; } .pet-flow-hero { min-height:0; height:220px; } .pet-flow-detail-body { gap:18px; } .pet-flow-record-tabs { grid-template-columns:repeat(4,1fr); gap:6px; } .pet-flow-record-tabs button:nth-child(-n+3) { grid-column:span 1; } .pet-flow-record-tabs button:first-child { grid-column:span 2; } .pet-flow-chart-canvas { height:270px; } .pet-flow-create { padding-bottom:calc(112px + env(safe-area-inset-bottom,0px)); } .pet-flow-create .pet-flow-form-body { gap:20px; } .pet-flow-intro .pajak-mascot, .pet-flow-complete .pajak-mascot { width:160px; height:160px; } }
+@media(max-width:700px) { .pet-flow { padding:18px 20px 24px; } .pet-flow-header { margin-bottom:18px; } .pet-flow-header h1 { font-size:21px; } .pet-flow-header.centered { grid-template-columns:64px 1fr 64px; } .pet-flow-header-actions .pet-flow-icon-button { width:32px; } .pet-flow-cards { grid-template-columns:1fr; gap:14px; } .pet-flow-card { min-height:100px; padding:12px 14px; gap:12px; } .pet-flow-card-photo { width:74px; height:74px; } .pet-flow-card-photo .pet-flow-photo { width:62px; height:62px; } .pet-flow-detail-content { grid-template-columns:1fr; gap:14px; } .pet-flow-hero { min-height:0; height:220px; } .pet-flow-detail-body { gap:18px; } .pet-flow-record-tabs { grid-template-columns:repeat(4,1fr); gap:6px; } .pet-flow-record-tabs button:nth-child(-n+3) { grid-column:span 1; } .pet-flow-record-tabs button:first-child { grid-column:span 2; } .pet-flow-chart-canvas { height:270px; } .pet-flow-create { padding:12px 16px calc(104px + env(safe-area-inset-bottom,0px)); } .pet-flow-create .pet-flow-header { margin-bottom:8px; } .pet-flow-create .pet-flow-form-body { gap:10px; padding-bottom:10px; } .pet-flow-create .pet-flow-photo-input > span { width:68px; height:68px; } .pet-flow-create .pet-flow-photo-input svg { width:32px; height:32px; } .pet-flow-create .pet-flow-fields { gap:10px; } .pet-flow-create .pet-flow-field { gap:4px; font-size:13px; } .pet-flow-create .pet-flow-field > input, .pet-flow-create .pet-flow-species-combobox > input { min-height:40px; padding-block:8px; } .pet-flow-create .pet-flow-category legend, .pet-flow-create .pet-flow-gender legend { margin-bottom:4px; font-size:13px; } .pet-flow-create .pet-flow-category > div { gap:8px; } .pet-flow-create .pet-flow-category button { grid-template-columns:52px 1fr; min-height:72px; gap:5px; padding:6px 8px; text-align:left; } .pet-flow-create .pet-flow-category-illustration { width:52px; } .pet-flow-create .pet-flow-category button strong { font-size:15px; } .pet-flow-create .pet-flow-category .pet-flow-category-check { top:6px; right:6px; width:22px; height:22px; } .pet-flow-create .pet-flow-category .pet-flow-category-check svg { width:14px; height:14px; } .pet-flow-create .pet-flow-gender button { min-height:40px; font-size:12px; } .pet-flow-create .pet-flow-gender button svg { width:27px; height:27px; } .pet-flow-create .pet-flow-age-field > span { font-size:13px; } .pet-flow-create .pet-flow-age-field input[type="range"] { min-height:22px; } .pet-flow-create .pet-flow-age-field > small { font-size:10px; } .pet-flow-intro .pajak-mascot, .pet-flow-complete .pajak-mascot { width:160px; height:160px; } }
 
 
 }

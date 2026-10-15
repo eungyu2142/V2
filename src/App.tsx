@@ -34,6 +34,7 @@ const qnaDatabaseCategory = ['Q', '&A'].join('')
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const loginPendingRef = useRef(false)
   const [deviceBlocked, setDeviceBlocked] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -53,6 +54,7 @@ function App() {
     void supabase.auth.getSession()
       .then(({ data }) => {
         if (!active) return
+        loginPendingRef.current = !data.session
         setSession(data.session)
         setAuthReady(true)
       })
@@ -61,8 +63,12 @@ function App() {
       })
       .finally(() => window.clearTimeout(authTimeout))
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return
+      if (event === 'SIGNED_IN' && nextSession && loginPendingRef.current) {
+        syncAppUrl('pets')
+      }
+      loginPendingRef.current = !nextSession
       setSession(nextSession)
       setAuthReady(true)
     })
@@ -89,7 +95,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [editingPet, setEditingPet] = useState<Pet | null>(null)
   const [diaryPetId, setDiaryPetId] = useState<string | null>(initialUrlState.petId)
   const [diaryReadOnly, setDiaryReadOnly] = useState(false)
-  const [diaryInitialAction, setDiaryInitialAction] = useState<'routine-create' | null>(null)
+  const [diaryInitialAction, setDiaryInitialAction] = useState<'main' | 'routine-create' | null>(null)
   const [diaryReturnToPets, setDiaryReturnToPets] = useState(false)
   const [qnaInitialPetId, setQnaInitialPetId] = useState<string | null>(initialUrlState.tab === 'qna' ? initialUrlState.petId : null)
   const [qnaInitialPreset, setQnaInitialPreset] = useState<{ category: QnaCategory; title: string } | null>(null)
@@ -385,7 +391,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
     setCurrentPetId(petId)
     setDiaryPetId(petId)
     setDiaryReadOnly(false)
-    setDiaryInitialAction(action ?? null)
+    setDiaryInitialAction(action ?? 'main')
     setDiaryReturnToPets(true)
     syncAppUrl('diary', petId)
     setActiveTab('diary')
@@ -404,7 +410,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
     syncAppUrl('qna', validPetId)
   }
 
-  const openPetHospitalSearch = (petId: string, concern?: HospitalRecommendationConcern) => {
+  const openPetHospitalSearch = (petId: string, concern?: HospitalRecommendationConcern | HospitalConditionId) => {
     if (pets.some((pet) => pet.id === petId)) setCurrentPetId(petId)
     setMapRecommendationConcern(concern ?? null)
     moveTab('map')
