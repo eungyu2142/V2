@@ -658,9 +658,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   if (createMode === 'pet') return (
     <PetCreateFlow
-      userId={session.user.id}
       initialPet={editingDraft?.draftType === 'pet' ? editingDraft.payload as Pet : editingPet}
-      initialDraft={editingDraft?.draftType === 'pet' ? editingDraft : null}
       categoryOptions={animalCategoryOptions.filter((item): item is Exclude<AnimalCategory, 'all'> => item !== 'all')}
       categoryLabels={animalCategoryLabels}
       speciesOptions={petSpeciesOptions}
@@ -671,7 +669,6 @@ function AuthenticatedApp({ session }: { session: Session }) {
         setEditingDraft(null)
       }}
       onDelete={deletePet}
-      onOpenPlan={(petId) => openPetDiary(petId)}
     />
   )
   if (createMode === 'post') return (

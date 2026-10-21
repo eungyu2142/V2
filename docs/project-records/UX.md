@@ -6463,3 +6463,27 @@ AI 사진을 사용하지 않고, 사용자가 직접 사진을 첨부해야 펫
 - 핵심 변경 내용: 제목과 장식용 SVG 화살표를 하나의 버튼에 배치했다. 날짜·본문·통계·상태·더보기 메뉴를 제거했다. 임시저장과 리뷰에도 같은 형식을 적용했다. 긴 제목은 말줄임표 없이 줄바꿈하고 공통 색상·radius 토큰 및 키보드 포커스를 적용했다.
 - 검증 결과: TypeScript 검사, Vite 프로덕션 빌드와 대상 TSX ESLint를 통과했다. 실제 브라우저 화면 검증은 수행하지 않았다.
 - 남은 작업: 운영 재배포 및 실제 계정의 목록 화면 확인.
+# 2026-10-17 펫 등록 즉시 입력 흐름
+
+- 요청 요약: `+ → 정보 입력 → 등록 완료`로 펫 등록 동선을 단축하고 초기 루틴 등록을 제외한다.
+- 분석·판단 이유: 펫과 루틴은 생성 시점과 관리 목적이 다르므로 펫 등록에서는 필수 펫 정보에만 집중하고 루틴은 다이어리에서 선택적으로 생성하는 편이 명확하다.
+- 수정 파일: `src/App.tsx`, `src/components/my-pet/PetCreateFlow.tsx`, `src/components/my-pet/PetFlow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 등록 진입 즉시 입력 폼이 열리고 제출 시 루틴 화면을 거치지 않고 저장·완료 화면으로 이동한다. 펫 수정과 삭제 흐름은 유지한다.
+- 검증 결과: 관련 React 파일 ESLint, 전체 TypeScript 검사와 Vite 프로덕션 빌드를 통과했다. Vercel 프로덕션 배포 `dpl_Bnwpz3D2D2jUUCjmsRpw4XK8VYuK`가 Ready이며 운영 별칭 `https://exopet-sage.vercel.app`의 HTTP 200 응답을 확인했다.
+- 남은 작업: 없음.
+# 2026-10-17 리뷰 작성 정보 간소화
+
+- 요청 요약: 리뷰 화면에서 중복 문구와 설명 문장을 제거하고 병원명, 필수 입력, 사진 선택 행동만 명확하게 남긴다.
+- 분석·판단 이유: 작은 모바일 화면에서 반복 제목과 긴 도움말은 실제 입력 공간을 줄이고, 브라우저 기본 파일 선택 UI는 앱의 버튼 체계와 일치하지 않는다.
+- 수정 파일: `src/components/hospital-map/MapScreen.tsx`, `src/features/hospital-map/HospitalReviewForm.tsx`, `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 상단 맥락은 병원명으로 단순화하고 진료·리뷰 단계의 중복 설명을 제거했다. 사진 첨부는 `사진 선택`이라는 단일 Primary 행동으로 제공한다.
+- 검증 결과: 관련 컴포넌트 ESLint, 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 공백 검사를 통과했다. Vercel 프로덕션 배포 `dpl_3XaakZE3BAs9sSuBAbgcMME1jD8w`가 Ready 상태이며 기본 도메인에 연결됐다.
+- 남은 작업: 없음.
+# 2026-10-17 첨부 사진 정렬 보정
+
+- 요청 요약: 첨부 사진 미리보기 주변의 불필요한 틈을 없애 사진 선택 영역과 정렬을 맞춘다.
+- 분석·판단 이유: 기본 요소 여백 때문에 사용자가 선택한 사진이 임의로 들여쓰기 된 것처럼 보여 첨부 영역의 경계가 불분명했다.
+- 수정 파일: `src/components/hospital-map/map-flow.css`, `docs/APP_REQUIREMENTS.md`, `docs/project-records/UI.md`, `docs/project-records/UX.md`.
+- 핵심 변경 내용: 사진 미리보기와 삭제 행동을 하나의 작은 카드 흐름으로 묶고 콘텐츠 왼쪽 선에 맞췄다.
+- 검증 결과: 전체 TypeScript 검사, Vite 프로덕션 빌드와 변경 파일 공백 검사를 통과했다. Vercel 프로덕션 배포 `dpl_ArzT1ZpSdzmqLrgGznTGfMzvty1o`가 Ready 상태이며 기본 도메인에 연결됐다.
+- 남은 작업: 없음.

@@ -170,12 +170,9 @@ export default function HospitalReviewForm({
       {currentStep === 1 && <div className="review-step-content" aria-labelledby="review-step-treatment">
       <h3 id="review-step-treatment" className="review-step-title">진료 정보</h3>
       <section className="review-input-section">
-        <div className="review-input-head">
-          <strong>{text.treatmentTitle}</strong>
-        </div>
         <div className="review-form-row">
           <label>
-            {text.visitDate} <span className="review-required-star" aria-label={text.required}>*</span>
+            <span>{text.visitDate} <span className="review-required-star" aria-label={text.required}>*</span></span>
             <input type="date" value={visitDate} onChange={(event) => onVisitDateChange(event.target.value)} required />
           </label>
           <label>
@@ -229,7 +226,7 @@ export default function HospitalReviewForm({
       </div>}
 
       {currentStep === 3 && <div className="review-step-content" aria-labelledby="review-step-body">
-      <h3 id="review-step-body" className="review-step-title">리뷰 작성</h3>
+      <h3 id="review-step-body" className="sr-only">리뷰</h3>
       <section className="review-input-section review-rating-section" aria-labelledby="review-rating-title">
         <div className="review-input-head">
           <strong id="review-rating-title">병원 별점</strong>
@@ -241,7 +238,6 @@ export default function HospitalReviewForm({
             <button className={score <= rating ? 'active' : ''} type="button" role="radio" aria-checked={rating === score} aria-label={`${score}점`} key={score} onClick={() => onRatingChange(score)}>★</button>
           ))}
         </div>
-        <small>처음에는 0점이며 별을 눌러 평가해 주세요.</small>
       </section>
       <section className="review-input-section">
         <div className="review-input-head">
@@ -250,7 +246,7 @@ export default function HospitalReviewForm({
             ? <span className="review-optional-label">{text.optional}</span>
             : <span className="review-required-star" aria-label={text.required}>*</span>}
         </div>
-        <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} placeholder={text.bodyPlaceholder} required={!isEditing} />
+        <textarea value={body} onChange={(event) => onBodyChange(event.target.value)} aria-label={text.bodyTitle} required={!isEditing} />
       </section>
       <section className="review-input-section review-image-section">
         <div className="review-input-head">
@@ -258,10 +254,9 @@ export default function HospitalReviewForm({
           <span>{images.length}/3</span>
         </div>
         <label className={`review-image-picker ${images.length >= 3 ? 'is-disabled' : ''}`}>
-          <span>+ 사진 선택</span>
+          <span>사진 선택</span>
           <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" multiple disabled={images.length >= 3 || isSubmitting} onChange={handleImagesSelect} />
         </label>
-        <small className="review-image-help">최대 3장까지 첨부할 수 있어요.</small>
         {imageError && <p className="review-image-error" role="alert">{imageError}</p>}
         {images.length > 0 && (
           <div className="review-image-preview-list" aria-label="첨부 사진 미리보기">
