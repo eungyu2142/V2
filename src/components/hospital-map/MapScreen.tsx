@@ -1271,7 +1271,10 @@ function MapScreen({ userId, profile, pets, initialPetId, focusHospital, recomme
           <button className="hospital-review-modal-backdrop" type="button" aria-label="리뷰 작성 닫기" onClick={closeReviewForm} />
           <section className="hospital-review-modal" role="dialog" aria-modal="true" aria-labelledby="hospital-review-modal-title">
             <header className="hospital-review-modal-head">
-              <strong id="hospital-review-modal-title">{selectedHospital.name}</strong>
+              <div>
+                <strong id="hospital-review-modal-title">{editingReviewId ? '리뷰 수정' : '리뷰 작성'}</strong>
+                <span>{selectedHospital.name}</span>
+              </div>
               <button className="hospital-review-modal-close" type="button" aria-label="닫기" onClick={closeReviewForm} />
             </header>
             <div className="hospital-review-modal-body">

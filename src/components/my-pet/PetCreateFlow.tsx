@@ -1,21 +1,26 @@
 import { type ChangeEvent, type PointerEvent, useEffect, useRef, useState } from 'react'
-import type { AnimalCategory, Pet } from '../../types/app'
+import type { AnimalCategory, DraftItem, Pet } from '../../types/app'
 import { validateImageFile } from '../../lib/imageStorage'
 import { RequiredMark } from '../common/FieldMarkers'
+import { saveCarePlan } from '../../features/diary/diaryService'
+import type { CareTaskType } from '../../features/diary/diaryTypes'
 import Mascot from '../common/Mascot'
-import { PetIcon } from './PetIcons'
+import { PetIcon, type PetIconName } from './PetIcons'
 import './PetFlow.css'
 
 type SupportedPetCategory = 'reptile' | 'amphibian'
 type PendingPhoto = { url: string; file: File; position: { x: number; y: number } }
 type Props = {
+  userId: string
   initialPet: Pet | null
+  initialDraft?: DraftItem | null
   categoryOptions: Exclude<AnimalCategory, 'all'>[]
   categoryLabels: Record<AnimalCategory, string>
   speciesOptions: Record<Exclude<AnimalCategory, 'all'>, string[]>
   onClose: () => void
   onSave: (pet: Pet, photoFile?: File) => void | Promise<void>
   onDelete: (petId: string) => void | Promise<void>
+  onOpenPlan: (petId: string) => void
 }
 
 const defaultPosition = { x: 50, y: 50 }
@@ -23,6 +28,19 @@ const categoryIllustrations: Record<SupportedPetCategory, string> = {
   reptile: '/assets/pet-category-reptile.png',
   amphibian: '/assets/pet-category-amphibian.png',
 }
+const routineOptions: Array<{ key: string; type: CareTaskType; label: string; icon: PetIconName }> = [
+  { key: 'feed', type: 'feed', label: '먹이', icon: 'feed' },
+  { key: 'mist', type: 'mist', label: '분무', icon: 'mist' },
+  { key: 'water', type: 'water', label: '물그릇', icon: 'water' },
+  { key: 'temperature', type: 'temperature', label: '온도', icon: 'temperature' },
+  { key: 'humidity', type: 'humidity', label: '습도', icon: 'mist' },
+  { key: 'cleaning', type: 'cleaning', label: '청소', icon: 'cleaning' },
+  { key: 'uvb_check', type: 'uvb_check', label: 'UVB', icon: 'uvb' },
+  { key: 'spot', type: 'custom', label: '스팟', icon: 'spot' },
+  { key: 'water_temperature', type: 'water_temperature', label: '수온', icon: 'temperature' },
+  { key: 'weight', type: 'weight', label: '무게', icon: 'weight' },
+  { key: 'medicine', type: 'medicine', label: '약', icon: 'medicine' },
+]
 function isSupported(value?: AnimalCategory | ''): value is SupportedPetCategory {
   return value === 'reptile' || value === 'amphibian'
 }
@@ -42,9 +60,12 @@ function normalizeSpeciesSearch(value: string) {
   return value.trim().toLocaleLowerCase('ko-KR')
 }
 
-export default function PetCreateFlow({ initialPet, categoryOptions, categoryLabels, speciesOptions, onClose, onSave, onDelete }: Props) {
+export default function PetCreateFlow({ userId, initialPet, initialDraft, categoryOptions, categoryLabels, speciesOptions, onClose, onSave, onDelete }: Props) {
   const initialGroup = isSupported(initialPet?.group) ? initialPet.group : ''
+  const [step, setStep] = useState(initialPet || initialDraft ? 1 : 0)
   const [petId] = useState(initialPet?.id ?? crypto.randomUUID())
+  const [selectedRoutines, setSelectedRoutines] = useState<string[]>([])
+  const [routineIds] = useState(() => Object.fromEntries(routineOptions.map((option) => [option.key, crypto.randomUUID()])))
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [completedPet, setCompletedPet] = useState<Pet | null>(null)
@@ -162,10 +183,17 @@ export default function PetCreateFlow({ initialPet, categoryOptions, categoryLab
       setSaveError('')
       const pet = buildPet()
       await onSave(pet, photoFile)
+      if (!initialPet) {
+        const now = new Date().toISOString()
+        const startDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+        for (const option of routineOptions.filter((item) => selectedRoutines.includes(item.key))) {
+          await saveCarePlan(userId, { id: routineIds[option.key], userId, petId: pet.id, taskType: option.type, title: option.label, repeatDays: [0, 1, 2, 3, 4, 5, 6], recurrenceType: 'weekdays', startDate, notificationTime: '09:00', isActive: true, createdAt: now, updatedAt: now })
+        }
+      }
       if (initialPet) onClose()
       else setCompletedPet(pet)
     } catch {
-      setSaveError('펫 정보를 저장하지 못했어요. 입력 내용은 유지돼요. 다시 시도해주세요.')
+      setSaveError('펫 정보 또는 선택한 루틴을 저장하지 못했어요. 입력 내용은 유지돼요. 다시 시도해주세요.')
     } finally {
       setSaving(false)
     }
@@ -187,11 +215,14 @@ export default function PetCreateFlow({ initialPet, categoryOptions, categoryLab
 
   if (completedPet) return <main className="pet-flow pet-flow-create pet-flow-complete"><section><Mascot mood="happy"/><h1>{completedPet.name}가 등록되었어요!</h1></section><footer className="pet-flow-footer"><button className="pet-flow-primary" type="button" onClick={onClose}>내 펫 보기</button></footer></main>
 
+  if (step === 0) return <main className="pet-flow pet-flow-create pet-flow-intro"><header className="pet-flow-header centered"><button className="pet-flow-icon-button" type="button" aria-label="뒤로가기" onClick={onClose}><PetIcon name="back"/></button><h1>펫 추가</h1><span/></header><section><Mascot mood="welcome"/><h2>새로운 가족을 맞이해요!</h2></section><footer className="pet-flow-footer"><button className="pet-flow-primary" type="button" onClick={() => setStep(1)}>시작하기</button></footer></main>
+
   const categories = categoryOptions.filter(isSupported)
   return <main className="pet-flow pet-flow-create">
-    <header className="pet-flow-header centered"><button className="pet-flow-icon-button" type="button" aria-label="뒤로가기" disabled={saving} onClick={onClose}><PetIcon name="back"/></button><h1>{initialPet ? '펫 정보 수정' : '펫 정보 입력'}</h1><span/></header>
-    <form onSubmit={(event) => { event.preventDefault(); if (canContinue) void save() }}>
+    <header className="pet-flow-header centered"><button className="pet-flow-icon-button" type="button" aria-label="뒤로가기" disabled={saving} onClick={() => { if (initialPet) onClose(); else setStep((current) => current - 1) }}><PetIcon name="back"/></button><h1>{step === 2 ? '루틴 설정 (선택)' : initialPet ? '펫 정보 수정' : '펫 정보 입력'}</h1><span/></header>
+    <form onSubmit={(event) => { event.preventDefault(); if (!canContinue) return; if (step === 1 && !initialPet) setStep(2); else void save() }}>
       <section className="pet-flow-form-body">
+        {step === 1 ? <>
           <label className="pet-flow-photo-input"><input type="file" accept="image/*" aria-label="펫 사진 선택" onChange={attachPhoto}/><span>{photo ? <img src={photo} alt="반려동물 사진 미리보기" style={{ objectPosition: `${photoPosition.x}% ${photoPosition.y}%` }}/> : <PetIcon name="camera"/>}</span></label>
           <div className="pet-flow-fields">
             <label className="pet-flow-field"><span>이름 <RequiredMark/></span><input value={name} maxLength={24} onChange={(event) => setName(event.target.value)} placeholder="예) 청단이" required/></label>
@@ -206,9 +237,14 @@ export default function PetCreateFlow({ initialPet, categoryOptions, categoryLab
               <label className="pet-flow-field"><span>메모</span><textarea value={memo} maxLength={300} onChange={(event) => setMemo(event.target.value)} placeholder="추가로 기록할 내용을 입력해주세요"/></label>
             </div></details>
           </div>
+        </> : <>
+          <p className="pet-flow-routine-help">필요한 루틴만 선택해주세요.</p>
+          <div className="pet-flow-routine-options">{routineOptions.map((option) => <label key={option.key}><PetIcon name={option.icon}/><span>{option.label}</span><input type="checkbox" checked={selectedRoutines.includes(option.key)} onChange={(event) => setSelectedRoutines((current) => event.target.checked ? [...current, option.key] : current.filter((key) => key !== option.key))}/></label>)}</div>
+          <p className="pet-flow-form-note">선택한 루틴은 매일 오전 9시로 등록돼요. 루틴 관리에서 요일과 시간을 변경할 수 있어요.</p>
+        </>}
         {saveError ? <p className="pet-flow-error" role="alert">{saveError}</p> : null}
       </section>
-      <footer className={initialPet ? 'pet-flow-footer pet-flow-footer-edit' : 'pet-flow-footer'}><button className="pet-flow-primary" type="submit" disabled={!canContinue || saving || deleting}>{saving ? '저장 중…' : initialPet ? '적용하기' : '등록하기'}</button>{initialPet ? <button className="pet-flow-delete-button" type="button" disabled={saving || deleting} onClick={() => void deletePet()}>{deleting ? '삭제 중…' : '펫 삭제'}</button> : null}</footer>
+      <footer className={initialPet ? 'pet-flow-footer pet-flow-footer-edit' : 'pet-flow-footer'}><button className="pet-flow-primary" type="submit" disabled={!canContinue || saving || deleting}>{saving ? '저장 중…' : initialPet ? '적용하기' : '다음'}</button>{initialPet ? <button className="pet-flow-delete-button" type="button" disabled={saving || deleting} onClick={() => void deletePet()}>{deleting ? '삭제 중…' : '펫 삭제'}</button> : null}</footer>
     </form>
     {pendingPhoto ? <div className="pet-photo-preview-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) cancelPhoto() }}><section className="pet-photo-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="pet-photo-preview-title"><div className="pet-photo-preview-header"><button type="button" onClick={cancelPhoto}>취소</button><h2 id="pet-photo-preview-title">사진 조정</h2><button type="button" onClick={applyPhoto}>적용</button></div><div className="pet-photo-preview-body"><p>사진을 움직여 위치를 맞춰주세요.</p><div className="pet-photo-preview-frame" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); movePendingPhoto(event) }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) movePendingPhoto(event) }} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}><img src={pendingPhoto.url} alt="조정 중인 반려동물 사진" style={{ objectPosition: `${pendingPhoto.position.x}% ${pendingPhoto.position.y}%` }} draggable={false}/><span className="pet-photo-preview-guide" aria-hidden="true"/></div><small>상하좌우로 드래그해 조정할 수 있어요.</small></div></section></div> : null}
   </main>
